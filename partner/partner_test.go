@@ -1,0 +1,95 @@
+// Copyright 2020 Megaport Pty Ltd
+//
+// Licensed under the Mozilla Public License, Version 2.0 (the
+// "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
+//
+//       https://mozilla.org/MPL/2.0/
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package partner
+
+import (
+	"github.com/megaport/megaportgo/location"
+	"github.com/megaport/megaportgo/types"
+	"github.com/rs/zerolog/log"
+	"github.com/stretchr/testify/assert"
+	"testing"
+)
+
+func TestGetAllPartnerMegaports(t *testing.T) {
+	// Make sure that an id with no record returns an error as expected.
+	GetAllPartnerMegaports()
+	//shared.DumpObject(partnerMegaports)
+	//assert.Equal(t, "LocationNotFound", idErr.Error())
+}
+
+func TestFilterPartnerMegaportByCompanyName(t *testing.T) {
+	assert := assert.New(t)
+	partnerMegaports, _ := GetAllPartnerMegaports()
+	FilterPartnerMegaportByCompanyName(&partnerMegaports, "AWS", true)
+
+	for i := 0; i < len(partnerMegaports); i++ {
+		assert.Equal(partnerMegaports[i].CompanyName, "AWS")
+	}
+}
+
+func TestFilterPartnerMegaportByLocationId(t *testing.T) {
+	assert := assert.New(t)
+	partnerMegaports, _ := GetAllPartnerMegaports()
+	location, _ := location.GetLocationByName("Equinix SY3")
+	FilterPartnerMegaportByLocationId(&partnerMegaports, location.ID)
+	assert.Greater(len(partnerMegaports), 0)
+
+	for i := 0; i < len(partnerMegaports); i++ {
+		assert.Equal(partnerMegaports[i].LocationId, location.ID)
+	}
+}
+
+func TestFilterPartnerMegaportByConnectType(t *testing.T) {
+	assert := assert.New(t)
+	partnerMegaports, _ := GetAllPartnerMegaports()
+	FilterPartnerMegaportByConnectType(&partnerMegaports, types.CONNECT_TYPE_AWS_VIF, true)
+	assert.Greater(len(partnerMegaports), 0)
+
+	for i := 0; i < len(partnerMegaports); i++ {
+		assert.Equal(partnerMegaports[i].ConnectType, types.CONNECT_TYPE_AWS_VIF)
+	}
+
+	partnerMegaports, _ = GetAllPartnerMegaports()
+	FilterPartnerMegaportByConnectType(&partnerMegaports, types.CONNECT_TYPE_AWS_VIF, false)
+	assert.Greater(len(partnerMegaports), 0)
+
+	for i := 0; i < len(partnerMegaports); i++ {
+		assert.Contains(partnerMegaports[i].ConnectType, types.CONNECT_TYPE_AWS_VIF)
+	}
+
+	partnerMegaports, _ = GetAllPartnerMegaports()
+	FilterPartnerMegaportByConnectType(&partnerMegaports, types.CONNECT_TYPE_AWS_HOSTED_CONNECTION, true)
+	assert.Greater(len(partnerMegaports), 0)
+
+	for i := 0; i < len(partnerMegaports); i++ {
+		assert.Equal(partnerMegaports[i].ConnectType, types.CONNECT_TYPE_AWS_HOSTED_CONNECTION)
+	}
+}
+
+func TestFilterPartnerMegaportByProductName(t *testing.T) {
+	partnerMegaports, _ := GetAllPartnerMegaports()
+	productName := "Asia Pacific (Sydney) (ap-southeast-2)"
+	FilterPartnerMegaportByProductName(&partnerMegaports, productName, true)
+
+	for i := 0; i < len(partnerMegaports); i++ {
+		log.Info().Str("ProductName", partnerMegaports[i].ProductName).Msg("Item found.")
+	}
+}
+
+/*
+func TestGetPartnerMegaportByFilter(t *testing.T) {
+	// 52dfc422-9041-4a16-b040-f03c795a3e01
+	GetPartnerMegaportByFilter("+AWS", "Sydney", "+AWS", -1)
+}*/
