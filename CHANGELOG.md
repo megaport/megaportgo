@@ -1,4 +1,4 @@
-# 0.1.0-beta Release
+# 0.1.2-beta Release
 
 Welcome to the first release of the `megaportgo` library!
 
@@ -14,6 +14,10 @@ Welcome to the first release of the `megaportgo` library!
  - The following lookup functionality is available:
    - Locations.
    - Partners Ports.
+
+## 0.1.2-beta
+ - Changed the `WaitForPortProvisioning` function so that it considers
+   "LIVE" or "CONFIGURED" as an active status.
    
 ## Notes
 This product is a `beta` release, please test all your changes in the

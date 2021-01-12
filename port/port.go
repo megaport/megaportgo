@@ -21,7 +21,6 @@ import (
 	"errors"
 	"github.com/megaport/megaportgo/mega_err"
 	"io/ioutil"
-	"strings"
 	"time"
 
 	"github.com/megaport/megaportgo/product"
@@ -163,7 +162,7 @@ func WaitForPortProvisioning(portId string) (bool, error) {
 	wait := 0
 
 	log.Debug().Msg("Waiting for port status transition.")
-	for strings.Compare(portInfo.ProvisioningStatus, "LIVE") != 0 && wait < 30 {
+	for portInfo.ProvisioningStatus != "CONFIGURED" && portInfo.ProvisioningStatus  != "LIVE" && wait < 30 {
 		time.Sleep(30 * time.Second)
 		wait++
 		portInfo, _ = GetPortDetails(portId)
@@ -176,7 +175,7 @@ func WaitForPortProvisioning(portId string) (bool, error) {
 	portInfo, _ = GetPortDetails(portId)
 	log.Debug().Str("Status", portInfo.ProvisioningStatus).Msg("Port waiting cycle complete.")
 
-	if portInfo.ProvisioningStatus == "LIVE" {
+	if portInfo.ProvisioningStatus == "CONFIGURED" || portInfo.ProvisioningStatus == "LIVE" {
 		return true, nil
 	} else {
 		if wait >= 30 {
