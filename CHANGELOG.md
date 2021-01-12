@@ -15,8 +15,8 @@ Welcome to the first release of the `megaportgo` library!
    - Locations.
    - Partners Ports.
 
-## 0.1.2-beta
- - Changed the `WaitForPortProvisioning` function so that it considers
+## Changes
+ - (added in 0.1.2) Changed the `WaitForPortProvisioning` function so that it considers
    "LIVE" or "CONFIGURED" as an active status.
    
 ## Notes
