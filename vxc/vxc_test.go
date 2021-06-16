@@ -29,6 +29,7 @@ import (
 
 const TEST_LOCATION_A = "Global Switch Sydney"
 const TEST_LOCATION_B = "Equinix SY3"
+const TEST_LOCATION_C = "42464fbb-4d38-4f82-9061-294e1d84ed9f"
 
 func TestVXCBuy(t *testing.T) {
 	assert := assert.New(t)
@@ -193,6 +194,39 @@ func TestBuyGoogleInterconnect(t *testing.T) {
 		pairingKey := "7e51371e-72a3-40b5-b844-2e3efefaee59/us-central1/2"
 		log.Info().Msgf("Buying Google Interconnect VXC (B End).")
 		googleInterconnectId, buyErr := BuyGoogleInterconnect(portId, "Test Google Interconnect", 1000, 0, pairingKey)
+
+		if buyErr != nil {
+			shared.PurchaseError(googleInterconnectId, buyErr)
+		}
+
+		if assert.NoError(t, buyErr) && assert.True(t, shared.IsGuid(googleInterconnectId)) {
+			log.Info().Msgf("Google Interconnect ID: '%s'", googleInterconnectId)
+			WaitForVXCProvisioning(googleInterconnectId)
+
+			googleInterconnectDeleteStatus, googleInterconnectDeleteErr := DeleteVXC(googleInterconnectId, true)
+			assert.NoError(t, googleInterconnectDeleteErr)
+			assert.True(t, googleInterconnectDeleteStatus)
+
+			portDeleteStatus, portDeleteErr := port.DeletePort(portId, true)
+			assert.NoError(t, portDeleteErr)
+			assert.True(t, portDeleteStatus)
+		} else {
+			shared.PurchaseError(googleInterconnectId, buyErr)
+		}
+	}
+}
+
+func TestBuyGoogleInterconnectLocation(t *testing.T) {
+	testLocation, _ := location.GetLocationByName(TEST_LOCATION_B)
+	log.Info().Msg("Buying Google Interconnect Port (A End).")
+	portId, portErr := port.BuySinglePort("Google Interconnect Test Port", 1, 1000, int(testLocation.ID), "AU", true)
+	log.Info().Msgf("Port Purchased: '%s'.", portId)
+
+	if assert.NoError(t, portErr) && assert.True(t, shared.IsGuid(portId)) {
+		port.WaitForPortProvisioning(portId)
+		pairingKey := "7e51371e-72a3-40b5-b844-2e3efefaee59/us-central1/2"
+		log.Info().Msgf("Buying Google Interconnect VXC (B End).")
+		googleInterconnectId, buyErr := BuyGoogleInterconnectLocation(portId, "Test Google Interconnect", 1000, 0, pairingKey, TEST_LOCATION_C)
 
 		if buyErr != nil {
 			shared.PurchaseError(googleInterconnectId, buyErr)
