@@ -159,8 +159,13 @@ func TestBuyAzureExpressRoute(t *testing.T) {
 	if assert.NoError(t, portErr) && assert.True(t, shared.IsGuid(portId)) {
 		port.WaitForPortProvisioning(portId)
 		serviceKey := "9d025691-38dc-48f3-9f95-fbb42e1a9f92"
+		peers := map[string]bool{
+			"private":   true,
+			"public":    false,
+			"microsoft": false,
+		}
 		log.Info().Msgf("Buying Azure ExpressRoute VXC (B End).")
-		expressRouteId, buyErr := BuyAzureExpressRoute(portId, "Test Express Route", 1000, 0, serviceKey)
+		expressRouteId, buyErr := BuyAzureExpressRoute(portId, "Test Express Route", 1000, 0, serviceKey, peers)
 
 		if buyErr != nil {
 			shared.PurchaseError(expressRouteId, buyErr)

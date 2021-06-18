@@ -1,3 +1,8 @@
+# 0.1.3-beta Release
+
+## New Features
+ - Optionally Specify the Google Interconnect Location when creating a GCP Connection. Credit @kdw174
+
 # 0.1.2-beta Release
 
 Welcome to the first release of the `megaportgo` library!
