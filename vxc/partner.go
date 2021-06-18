@@ -17,12 +17,13 @@ package vxc
 import (
 	"encoding/json"
 	"errors"
+	"io/ioutil"
+	"strings"
+
 	"github.com/megaport/megaportgo/mega_err"
 	"github.com/megaport/megaportgo/product"
 	"github.com/megaport/megaportgo/shared"
 	"github.com/megaport/megaportgo/types"
-	"io/ioutil"
-	"strings"
 )
 
 const PARTNER_AZURE string = "AZURE"
@@ -33,7 +34,7 @@ const PEERING_AZURE_MICROSOFT string = "microsoft"
 
 // LookupPartnerPorts is used to find available partner ports. This is Step 1 of the purchase process for most partner
 // ports as outlined at https://dev.megaport.com/#cloud-partner-api-orders.
-func LookupPartnerPorts(key string, portSpeed int, partner string) (string, error) {
+func LookupPartnerPorts(key string, portSpeed int, partner string, requestedProductID string) (string, error) {
 	lookupUrl := "/v2/secure/" + strings.ToLower(partner) + "/" + key
 	response, resErr := shared.MakeAPICall("GET", lookupUrl, nil)
 	defer response.Body.Close()
@@ -57,9 +58,14 @@ func LookupPartnerPorts(key string, portSpeed int, partner string) (string, erro
 	}
 
 	for i := 0; i < len(lookupResponse.Data.Megaports); i++ {
-		// We only need the first available one that has enough speed capacity.
 		if lookupResponse.Data.Megaports[i].VXC == 0 && lookupResponse.Data.Megaports[i].PortSpeed >= portSpeed { // nil is 0
-			return lookupResponse.Data.Megaports[i].ProductUID, nil
+			// We only need the first available one that has enough speed capacity.
+			if requestedProductID == "" {
+				return lookupResponse.Data.Megaports[i].ProductUID, nil
+				// Try to match Product ID if provided
+			} else if lookupResponse.Data.Megaports[i].ProductUID == requestedProductID {
+				return lookupResponse.Data.Megaports[i].ProductUID, nil
+			}
 		}
 	}
 
@@ -68,8 +74,8 @@ func LookupPartnerPorts(key string, portSpeed int, partner string) (string, erro
 
 // BuyPartnerVXC performs Step 2 of the partner port purchase process. These are for partners that require some kind
 // of partner pairing key (e.g. GCP, Azure).
-func BuyPartnerVXC(portId string, name string, rateLimit int, aEndVLan int, key string, partner string, attributes map[string]bool) (string, error) {
-	partnerPortId, partnerLookupErr := LookupPartnerPorts(key, rateLimit, partner)
+func BuyPartnerVXC(portId string, name string, rateLimit int, aEndVLan int, key string, partner string, attributes map[string]bool, requestedProductID string) (string, error) {
+	partnerPortId, partnerLookupErr := LookupPartnerPorts(key, rateLimit, partner, requestedProductID)
 
 	if partnerLookupErr != nil {
 		return "", partnerLookupErr
@@ -112,7 +118,7 @@ func BuyPartnerVXC(portId string, name string, rateLimit int, aEndVLan int, key 
 		partnerConfig = types.PartnerOrderAzurePartnerConfig{
 			ConnectType: partner,
 			ServiceKey:  key,
-			Peers: azurePeerings,
+			Peers:       azurePeerings,
 		}
 	} else if partner == PARTNER_GOOGLE {
 		partnerConfig = types.PartnerOrderGooglePartnerConfig{
@@ -158,9 +164,13 @@ func BuyPartnerVXC(portId string, name string, rateLimit int, aEndVLan int, key 
 }
 
 func BuyAzureExpressRoute(portId string, name string, rateLimit int, aEndVLan int, serviceKey string, peerings map[string]bool) (string, error) {
-	return BuyPartnerVXC(portId, name, rateLimit, aEndVLan, serviceKey, PARTNER_AZURE, peerings)
+	return BuyPartnerVXC(portId, name, rateLimit, aEndVLan, serviceKey, PARTNER_AZURE, peerings, "")
 }
 
 func BuyGoogleInterconnect(portId string, name string, rateLimit int, aEndVLan int, pairingKey string) (string, error) {
-	return BuyPartnerVXC(portId, name, rateLimit, aEndVLan, pairingKey, PARTNER_GOOGLE, nil)
+	return BuyPartnerVXC(portId, name, rateLimit, aEndVLan, pairingKey, PARTNER_GOOGLE, nil, "")
+}
+
+func BuyGoogleInterconnectLocation(portId string, name string, rateLimit int, aEndVLan int, pairingKey string, requestedProductID string) (string, error) {
+	return BuyPartnerVXC(portId, name, rateLimit, aEndVLan, pairingKey, PARTNER_GOOGLE, nil, requestedProductID)
 }
