@@ -23,17 +23,30 @@ package location
 import (
 	"encoding/json"
 	"errors"
+	"io/ioutil"
+
+	"github.com/lithammer/fuzzysearch/fuzzy"
+	"github.com/megaport/megaportgo/config"
 	"github.com/megaport/megaportgo/mega_err"
 	"github.com/megaport/megaportgo/shared"
 	"github.com/megaport/megaportgo/types"
-	"github.com/lithammer/fuzzysearch/fuzzy"
-	"io/ioutil"
 )
+
+type Location struct {
+	*config.Config
+}
+
+// NewLocation
+func New(cfg *config.Config) *Location {
+	return &Location{
+		Config: cfg,
+	}
+}
 
 // GetLocationByID looks up locations based on the IDs that are exposed by the API. These IDs can be found by querying
 // the API directly or iterating over GetAllLocations.
-func GetLocationByID(locationID int) (types.Location, error) {
-	allLocations, locErr := GetAllLocations()
+func (l *Location) GetLocationByID(locationID int) (types.Location, error) {
+	allLocations, locErr := l.GetAllLocations()
 
 	if locErr != nil {
 		return types.Location{}, locErr
@@ -50,8 +63,8 @@ func GetLocationByID(locationID int) (types.Location, error) {
 
 // GetLocationByName is an exact name lookup for Megaport Locations. This is not fuzzy, if the exact Location name is
 // not passed in, you will not get a result. This is supposed to return a single entry.
-func GetLocationByName(locationName string) (types.Location, error) {
-	allLocations, locErr := GetAllLocations()
+func (l *Location) GetLocationByName(locationName string) (types.Location, error) {
+	allLocations, locErr := l.GetAllLocations()
 
 	if locErr != nil {
 		return types.Location{}, locErr
@@ -67,12 +80,12 @@ func GetLocationByName(locationName string) (types.Location, error) {
 }
 
 // GetAllLocations retrieves all Megaport locations from the API.
-func GetAllLocations() ([]types.Location, error) {
+func (l *Location) GetAllLocations() ([]types.Location, error) {
 	locationUrl := "/v2/locations"
-	response, resErr := shared.MakeAPICall("GET", locationUrl, nil)
+	response, resErr := l.Config.MakeAPICall("GET", locationUrl, nil)
 	defer response.Body.Close()
 
-	isResErr, compiledResError := shared.IsErrorResponse(response, &resErr, 200)
+	isResErr, compiledResError := l.Config.IsErrorResponse(response, &resErr, 200)
 
 	if isResErr {
 		return nil, compiledResError
@@ -95,8 +108,8 @@ func GetAllLocations() ([]types.Location, error) {
 	return locationResponse.Data, nil
 }
 
-func GetLocationByNameFuzzy(search string) ([]types.Location, error) {
-	locations, _ := GetAllLocations()
+func (l *Location) GetLocationByNameFuzzy(search string) ([]types.Location, error) {
+	locations, _ := l.GetAllLocations()
 	var matchedLocations []types.Location
 
 	for i := 0; i < len(locations); i++ {
@@ -112,13 +125,13 @@ func GetLocationByNameFuzzy(search string) ([]types.Location, error) {
 	}
 }
 
-func GetCountries() ([]types.Country, error) {
+func (l *Location) GetCountries() ([]types.Country, error) {
 	marketCodeUrl := "/v2/networkRegions"
-	response, resErr := shared.MakeAPICall("GET", marketCodeUrl, nil)
+	response, resErr := l.Config.MakeAPICall("GET", marketCodeUrl, nil)
 	allCountries := make([]types.Country, 0)
 	defer response.Body.Close()
 
-	isResErr, compiledResError := shared.IsErrorResponse(response, &resErr, 200)
+	isResErr, compiledResError := l.Config.IsErrorResponse(response, &resErr, 200)
 
 	if isResErr {
 		return nil, compiledResError
@@ -147,8 +160,8 @@ func GetCountries() ([]types.Country, error) {
 	return allCountries, nil
 }
 
-func GetMarketCodes() ([]string, error) {
-	countries, countriesErr := GetCountries()
+func (l *Location) GetMarketCodes() ([]string, error) {
+	countries, countriesErr := l.GetCountries()
 	var marketCodes []string
 
 	if countriesErr != nil {
@@ -162,8 +175,8 @@ func GetMarketCodes() ([]string, error) {
 	return marketCodes, nil
 }
 
-func IsValidMarketCode(marketCode string) bool {
-	marketCodes, _ := GetMarketCodes()
+func (l *Location) IsValidMarketCode(marketCode string) bool {
+	marketCodes, _ := l.GetMarketCodes()
 	found := false
 
 	for i := 0; i < len(marketCodes); i++ {
@@ -175,10 +188,10 @@ func IsValidMarketCode(marketCode string) bool {
 	return found
 }
 
-func FilterLocationsByMarketCode(marketCode string, locations *[]types.Location) {
+func (l *Location) FilterLocationsByMarketCode(marketCode string, locations *[]types.Location) {
 	existingLocations := *locations
 	*locations = nil
-	if IsValidMarketCode(marketCode) {
+	if l.IsValidMarketCode(marketCode) {
 		for i := 0; i < len(existingLocations); i++ {
 			if existingLocations[i].Market == marketCode {
 				*locations = append(*locations, existingLocations[i])
@@ -187,7 +200,7 @@ func FilterLocationsByMarketCode(marketCode string, locations *[]types.Location)
 	}
 }
 
-func FilterLocationsByMcrAvailability(mcrAvailable bool, locations *[]types.Location) {
+func (l *Location) FilterLocationsByMcrAvailability(mcrAvailable bool, locations *[]types.Location) {
 	existingLocations := *locations
 	*locations = nil
 	for i := 0; i < len(existingLocations); i++ {
@@ -198,10 +211,10 @@ func FilterLocationsByMcrAvailability(mcrAvailable bool, locations *[]types.Loca
 	}
 }
 
-func GetRandom(marketCode string) *types.Location {
-	testLocations, _ := GetAllLocations()
-	FilterLocationsByMarketCode(marketCode, &testLocations)
-	FilterLocationsByMcrAvailability(true, &testLocations)
+func (l *Location) GetRandom(marketCode string) *types.Location {
+	testLocations, _ := l.GetAllLocations()
+	l.FilterLocationsByMarketCode(marketCode, &testLocations)
+	l.FilterLocationsByMcrAvailability(true, &testLocations)
 	testLocation := testLocations[shared.GenerateRandomNumber(0, len(testLocations)-1)]
 	return &testLocation
 }

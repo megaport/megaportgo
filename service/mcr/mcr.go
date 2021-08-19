@@ -19,18 +19,31 @@ package mcr
 import (
 	"encoding/json"
 	"errors"
-	"github.com/megaport/megaportgo/mega_err"
-	"github.com/megaport/megaportgo/product"
-	"github.com/megaport/megaportgo/shared"
-	"github.com/megaport/megaportgo/types"
-	"github.com/rs/zerolog/log"
 	"io/ioutil"
 	"strings"
 	"time"
+
+	"github.com/megaport/megaportgo/config"
+	"github.com/megaport/megaportgo/mega_err"
+	"github.com/megaport/megaportgo/service/product"
+	"github.com/megaport/megaportgo/types"
 )
 
+type MCR struct {
+	*config.Config
+	product *product.Product
+}
+
+// NewLocation
+func New(cfg *config.Config) *MCR {
+	return &MCR{
+		Config:  cfg,
+		product: product.New(cfg),
+	}
+}
+
 // BuyMCR purchases an MCR.
-func BuyMCR(locationID int, name string, portSpeed int, mcrASN int) (string, error) {
+func (m *MCR) BuyMCR(locationID int, name string, portSpeed int, mcrASN int) (string, error) {
 	orderConfig := types.MCROrderConfig{}
 
 	if mcrASN != 0 {
@@ -57,7 +70,7 @@ func BuyMCR(locationID int, name string, portSpeed int, mcrASN int) (string, err
 		return "", marshalErr
 	}
 
-	body, resErr := product.ExecuteOrder(&requestBody)
+	body, resErr := m.product.ExecuteOrder(&requestBody)
 
 	if resErr != nil {
 		return "", resErr
@@ -74,12 +87,12 @@ func BuyMCR(locationID int, name string, portSpeed int, mcrASN int) (string, err
 }
 
 // BuyMCR get the details of an MCR.
-func GetMCRDetails(id string) (types.MCR, error) {
+func (m *MCR) GetMCRDetails(id string) (types.MCR, error) {
 	url := "/v2/product/" + id
-	response, err := shared.MakeAPICall("GET", url, nil)
+	response, err := m.Config.MakeAPICall("GET", url, nil)
 	defer response.Body.Close()
 
-	isError, parsedError := shared.IsErrorResponse(response, &err, 200)
+	isError, parsedError := m.Config.IsErrorResponse(response, &err, 200)
 
 	if isError {
 		return types.MCR{}, parsedError
@@ -102,39 +115,39 @@ func GetMCRDetails(id string) (types.MCR, error) {
 }
 
 // ModifyMCR modifies an MCR.
-func ModifyMCR(mcrId string, name string, costCentre string, marketplaceVisibility bool) (bool, error) {
-	return product.ModifyProduct(mcrId, types.PRODUCT_MCR, name, costCentre, marketplaceVisibility)
+func (m *MCR) ModifyMCR(mcrId string, name string, costCentre string, marketplaceVisibility bool) (bool, error) {
+	return m.product.ModifyProduct(mcrId, types.PRODUCT_MCR, name, costCentre, marketplaceVisibility)
 }
 
 // ModifyMCR deletes an MCR.
-func DeleteMCR(id string, deleteNow bool) (bool, error) {
-	return product.DeleteProduct(id, deleteNow)
+func (m *MCR) DeleteMCR(id string, deleteNow bool) (bool, error) {
+	return m.product.DeleteProduct(id, deleteNow)
 }
 
 // ModifyMCR un-deletes an MCR.
-func RestoreMCR(id string) (bool, error) {
-	return product.RestoreProduct(id)
+func (m *MCR) RestoreMCR(id string) (bool, error) {
+	return m.product.RestoreProduct(id)
 }
 
 // DebugWaitMCRLive will should be used for testing only.
-func WaitForMcrProvisioning(mcrId string) (bool, error) {
-	mcrInfo, _ := GetMCRDetails(mcrId)
+func (m *MCR) WaitForMcrProvisioning(mcrId string) (bool, error) {
+	mcrInfo, _ := m.GetMCRDetails(mcrId)
 	wait := 0
 
 	// Go-Live
-	log.Debug().Msg("Waiting for MCR to transition to 'LIVE'.")
+	m.Log.Debugln("Waiting for MCR to transition to 'LIVE'.")
 	for strings.Compare(mcrInfo.ProvisioningStatus, "LIVE") != 0 && wait < 30 {
 		time.Sleep(30 * time.Second)
 		wait++
-		mcrInfo, _ = GetMCRDetails(mcrId)
+		mcrInfo, _ = m.GetMCRDetails(mcrId)
 
 		if wait%5 == 0 {
-			log.Debug().Str("Status", mcrInfo.ProvisioningStatus).Msg("MCR is currently being provisioned.")
+			m.Log.Debugln("MCR is currently being provisioned. Status: ", mcrInfo.ProvisioningStatus)
 		}
 	}
 
-	mcrInfo, _ = GetMCRDetails(mcrId)
-	log.Debug().Str("Status", mcrInfo.ProvisioningStatus).Msg("MCR waiting cycle complete.")
+	mcrInfo, _ = m.GetMCRDetails(mcrId)
+	m.Log.Debugln("MCR waiting cycle complete. Status: ", mcrInfo.ProvisioningStatus)
 
 	if mcrInfo.ProvisioningStatus == "LIVE" {
 		return true, nil

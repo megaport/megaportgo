@@ -19,22 +19,34 @@ package port
 import (
 	"encoding/json"
 	"errors"
-	"github.com/megaport/megaportgo/mega_err"
 	"io/ioutil"
 	"time"
 
-	"github.com/megaport/megaportgo/product"
+	"github.com/megaport/megaportgo/config"
+	"github.com/megaport/megaportgo/mega_err"
+	"github.com/megaport/megaportgo/service/product"
 	"github.com/megaport/megaportgo/shared"
 	"github.com/megaport/megaportgo/types"
-	"github.com/rs/zerolog/log"
 )
 
 const MODIFY_NAME string = "NAME"
 const MODIFY_COST_CENTRE = "COST_CENTRE"
 const MODIFY_MARKETPLACE_VISIBILITY string = "MARKETPLACE_VISIBILITY"
 
+type Port struct {
+	*config.Config
+	product *product.Product
+}
+
+func New(cfg *config.Config) *Port {
+	return &Port{
+		Config:  cfg,
+		product: product.New(cfg),
+	}
+}
+
 // BuyPort orders a Port.
-func BuyPort(name string, term int, portSpeed int, locationId int, market string, isLAG bool, lagCount int, isPrivate bool) (string, error) {
+func (p *Port) BuyPort(name string, term int, portSpeed int, locationId int, market string, isLAG bool, lagCount int, isPrivate bool) (string, error) {
 	var buyOrder []types.PortOrder
 
 	if term != 1 && term != 12 && term != 24 && term != 36 {
@@ -73,7 +85,7 @@ func BuyPort(name string, term int, portSpeed int, locationId int, market string
 	}
 
 	requestBody, _ := json.Marshal(buyOrder)
-	responseBody, responseErr := product.ExecuteOrder(&requestBody)
+	responseBody, responseErr := p.product.ExecuteOrder(&requestBody)
 
 	if responseErr != nil {
 		return "", responseErr
@@ -90,21 +102,21 @@ func BuyPort(name string, term int, portSpeed int, locationId int, market string
 }
 
 // BuyPort orders a single Port. Same as BuyPort, with isLag set to false.
-func BuySinglePort(name string, term int, portSpeed int, locationId int, market string, isPrivate bool) (string, error) {
-	return BuyPort(name, term, portSpeed, locationId, market, false, 0, isPrivate)
+func (p *Port) BuySinglePort(name string, term int, portSpeed int, locationId int, market string, isPrivate bool) (string, error) {
+	return p.BuyPort(name, term, portSpeed, locationId, market, false, 0, isPrivate)
 }
 
 // BuyPort orders a LAG Port. Same as BuyPort, with isLag set to true.
-func BuyLAGPort(name string, term int, portSpeed int, locationId int, market string, lagCount int, isPrivate bool) (string, error) {
-	return BuyPort(name, term, portSpeed, locationId, market, true, lagCount, isPrivate)
+func (p *Port) BuyLAGPort(name string, term int, portSpeed int, locationId int, market string, lagCount int, isPrivate bool) (string, error) {
+	return p.BuyPort(name, term, portSpeed, locationId, market, true, lagCount, isPrivate)
 }
 
-func GetPortDetails(id string) (types.Port, error) {
+func (p *Port) GetPortDetails(id string) (types.Port, error) {
 	url := "/v2/product/" + id
-	response, err := shared.MakeAPICall("GET", url, nil)
+	response, err := p.Config.MakeAPICall("GET", url, nil)
 	defer response.Body.Close()
 
-	isError, parsedError := shared.IsErrorResponse(response, &err, 200)
+	isError, parsedError := p.Config.IsErrorResponse(response, &err, 200)
 
 	if isError {
 		return types.Port{}, parsedError
@@ -126,54 +138,54 @@ func GetPortDetails(id string) (types.Port, error) {
 	return portDetails.Data, nil
 }
 
-func ModifyPort(portId string, name string, costCentre string, marketplaceVisibility bool) (bool, error) {
-	return product.ModifyProduct(portId, types.PRODUCT_MEGAPORT, name, costCentre, marketplaceVisibility)
+func (p *Port) ModifyPort(portId string, name string, costCentre string, marketplaceVisibility bool) (bool, error) {
+	return p.product.ModifyProduct(portId, types.PRODUCT_MEGAPORT, name, costCentre, marketplaceVisibility)
 }
 
-func DeletePort(id string, deleteNow bool) (bool, error) {
-	return product.DeleteProduct(id, deleteNow)
+func (p *Port) DeletePort(id string, deleteNow bool) (bool, error) {
+	return p.product.DeleteProduct(id, deleteNow)
 }
 
-func RestorePort(id string) (bool, error) {
-	return product.RestoreProduct(id)
+func (p *Port) RestorePort(id string) (bool, error) {
+	return p.product.RestoreProduct(id)
 }
 
 // TODO: Tests for locking.
-func LockPort(id string) (bool, error) {
-	portInfo, _ := GetPortDetails(id)
+func (p *Port) LockPort(id string) (bool, error) {
+	portInfo, _ := p.GetPortDetails(id)
 	if !portInfo.Locked {
-		return product.ManageProductLock(id, true)
+		return p.product.ManageProductLock(id, true)
 	} else {
 		return true, errors.New(mega_err.ERR_PORT_ALREADY_LOCKED)
 	}
 }
 
-func UnlockPort(id string) (bool, error) {
-	portInfo, _ := GetPortDetails(id)
+func (p *Port) UnlockPort(id string) (bool, error) {
+	portInfo, _ := p.GetPortDetails(id)
 	if portInfo.Locked {
-		return product.ManageProductLock(id, false)
+		return p.product.ManageProductLock(id, false)
 	} else {
 		return true, errors.New(mega_err.ERR_PORT_NOT_LOCKED)
 	}
 }
 
-func WaitForPortProvisioning(portId string) (bool, error) {
-	portInfo, _ := GetPortDetails(portId)
+func (p *Port) WaitForPortProvisioning(portId string) (bool, error) {
+	portInfo, _ := p.GetPortDetails(portId)
 	wait := 0
 
-	log.Debug().Msg("Waiting for port status transition.")
-	for portInfo.ProvisioningStatus != "CONFIGURED" && portInfo.ProvisioningStatus  != "LIVE" && wait < 30 {
+	p.Log.Debugln("Waiting for port status transition.")
+	for portInfo.ProvisioningStatus != "CONFIGURED" && portInfo.ProvisioningStatus != "LIVE" && wait < 30 {
 		time.Sleep(30 * time.Second)
 		wait++
-		portInfo, _ = GetPortDetails(portId)
+		portInfo, _ = p.GetPortDetails(portId)
 
 		if wait%5 == 0 {
-			log.Debug().Str("Status", portInfo.ProvisioningStatus).Msg("Port is currently being provisioned.")
+			p.Log.Debugln("Port is currently being provisioned. Status: ", portInfo.ProvisioningStatus)
 		}
 	}
 
-	portInfo, _ = GetPortDetails(portId)
-	log.Debug().Str("Status", portInfo.ProvisioningStatus).Msg("Port waiting cycle complete.")
+	portInfo, _ = p.GetPortDetails(portId)
+	p.Log.Debugln("Port waiting cycle complete. Status:", portInfo.ProvisioningStatus)
 
 	if portInfo.ProvisioningStatus == "CONFIGURED" || portInfo.ProvisioningStatus == "LIVE" {
 		return true, nil

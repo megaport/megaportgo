@@ -18,12 +18,12 @@ package vxc
 
 import (
 	"encoding/json"
-	"github.com/megaport/megaportgo/product"
+
 	"github.com/megaport/megaportgo/types"
 )
 
 // BuyAWSHostedVIF buys an AWS Hosted VIF.
-func BuyAWSHostedVIF(portUID string, productUID string, name string, rateLimit int, aEndVLAN int, connectType string, vifType string, asn int, amazonASN int, ownerAccount string, authKey string, prefixes string, customerIPAddress string, amazonIPAddress string) (string, error) {
+func (v *VXC) BuyAWSHostedVIF(portUID string, productUID string, name string, rateLimit int, aEndVLAN int, connectType string, vifType string, asn int, amazonASN int, ownerAccount string, authKey string, prefixes string, customerIPAddress string, amazonIPAddress string) (string, error) {
 	buyOrder := []types.AWSHostedVIFOrder{
 		types.AWSHostedVIFOrder{
 			PortID: portUID,
@@ -54,7 +54,7 @@ func BuyAWSHostedVIF(portUID string, productUID string, name string, rateLimit i
 	}
 
 	requestBody, _ := json.Marshal(buyOrder)
-	responseBody, responseErr := product.ExecuteOrder(&requestBody)
+	responseBody, responseErr := v.product.ExecuteOrder(&requestBody)
 
 	if responseErr != nil {
 		return "", responseErr

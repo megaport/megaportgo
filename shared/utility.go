@@ -17,7 +17,7 @@
 package shared
 
 import (
-	"github.com/davecgh/go-spew/spew"
+	"math/rand"
 	"regexp"
 	"time"
 )
@@ -51,7 +51,8 @@ func GenerateRandomVLAN() int {
 	return GenerateRandomNumber(1, 4094)
 }
 
-// DumpObject uses the spew library to output variable contents
-func DumpObject(debugObject interface{}) {
-	spew.Dump(debugObject)
+// GenerateRandomNumber generates a random number between an upper and lower bound.
+func GenerateRandomNumber(lowerBound int, upperBound int) int {
+	rand.Seed(time.Now().UnixNano())
+	return rand.Intn(upperBound) + lowerBound
 }

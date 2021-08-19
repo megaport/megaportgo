@@ -71,32 +71,32 @@ type VXCOrderConfirmation struct {
 
 // ---- VXC Detail Types //
 type VXC struct {
-	ID                 int                    `json:"productId"`
-	UID                string                 `json:"productUid"`
-	ServiceID          int                    `json:"nServiceId"`
-	Name               string                 `json:"productName"`
-	Type               string                 `json:"productType"`
-	RateLimit          int                    `json:"rateLimit"`
-	DistanceBand       string                 `json:"distanceBand"`
-	ProvisioningStatus string                 `json:"provisioningStatus"`
-	AEndConfiguration  VXCEndConfiguration    `json:"aEnd"`
-	BEndConfiguration  VXCEndConfiguration    `json:"bEnd"`
-	SecondaryName      string                 `json:"secondaryName"`
-	UsageAlgorithm     string                 `json:"usageAlgorithm"`
-	CreatedBy          string                 `json:"createdBy"`
-	LiveDate           int                    `json:"liveDate"`
-	CreateDate         int                    `json:"createDate"`
-	Resources          VXCResources           `json:"resources"`
-	VXCApproval        VXCApproval            `json:"vxcApproval"`
-	ContractStartDate  int                    `json:"contractStartDate"`
-	ContractEndDate    int                    `json:"contractEndDate"`
-	ContractTermMonths int                    `json:"contractTermMonths"`
-	CompanyUID         string                 `json:"companyUid"`
-	CompanyName        string                 `json:"companyName"`
-	Locked             bool                   `json:"locked"`
-	AdminLocked        bool                   `json:"adminLocked"`
-	AttributeTags      map[string]string      `json:"attributeTags"`
-	Cancelable         bool                   `json:"cancelable"`
+	ID                 int                 `json:"productId"`
+	UID                string              `json:"productUid"`
+	ServiceID          int                 `json:"nServiceId"`
+	Name               string              `json:"productName"`
+	Type               string              `json:"productType"`
+	RateLimit          int                 `json:"rateLimit"`
+	DistanceBand       string              `json:"distanceBand"`
+	ProvisioningStatus string              `json:"provisioningStatus"`
+	AEndConfiguration  VXCEndConfiguration `json:"aEnd"`
+	BEndConfiguration  VXCEndConfiguration `json:"bEnd"`
+	SecondaryName      string              `json:"secondaryName"`
+	UsageAlgorithm     string              `json:"usageAlgorithm"`
+	CreatedBy          string              `json:"createdBy"`
+	LiveDate           int                 `json:"liveDate"`
+	CreateDate         int                 `json:"createDate"`
+	Resources          VXCResources        `json:"resources"`
+	VXCApproval        VXCApproval         `json:"vxcApproval"`
+	ContractStartDate  int                 `json:"contractStartDate"`
+	ContractEndDate    int                 `json:"contractEndDate"`
+	ContractTermMonths int                 `json:"contractTermMonths"`
+	CompanyUID         string              `json:"companyUid"`
+	CompanyName        string              `json:"companyName"`
+	Locked             bool                `json:"locked"`
+	AdminLocked        bool                `json:"adminLocked"`
+	AttributeTags      map[string]string   `json:"attributeTags"`
+	Cancelable         bool                `json:"cancelable"`
 }
 
 type VXCEndConfiguration struct {
@@ -110,10 +110,10 @@ type VXCEndConfiguration struct {
 }
 
 type VXCResources struct {
-	Interface     []PortInterface          `json:"interface"`
-	VirtualRouter map[string]interface{}   `json:"virtual_router"`
-	CspConnection interface{}  `json:"csp_connection"`
-	VLL           VLLConfig                `json:"vll"`
+	Interface     []PortInterface `json:"interface"`
+	VirtualRouter interface{}     `json:"virtual_router"`
+	CspConnection interface{}     `json:"csp_connection"`
+	VLL           VLLConfig       `json:"vll"`
 }
 
 type VLLConfig struct {
@@ -184,8 +184,8 @@ type PartnerOrderBEndConfiguration struct {
 }
 
 type PartnerOrderAzurePartnerConfig struct {
-	ConnectType string `json:"connectType"`
-	ServiceKey  string `json:"serviceKey"`
+	ConnectType string              `json:"connectType"`
+	ServiceKey  string              `json:"serviceKey"`
 	Peers       []map[string]string `json:"peers"`
 }
 

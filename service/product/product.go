@@ -19,19 +19,30 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/megaport/megaportgo/mega_err"
-	"github.com/megaport/megaportgo/shared"
-	"github.com/megaport/megaportgo/types"
 	"io/ioutil"
+
+	"github.com/megaport/megaportgo/config"
+	"github.com/megaport/megaportgo/mega_err"
+	"github.com/megaport/megaportgo/types"
 )
 
+type Product struct {
+	*config.Config
+}
+
+func New(cfg *config.Config) *Product {
+	return &Product{
+		Config: cfg,
+	}
+}
+
 // ExecuteOrder executes an order against the Megaport API.
-func ExecuteOrder(requestBody *[]byte) (*[]byte, error) {
+func (p *Product) ExecuteOrder(requestBody *[]byte) (*[]byte, error) {
 	url := "/v2/networkdesign/buy"
-	response, resErr := shared.MakeAPICall("POST", url, *requestBody)
+	response, resErr := p.Config.MakeAPICall("POST", url, *requestBody)
 	defer response.Body.Close()
 
-	isError, parsedError := shared.IsErrorResponse(response, &resErr, 200)
+	isError, parsedError := p.Config.IsErrorResponse(response, &resErr, 200)
 
 	if isError {
 		return nil, parsedError
@@ -46,7 +57,7 @@ func ExecuteOrder(requestBody *[]byte) (*[]byte, error) {
 
 // DeleteProduct is responsible for either scheduling a product for deletion "CANCEL" or deleting a product immediately
 // "CANCEL_NOW".
-func DeleteProduct(id string, deleteNow bool) (bool, error) {
+func (p *Product) DeleteProduct(id string, deleteNow bool) (bool, error) {
 	var action string
 
 	if deleteNow {
@@ -56,10 +67,10 @@ func DeleteProduct(id string, deleteNow bool) (bool, error) {
 	}
 
 	url := "/v2/product/" + id + "/action/" + action
-	response, err := shared.MakeAPICall("POST", url, nil)
+	response, err := p.Config.MakeAPICall("POST", url, nil)
 	defer response.Body.Close()
 
-	isError, errorMessage := shared.IsErrorResponse(response, &err, 200)
+	isError, errorMessage := p.Config.IsErrorResponse(response, &err, 200)
 
 	if isError {
 		return false, errorMessage
@@ -69,12 +80,12 @@ func DeleteProduct(id string, deleteNow bool) (bool, error) {
 }
 
 // RestoreProduct will re-enable a Product if a product has been scheduled for deletion.
-func RestoreProduct(id string) (bool, error) {
+func (p *Product) RestoreProduct(id string) (bool, error) {
 	url := "/v2/product/" + id + "/action/UN_CANCEL"
-	response, err := shared.MakeAPICall("POST", url, nil)
+	response, err := p.Config.MakeAPICall("POST", url, nil)
 	defer response.Body.Close()
 
-	isError, errorMessage := shared.IsErrorResponse(response, &err, 200)
+	isError, errorMessage := p.Config.IsErrorResponse(response, &err, 200)
 
 	if isError {
 		return false, errorMessage
@@ -84,7 +95,7 @@ func RestoreProduct(id string) (bool, error) {
 }
 
 // ModifyProduct modifies a product. The available fields to modify are Name, Cost Centre, and Marketplace Visibility.
-func ModifyProduct(productId string, productType string, name string, costCentre string, marketplaceVisibility bool) (bool, error) {
+func (p *Product) ModifyProduct(productId string, productType string, name string, costCentre string, marketplaceVisibility bool) (bool, error) {
 	if productType == types.PRODUCT_MEGAPORT || productType == types.PRODUCT_MCR {
 		update := types.ProductUpdate{
 			Name:                 name,
@@ -99,8 +110,8 @@ func ModifyProduct(productId string, productType string, name string, costCentre
 			return false, marshalErr
 		}
 
-		updateResponse, err := shared.MakeAPICall("PUT", url, []byte(body))
-		isResErr, compiledResErr := shared.IsErrorResponse(updateResponse, &err, 200)
+		updateResponse, err := p.Config.MakeAPICall("PUT", url, []byte(body))
+		isResErr, compiledResErr := p.Config.IsErrorResponse(updateResponse, &err, 200)
 
 		if isResErr {
 			return false, compiledResErr
@@ -113,15 +124,15 @@ func ModifyProduct(productId string, productType string, name string, costCentre
 
 }
 
-func ManageProductLock(productId string, shouldLock bool) (bool, error) {
+func (p *Product) ManageProductLock(productId string, shouldLock bool) (bool, error) {
 	verb := "POST"
 
 	if !shouldLock {
 		verb = "DELETE"
 	}
 	url := fmt.Sprintf("/v2/product/%s/lock", productId)
-	lockResponse, err := shared.MakeAPICall(verb, url, nil)
-	isResErr, compiledResErr := shared.IsErrorResponse(lockResponse, &err, 200)
+	lockResponse, err := p.Config.MakeAPICall(verb, url, nil)
+	isResErr, compiledResErr := p.Config.IsErrorResponse(lockResponse, &err, 200)
 	if isResErr {
 		return false, compiledResErr
 	} else {

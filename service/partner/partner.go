@@ -18,24 +18,35 @@ package partner
 import (
 	"encoding/json"
 	"errors"
-	"github.com/megaport/megaportgo/mega_err"
-	"github.com/megaport/megaportgo/shared"
-	"github.com/megaport/megaportgo/types"
-	"github.com/lithammer/fuzzysearch/fuzzy"
 	"io/ioutil"
+
+	"github.com/lithammer/fuzzysearch/fuzzy"
+	"github.com/megaport/megaportgo/config"
+	"github.com/megaport/megaportgo/mega_err"
+	"github.com/megaport/megaportgo/types"
 )
 
-// GetAllPartnerMegaports gets a list of all partner megaports in the Megaport Marketplace.
-func GetAllPartnerMegaports() ([]types.PartnerMegaport, error) {
-	partnerMegaportUrl := "/v2/dropdowns/partner/megaports"
-	response, resErr := shared.MakeAPICall("GET", partnerMegaportUrl, nil)
-	defer response.Body.Close()
+type Partner struct {
+	*config.Config
+}
 
-	isResErr, parsedResErr := shared.IsErrorResponse(response, &resErr, 200)
+func New(cfg *config.Config) *Partner {
+	return &Partner{
+		Config: cfg,
+	}
+}
+
+// GetAllPartnerMegaports gets a list of all partner megaports in the Megaport Marketplace.
+func (p *Partner) GetAllPartnerMegaports() ([]types.PartnerMegaport, error) {
+	partnerMegaportUrl := "/v2/dropdowns/partner/megaports"
+
+	response, resErr := p.Config.MakeAPICall("GET", partnerMegaportUrl, nil)
+	isResErr, parsedResErr := p.Config.IsErrorResponse(response, &resErr, 200)
 
 	if isResErr {
 		return nil, parsedResErr
 	}
+	defer response.Body.Close()
 
 	body, fileErr := ioutil.ReadAll(response.Body)
 
@@ -53,7 +64,7 @@ func GetAllPartnerMegaports() ([]types.PartnerMegaport, error) {
 	return partnerMegaportResponse.Data, nil
 }
 
-func FilterPartnerMegaportByProductName(partnerMegaports *[]types.PartnerMegaport, productName string, exactMatch bool) error {
+func (p *Partner) FilterPartnerMegaportByProductName(partnerMegaports *[]types.PartnerMegaport, productName string, exactMatch bool) error {
 	existingMegaports := *partnerMegaports
 	var filteredMegaports []types.PartnerMegaport
 
@@ -88,7 +99,7 @@ func FilterPartnerMegaportByProductName(partnerMegaports *[]types.PartnerMegapor
 	}
 }
 
-func FilterPartnerMegaportByConnectType(partnerMegaports *[]types.PartnerMegaport, connectType string, exactMatch bool) error {
+func (p *Partner) FilterPartnerMegaportByConnectType(partnerMegaports *[]types.PartnerMegaport, connectType string, exactMatch bool) error {
 	existingMegaports := *partnerMegaports
 	var filteredMegaports []types.PartnerMegaport
 
@@ -123,7 +134,7 @@ func FilterPartnerMegaportByConnectType(partnerMegaports *[]types.PartnerMegapor
 	}
 }
 
-func FilterPartnerMegaportByCompanyName(partnerMegaports *[]types.PartnerMegaport, companyName string, exactMatch bool) error {
+func (p *Partner) FilterPartnerMegaportByCompanyName(partnerMegaports *[]types.PartnerMegaport, companyName string, exactMatch bool) error {
 	existingMegaports := *partnerMegaports
 	var filteredMegaports []types.PartnerMegaport
 
@@ -158,7 +169,7 @@ func FilterPartnerMegaportByCompanyName(partnerMegaports *[]types.PartnerMegapor
 	}
 }
 
-func FilterPartnerMegaportByLocationId(partnerMegaports *[]types.PartnerMegaport, locationId int) error {
+func (p *Partner) FilterPartnerMegaportByLocationId(partnerMegaports *[]types.PartnerMegaport, locationId int) error {
 	existingMegaports := *partnerMegaports
 	var filteredMegaports []types.PartnerMegaport
 

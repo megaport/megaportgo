@@ -1,3 +1,5 @@
+// +build integration
+
 // Copyright 2020 Megaport Pty Ltd
 //
 // Licensed under the Mozilla Public License, Version 2.0 (the
@@ -16,60 +18,120 @@ package location
 
 import (
 	"errors"
-	"github.com/megaport/megaportgo/mega_err"
-	"github.com/stretchr/testify/assert"
+	"os"
 	"testing"
+
+	"github.com/megaport/megaportgo/config"
+	"github.com/megaport/megaportgo/mega_err"
+	"github.com/megaport/megaportgo/service/authentication"
+	"github.com/stretchr/testify/assert"
 )
+
+var logger *config.DefaultLogger
+var cfg config.Config
+
+const (
+	MEGAPORTURL = "https://api-staging.megaport.com/"
+)
+
+func TestMain(m *testing.M) {
+	logger = config.NewDefaultLogger()
+	logger.SetLevel(config.DebugLevel)
+
+	username := os.Getenv("MEGAPORT_USERNAME")
+	password := os.Getenv("MEGAPORT_PASSWORD")
+	otp := os.Getenv("MEGAPORT_MFA_OTP_KEY")
+	logLevel := os.Getenv("LOG_LEVEL")
+
+	if logLevel != "" {
+		logger.SetLevel(config.StringToLogLevel(logLevel))
+	}
+
+	if username == "" {
+		logger.Error("MEGAPORT_USERNAME environment variable not set.")
+		os.Exit(1)
+	}
+
+	if password == "" {
+		logger.Error("MEGAPORT_PASSWORD environment variable not set.")
+		os.Exit(1)
+	}
+
+	cfg = config.Config{
+		Log:      logger,
+		Endpoint: MEGAPORTURL,
+	}
+
+	auth := authentication.New(&cfg, username, password, otp)
+	token, loginErr := auth.Login()
+
+	if loginErr != nil {
+		logger.Errorf("LoginError: %s", loginErr.Error())
+	}
+
+	cfg.SessionToken = token
+	os.Exit(m.Run())
+}
 
 func TestBadID(t *testing.T) {
 	assert := assert.New(t)
+	loc := New(&cfg)
+
 	// Make sure that an id with no record returns an error as expected.
-	_, idErr := GetLocationByID(-999999)
+	_, idErr := loc.GetLocationByID(-999999)
 	assert.Equal(mega_err.ERR_LOCATION_NOT_FOUND, idErr.Error())
 }
 
 func TestBadName(t *testing.T) {
-	// Make sure that a name with no record returns an error as expected.
 	assert := assert.New(t)
-	_, nameErr := GetLocationByName("DefinitelyNotARealName")
+	loc := New(&cfg)
+
+	// Make sure that a name with no record returns an error as expected.
+	_, nameErr := loc.GetLocationByName("DefinitelyNotARealName")
 	assert.Equal(mega_err.ERR_LOCATION_NOT_FOUND, nameErr.Error())
 }
 
 func TestGetLocationByID(t *testing.T) {
 	assert := assert.New(t)
+	loc := New(&cfg)
+
 	// Make sure our location by id works as expected
-	byId, idErr := GetLocationByID(137)
+	byId, idErr := loc.GetLocationByID(137)
 	assert.Nil(idErr)
 	assert.Equal("3DC/Telecity Sofia", byId.Name)
 
-	byId, idErr = GetLocationByID(383)
+	byId, idErr = loc.GetLocationByID(383)
 	assert.Nil(idErr)
 	assert.Equal("NextDC B2", byId.Name)
 }
 
 func TestGetLocationByName(t *testing.T) {
 	assert := assert.New(t)
+	loc := New(&cfg)
+
 	// Make sure our location by name works as expected
-	byName, nameErr := GetLocationByName("3DC/Telecity Sofia")
+	byName, nameErr := loc.GetLocationByName("3DC/Telecity Sofia")
 	assert.Nil(nameErr)
 	assert.Equal(137, byName.ID)
 
-	byName, nameErr = GetLocationByName("NextDC B2")
+	byName, nameErr = loc.GetLocationByName("NextDC B2")
 	assert.Nil(nameErr)
 	assert.Equal(383, byName.ID)
 
-	byName, nameErr = GetLocationByName("Equinix SY3")
+	byName, nameErr = loc.GetLocationByName("Equinix SY3")
 	assert.Nil(nameErr)
 	assert.Equal(6, byName.ID)
 }
 
 func TestGetLocationByNameFuzzy(t *testing.T) {
 	assert := assert.New(t)
-	byFuzzy, fuzzyErr := GetLocationByNameFuzzy("NextDC")
+	loc := New(&cfg)
+
+	byFuzzy, fuzzyErr := loc.GetLocationByNameFuzzy("NextDC")
 	assert.True(len(byFuzzy) > 0)
 	assert.NoError(fuzzyErr)
 
-	failFuzzy, failFuzzyErr := GetLocationByNameFuzzy("definitely not a location name at all")
+	failFuzzy, failFuzzyErr := loc.GetLocationByNameFuzzy("definitely not a location name at all")
 	assert.True(len(failFuzzy) == 0)
 	assert.Error(errors.New(mega_err.ERR_NO_MATCHING_LOCATIONS), failFuzzyErr)
 }
@@ -77,7 +139,9 @@ func TestGetLocationByNameFuzzy(t *testing.T) {
 // first one should always be Australia
 func TestGetCountries(t *testing.T) {
 	assert := assert.New(t)
-	countries, countriesErr := GetCountries()
+	loc := New(&cfg)
+
+	countries, countriesErr := loc.GetCountries()
 	assert.NoError(countriesErr)
 	assert.Equal("Australia", countries[0].Name)
 	assert.Equal("AUS", countries[0].Code)
@@ -87,7 +151,9 @@ func TestGetCountries(t *testing.T) {
 
 func TestMarketCodes(t *testing.T) {
 	assert := assert.New(t)
-	marketCodes, _ := GetMarketCodes()
+	loc := New(&cfg)
+
+	marketCodes, _ := loc.GetMarketCodes()
 	found := false
 
 	for i := 0; i < len(marketCodes); i++ {
@@ -101,17 +167,22 @@ func TestMarketCodes(t *testing.T) {
 
 func TestFilterLocationsByMarketCode(t *testing.T) {
 	assert := assert.New(t)
-	locations, _ := GetAllLocations()
+	loc := New(&cfg)
+
+	locations, _ := loc.GetAllLocations()
 	currentCount := len(locations)
-	FilterLocationsByMarketCode("AU", &locations)
+	loc.FilterLocationsByMarketCode("AU", &locations)
+
 	assert.Less(len(locations), currentCount)
 	assert.Equal("AU", locations[0].Market)
 }
 
 func TestFilterLocationsByMcrAvailability(t *testing.T) {
 	assert := assert.New(t)
-	locations, _ := GetAllLocations()
+	loc := New(&cfg)
+
+	locations, _ := loc.GetAllLocations()
 	currentCount := len(locations)
-	FilterLocationsByMcrAvailability(true, &locations)
+	loc.FilterLocationsByMcrAvailability(true, &locations)
 	assert.Less(len(locations), currentCount)
 }

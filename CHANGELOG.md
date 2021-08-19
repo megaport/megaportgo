@@ -1,3 +1,8 @@
+# 0.1.4 Release
+
+## Changes
+ - Fix marshalling issue with VirtualRouter in VXCResource.
+
 # 0.1.3-beta Release
 
 ## New Features

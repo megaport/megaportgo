@@ -18,20 +18,31 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/megaport/megaportgo/mega_err"
 	"io/ioutil"
 	"strings"
 	"time"
 
-	"github.com/megaport/megaportgo/product"
-	"github.com/megaport/megaportgo/shared"
+	"github.com/megaport/megaportgo/config"
+	"github.com/megaport/megaportgo/mega_err"
+	"github.com/megaport/megaportgo/service/product"
 	"github.com/megaport/megaportgo/types"
-	"github.com/rs/zerolog/log"
 )
+
+type VXC struct {
+	*config.Config
+	product *product.Product
+}
+
+func New(cfg *config.Config) *VXC {
+	return &VXC{
+		Config:  cfg,
+		product: product.New(cfg),
+	}
+}
 
 // BuyVXC purchases a generic VXC between two Megaport Ports. The productUID should be the Service Key for a port if
 // it is in another account, otherwise it should be the port UID.
-func BuyVXC(portUID string, productUID string, name string, rateLimit int, aEndVLAN int, bEndVLAN int) (string, error) {
+func (v *VXC) BuyVXC(portUID string, productUID string, name string, rateLimit int, aEndVLAN int, bEndVLAN int) (string, error) {
 	buyOrder := []types.VXCOrder{
 		{
 			PortID: portUID,
@@ -52,7 +63,7 @@ func BuyVXC(portUID string, productUID string, name string, rateLimit int, aEndV
 	}
 
 	requestBody, _ := json.Marshal(buyOrder)
-	responseBody, responseErr := product.ExecuteOrder(&requestBody)
+	responseBody, responseErr := v.product.ExecuteOrder(&requestBody)
 
 	if responseErr != nil {
 		return "", responseErr
@@ -69,9 +80,9 @@ func BuyVXC(portUID string, productUID string, name string, rateLimit int, aEndV
 }
 
 // GetVXCDetails gets the details of a VXC.
-func GetVXCDetails(id string) (types.VXC, error) {
+func (v *VXC) GetVXCDetails(id string) (types.VXC, error) {
 	url := "/v2/product/" + id
-	response, err := shared.MakeAPICall("GET", url, nil)
+	response, err := v.Config.MakeAPICall("GET", url, nil)
 	defer response.Body.Close()
 
 	if err != nil {
@@ -95,11 +106,11 @@ func GetVXCDetails(id string) (types.VXC, error) {
 }
 
 // GetVXCDetails deletes a VXC.
-func DeleteVXC(id string, deleteNow bool) (bool, error) {
-	return product.DeleteProduct(id, deleteNow)
+func (v *VXC) DeleteVXC(id string, deleteNow bool) (bool, error) {
+	return v.product.DeleteProduct(id, deleteNow)
 }
 
-func UpdateVXC(id string, name string, rateLimit int, aEndVLAN int, bEndVLAN int) (bool, error) {
+func (v *VXC) UpdateVXC(id string, name string, rateLimit int, aEndVLAN int, bEndVLAN int) (bool, error) {
 	url := fmt.Sprintf("/v2/product/%s/%s", types.PRODUCT_VXC, id)
 	var update interface{}
 
@@ -124,8 +135,8 @@ func UpdateVXC(id string, name string, rateLimit int, aEndVLAN int, bEndVLAN int
 		return false, marshalErr
 	}
 
-	updateResponse, err := shared.MakeAPICall("PUT", url, []byte(body))
-	isResErr, compiledResErr := shared.IsErrorResponse(updateResponse, &err, 200)
+	updateResponse, err := v.Config.MakeAPICall("PUT", url, []byte(body))
+	isResErr, compiledResErr := v.Config.IsErrorResponse(updateResponse, &err, 200)
 
 	if isResErr {
 		return false, compiledResErr
@@ -134,24 +145,24 @@ func UpdateVXC(id string, name string, rateLimit int, aEndVLAN int, bEndVLAN int
 	}
 }
 
-func WaitForVXCProvisioning(vxcId string) (bool, error) {
-	vxcInfo, _ := GetVXCDetails(vxcId)
+func (v *VXC) WaitForVXCProvisioning(vxcId string) (bool, error) {
+	vxcInfo, _ := v.GetVXCDetails(vxcId)
 	wait := 0
 
 	// Go-Live
-	log.Debug().Msg("Waiting for VXC status transition.")
+	v.Log.Info("Waiting for VXC status transition.")
 	for strings.Compare(vxcInfo.ProvisioningStatus, "LIVE") != 0 && wait < 30 {
 		time.Sleep(30 * time.Second)
 		wait++
-		vxcInfo, _ = GetVXCDetails(vxcId)
+		vxcInfo, _ = v.GetVXCDetails(vxcId)
 
 		if wait%5 == 0 {
-			log.Debug().Str("Status", vxcInfo.ProvisioningStatus).Msg("VXC is currently being provisioned.")
+			v.Log.Infoln("VXC is currently being provisioned. Status: ", vxcInfo.ProvisioningStatus)
 		}
 	}
 
-	vxcInfo, _ = GetVXCDetails(vxcId)
-	log.Debug().Str("Status", vxcInfo.ProvisioningStatus).Msg("VXC waiting cycle complete.")
+	vxcInfo, _ = v.GetVXCDetails(vxcId)
+	v.Log.Debugln("VXC waiting cycle complete. Status: ", vxcInfo.ProvisioningStatus)
 
 	if vxcInfo.ProvisioningStatus == "LIVE" {
 		return true, nil
@@ -164,14 +175,14 @@ func WaitForVXCProvisioning(vxcId string) (bool, error) {
 	}
 }
 
-func WaitForVXCUpdated(id string, name string, rateLimit int, aEndVLAN int, bEndVLAN int) (bool, error) {
+func (v *VXC) WaitForVXCUpdated(id string, name string, rateLimit int, aEndVLAN int, bEndVLAN int) (bool, error) {
 	wait := 0
 	hasUpdated := false
 
 	for !hasUpdated && wait < 30 {
 		time.Sleep(30 * time.Second)
 		wait++
-		vxcDetails, _ := GetVXCDetails(id)
+		vxcDetails, _ := v.GetVXCDetails(id)
 
 		if aEndVLAN == 0 {
 			aEndVLAN = vxcDetails.AEndConfiguration.VLAN
@@ -182,12 +193,11 @@ func WaitForVXCUpdated(id string, name string, rateLimit int, aEndVLAN int, bEnd
 		}
 
 		if wait%5 == 0 {
-			log.Debug().
-				Bool("Name", vxcDetails.Name == name).
-				Bool("RateLimit", vxcDetails.RateLimit == rateLimit).
-				Bool("AEndVLAN", vxcDetails.AEndConfiguration.VLAN == aEndVLAN).
-				Bool("BEndVLAN", vxcDetails.BEndConfiguration.VLAN == bEndVLAN).
-				Msg("VXC Update in progress.")
+			v.Log.Debugf("VXC Update in progress: Name %t; RateLimit %t; AEndVLAN %t; BEndVLAN %t\n",
+				vxcDetails.Name == name,
+				vxcDetails.RateLimit == rateLimit,
+				vxcDetails.AEndConfiguration.VLAN == aEndVLAN,
+				vxcDetails.BEndConfiguration.VLAN == bEndVLAN)
 		}
 
 		if vxcDetails.Name == name && vxcDetails.RateLimit == rateLimit && vxcDetails.AEndConfiguration.VLAN == aEndVLAN && vxcDetails.BEndConfiguration.VLAN == bEndVLAN {
@@ -195,13 +205,12 @@ func WaitForVXCUpdated(id string, name string, rateLimit int, aEndVLAN int, bEnd
 		}
 	}
 
-	vxcDetails, _ := GetVXCDetails(id)
-	log.Debug().
-		Bool("Name", vxcDetails.Name == name).
-		Bool("RateLimit", vxcDetails.RateLimit == rateLimit).
-		Bool("AEndVLAN", vxcDetails.AEndConfiguration.VLAN == aEndVLAN).
-		Bool("BEndVLAN", vxcDetails.BEndConfiguration.VLAN == bEndVLAN).
-		Msg("VXC wait cycle complete.")
+	vxcDetails, _ := v.GetVXCDetails(id)
+	v.Log.Debugf("VXC wait cyclecomplete: Name %t; RateLimit %t; AEndVLAN %t; BEndVLAN %t\n",
+		vxcDetails.Name == name,
+		vxcDetails.RateLimit == rateLimit,
+		vxcDetails.AEndConfiguration.VLAN == aEndVLAN,
+		vxcDetails.BEndConfiguration.VLAN == bEndVLAN)
 
 	if wait >= 30 {
 		return false, errors.New(mega_err.ERR_VXC_UPDATE_TIMEOUT_EXCEED)
