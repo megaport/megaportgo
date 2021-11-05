@@ -8,11 +8,15 @@ export LOG_LEVEL ?= INFO
 # Unit Testing #
 #######################
 
-unit: clean-test-cache auth-unit
+unit: clean-test-cache auth-unit vxc-unit
 
 auth-unit:
 	@echo "Unit Testing Authentication Package"
 	go test ${TEST_TIMEOUT} -v ./service/authentication -tags ${UNIT_TAG}
+
+vxc-unit:
+	@echo "Unit Testing Authentication Package"
+	go test ${TEST_TIMEOUT} -v ./service/vxc -tags ${UNIT_TAG}
 
 #######################
 # Integration Testing #

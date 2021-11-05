@@ -25,6 +25,7 @@ import (
 	"github.com/megaport/megaportgo/config"
 	"github.com/megaport/megaportgo/service/authentication"
 	"github.com/megaport/megaportgo/service/location"
+	"github.com/megaport/megaportgo/service/mcr"
 	"github.com/megaport/megaportgo/service/port"
 	"github.com/megaport/megaportgo/shared"
 	"github.com/megaport/megaportgo/types"
@@ -36,6 +37,7 @@ const (
 	TEST_LOCATION_A = "Global Switch Sydney"
 	TEST_LOCATION_B = "Equinix SY3"
 	TEST_LOCATION_C = "42464fbb-4d38-4f82-9061-294e1d84ed9f"
+	MCR_LOCATION    = "AU"
 )
 
 var logger *config.DefaultLogger
@@ -149,7 +151,7 @@ func TestVXCBuy(t *testing.T) {
 	assert.True(bDeleteStatus)
 }
 
-func TestAWSConnectionBuy(t *testing.T) {
+func TestAWSVIFConnectionBuy(t *testing.T) {
 	vxc := New(&cfg)
 	loc := location.New(&cfg)
 	port := port.New(&cfg)
@@ -167,8 +169,32 @@ func TestAWSConnectionBuy(t *testing.T) {
 
 	port.WaitForPortProvisioning(portId)
 
+	aEndConfiguration := types.AWSVXCOrderAEndConfiguration{
+		VLAN: shared.GenerateRandomVLAN(),
+	}
+
+	bEndConfiguration := types.AWSVXCOrderBEndConfiguration{
+		ProductUID: "87860c28-81ef-4e79-8cc7-cfc5a4c4bc86",
+		PartnerConfig: types.AWSVXCOrderBEndPartnerConfig{
+			ConnectType:  "AWS",
+			Type:         "private",
+			ASN:          65105,
+			AmazonASN:    65106,
+			OwnerAccount: "684021030471",
+			AuthKey:      "notarealauthkey",
+			Prefixes:     "10.0.1.0/24",
+		},
+	}
+
 	logger.Info("Buying AWS VIF Connection (B End).")
-	hostedVifId, hostedVifErr := vxc.BuyAWSHostedVIF(portId, "87860c28-81ef-4e79-8cc7-cfc5a4c4bc86", "Hosted AWS VIF Test Connection", 500, shared.GenerateRandomVLAN(), types.CONNECT_TYPE_AWS_VIF, "private", 65105, 65105, "684021030471", "notarealauthkey", "10.0.1.0/24", "", "")
+	hostedVifId, hostedVifErr := vxc.BuyAWSVXC(
+		portId,
+		"Hosted AWS VIF Test Connection",
+		500,
+		aEndConfiguration,
+		bEndConfiguration,
+	)
+
 	logger.Infof("AWS VIF Connection ID: %s", hostedVifId)
 
 	if !assert.NoError(t, hostedVifErr) && !assert.True(t, shared.IsGuid(hostedVifId)) {
@@ -187,12 +213,95 @@ func TestAWSConnectionBuy(t *testing.T) {
 	assert.True(t, portDeleteStatus)
 }
 
+func TestAWSHostedConnectionBuy(t *testing.T) {
+	vxc := New(&cfg)
+	loc := location.New(&cfg)
+	mcr := mcr.New(&cfg)
+
+	testLocation := loc.GetRandom(MCR_LOCATION)
+
+	logger.Info("Buying AWS Hosted Connection MCR (A End).")
+	mcrId, mcrErr := mcr.BuyMCR(testLocation.ID, "AWS Hosted Conection Test MCR", 1000, 0)
+	logger.Infof("MCR Purchased: %s", mcrId)
+
+	if !assert.NoError(t, mcrErr) && !assert.True(t, shared.IsGuid(mcrId)) {
+		cfg.PurchaseError(mcrId, mcrErr)
+		t.FailNow()
+	}
+
+	mcr.WaitForMcrProvisioning(mcrId)
+
+	aEndConfiguration := types.AWSVXCOrderAEndConfiguration{
+		VLAN: shared.GenerateRandomVLAN(),
+		PartnerConfig: types.AWSVXCOrderAEndPartnerConfig{
+			Interfaces: []types.PartnerConfigInterface{
+				types.PartnerConfigInterface{
+					IpAddresses: []string{"11.192.0.25/29"},
+					Bfd: types.BfdConfig{
+						TxInterval: 300,
+						RxInterval: 300,
+						Multiplier: 3,
+					},
+					BgpConnections: []types.BgpConnectionConfig{
+						{
+							PeerAsn:        62512,
+							LocalIpAddress: "11.192.0.25",
+							PeerIpAddress:  "11.192.0.26",
+							Password:       "notARealPAssword",
+							Shutdown:       false,
+							Description:    "BGP with MED and BFD enabled",
+							MedIn:          100,
+							MedOut:         100,
+							BfdEnabled:     true,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	bEndConfiguration := types.AWSVXCOrderBEndConfiguration{
+		ProductUID: "b2e0b6b8-2943-4c44-8a07-9ec13060afb2",
+		PartnerConfig: types.AWSVXCOrderBEndPartnerConfig{
+			ConnectType:  "AWSHC",
+			Type:         "private",
+			OwnerAccount: "684021030471",
+		},
+	}
+
+	logger.Info("Buying AWS Hosted Connection (B End).")
+	hostedConnectionId, hostedConnectionErr := vxc.BuyAWSVXC(
+		mcrId,
+		"Hosted Connection AWS Test Connection",
+		500,
+		aEndConfiguration,
+		bEndConfiguration,
+	)
+	logger.Infof("AWS Hosted Connection ID: %s", hostedConnectionId)
+
+	if !assert.NoError(t, hostedConnectionErr) && !assert.True(t, shared.IsGuid(hostedConnectionId)) {
+		cfg.PurchaseError(hostedConnectionId, hostedConnectionErr)
+		t.FailNow()
+	}
+
+	vxc.WaitForVXCProvisioning(hostedConnectionId)
+
+	hostedVIFDeleteStatus, hostedVIFDeleteErr := vxc.DeleteVXC(hostedConnectionId, true)
+	assert.NoError(t, hostedVIFDeleteErr)
+	assert.True(t, hostedVIFDeleteStatus)
+
+	mcrDeleteStatus, mcrDeleteErr := mcr.DeleteMCR(mcrId, true)
+	assert.NoError(t, mcrDeleteErr)
+	assert.True(t, mcrDeleteStatus)
+}
+
 func TestAWSConnectionBuyDefaults(t *testing.T) {
 	vxc := New(&cfg)
 	loc := location.New(&cfg)
 	port := port.New(&cfg)
 
 	testLocation, _ := loc.GetLocationByName(TEST_LOCATION_B)
+
 	logger.Info("Buying AWS VIF Port (A End).")
 	portId, portErr := port.BuySinglePort("AWS VIF Test Port", 1, 1000, int(testLocation.ID), "AU", true)
 	logger.Infof("Port Purchased: %s", portId)
@@ -203,8 +312,30 @@ func TestAWSConnectionBuyDefaults(t *testing.T) {
 	}
 	port.WaitForPortProvisioning(portId)
 
+	aEndConfiguration := types.AWSVXCOrderAEndConfiguration{
+		VLAN: 0,
+	}
+
+	bEndConfiguration := types.AWSVXCOrderBEndConfiguration{
+		ProductUID: "87860c28-81ef-4e79-8cc7-cfc5a4c4bc86",
+		PartnerConfig: types.AWSVXCOrderBEndPartnerConfig{
+			ConnectType:  "AWS",
+			Type:         "private",
+			ASN:          65105,
+			AmazonASN:    65106,
+			OwnerAccount: "684021030471",
+		},
+	}
+
 	logger.Info("Buying AWS VIF Connection (B End).")
-	hostedVifId, hostedVifErr := vxc.BuyAWSHostedVIF(portId, "87860c28-81ef-4e79-8cc7-cfc5a4c4bc86", "Hosted AWS VIF Test Connection", 500, 0, types.CONNECT_TYPE_AWS_VIF, "private", 65105, 65106, "684021030471", "", "", "", "")
+	hostedVifId, hostedVifErr := vxc.BuyAWSVXC(
+		portId,
+		"Hosted AWS VIF Test Connection",
+		500,
+		aEndConfiguration,
+		bEndConfiguration,
+	)
+
 	logger.Infof("AWS VIF Connection ID: %s", hostedVifId)
 
 	if !assert.NoError(t, hostedVifErr) && !assert.True(t, shared.IsGuid(hostedVifId)) {

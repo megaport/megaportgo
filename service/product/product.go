@@ -39,8 +39,12 @@ func New(cfg *config.Config) *Product {
 // ExecuteOrder executes an order against the Megaport API.
 func (p *Product) ExecuteOrder(requestBody *[]byte) (*[]byte, error) {
 	url := "/v2/networkdesign/buy"
+
 	response, resErr := p.Config.MakeAPICall("POST", url, *requestBody)
-	defer response.Body.Close()
+
+	if response != nil {
+		defer response.Body.Close()
+	}
 
 	isError, parsedError := p.Config.IsErrorResponse(response, &resErr, 200)
 
@@ -52,6 +56,7 @@ func (p *Product) ExecuteOrder(requestBody *[]byte) (*[]byte, error) {
 	if fileErr != nil {
 		return nil, fileErr
 	}
+
 	return &body, nil
 }
 

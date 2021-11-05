@@ -159,8 +159,48 @@ func TestMCRConnectionAdd(t *testing.T) {
 
 		logger.Info("Buying A")
 		logger.Info("Buying AWS VIF Connection (B End).")
-		vifOneId, vifOneErr := vxc.BuyAWSHostedVIF(mcrId, "87860c28-81ef-4e79-8cc7-cfc5a4c4bc86", "MCR and AWS Connection 1", 500, shared.GenerateRandomVLAN(), types.CONNECT_TYPE_AWS_VIF, "private", 65105, 65105, "684021030471", "notarealauthkey", "10.0.1.0/24", "", "")
-		vifTwoId, vifTwoErr := vxc.BuyAWSHostedVIF(mcrId, "87860c28-81ef-4e79-8cc7-cfc5a4c4bc86", "MCR and AWS Connection 2", 500, shared.GenerateRandomVLAN(), types.CONNECT_TYPE_AWS_VIF, "private", 65105, 65105, "684021030471", "notarealauthkey", "10.0.2.0/24", "", "")
+		vifOneId, vifOneErr := vxc.BuyAWSVXC(
+			mcrId,
+			"MCR and AWS Connection 1",
+			500,
+			types.AWSVXCOrderAEndConfiguration{
+				VLAN: shared.GenerateRandomVLAN(),
+			},
+			types.AWSVXCOrderBEndConfiguration{
+				ProductUID: "87860c28-81ef-4e79-8cc7-cfc5a4c4bc86",
+				PartnerConfig: types.AWSVXCOrderBEndPartnerConfig{
+					ConnectType:  types.CONNECT_TYPE_AWS_VIF,
+					Type:         "private",
+					ASN:          65105,
+					AmazonASN:    65106,
+					OwnerAccount: "684021030471",
+					AuthKey:      "notarealauthkey",
+					Prefixes:     "10.0.1.0/24",
+				},
+			},
+		)
+
+		vifTwoId, vifTwoErr := vxc.BuyAWSVXC(
+			mcrId,
+			"MCR and AWS Connection 2",
+			500,
+			types.AWSVXCOrderAEndConfiguration{
+				VLAN: shared.GenerateRandomVLAN(),
+			},
+			types.AWSVXCOrderBEndConfiguration{
+				ProductUID: "87860c28-81ef-4e79-8cc7-cfc5a4c4bc86",
+				PartnerConfig: types.AWSVXCOrderBEndPartnerConfig{
+					ConnectType:  types.CONNECT_TYPE_AWS_VIF,
+					Type:         "private",
+					ASN:          65105,
+					AmazonASN:    65106,
+					OwnerAccount: "684021030471",
+					AuthKey:      "notarealauthkey",
+					Prefixes:     "10.0.2.0/24",
+				},
+			},
+		)
+
 		logger.Infof("AWS VIF Connection 1: %s", vifOneId)
 		logger.Infof("AWS VIF Connection 2: %s", vifTwoId)
 

@@ -22,38 +22,31 @@ import (
 	"github.com/megaport/megaportgo/types"
 )
 
-// BuyAWSHostedVIF buys an AWS Hosted VIF.
-func (v *VXC) BuyAWSHostedVIF(portUID string, productUID string, name string, rateLimit int, aEndVLAN int, connectType string, vifType string, asn int, amazonASN int, ownerAccount string, authKey string, prefixes string, customerIPAddress string, amazonIPAddress string) (string, error) {
-	buyOrder := []types.AWSHostedVIFOrder{
-		types.AWSHostedVIFOrder{
+// BuyAWSVXC buys an AWS VXC.
+func (v *VXC) BuyAWSVXC(
+	portUID string,
+	vxcName string,
+	rateLimit int,
+	aEndConfiguration types.AWSVXCOrderAEndConfiguration,
+	bEndConfiguration types.AWSVXCOrderBEndConfiguration,
+) (string, error) {
+
+	buyOrder := []types.AWSVXCOrder{
+		types.AWSVXCOrder{
 			PortID: portUID,
-			AssociatedVXCs: []types.AWSHostedVIFOrderConfiguration{
+			AssociatedVXCs: []types.AWSVXCOrderConfiguration{
 				{
-					Name:      name,
+					Name:      vxcName,
 					RateLimit: rateLimit,
-					AEnd: types.VXCOrderAEndConfiguration{
-						VLAN: aEndVLAN,
-					},
-					BEnd: types.AWSHostedVIFOrderBEndConfiguration{
-						ProductUID: productUID,
-						PartnerConfig: types.AWSHostedVIFOrderPartnerConfig{
-							ConnectType:       connectType,
-							Type:              vifType,
-							ASN:               asn,
-							AmazonASN:         amazonASN,
-							OwnerAccount:      ownerAccount,
-							AuthKey:           authKey,
-							Prefixes:          prefixes,
-							CustomerIPAddress: customerIPAddress,
-							AmazonIPAddress:   amazonIPAddress,
-						},
-					},
+					AEnd:      aEndConfiguration,
+					BEnd:      bEndConfiguration,
 				},
 			},
 		},
 	}
 
 	requestBody, _ := json.Marshal(buyOrder)
+
 	responseBody, responseErr := v.product.ExecuteOrder(&requestBody)
 
 	if responseErr != nil {

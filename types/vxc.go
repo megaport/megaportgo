@@ -19,12 +19,6 @@ type VXCOrder struct {
 	AssociatedVXCs []VXCConfiguration `json:"associatedVxcs"`
 	PortID         string             `json:"productUid"`
 }
-
-type AWSHostedVIFOrder struct {
-	AssociatedVXCs []AWSHostedVIFOrderConfiguration `json:"associatedVxcs"`
-	PortID         string                           `json:"productUid"`
-}
-
 type VXCConfiguration struct {
 	Name      string                    `json:"productName"`
 	RateLimit int                       `json:"rateLimit"`
@@ -32,13 +26,69 @@ type VXCConfiguration struct {
 	BEnd      VXCOrderBEndConfiguration `json:"bEnd"`
 }
 
-type AWSHostedVIFOrderConfiguration struct {
-	Name      string                             `json:"productName"`
-	RateLimit int                                `json:"rateLimit"`
-	AEnd      VXCOrderAEndConfiguration          `json:"aEnd"`
-	BEnd      AWSHostedVIFOrderBEndConfiguration `json:"bEnd"`
+// AWS
+type AWSVXCOrder struct {
+	AssociatedVXCs []AWSVXCOrderConfiguration `json:"associatedVxcs"`
+	PortID         string                     `json:"productUid"`
 }
 
+type AWSVXCOrderConfiguration struct {
+	Name      string                       `json:"productName"`
+	RateLimit int                          `json:"rateLimit"`
+	AEnd      AWSVXCOrderAEndConfiguration `json:"aEnd"`
+	BEnd      AWSVXCOrderBEndConfiguration `json:"bEnd"`
+}
+type AWSVXCOrderAEndConfiguration struct {
+	VLAN          int                          `json:"vlan"`
+	PartnerConfig AWSVXCOrderAEndPartnerConfig `json:"partnerConfig,omitempty"`
+}
+
+type AWSVXCOrderAEndPartnerConfig struct {
+	Interfaces []PartnerConfigInterface `json:"interfaces,omitempty"`
+}
+
+type PartnerConfigInterface struct {
+	IpAddresses    []string              `json:"ipAddresses,omitempty"`
+	Bfd            BfdConfig             `json:"bfd,omitempty"`
+	BgpConnections []BgpConnectionConfig `json:"bgpConnections,omitempty"`
+}
+
+type BfdConfig struct {
+	TxInterval int `json:"txInterval,omitempty"`
+	RxInterval int `json:"rxInterval,omitempty"`
+	Multiplier int `json:"multiplier,omitempty"`
+}
+
+type BgpConnectionConfig struct {
+	PeerAsn        int    `json:"peerAsn"`
+	LocalIpAddress string `json:"localIpAddress"`
+	PeerIpAddress  string `json:"peerIpAddress"`
+	Password       string `json:"password,omitempty"`
+	Shutdown       bool   `json:"shutdown"`
+	Description    string `json:"description,omitempty"`
+	MedIn          int    `json:"medIn,omitempty"`
+	MedOut         int    `json:"medOut,omitempty"`
+	BfdEnabled     bool   `json:"bfdEnabled"`
+}
+
+type AWSVXCOrderBEndConfiguration struct {
+	ProductUID    string                       `json:"productUid"`
+	PartnerConfig AWSVXCOrderBEndPartnerConfig `json:"partnerConfig"`
+}
+
+type AWSVXCOrderBEndPartnerConfig struct {
+	ConnectType       string `json:"connectType"`
+	Type              string `json:"type"`
+	OwnerAccount      string `json:"ownerAccount"`
+	ASN               int    `json:"asn,omitempty"`
+	AmazonASN         int    `json:"amazonAsn,omitempty"`
+	AuthKey           string `json:"authKey,omitempty"`
+	Prefixes          string `json:"prefixes,omitempty"`
+	CustomerIPAddress string `json:"customerIpAddress,omitempty"`
+	AmazonIPAddress   string `json:"amazonIpAddress,omitempty"`
+}
+
+// Common VXC types
 type VXCOrderAEndConfiguration struct {
 	VLAN int `json:"vlan"`
 }
@@ -46,23 +96,6 @@ type VXCOrderAEndConfiguration struct {
 type VXCOrderBEndConfiguration struct {
 	VLAN       int    `json:"vlan,omitempty"`
 	ProductUID string `json:"productUid"`
-}
-
-type AWSHostedVIFOrderBEndConfiguration struct {
-	ProductUID    string                         `json:"productUid"`
-	PartnerConfig AWSHostedVIFOrderPartnerConfig `json:"partnerConfig"`
-}
-
-type AWSHostedVIFOrderPartnerConfig struct {
-	ConnectType       string `json:"connectType"`
-	Type              string `json:"type"`
-	ASN               int    `json:"asn"`
-	AmazonASN         int    `json:"amazonAsn"`
-	OwnerAccount      string `json:"ownerAccount"`
-	AuthKey           string `json:"authKey,omitempty"`
-	Prefixes          string `json:"prefixes,omitempty"`
-	CustomerIPAddress string `json:"customerIpAddress,omitempty"`
-	AmazonIPAddress   string `json:"amazonIpAddress,omitempty"`
 }
 
 type VXCOrderConfirmation struct {

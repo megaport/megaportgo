@@ -1,3 +1,11 @@
+# 0.1.5 Release
+
+## New Features
+ - Add BGP Connection support for AWS VXC Connections
+ 
+## Changes
+ - Rewrite and rename BuyAWSHostedVIF to BuyAWSVXC to handle new parameters and use cases
+
 # 0.1.4 Release
 
 ## Changes

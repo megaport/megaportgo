@@ -17,15 +17,23 @@ type Config struct {
 	Log          Logger
 	Endpoint     string
 	SessionToken string
+	Client       httpClientInterface
+}
+
+// http interface to cover mocking
+type httpClientInterface interface {
+	Do(req *http.Request) (retres *http.Response, reterr error)
 }
 
 // MakeAPICall
 func (c *Config) MakeAPICall(verb string, endpoint string, body []byte) (*http.Response, error) {
-	client := &http.Client{}
+
 	var request *http.Request
 	var reqErr error
 
 	url := c.Endpoint + endpoint
+
+	c.Log.Debugln("Making call to: ", string(url))
 
 	if body == nil {
 		request, reqErr = http.NewRequest(verb, url, nil)
@@ -45,7 +53,12 @@ func (c *Config) MakeAPICall(verb string, endpoint string, body []byte) (*http.R
 		request.Header.Set("Content-Type", "application/json")
 	}
 
-	response, resErr := client.Do(request)
+	// check config for http client, create a new client if one was not provided at instantiation
+	if c.Client == nil {
+		c.Client = new(http.Client)
+	}
+
+	response, resErr := c.Client.Do(request)
 
 	if resErr != nil {
 		return nil, resErr
