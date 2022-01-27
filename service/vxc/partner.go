@@ -70,42 +70,98 @@ func (v *VXC) LookupPartnerPorts(key string, portSpeed int, partner string, requ
 	return "", errors.New(mega_err.ERR_NO_AVAILABLE_VXC_PORTS)
 }
 
+// BuyAWSVXC buys an AWS VXC.
+func (v *VXC) BuyPartnerVXC(
+	portUID string,
+	vxcName string,
+	rateLimit int,
+	aEndConfiguration types.VXCOrderAEndConfiguration,
+	bEndConfiguration types.PartnerOrderBEndConfiguration,
+) (string, error) {
+
+	buyOrder := []types.PartnerOrder{
+		{
+			PortID: portUID,
+			AssociatedVXCs: []types.PartnerOrderContents{
+				{
+					Name:      vxcName,
+					RateLimit: rateLimit,
+					AEnd:      aEndConfiguration,
+					BEnd:      bEndConfiguration,
+				},
+			},
+		},
+	}
+
+	requestBody, _ := json.Marshal(buyOrder)
+
+	responseBody, responseErr := v.product.ExecuteOrder(&requestBody)
+
+	if responseErr != nil {
+		return "", responseErr
+	}
+
+	orderInfo := types.VXCOrderResponse{}
+	err := json.Unmarshal(*responseBody, &orderInfo)
+
+	if err != nil {
+		return "", err
+	}
+
+	return orderInfo.Data[0].TechnicalServiceUID, nil
+}
+
 // BuyPartnerVXC performs Step 2 of the partner port purchase process. These are for partners that require some kind
 // of partner pairing key (e.g. GCP, Azure).
-func (v *VXC) BuyPartnerVXC(portId string, name string, rateLimit int, aEndVLan int, key string, partner string, attributes map[string]bool, requestedProductID string) (string, error) {
-	partnerPortId, partnerLookupErr := v.LookupPartnerPorts(key, rateLimit, partner, requestedProductID)
-
-	if partnerLookupErr != nil {
-		return "", partnerLookupErr
-	}
-
-	aEndConfiguration := types.PartnerOrderAEndConfiguration{}
-
-	if aEndVLan != 0 {
-		aEndConfiguration.VLAN = aEndVLan
-	}
+func (v *VXC) MarshallPartnerConfig(
+	key string,
+	partner string,
+	attributes map[string]interface{},
+) (interface{}, error) {
 
 	var partnerConfig interface{} = nil
 
 	if partner == PARTNER_AZURE {
 		var azurePeerings []map[string]string
 
+		private := false
+		public := false
+		microsoft := false
+
+		if v, ok := attributes["private_peer"].(bool); ok && v {
+			private = true
+		}
+
+		if v, ok := attributes["public_peer"].(bool); ok && v {
+			public = true
+		}
+
+		if v, ok := attributes["microsoft_peer"].(bool); ok && v {
+			microsoft = true
+		}
+
+		peers := map[string]bool{
+			PEERING_AZURE_PRIVATE:   private,
+			PEERING_AZURE_PUBLIC:    public,
+			PEERING_AZURE_MICROSOFT: microsoft,
+		}
+
 		if attributes != nil {
-			if private, ok := attributes[PEERING_AZURE_PRIVATE]; ok && private {
+			if private, ok := peers[PEERING_AZURE_PRIVATE]; ok && private {
 				envelope := map[string]string{
 					"type": PEERING_AZURE_PRIVATE,
 				}
 				azurePeerings = append(azurePeerings, envelope)
 			}
 
-			if public, ok := attributes[PEERING_AZURE_PUBLIC]; ok && public {
+			if public, ok := peers[PEERING_AZURE_PUBLIC]; ok && public {
 				envelope := map[string]string{
 					"type": PEERING_AZURE_PUBLIC,
 				}
 				azurePeerings = append(azurePeerings, envelope)
 			}
 
-			if microsoft, ok := attributes[PEERING_AZURE_MICROSOFT]; ok && microsoft {
+			if microsoft, ok := peers[PEERING_AZURE_MICROSOFT]; ok && microsoft {
 				envelope := map[string]string{
 					"type": PEERING_AZURE_MICROSOFT,
 				}
@@ -127,48 +183,5 @@ func (v *VXC) BuyPartnerVXC(portId string, name string, rateLimit int, aEndVLan 
 		return "", errors.New(mega_err.ERR_INVALID_PARTNER)
 	}
 
-	buyOrder := []types.PartnerOrder{
-		types.PartnerOrder{
-			PortID: portId,
-			AssociatedVXCs: []types.PartnerOrderContents{
-				types.PartnerOrderContents{
-					Name:      name,
-					RateLimit: rateLimit,
-					AEnd:      aEndConfiguration,
-					BEnd: types.PartnerOrderBEndConfiguration{
-						PartnerPortID: partnerPortId,
-						PartnerConfig: partnerConfig,
-					},
-				},
-			},
-		},
-	}
-
-	requestBody, _ := json.Marshal(buyOrder)
-	responseBody, responseErr := v.product.ExecuteOrder(&requestBody)
-
-	if responseErr != nil {
-		return "", responseErr
-	}
-
-	orderInfo := types.VXCOrderResponse{}
-	err := json.Unmarshal(*responseBody, &orderInfo)
-
-	if err != nil {
-		return "", err
-	}
-
-	return orderInfo.Data[0].TechnicalServiceUID, nil
-}
-
-func (v *VXC) BuyAzureExpressRoute(portId string, name string, rateLimit int, aEndVLan int, serviceKey string, peerings map[string]bool) (string, error) {
-	return v.BuyPartnerVXC(portId, name, rateLimit, aEndVLan, serviceKey, PARTNER_AZURE, peerings, "")
-}
-
-func (v *VXC) BuyGoogleInterconnect(portId string, name string, rateLimit int, aEndVLan int, pairingKey string) (string, error) {
-	return v.BuyPartnerVXC(portId, name, rateLimit, aEndVLan, pairingKey, PARTNER_GOOGLE, nil, "")
-}
-
-func (v *VXC) BuyGoogleInterconnectLocation(portId string, name string, rateLimit int, aEndVLan int, pairingKey string, requestedProductID string) (string, error) {
-	return v.BuyPartnerVXC(portId, name, rateLimit, aEndVLan, pairingKey, PARTNER_GOOGLE, nil, requestedProductID)
+	return partnerConfig, nil
 }

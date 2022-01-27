@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/megaport/megaportgo/config"
 	"github.com/megaport/megaportgo/mega_err"
 	"github.com/megaport/megaportgo/service/product"
@@ -40,29 +41,30 @@ func New(cfg *config.Config) *VXC {
 	}
 }
 
-// BuyVXC purchases a generic VXC between two Megaport Ports. The productUID should be the Service Key for a port if
-// it is in another account, otherwise it should be the port UID.
-func (v *VXC) BuyVXC(portUID string, productUID string, name string, rateLimit int, aEndVLAN int, bEndVLAN int) (string, error) {
+func (v *VXC) BuyVXC(
+	portUID string,
+	vxcName string,
+	rateLimit int,
+	aEndConfiguration types.VXCOrderAEndConfiguration,
+	bEndConfiguration types.VXCOrderBEndConfiguration,
+) (string, error) {
+
 	buyOrder := []types.VXCOrder{
 		{
 			PortID: portUID,
-			AssociatedVXCs: []types.VXCConfiguration{
+			AssociatedVXCs: []types.VXCOrderConfiguration{
 				{
-					Name:      name,
+					Name:      vxcName,
 					RateLimit: rateLimit,
-					AEnd: types.VXCOrderAEndConfiguration{
-						VLAN: aEndVLAN,
-					},
-					BEnd: types.VXCOrderBEndConfiguration{
-						ProductUID: productUID,
-						VLAN:       bEndVLAN,
-					},
+					AEnd:      aEndConfiguration,
+					BEnd:      bEndConfiguration,
 				},
 			},
 		},
 	}
 
 	requestBody, _ := json.Marshal(buyOrder)
+
 	responseBody, responseErr := v.product.ExecuteOrder(&requestBody)
 
 	if responseErr != nil {
@@ -217,4 +219,207 @@ func (v *VXC) WaitForVXCUpdated(id string, name string, rateLimit int, aEndVLAN 
 	} else {
 		return true, nil
 	}
+}
+
+func (v *VXC) MarshallMcrAEndConfig(d *schema.ResourceData) (types.PartnerConfigInterface, error) {
+
+	mcrConfig := types.PartnerConfigInterface{}
+
+	// infer a_end configuration
+	if a_end_mcr_configuration, a_ok := d.GetOk("a_end_mcr_configuration"); a_ok && len(a_end_mcr_configuration.(*schema.Set).List()) > 0 {
+
+		// cast to a map
+		mcr_map := a_end_mcr_configuration.(*schema.Set).List()[0].(map[string]interface{})
+
+		// init config props
+		ip_addresses_list := []string{}
+		bfd_configuration := types.BfdConfig{}
+		bgp_connection_list := []types.BgpConnectionConfig{}
+
+		// extract ip addresses list
+		if ip_addresses, ip_ok := mcr_map["ip_addresses"].([]interface{}); ip_ok {
+
+			for _, ip_address := range ip_addresses {
+				i := ip_address.(string)
+				ip_addresses_list = append(ip_addresses_list, i)
+			}
+
+			mcrConfig.IpAddresses = ip_addresses_list
+		}
+
+		// extract BFD settings
+		if bfd_config, bfd_ok := mcr_map["bfd_configuration"].(*schema.Set); bfd_ok && len(bfd_config.List()) > 0 {
+
+			bfd_config_map := bfd_config.List()[0].(map[string]interface{})
+			bfd_configuration = types.BfdConfig{
+				TxInterval: bfd_config_map["tx_internal"].(int),
+				RxInterval: bfd_config_map["rx_internal"].(int),
+				Multiplier: bfd_config_map["multiplier"].(int),
+			}
+
+			mcrConfig.Bfd = bfd_configuration
+		}
+
+		// extract bgp connections
+		if bgp_connections, bgp_ok := mcr_map["bgp_connection"].([]interface{}); bgp_ok {
+
+			for _, bgp_connection := range bgp_connections {
+
+				i := bgp_connection.(map[string]interface{})
+
+				new_bgp_connection := types.BgpConnectionConfig{
+					PeerAsn:        i["peer_asn"].(int),
+					LocalIpAddress: i["local_ip_address"].(string),
+					PeerIpAddress:  i["peer_ip_address"].(string),
+					Password:       i["password"].(string),
+					Shutdown:       i["shutdown"].(bool),
+					Description:    i["description"].(string),
+					MedIn:          i["med_in"].(int),
+					MedOut:         i["med_out"].(int),
+					BfdEnabled:     i["bfd_enabled"].(bool),
+				}
+
+				bgp_connection_list = append(bgp_connection_list, new_bgp_connection)
+
+			}
+
+			mcrConfig.BgpConnections = bgp_connection_list
+		}
+
+	}
+
+	return mcrConfig, nil
+
+}
+
+func (v *VXC) UnmarshallMcrAEndConfig(vxcDetails types.VXC) (interface{}, error) {
+
+	v.Log.Warn("Unmarshall")
+
+	cspConnection := v.GetCspConnection("resource_name", "a_csp_connection", vxcDetails)
+
+	if partner_interfaces, ok := cspConnection["interfaces"].([]interface{}); ok {
+
+		v.Log.Warn("Interfaces")
+		// handle more than one interface
+		if len(partner_interfaces) != 1 {
+			v.Log.Warn("More than one interface present in MCR A end Resource")
+			return nil, errors.New("More than one interface present in MCR A end Resource")
+		}
+
+		for _, partner_interface := range partner_interfaces {
+
+			v.Log.Warn("...processing")
+			partner_configuration := map[string]interface{}{}
+
+			partner_interface_map, pi_ok := partner_interface.(map[string]interface{})
+			if !pi_ok {
+				v.Log.Warn("Error casting partner_interface_map")
+			}
+			v.Log.Info(partner_interface_map)
+
+			// add ip addresses to configuration
+			if ip_slice, ip_ok := partner_interface_map["ipAddresses"].([]interface{}); ip_ok {
+				if len(ip_slice) > 0 {
+					v.Log.Info(" - ipAddresses field present")
+					partner_configuration["ip_addresses"] = ip_slice
+				} else {
+					v.Log.Info(" - ipAddresses is empty")
+				}
+			} else {
+				v.Log.Info(" - ipAddresses field not present")
+			}
+
+			// extract bfd settings
+			bfd_map, bfd_ok := partner_interface_map["bfd"].(map[string]interface{})
+			if bfd_ok {
+
+				v.Log.Info(" - bfd field present")
+				// add bfd to configuration
+				partner_configuration["bfd_configuration"] = []interface{}{map[string]interface{}{
+					"tx_internal": bfd_map["txInterval"],
+					"rx_internal": bfd_map["rxInterval"],
+					"multiplier":  bfd_map["multiplier"],
+				}}
+
+			} else {
+				v.Log.Info(" - bfd field not present")
+			}
+
+			// extract bgp configurations
+			bgp_connection_list := []interface{}{}
+			if bgpConnections, bgp_ok := partner_interface_map["bgpConnections"].([]interface{}); bgp_ok {
+
+				v.Log.Info(" - bgpConnections field present")
+				for _, bgpConnection := range bgpConnections {
+
+					bgp_connection_map, bgpm_ok := bgpConnection.(map[string]interface{})
+					if bgpm_ok {
+
+						new_bgp_connection := map[string]interface{}{
+							"peer_asn":         bgp_connection_map["peerAsn"],
+							"local_ip_address": bgp_connection_map["localIpAddress"],
+							"peer_ip_address":  bgp_connection_map["peerIpAddress"],
+							"password":         bgp_connection_map["password"],
+							"shutdown":         bgp_connection_map["shutdown"],
+							"description":      bgp_connection_map["description"],
+							"med_in":           bgp_connection_map["medIn"],
+							"med_out":          bgp_connection_map["medOut"],
+							"bfd_enabled":      bgp_connection_map["bfdEnabled"],
+						}
+
+						bgp_connection_list = append(bgp_connection_list, new_bgp_connection)
+					}
+
+				} // end bgp connections loop
+
+				// add bgp to configuration
+				partner_configuration["bgp_connection"] = bgp_connection_list
+
+			} else {
+				v.Log.Info(" - bgpConnections field not present")
+			} // end bgp connection inspection
+
+			if len(partner_configuration) > 0 {
+				v.Log.Info("Package for return")
+				wrapped_partner_configuration := append([]interface{}{}, partner_configuration)
+
+				// Return here
+				return wrapped_partner_configuration, nil
+			}
+
+		} // end interface loop
+
+	}
+
+	v.Log.Info("Nothing of value was found...")
+	return nil, nil
+}
+
+func (v *VXC) GetCspConnection(cspIdentifier string, cspIdentifierValue string, vxcDetails types.VXC) map[string]interface{} {
+
+	v.Log.Info("searching for  csp where " + cspIdentifier + "=" + cspIdentifierValue)
+	cspConnectionList := []map[string]interface{}{}
+
+	if cspConnectionListInner, ok := vxcDetails.Resources.CspConnection.([]interface{}); ok {
+		for _, conn := range cspConnectionListInner {
+			v.Log.Info("searchCspConnections - adding connection")
+			cspConnection := conn.(map[string]interface{})
+			cspConnectionList = append(cspConnectionList, cspConnection)
+		}
+	} else if cspConnection, ok := vxcDetails.Resources.CspConnection.(map[string]interface{}); ok {
+		v.Log.Info("searchCspConnections - adding connection")
+		cspConnectionList = append(cspConnectionList, cspConnection)
+	}
+
+	for _, conn := range cspConnectionList {
+		v.Log.Info("inspecting - " + conn[cspIdentifier].(string))
+		if cspIdentifierValue == conn[cspIdentifier].(string) {
+			v.Log.Info("searchCspConnections - found")
+			v.Log.Info(conn)
+			return conn
+		}
+	}
+
+	return nil
 }

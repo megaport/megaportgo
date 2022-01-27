@@ -22,7 +22,7 @@ vxc-unit:
 # Integration Testing #
 #######################
 
-integration: clean-test-cache auth-integ location-integ mcr-integ partner-integ port-integ vxc-integ
+integration: clean-test-cache create-user auth-integ location-integ mcr-integ partner-integ port-integ vxc-integ
 
 auth-integ:
 	@echo "Integration Testing Authentication Package; Log Level: ${LOG_LEVEL}"
@@ -30,23 +30,23 @@ auth-integ:
 
 location-integ:
 	@echo "Integration Testing Location Package; Log Level: ${LOG_LEVEL}"
-	go test ${TEST_TIMEOUT} -v ./service/location -tags ${INTEGRATION_TAG}
-
-mcr-integ:
-	@echo "Integration Testing MCR Package; Log Level: ${LOG_LEVEL}"
-	go test ${TEST_TIMEOUT} -v ./service/mcr -tags ${INTEGRATION_TAG}
-
-partner-integ:
-	@echo "Integration Testing Partner Package; Log Level: ${LOG_LEVEL}"
-	go test ${TEST_TIMEOUT} -v ./service/partner -tags ${INTEGRATION_TAG}
+	go test ${TEST_TIMEOUT} -v ./service/location -coverprofile="reports/location_coverage.out" -tags ${INTEGRATION_TAG}
 
 port-integ:
 	@echo "Integration Testing Port Package; Log Level: ${LOG_LEVEL}"
-	go test ${TEST_TIMEOUT} -v ./service/port -tags ${INTEGRATION_TAG}
+	go test ${TEST_TIMEOUT} -v ./service/port -run -coverprofile="reports/port_coverage.out" -tags ${INTEGRATION_TAG}
+
+partner-integ:
+	@echo "Integration Testing Partner Package; Log Level: ${LOG_LEVEL}"
+	go test ${TEST_TIMEOUT} -v ./service/partner -coverprofile="reports/partner_coverage.out" -tags ${INTEGRATION_TAG}
+
+mcr-integ:
+	@echo "Integration Testing MCR Package; Log Level: ${LOG_LEVEL}"
+	go test ${TEST_TIMEOUT} -v ./service/mcr -coverprofile="reports/mcr_coverage.out" -tags ${INTEGRATION_TAG}
 
 vxc-integ:
 	@echo "Integration Testing VXC Package; Log Level: ${LOG_LEVEL}"
-	go test ${TEST_TIMEOUT} -v ./service/vxc -tags ${INTEGRATION_TAG}
+	go test ${TEST_TIMEOUT} -v ./service/vxc -coverprofile="reports/vxc_coverage.out" -tags ${INTEGRATION_TAG}
 
 #############
 # Utilities #

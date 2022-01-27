@@ -26,7 +26,7 @@ import (
 *********************/
 
 const (
-	TEST_1_REFERENCE_STRING = `[{"associatedVxcs":[{"productName":"MCR VXC from GO (HC)","rateLimit":500,"aEnd":{"vlan":0,"partnerConfig":{"interfaces":[{"ipAddresses":["10.192.0.25/29"],"bfd":{"txInterval":300,"rxInterval":300,"multiplier":3},"bgpConnections":[{"peerAsn":62512,"localIpAddress":"10.192.0.25","peerIpAddress":"10.192.0.26","password":"cnn6eaeaETSjvjvjvjv","shutdown":false,"description":"BGP with MED and BFD enabled","medIn":100,"medOut":100,"bfdEnabled":true}]}]}},"bEnd":{"productUid":"b2e0b6b8-2943-4c44-8a07-9ec13060afb2","partnerConfig":{"connectType":"AWSHC","type":"private","ownerAccount":"684021030471"}}}],"productUid":"mcr-id-here"}]`
+	TEST_1_REFERENCE_STRING = `[{"associatedVxcs":[{"productName":"VXC MCR to AWSHC from GO","rateLimit":500,"aEnd":{"vlan":0,"partnerConfig":{"interfaces":[{"ipAddresses":["10.192.0.25/29"],"bfd":{"txInterval":300,"rxInterval":300,"multiplier":3},"bgpConnections":[{"peerAsn":64512,"localIpAddress":"10.192.0.25","peerIpAddress":"10.192.0.26","password":"cnn6eaeaETSjvjvjvjv","shutdown":false,"description":"BGP with MED and BFD enabled","medIn":100,"medOut":100,"bfdEnabled":true}]}]}},"bEnd":{"productUid":"b2e0b6b8-2943-4c44-8a07-9ec13060afb2","partnerConfig":{"connectType":"AWSHC","type":"private","ownerAccount":"684021030471"}}}],"productUid":"mcr-id-here"}]`
 )
 
 func SUCCESS_RESPONSE_MOCK(req *http.Request) *http.Response {
@@ -94,7 +94,7 @@ TESTS START HERE
 
 ***************/
 
-func Test_Buy_MCR_AWS_VSC_HC_With_BGP(t *testing.T) {
+func Test_VXC_MCR_AWS(t *testing.T) {
 
 	mockClient := new(MockHttpClient)
 
@@ -109,7 +109,7 @@ func Test_Buy_MCR_AWS_VSC_HC_With_BGP(t *testing.T) {
 	vxcService := New(&cfg)
 
 	vxcAmazonProductUidHC := "b2e0b6b8-2943-4c44-8a07-9ec13060afb2"
-	vxcName := "MCR VXC from GO (HC)"
+	vxcName := "VXC MCR to AWSHC from GO"
 	vxcRteLimit := 500
 
 	partnerConfigInterface := types.PartnerConfigInterface{
@@ -121,7 +121,7 @@ func Test_Buy_MCR_AWS_VSC_HC_With_BGP(t *testing.T) {
 		},
 		BgpConnections: []types.BgpConnectionConfig{
 			{
-				PeerAsn:        62512,
+				PeerAsn:        64512,
 				LocalIpAddress: "10.192.0.25",
 				PeerIpAddress:  "10.192.0.26",
 				Password:       "cnn6eaeaETSjvjvjvjv",
@@ -134,9 +134,9 @@ func Test_Buy_MCR_AWS_VSC_HC_With_BGP(t *testing.T) {
 		},
 	}
 
-	aEndConfiguration := types.AWSVXCOrderAEndConfiguration{
+	aEndConfiguration := types.VXCOrderAEndConfiguration{
 		VLAN: 0,
-		PartnerConfig: types.AWSVXCOrderAEndPartnerConfig{
+		PartnerConfig: types.VXCOrderAEndPartnerConfig{
 			Interfaces: []types.PartnerConfigInterface{
 				partnerConfigInterface,
 			},

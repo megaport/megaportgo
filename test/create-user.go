@@ -27,7 +27,7 @@ const (
 
 func main() {
 	userPostfix := generateRandomStringWithCharset(10, CHARSET)
-	password := generateRandomStringWithCharset(20, CHARSET+"!@+=")
+	password := generateRandomStringWithCharset(20, CHARSET+"@+=")
 	username := "golib+" + userPostfix + "@sink.megaport.com"
 
 	fmt.Println("Registering User: ", username)

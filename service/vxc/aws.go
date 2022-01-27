@@ -27,12 +27,12 @@ func (v *VXC) BuyAWSVXC(
 	portUID string,
 	vxcName string,
 	rateLimit int,
-	aEndConfiguration types.AWSVXCOrderAEndConfiguration,
+	aEndConfiguration types.VXCOrderAEndConfiguration,
 	bEndConfiguration types.AWSVXCOrderBEndConfiguration,
 ) (string, error) {
 
 	buyOrder := []types.AWSVXCOrder{
-		types.AWSVXCOrder{
+		{
 			PortID: portUID,
 			AssociatedVXCs: []types.AWSVXCOrderConfiguration{
 				{
@@ -61,4 +61,18 @@ func (v *VXC) BuyAWSVXC(
 	}
 
 	return orderInfo.Data[0].TechnicalServiceUID, nil
+}
+
+func (v *VXC) ExtractAwsId(vxcDetails types.VXC) string {
+
+	// extract fid id from csp connection data
+	cspConnection := v.GetCspConnection("connectType", "AWS", vxcDetails)
+
+	if cspConnection != nil {
+		if _, exists := cspConnection["vif_id"]; exists {
+			return cspConnection["vif_id"].(string)
+		}
+	}
+
+	return ""
 }

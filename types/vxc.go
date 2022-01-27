@@ -14,94 +14,6 @@
 
 package types
 
-// ---- VXC Order Types //
-type VXCOrder struct {
-	AssociatedVXCs []VXCConfiguration `json:"associatedVxcs"`
-	PortID         string             `json:"productUid"`
-}
-type VXCConfiguration struct {
-	Name      string                    `json:"productName"`
-	RateLimit int                       `json:"rateLimit"`
-	AEnd      VXCOrderAEndConfiguration `json:"aEnd"`
-	BEnd      VXCOrderBEndConfiguration `json:"bEnd"`
-}
-
-// AWS
-type AWSVXCOrder struct {
-	AssociatedVXCs []AWSVXCOrderConfiguration `json:"associatedVxcs"`
-	PortID         string                     `json:"productUid"`
-}
-
-type AWSVXCOrderConfiguration struct {
-	Name      string                       `json:"productName"`
-	RateLimit int                          `json:"rateLimit"`
-	AEnd      AWSVXCOrderAEndConfiguration `json:"aEnd"`
-	BEnd      AWSVXCOrderBEndConfiguration `json:"bEnd"`
-}
-type AWSVXCOrderAEndConfiguration struct {
-	VLAN          int                          `json:"vlan"`
-	PartnerConfig AWSVXCOrderAEndPartnerConfig `json:"partnerConfig,omitempty"`
-}
-
-type AWSVXCOrderAEndPartnerConfig struct {
-	Interfaces []PartnerConfigInterface `json:"interfaces,omitempty"`
-}
-
-type PartnerConfigInterface struct {
-	IpAddresses    []string              `json:"ipAddresses,omitempty"`
-	Bfd            BfdConfig             `json:"bfd,omitempty"`
-	BgpConnections []BgpConnectionConfig `json:"bgpConnections,omitempty"`
-}
-
-type BfdConfig struct {
-	TxInterval int `json:"txInterval,omitempty"`
-	RxInterval int `json:"rxInterval,omitempty"`
-	Multiplier int `json:"multiplier,omitempty"`
-}
-
-type BgpConnectionConfig struct {
-	PeerAsn        int    `json:"peerAsn"`
-	LocalIpAddress string `json:"localIpAddress"`
-	PeerIpAddress  string `json:"peerIpAddress"`
-	Password       string `json:"password,omitempty"`
-	Shutdown       bool   `json:"shutdown"`
-	Description    string `json:"description,omitempty"`
-	MedIn          int    `json:"medIn,omitempty"`
-	MedOut         int    `json:"medOut,omitempty"`
-	BfdEnabled     bool   `json:"bfdEnabled"`
-}
-
-type AWSVXCOrderBEndConfiguration struct {
-	ProductUID    string                       `json:"productUid"`
-	PartnerConfig AWSVXCOrderBEndPartnerConfig `json:"partnerConfig"`
-}
-
-type AWSVXCOrderBEndPartnerConfig struct {
-	ConnectType       string `json:"connectType"`
-	Type              string `json:"type"`
-	OwnerAccount      string `json:"ownerAccount"`
-	ASN               int    `json:"asn,omitempty"`
-	AmazonASN         int    `json:"amazonAsn,omitempty"`
-	AuthKey           string `json:"authKey,omitempty"`
-	Prefixes          string `json:"prefixes,omitempty"`
-	CustomerIPAddress string `json:"customerIpAddress,omitempty"`
-	AmazonIPAddress   string `json:"amazonIpAddress,omitempty"`
-}
-
-// Common VXC types
-type VXCOrderAEndConfiguration struct {
-	VLAN int `json:"vlan"`
-}
-
-type VXCOrderBEndConfiguration struct {
-	VLAN       int    `json:"vlan,omitempty"`
-	ProductUID string `json:"productUid"`
-}
-
-type VXCOrderConfirmation struct {
-	TechnicalServiceUID string `json:"vxcJTechnicalServiceUid"`
-}
-
 // ---- VXC Detail Types //
 type VXC struct {
 	ID                 int                 `json:"productId"`
@@ -193,38 +105,6 @@ type PartnerLookupItem struct {
 	LocationID  int    `json:"locationId"`
 	State       string `json:"state"`
 	Country     string `json:"country"`
-}
-
-type PartnerOrder struct {
-	PortID         string                 `json:"productUid"`
-	AssociatedVXCs []PartnerOrderContents `json:"associatedVxcs"`
-}
-
-type PartnerOrderContents struct {
-	Name      string                        `json:"productName"`
-	RateLimit int                           `json:"rateLimit"`
-	AEnd      PartnerOrderAEndConfiguration `json:"aEnd"`
-	BEnd      PartnerOrderBEndConfiguration `json:"bEnd"`
-}
-
-type PartnerOrderAEndConfiguration struct {
-	VLAN int `json:"vlan,omitempty"`
-}
-
-type PartnerOrderBEndConfiguration struct {
-	PartnerPortID string      `json:"productUid"`
-	PartnerConfig interface{} `json:"partnerConfig"`
-}
-
-type PartnerOrderAzurePartnerConfig struct {
-	ConnectType string              `json:"connectType"`
-	ServiceKey  string              `json:"serviceKey"`
-	Peers       []map[string]string `json:"peers"`
-}
-
-type PartnerOrderGooglePartnerConfig struct {
-	ConnectType string `json:"connectType"`
-	PairingKey  string `json:"pairingKey"`
 }
 
 type VXCUpdate struct {

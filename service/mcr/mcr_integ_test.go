@@ -152,7 +152,7 @@ func TestMCRConnectionAdd(t *testing.T) {
 
 	mcrId, mcrErr := mcr.BuyMCR(testLocation.ID, "MCR and AWS Interconnectivity", 1000, 0)
 
-	logger.Infof("MCR Purschased: %s", mcrId)
+	logger.Infof("MCR Purchased: %s", mcrId)
 
 	if assert.NoError(mcrErr) && assert.True(shared.IsGuid(mcrId)) {
 		mcr.WaitForMcrProvisioning(mcrId)
@@ -163,7 +163,7 @@ func TestMCRConnectionAdd(t *testing.T) {
 			mcrId,
 			"MCR and AWS Connection 1",
 			500,
-			types.AWSVXCOrderAEndConfiguration{
+			types.VXCOrderAEndConfiguration{
 				VLAN: shared.GenerateRandomVLAN(),
 			},
 			types.AWSVXCOrderBEndConfiguration{
@@ -184,7 +184,7 @@ func TestMCRConnectionAdd(t *testing.T) {
 			mcrId,
 			"MCR and AWS Connection 2",
 			500,
-			types.AWSVXCOrderAEndConfiguration{
+			types.VXCOrderAEndConfiguration{
 				VLAN: shared.GenerateRandomVLAN(),
 			},
 			types.AWSVXCOrderBEndConfiguration{

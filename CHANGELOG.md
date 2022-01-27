@@ -1,3 +1,11 @@
+# 0.1.6 Release
+
+## New Features
+ - Migrate BGP Connection support from AWS-VXC to all VXC Connections.
+ 
+## Changes
+ - VXC type resources now expect aEnd and bEnd configuration objects to represent these configurations.
+
 # 0.1.5 Release
 
 ## New Features

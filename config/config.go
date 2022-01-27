@@ -104,3 +104,29 @@ func (c *Config) PurchaseError(productID string, err error) {
 		c.Log.Infoln("Error purchasing Product:", err)
 	}
 }
+
+func (c *Config) GetProductType(productId string) (string, error) {
+	url := "/v2/product/" + productId
+	verb := "GET"
+
+	detailsResponse, err := c.MakeAPICall(verb, url, nil)
+	defer detailsResponse.Body.Close()
+
+	isResErr, compiledResErr := c.IsErrorResponse(detailsResponse, &err, 200)
+	if isResErr {
+		return "", compiledResErr
+	}
+
+	body, fileErr := ioutil.ReadAll(detailsResponse.Body)
+
+	if fileErr != nil {
+		return "", fileErr
+	}
+
+	obj := map[string]interface{}{}
+	if err := json.Unmarshal([]byte(body), &obj); err != nil {
+		c.Log.Error(err)
+	}
+
+	return obj["data"].(map[string]interface{})["productType"].(string), nil
+}

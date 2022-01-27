@@ -36,7 +36,7 @@ const (
 	MEGAPORTURL     = "https://api-staging.megaport.com/"
 	TEST_LOCATION_A = "Global Switch Sydney"
 	TEST_LOCATION_B = "Equinix SY3"
-	TEST_LOCATION_C = "42464fbb-4d38-4f82-9061-294e1d84ed9f"
+	TEST_LOCATION_C = "90558833-e14f-49cf-84ba-bce1c2c40f2d"
 	MCR_LOCATION    = "AU"
 )
 
@@ -116,7 +116,20 @@ func TestVXCBuy(t *testing.T) {
 
 	logger.Info("Buying VXC.")
 
-	vxcId, vxcErr := vxc.BuyVXC(aEnd, bEnd, "Test VXC", 500, shared.GenerateRandomVLAN(), shared.GenerateRandomVLAN())
+	logger.Info("Buying AWS Hosted Connection (B End).")
+	vxcId, vxcErr := vxc.BuyVXC(
+		aEnd,
+		"Test VXC",
+		500,
+		types.VXCOrderAEndConfiguration{
+			VLAN: shared.GenerateRandomVLAN(),
+		},
+		types.VXCOrderBEndConfiguration{
+			VLAN:       shared.GenerateRandomVLAN(),
+			ProductUID: bEnd,
+		},
+	)
+
 	logger.Infof("VXC Purchased: %s", vxcId)
 
 	if !assert.NoError(vxcErr) && !assert.True(shared.IsGuid(vxcId)) {
@@ -169,30 +182,26 @@ func TestAWSVIFConnectionBuy(t *testing.T) {
 
 	port.WaitForPortProvisioning(portId)
 
-	aEndConfiguration := types.AWSVXCOrderAEndConfiguration{
-		VLAN: shared.GenerateRandomVLAN(),
-	}
-
-	bEndConfiguration := types.AWSVXCOrderBEndConfiguration{
-		ProductUID: "87860c28-81ef-4e79-8cc7-cfc5a4c4bc86",
-		PartnerConfig: types.AWSVXCOrderBEndPartnerConfig{
-			ConnectType:  "AWS",
-			Type:         "private",
-			ASN:          65105,
-			AmazonASN:    65106,
-			OwnerAccount: "684021030471",
-			AuthKey:      "notarealauthkey",
-			Prefixes:     "10.0.1.0/24",
-		},
-	}
-
 	logger.Info("Buying AWS VIF Connection (B End).")
 	hostedVifId, hostedVifErr := vxc.BuyAWSVXC(
 		portId,
 		"Hosted AWS VIF Test Connection",
 		500,
-		aEndConfiguration,
-		bEndConfiguration,
+		types.VXCOrderAEndConfiguration{
+			VLAN: shared.GenerateRandomVLAN(),
+		},
+		types.AWSVXCOrderBEndConfiguration{
+			ProductUID: "87860c28-81ef-4e79-8cc7-cfc5a4c4bc86",
+			PartnerConfig: types.AWSVXCOrderBEndPartnerConfig{
+				ConnectType:  "AWS",
+				Type:         "private",
+				ASN:          65105,
+				AmazonASN:    65106,
+				OwnerAccount: "684021030471",
+				AuthKey:      "notarealauthkey",
+				Prefixes:     "10.0.1.0/24",
+			},
+		},
 	)
 
 	logger.Infof("AWS VIF Connection ID: %s", hostedVifId)
@@ -231,51 +240,47 @@ func TestAWSHostedConnectionBuy(t *testing.T) {
 
 	mcr.WaitForMcrProvisioning(mcrId)
 
-	aEndConfiguration := types.AWSVXCOrderAEndConfiguration{
-		VLAN: shared.GenerateRandomVLAN(),
-		PartnerConfig: types.AWSVXCOrderAEndPartnerConfig{
-			Interfaces: []types.PartnerConfigInterface{
-				types.PartnerConfigInterface{
-					IpAddresses: []string{"11.192.0.25/29"},
-					Bfd: types.BfdConfig{
-						TxInterval: 300,
-						RxInterval: 300,
-						Multiplier: 3,
-					},
-					BgpConnections: []types.BgpConnectionConfig{
-						{
-							PeerAsn:        62512,
-							LocalIpAddress: "11.192.0.25",
-							PeerIpAddress:  "11.192.0.26",
-							Password:       "notARealPAssword",
-							Shutdown:       false,
-							Description:    "BGP with MED and BFD enabled",
-							MedIn:          100,
-							MedOut:         100,
-							BfdEnabled:     true,
-						},
-					},
-				},
-			},
-		},
-	}
-
-	bEndConfiguration := types.AWSVXCOrderBEndConfiguration{
-		ProductUID: "b2e0b6b8-2943-4c44-8a07-9ec13060afb2",
-		PartnerConfig: types.AWSVXCOrderBEndPartnerConfig{
-			ConnectType:  "AWSHC",
-			Type:         "private",
-			OwnerAccount: "684021030471",
-		},
-	}
-
 	logger.Info("Buying AWS Hosted Connection (B End).")
 	hostedConnectionId, hostedConnectionErr := vxc.BuyAWSVXC(
 		mcrId,
 		"Hosted Connection AWS Test Connection",
 		500,
-		aEndConfiguration,
-		bEndConfiguration,
+		types.VXCOrderAEndConfiguration{
+			VLAN: shared.GenerateRandomVLAN(),
+			PartnerConfig: types.VXCOrderAEndPartnerConfig{
+				Interfaces: []types.PartnerConfigInterface{
+					types.PartnerConfigInterface{
+						IpAddresses: []string{"10.0.0.1/30"},
+						Bfd: types.BfdConfig{
+							TxInterval: 300,
+							RxInterval: 300,
+							Multiplier: 3,
+						},
+						BgpConnections: []types.BgpConnectionConfig{
+							{
+								PeerAsn:        64512,
+								LocalIpAddress: "10.0.0.1",
+								PeerIpAddress:  "10.0.0.2",
+								Password:       "notARealPAssword",
+								Shutdown:       false,
+								Description:    "BGP with MED and BFD enabled",
+								MedIn:          100,
+								MedOut:         100,
+								BfdEnabled:     true,
+							},
+						},
+					},
+				},
+			},
+		},
+		types.AWSVXCOrderBEndConfiguration{
+			ProductUID: "b2e0b6b8-2943-4c44-8a07-9ec13060afb2",
+			PartnerConfig: types.AWSVXCOrderBEndPartnerConfig{
+				ConnectType:  "AWSHC",
+				Type:         "private",
+				OwnerAccount: "684021030471",
+			},
+		},
 	)
 	logger.Infof("AWS Hosted Connection ID: %s", hostedConnectionId)
 
@@ -312,28 +317,24 @@ func TestAWSConnectionBuyDefaults(t *testing.T) {
 	}
 	port.WaitForPortProvisioning(portId)
 
-	aEndConfiguration := types.AWSVXCOrderAEndConfiguration{
-		VLAN: 0,
-	}
-
-	bEndConfiguration := types.AWSVXCOrderBEndConfiguration{
-		ProductUID: "87860c28-81ef-4e79-8cc7-cfc5a4c4bc86",
-		PartnerConfig: types.AWSVXCOrderBEndPartnerConfig{
-			ConnectType:  "AWS",
-			Type:         "private",
-			ASN:          65105,
-			AmazonASN:    65106,
-			OwnerAccount: "684021030471",
-		},
-	}
-
 	logger.Info("Buying AWS VIF Connection (B End).")
 	hostedVifId, hostedVifErr := vxc.BuyAWSVXC(
 		portId,
 		"Hosted AWS VIF Test Connection",
 		500,
-		aEndConfiguration,
-		bEndConfiguration,
+		types.VXCOrderAEndConfiguration{
+			VLAN: 0,
+		},
+		types.AWSVXCOrderBEndConfiguration{
+			ProductUID: "87860c28-81ef-4e79-8cc7-cfc5a4c4bc86",
+			PartnerConfig: types.AWSVXCOrderBEndPartnerConfig{
+				ConnectType:  "AWS",
+				Type:         "private",
+				ASN:          65105,
+				AmazonASN:    65106,
+				OwnerAccount: "684021030471",
+			},
+		},
 	)
 
 	logger.Infof("AWS VIF Connection ID: %s", hostedVifId)
@@ -362,6 +363,7 @@ func TestBuyAzureExpressRoute(t *testing.T) {
 
 	fuzzySearch, _ := loc.GetLocationByNameFuzzy(TEST_LOCATION_A)
 	testLocation := fuzzySearch[0]
+
 	logger.Info("Buying Azure ExpressRoute Port (A End).")
 	portId, portErr := port.BuySinglePort("Azure ExpressRoute Test Port", 1, 1000, int(testLocation.ID), "AU", true)
 	logger.Infof("Port Purchased: %s", portId)
@@ -370,15 +372,40 @@ func TestBuyAzureExpressRoute(t *testing.T) {
 		t.FailNow()
 	}
 	port.WaitForPortProvisioning(portId)
+
 	serviceKey := "9d025691-38dc-48f3-9f95-fbb42e1a9f92"
-	peers := map[string]bool{
+	peers := map[string]interface{}{
 		"private":   true,
 		"public":    false,
 		"microsoft": false,
 	}
 
 	logger.Info("Buying Azure ExpressRoute VXC (B End).")
-	expressRouteId, buyErr := vxc.BuyAzureExpressRoute(portId, "Test Express Route", 1000, 0, serviceKey, peers)
+
+	// get partner port
+	partnerPortId, partnerLookupErr := vxc.LookupPartnerPorts(serviceKey, 1000, PARTNER_AZURE, "")
+	if partnerLookupErr != nil {
+		t.FailNow()
+	}
+
+	// get partner config
+	partnerConfig, partnerConfigErr := vxc.MarshallPartnerConfig(serviceKey, PARTNER_AZURE, peers)
+	if partnerConfigErr != nil {
+		t.FailNow()
+	}
+
+	expressRouteId, buyErr := vxc.BuyPartnerVXC(
+		portId,
+		"Test Express Route",
+		1000,
+		types.VXCOrderAEndConfiguration{
+			VLAN: 0,
+		},
+		types.PartnerOrderBEndConfiguration{
+			PartnerPortID: partnerPortId,
+			PartnerConfig: partnerConfig,
+		},
+	)
 
 	if buyErr != nil {
 		cfg.PurchaseError(expressRouteId, buyErr)
@@ -419,7 +446,31 @@ func TestBuyGoogleInterconnect(t *testing.T) {
 
 	pairingKey := "7e51371e-72a3-40b5-b844-2e3efefaee59/us-central1/2"
 	logger.Info("Buying Google Interconnect VXC (B End).")
-	googleInterconnectId, buyErr := vxc.BuyGoogleInterconnect(portId, "Test Google Interconnect", 1000, 0, pairingKey)
+
+	// get partner port
+	partnerPortId, partnerLookupErr := vxc.LookupPartnerPorts(pairingKey, 1000, PARTNER_GOOGLE, "")
+	if partnerLookupErr != nil {
+		t.FailNow()
+	}
+
+	// get partner config
+	partnerConfig, partnerConfigErr := vxc.MarshallPartnerConfig(pairingKey, PARTNER_GOOGLE, nil)
+	if partnerConfigErr != nil {
+		t.FailNow()
+	}
+
+	googleInterconnectId, buyErr := vxc.BuyPartnerVXC(
+		portId,
+		"Test Google Interconnect",
+		1000,
+		types.VXCOrderAEndConfiguration{
+			VLAN: 0,
+		},
+		types.PartnerOrderBEndConfiguration{
+			PartnerPortID: partnerPortId,
+			PartnerConfig: partnerConfig,
+		},
+	)
 
 	if buyErr != nil {
 		cfg.PurchaseError(googleInterconnectId, buyErr)
@@ -457,9 +508,33 @@ func TestBuyGoogleInterconnectLocation(t *testing.T) {
 		t.FailNow()
 	}
 	port.WaitForPortProvisioning(portId)
-	pairingKey := "7e51371e-72a3-40b5-b844-2e3efefaee59/us-central1/2"
+	pairingKey := "7e51371e-72a3-40b5-b844-2e3efefaee59/australia-southeast1/2"
 	logger.Info("Buying Google Interconnect VXC (B End).")
-	googleInterconnectId, buyErr := vxc.BuyGoogleInterconnectLocation(portId, "Test Google Interconnect", 1000, 0, pairingKey, TEST_LOCATION_C)
+
+	// get partner port
+	partnerPortId, partnerLookupErr := vxc.LookupPartnerPorts(pairingKey, 1000, PARTNER_GOOGLE, TEST_LOCATION_C)
+	if partnerLookupErr != nil {
+		t.FailNow()
+	}
+
+	// get partner config
+	partnerConfig, partnerConfigErr := vxc.MarshallPartnerConfig(pairingKey, PARTNER_GOOGLE, nil)
+	if partnerConfigErr != nil {
+		t.FailNow()
+	}
+
+	googleInterconnectId, buyErr := vxc.BuyPartnerVXC(
+		portId,
+		"Test Google Interconnect",
+		1000,
+		types.VXCOrderAEndConfiguration{
+			VLAN: 0,
+		},
+		types.PartnerOrderBEndConfiguration{
+			PartnerPortID: partnerPortId,
+			PartnerConfig: partnerConfig,
+		},
+	)
 
 	if buyErr != nil {
 		cfg.PurchaseError(googleInterconnectId, buyErr)
