@@ -1,3 +1,8 @@
+# 0.1.7 Release
+
+## New Features
+ - Add NAT support for MCR VXC Connections.
+
 # 0.1.6 Release
 
 ## New Features

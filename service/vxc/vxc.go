@@ -233,6 +233,7 @@ func (v *VXC) MarshallMcrAEndConfig(d *schema.ResourceData) (types.PartnerConfig
 
 		// init config props
 		ip_addresses_list := []string{}
+		nat_ip_addresses_list := []string{}
 		bfd_configuration := types.BfdConfig{}
 		bgp_connection_list := []types.BgpConnectionConfig{}
 
@@ -247,13 +248,24 @@ func (v *VXC) MarshallMcrAEndConfig(d *schema.ResourceData) (types.PartnerConfig
 			mcrConfig.IpAddresses = ip_addresses_list
 		}
 
+		// extract nat ip addresses list
+		if nat_ip_addresses, nat_ok := mcr_map["nat_ip_addresses"].([]interface{}); nat_ok {
+
+			for _, nat_ip_address := range nat_ip_addresses {
+				i := nat_ip_address.(string)
+				nat_ip_addresses_list = append(nat_ip_addresses_list, i)
+			}
+
+			mcrConfig.NatIpAddresses = nat_ip_addresses_list
+		}
+
 		// extract BFD settings
 		if bfd_config, bfd_ok := mcr_map["bfd_configuration"].(*schema.Set); bfd_ok && len(bfd_config.List()) > 0 {
 
 			bfd_config_map := bfd_config.List()[0].(map[string]interface{})
 			bfd_configuration = types.BfdConfig{
-				TxInterval: bfd_config_map["tx_internal"].(int),
-				RxInterval: bfd_config_map["rx_internal"].(int),
+				TxInterval: bfd_config_map["tx_interval"].(int),
+				RxInterval: bfd_config_map["rx_interval"].(int),
 				Multiplier: bfd_config_map["multiplier"].(int),
 			}
 
@@ -330,6 +342,18 @@ func (v *VXC) UnmarshallMcrAEndConfig(vxcDetails types.VXC) (interface{}, error)
 				v.Log.Info(" - ipAddresses field not present")
 			}
 
+			// add nat ip addresses to configuration
+			if nat_slice, nat_ok := partner_interface_map["natIpAddresses"].([]interface{}); nat_ok {
+				if len(nat_slice) > 0 {
+					v.Log.Info(" - natIpAddresses field present")
+					partner_configuration["nat_ip_addresses"] = nat_slice
+				} else {
+					v.Log.Info(" - natIpAddresses is empty")
+				}
+			} else {
+				v.Log.Info(" - natIpAddresses field not present")
+			}
+			
 			// extract bfd settings
 			bfd_map, bfd_ok := partner_interface_map["bfd"].(map[string]interface{})
 			if bfd_ok {
@@ -337,8 +361,8 @@ func (v *VXC) UnmarshallMcrAEndConfig(vxcDetails types.VXC) (interface{}, error)
 				v.Log.Info(" - bfd field present")
 				// add bfd to configuration
 				partner_configuration["bfd_configuration"] = []interface{}{map[string]interface{}{
-					"tx_internal": bfd_map["txInterval"],
-					"rx_internal": bfd_map["rxInterval"],
+					"tx_interval": bfd_map["txInterval"],
+					"rx_interval": bfd_map["rxInterval"],
 					"multiplier":  bfd_map["multiplier"],
 				}}
 
