@@ -26,6 +26,7 @@ import (
 
 const PARTNER_AZURE string = "AZURE"
 const PARTNER_GOOGLE string = "GOOGLE"
+const PARTNER_AWS string = "AWS"
 const PEERING_AZURE_PRIVATE string = "private"
 const PEERING_AZURE_PUBLIC string = "public"
 const PEERING_AZURE_MICROSOFT string = "microsoft"
@@ -179,6 +180,17 @@ func (v *VXC) MarshallPartnerConfig(
 			ConnectType: partner,
 			PairingKey:  key,
 		}
+	} else if partner == PARTNER_AWS {
+		// Marshal/unmarshal via JSON so we can reuse struct field mappings
+		partnerConfigJson, err := json.Marshal(attributes)
+		if err != nil {
+			return nil, err
+		}
+		newPartnerConfig := types.AWSVXCOrderBEndPartnerConfig{}
+		if err := json.Unmarshal(partnerConfigJson, &newPartnerConfig); err != nil {
+			return nil, err
+		}
+		partnerConfig = newPartnerConfig
 	} else {
 		return "", errors.New(mega_err.ERR_INVALID_PARTNER)
 	}
