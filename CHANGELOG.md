@@ -1,3 +1,8 @@
+# 0.1.8 Release
+
+## New Features
+ - PartnerConfigInterface (MCR A end configuration in VXC) handles static ip routes
+
 # 0.1.7 Release
 
 ## New Features

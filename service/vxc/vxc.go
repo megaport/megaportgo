@@ -233,6 +233,7 @@ func (v *VXC) MarshallMcrAEndConfig(d *schema.ResourceData) (types.PartnerConfig
 
 		// init config props
 		ip_addresses_list := []string{}
+		ip_routes_list := []types.IpRoute{}
 		nat_ip_addresses_list := []string{}
 		bfd_configuration := types.BfdConfig{}
 		bgp_connection_list := []types.BgpConnectionConfig{}
@@ -246,6 +247,26 @@ func (v *VXC) MarshallMcrAEndConfig(d *schema.ResourceData) (types.PartnerConfig
 			}
 
 			mcrConfig.IpAddresses = ip_addresses_list
+		}
+
+		// extract static ip routes
+		if ip_routes, ipr_ok := mcr_map["ip_route"].([]interface{}); ipr_ok {
+
+			for _, ip_route := range ip_routes {
+
+				i := ip_route.(map[string]interface{})
+
+				new_ip_route := types.IpRoute{
+					Prefix:      i["prefix"].(string),
+					Description: i["description"].(string),
+					NextHop:     i["next_hop"].(string),
+				}
+
+				ip_routes_list = append(ip_routes_list, new_ip_route)
+
+			}
+
+			mcrConfig.IpRoutes = ip_routes_list
 		}
 
 		// extract nat ip addresses list
@@ -342,6 +363,34 @@ func (v *VXC) UnmarshallMcrAEndConfig(vxcDetails types.VXC) (interface{}, error)
 				v.Log.Info(" - ipAddresses field not present")
 			}
 
+			// extract ip routes configurations
+			ip_routes_list := []interface{}{}
+			if ip_routes, ipr_ok := partner_interface_map["ipRoutes"].([]interface{}); ipr_ok {
+
+				v.Log.Info(" - ip routes present")
+				for _, ipRoute := range ip_routes {
+
+					ip_route_map, iprm_ok := ipRoute.(map[string]interface{})
+					if iprm_ok {
+
+						new_ip_route := map[string]interface{}{
+							"prefix":      ip_route_map["prefix"],
+							"description": ip_route_map["description"],
+							"next_hop":    ip_route_map["nextHop"],
+						}
+
+						ip_routes_list = append(ip_routes_list, new_ip_route)
+					}
+
+				} // end ip routes loop
+
+				// add ip routes to configuration
+				partner_configuration["ip_routes"] = ip_routes_list
+
+			} else {
+				v.Log.Info(" - ipRoutes field not present")
+			} // end ip routes inspection
+
 			// add nat ip addresses to configuration
 			if nat_slice, nat_ok := partner_interface_map["natIpAddresses"].([]interface{}); nat_ok {
 				if len(nat_slice) > 0 {
@@ -353,7 +402,7 @@ func (v *VXC) UnmarshallMcrAEndConfig(vxcDetails types.VXC) (interface{}, error)
 			} else {
 				v.Log.Info(" - natIpAddresses field not present")
 			}
-			
+
 			// extract bfd settings
 			bfd_map, bfd_ok := partner_interface_map["bfd"].(map[string]interface{})
 			if bfd_ok {

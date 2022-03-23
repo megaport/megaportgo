@@ -47,9 +47,16 @@ type VXCOrderConfirmation struct {
 
 type PartnerConfigInterface struct {
 	IpAddresses    []string              `json:"ipAddresses,omitempty"`
+	IpRoutes       []IpRoute             `json:"ipRoutes,omitempty"`
 	NatIpAddresses []string              `json:"natIpAddresses,omitempty"`
 	Bfd            BfdConfig             `json:"bfd,omitempty"`
 	BgpConnections []BgpConnectionConfig `json:"bgpConnections,omitempty"`
+}
+
+type IpRoute struct {
+	Prefix      string `json:"prefix"`
+	Description string `json:"description,omitempty"`
+	NextHop     string `json:"nextHop"`
 }
 
 type BfdConfig struct {

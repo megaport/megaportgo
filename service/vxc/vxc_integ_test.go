@@ -251,6 +251,13 @@ func TestAWSHostedConnectionBuy(t *testing.T) {
 				Interfaces: []types.PartnerConfigInterface{
 					types.PartnerConfigInterface{
 						IpAddresses: []string{"10.0.0.1/30"},
+						IpRoutes: []types.IpRoute{
+							{
+								Prefix:      "10.0.0.1/32",
+								Description: "Static route 1",
+								NextHop:     "10.0.0.2",
+							},
+						},
 						NatIpAddresses: []string{"10.0.0.1"},
 						Bfd: types.BfdConfig{
 							TxInterval: 300,
