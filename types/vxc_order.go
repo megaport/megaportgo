@@ -106,6 +106,7 @@ type AWSVXCOrderBEndPartnerConfig struct {
 	Prefixes          string `json:"prefixes,omitempty"`
 	CustomerIPAddress string `json:"customerIpAddress,omitempty"`
 	AmazonIPAddress   string `json:"amazonIpAddress,omitempty"`
+	ConnectionName    string `json:"name,omitempty"`
 }
 
 // Partner
