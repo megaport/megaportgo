@@ -76,3 +76,19 @@ func (v *VXC) ExtractAwsId(vxcDetails types.VXC) string {
 
 	return ""
 }
+
+// Extract AWS CSP details from VXC CspConnection
+func (v *VXC) ExtractAWSPartnerConfig(vxcDetails types.VXC) (*types.AWSVXCOrderBEndPartnerConfig, error) {
+
+	cspConnection := v.GetCspConnection("resource_name", "b_csp_connection", vxcDetails)
+
+	if cspConnection != nil {
+		partnerConfigInterface, err := v.MarshallPartnerConfig("", PARTNER_AWS, cspConnection)
+		if err != nil {
+			return nil, err
+		}
+		partnerConfig := partnerConfigInterface.(types.AWSVXCOrderBEndPartnerConfig)
+		return &partnerConfig, nil
+	}
+	return nil, nil
+}
