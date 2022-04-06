@@ -1,3 +1,9 @@
+# 0.1.9 Release
+
+## New Features
+ - Add optional connection name attribute for AWS connections. Credit @ngarratt
+ - Add import support for pre-existing AWS connections. Credit @ngarratt
+
 # 0.1.8 Release
 
 ## New Features
