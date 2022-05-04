@@ -138,6 +138,64 @@ func (p *Port) GetPortDetails(id string) (types.Port, error) {
 	return portDetails.Data, nil
 }
 
+type ParsedProductsResponse struct {
+	Message string        `json:"message"`
+	Terms   string        `json:"terms"`
+	Data    []interface{} `json:"data"`
+}
+
+func (p *Port) GetPorts() ([]types.Port, error) {
+	url := "/v2/products"
+	response, err := p.Config.MakeAPICall("GET", url, nil)
+	defer response.Body.Close()
+
+	isError, parsedError := p.Config.IsErrorResponse(response, &err, 200)
+
+	if isError {
+		return []types.Port{}, parsedError
+	}
+
+	body, fileErr := ioutil.ReadAll(response.Body)
+
+	if fileErr != nil {
+		return []types.Port{}, fileErr
+	}
+
+	parsed := ParsedProductsResponse{}
+
+	unmarshalErr := json.Unmarshal(body, &parsed)
+
+	if unmarshalErr != nil {
+		return []types.Port{}, unmarshalErr
+	}
+
+	var ports []types.Port
+
+	for _, unmarshaledData := range parsed.Data {
+		// The products query response will likely contain non-port objects.  As a result
+		// we need to initially Unmarshal as ParsedProductsResponse so that we may iterate
+		// over the entries in Data then re-Marshal those entries so that we may Unmarshal
+		// them as Port (and `continue` where that doesn't work).  We could write a custom
+		// deserializer to avoid this but that is a lot of work for a performance
+		// optimization which is likely irrelevant in practice.
+		// Unfortunately I know of no better (maintainable) method of making this work.
+		remarshaled, err := json.Marshal(unmarshaledData)
+		if err != nil {
+			p.Log.Debugln("Could not remarshal %v as port.", err.Error())
+			continue
+		}
+		port := types.Port{}
+		unmarshalErr = json.Unmarshal(remarshaled, &port)
+		if unmarshalErr != nil {
+			p.Log.Debugln("Could not unmarshal %v as port.", unmarshalErr.Error())
+			continue
+		}
+		ports = append(ports, port)
+	}
+
+	return ports, nil
+}
+
 func (p *Port) ModifyPort(portId string, name string, costCentre string, marketplaceVisibility bool) (bool, error) {
 	return p.product.ModifyProduct(portId, types.PRODUCT_MEGAPORT, name, costCentre, marketplaceVisibility)
 }
