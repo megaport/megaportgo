@@ -96,7 +96,12 @@ func TestSinglePort(t *testing.T) {
 		t.FailNow()
 	}
 
-	port.WaitForPortProvisioning(portId)
+	portCreated, err := port.WaitForPortProvisioning(portId)
+
+	if !assert.NoError(t, err) || !portCreated {
+		t.FailNow()
+	}
+
 	testModifyPort(port, portId, types.SINGLE_PORT, t)
 	testLockPort(port, portId, t)
 	testCancelPort(port, portId, types.SINGLE_PORT, t)
@@ -122,7 +127,12 @@ func TestLAGPort(t *testing.T) {
 		t.FailNow()
 	}
 
-	port.WaitForPortProvisioning(portId)
+	portCreated, err := port.WaitForPortProvisioning(portId)
+
+	if !assert.NoError(t, err) || !portCreated {
+		t.FailNow()
+	}
+
 	testModifyPort(port, portId, types.LAG_PORT, t)
 	testCancelPort(port, portId, types.LAG_PORT, t)
 }
