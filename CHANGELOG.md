@@ -1,3 +1,8 @@
+# 0.1.10 Release
+
+## Changes
+ - Move MarshallMcrAEndConfig to megaport/terraform-provider-megaport. Credit @daniel-noland
+
 # 0.1.9 Release
 
 ## New Features
