@@ -89,7 +89,7 @@ func TestSinglePort(t *testing.T) {
 		t.FailNow()
 	}
 
-	portId, portErr := testCreatePort(port, types.SINGLE_PORT, testLocation.ID)
+	portId, portErr := testCreatePort(port, types.SINGLE_PORT, testLocation)
 
 	if !assert.NoError(t, portErr) && !assert.True(t, shared.IsGuid(portId)) {
 		cfg.PurchaseError(portId, portErr)
@@ -115,7 +115,7 @@ func TestLAGPort(t *testing.T) {
 		t.FailNow()
 	}
 
-	portId, portErr := testCreatePort(port, types.LAG_PORT, testLocation.ID)
+	portId, portErr := testCreatePort(port, types.LAG_PORT, testLocation)
 
 	if !assert.NoError(t, portErr) && !assert.True(t, shared.IsGuid(portId)) {
 		cfg.PurchaseError(portId, portErr)
@@ -127,15 +127,15 @@ func TestLAGPort(t *testing.T) {
 	testCancelPort(port, portId, types.LAG_PORT, t)
 }
 
-func testCreatePort(port *Port, portType string, locationId int) (string, error) {
+func testCreatePort(port *Port, portType string, location types.Location) (string, error) {
 	var portId string
 	var portErr error
 
 	logger.Debug("Buying Port:", portType)
 	if portType == types.LAG_PORT {
-		portId, portErr = port.BuyLAGPort("Buy Port (LAG) Test", 1, 10000, locationId, "US", 4, true)
+		portId, portErr = port.BuyLAGPort("Buy Port (LAG) Test", 1, 10000, location.ID, location.Market, 4, true)
 	} else {
-		portId, portErr = port.BuySinglePort("Buy Port (Single) Test", 1, 10000, locationId, "US", true)
+		portId, portErr = port.BuySinglePort("Buy Port (Single) Test", 1, 10000, location.ID, location.Market, true)
 	}
 
 	logger.Debugf("Port Purchased: %s", portId)
