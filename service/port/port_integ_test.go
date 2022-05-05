@@ -155,6 +155,11 @@ func TestLAGPort(t *testing.T) {
 		t.FailNow()
 	}
 
+	portsListInitial, err := port.GetPorts()
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+
 	portId, portErr := testCreatePort(port, types.LAG_PORT, testLocation)
 
 	if !assert.NoError(t, portErr) && !assert.True(t, shared.IsGuid(portId)) {
@@ -165,6 +170,36 @@ func TestLAGPort(t *testing.T) {
 	portCreated, err := port.WaitForPortProvisioning(portId)
 
 	if !assert.NoError(t, err) || !portCreated {
+		t.FailNow()
+	}
+
+	portsListPostCreate, err := port.GetPorts()
+	if err != nil {
+		logger.Debug("Failed to get ports list: ", err.Error())
+		t.FailNow()
+	}
+
+	portIsActuallyNew := true
+	for _, p := range portsListInitial {
+		if p.UID == portId {
+			portIsActuallyNew = false
+		}
+	}
+
+	if !portIsActuallyNew {
+		logger.Debug("Failed to find port we just created in ports list: ", portId)
+		t.FailNow()
+	}
+
+	foundNewPort := false
+	for _, p := range portsListPostCreate {
+		if p.UID == portId {
+			foundNewPort = true
+		}
+	}
+
+	if !foundNewPort {
+		logger.Debug("Failed to find port we just created in ports list: ", portId)
 		t.FailNow()
 	}
 
