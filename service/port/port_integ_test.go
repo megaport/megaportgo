@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	TEST_LOCATION_ID_A = 100 // US West (Oregon) (us-west-2) [DZ-RED]
+	TEST_LOCATION_ID_A = 19 // 	Interactive 437 Williamstown
 	MEGAPORTURL     = "https://api-staging.megaport.com/"
 )
 
@@ -213,7 +213,7 @@ func testCreatePort(port *Port, portType string, location types.Location) (strin
 
 	logger.Debug("Buying Port:", portType)
 	if portType == types.LAG_PORT {
-		portId, portErr = port.BuyLAGPort("Buy Port (LAG) Test", 1, 10000, location.ID, location.Market, 4, true)
+		portId, portErr = port.BuyLAGPort("Buy Port (LAG) Test", 1, 10000, location.ID, location.Market, 2, true)
 	} else {
 		portId, portErr = port.BuySinglePort("Buy Port (Single) Test", 1, 10000, location.ID, location.Market, true)
 	}

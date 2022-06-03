@@ -56,7 +56,7 @@ clean-test-cache:
 	go clean -testcache
 
 create-user:
-	go run test/create-user.go
+	./test/create-user.sh
 
 coverage:
 	go tool cover -func=reports/auth_coverage.out

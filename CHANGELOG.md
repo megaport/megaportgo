@@ -1,3 +1,8 @@
+# 0.1.11 Release
+
+## New Features
+ - Add GetPorts functionality. Credit @daniel-noland
+
 # 0.1.10 Release
 
 ## Changes
