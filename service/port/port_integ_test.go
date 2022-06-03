@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	TEST_LOCATION_A = "Interactive 437 Williamstown"
+	TEST_LOCATION_ID_A = 100 // US West (Oregon) (us-west-2) [DZ-RED]
 	MEGAPORTURL     = "https://api-staging.megaport.com/"
 )
 
@@ -83,15 +83,25 @@ func TestSinglePort(t *testing.T) {
 	port := New(&cfg)
 	loc := location.New(&cfg)
 
-	testLocation, _ := loc.GetLocationByName(TEST_LOCATION_A)
-	portId, portErr := testCreatePort(port, types.SINGLE_PORT, testLocation.ID)
+	testLocation, err := loc.GetLocationByID(TEST_LOCATION_ID_A)
+
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+
+	portId, portErr := testCreatePort(port, types.SINGLE_PORT, testLocation)
 
 	if !assert.NoError(t, portErr) && !assert.True(t, shared.IsGuid(portId)) {
 		cfg.PurchaseError(portId, portErr)
 		t.FailNow()
 	}
 
-	port.WaitForPortProvisioning(portId)
+	portCreated, err := port.WaitForPortProvisioning(portId)
+
+	if !assert.NoError(t, err) || !portCreated {
+		t.FailNow()
+	}
+
 	testModifyPort(port, portId, types.SINGLE_PORT, t)
 	testLockPort(port, portId, t)
 	testCancelPort(port, portId, types.SINGLE_PORT, t)
@@ -104,28 +114,38 @@ func TestLAGPort(t *testing.T) {
 	port := New(&cfg)
 	loc := location.New(&cfg)
 
-	testLocation, _ := loc.GetLocationByName(TEST_LOCATION_A)
-	portId, portErr := testCreatePort(port, types.LAG_PORT, testLocation.ID)
+	testLocation, err := loc.GetLocationByID(TEST_LOCATION_ID_A)
+
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+
+	portId, portErr := testCreatePort(port, types.LAG_PORT, testLocation)
 
 	if !assert.NoError(t, portErr) && !assert.True(t, shared.IsGuid(portId)) {
 		cfg.PurchaseError(portId, portErr)
 		t.FailNow()
 	}
 
-	port.WaitForPortProvisioning(portId)
+	portCreated, err := port.WaitForPortProvisioning(portId)
+
+	if !assert.NoError(t, err) || !portCreated {
+		t.FailNow()
+	}
+
 	testModifyPort(port, portId, types.LAG_PORT, t)
 	testCancelPort(port, portId, types.LAG_PORT, t)
 }
 
-func testCreatePort(port *Port, portType string, locationId int) (string, error) {
+func testCreatePort(port *Port, portType string, location types.Location) (string, error) {
 	var portId string
 	var portErr error
 
 	logger.Debug("Buying Port:", portType)
 	if portType == types.LAG_PORT {
-		portId, portErr = port.BuyLAGPort("Buy Port (LAG) Test", 1, 10000, locationId, "AU", 4, true)
+		portId, portErr = port.BuyLAGPort("Buy Port (LAG) Test", 1, 10000, location.ID, location.Market, 4, true)
 	} else {
-		portId, portErr = port.BuySinglePort("Buy Port (Single) Test", 1, 10000, locationId, "AU", true)
+		portId, portErr = port.BuySinglePort("Buy Port (Single) Test", 1, 10000, location.ID, location.Market, true)
 	}
 
 	logger.Debugf("Port Purchased: %s", portId)
