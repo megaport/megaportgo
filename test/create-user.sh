@@ -31,7 +31,7 @@ password=$(genRandomString 20 ${CHARSETSYMBOL})
 
 echo "Registering User"
 regResp=$(curl -s -X POST -H "Content-Type: multipart/form-data" -H "Accept: application/json" -H "User-Agent: Go-Megaport-Library/0.1" \
-    -F "firstName=Go" -F "lastName=Testing" -F "email=${username}" -F "password=${password}" \
+    -F "firstName=Go" -F "lastName=Testing" -F "email=${username}" -F "password=${password}" -F "companyName=Go Testing Company" \
     "${ENDPOINT}/v2/social/registration")
 
 token=$(echo $regResp | jq -r '.data.session')
@@ -43,7 +43,7 @@ EOF
 
 read -r -d '' companyEnable <<-EOC
 {
-    "tradingName": "${usernamePostfix}"
+    "tradingName": "Go Testing Company"
 }
 EOC
 
@@ -65,12 +65,9 @@ read -r -d '' market <<-EOC
 }
 EOC
 
-echo "Registering Company"
-compResp=$(curl -s -X POST -H "X-Auth-Token: ${token}" -H "Content-Type: application/json" -H "Accept: application/json" -H "User-Agent: Go-Megaport-Library/0.1" \
-    -d "${companyEnable}" \
-    "${ENDPOINT}/v2/social/company" 2>/dev/null)
-
+echo $compResp
 echo "Registering Marketplace"
 marketResp=$(curl -X POST -H "X-Auth-Token: ${token}" -H "Content-Type: application/json" -H "Accept: application/json" -H "User-Agent: Go-Megaport-Library/0.1" \
     -d "${market}" \
     "${ENDPOINT}/v2/market/" 2>/dev/null)
+echo $marketResp

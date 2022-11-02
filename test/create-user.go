@@ -57,13 +57,13 @@ func main() {
 
 	cfg.SessionToken = session
 
-	fmt.Println("Setting up mock Company and Market information for user")
-	userConfErr := setCompanyNameAndMarket(username, cfg)
+	fmt.Println("Setting up mock Market information for user")
+	userConfErr := createMarket(username, cfg)
 	if userConfErr != nil {
 		fmt.Println("Setup failed", userConfErr)
 		os.Exit(1)
 	}
-	fmt.Println("Mock Company and Market information set for user")
+	fmt.Println("Mock Market information set for user")
 
 	generateEnvironmentVaribles(username, password)
 	fmt.Printf("User credentails can be found in %s. Source file to set environment vars for user\n\n", CREDENTIALFILE)
@@ -80,6 +80,7 @@ func createUser(username string, password string) error {
 	data.Add("lastName", "Testing")
 	data.Add("email", username)
 	data.Add("password", password)
+	data.Add("companyName", "Go Testing Company")
 
 	loginRequest, _ := http.NewRequest("POST", createUserUrl, strings.NewReader(data.Encode()))
 	loginRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -154,8 +155,7 @@ func generateEnvironmentVaribles(username string, password string) {
 	file.WriteString(pwdStr)
 }
 
-func setCompanyNameAndMarket(contactEmail string, cfg config.Config) error {
-	company := types.CompanyEnablement{TradingName: "Go Testing Company"}
+func createMarket(contactEmail string, cfg config.Config) error {
 	market := types.Market{
 		Currency:               "AUD",
 		Language:               "en",
@@ -170,18 +170,6 @@ func setCompanyNameAndMarket(contactEmail string, cfg config.Config) error {
 		Postcode:               "4006",
 		Country:                "AU",
 		FirstPartyID:           808,
-	}
-
-	companyJSON, companyMarshalErr := json.Marshal(company)
-
-	if companyMarshalErr != nil {
-		return companyMarshalErr
-	}
-
-	companyResponse, companyErr := cfg.MakeAPICall("POST", "/v2/social/company", companyJSON)
-	isCompanyError, parsedCompanyErr := isErrorResponse(companyResponse, &companyErr, 200)
-	if isCompanyError {
-		return parsedCompanyErr
 	}
 
 	marketJSON, marketMarshalErr := json.Marshal(market)

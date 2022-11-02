@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 // Copyright 2020 Megaport Pty Ltd
@@ -381,11 +382,25 @@ func TestBuyAzureExpressRoute(t *testing.T) {
 	}
 	port.WaitForPortProvisioning(portId)
 
-	serviceKey := "9d025691-38dc-48f3-9f95-fbb42e1a9f92"
-	peers := map[string]interface{}{
-		"private":   true,
-		"public":    false,
-		"microsoft": false,
+	serviceKey := "1b2329a5-56dc-45d0-8a0d-87b706297777"
+	peerings := []types.PartnerOrderAzurePeeringConfig{
+		{
+			Type:            "private",
+			PeerASN:         "64555",
+			PrimarySubnet:   "10.0.0.0/30",
+			SecondarySubnet: "10.0.0.4/30",
+			SharedKey:       "SharedKey1",
+			VLAN:            100,
+		},
+		{
+			Type:            "microsoft",
+			PeerASN:         "64555",
+			PrimarySubnet:   "192.88.99.0/30",
+			SecondarySubnet: "192.88.99.4/30",
+			Prefixes:        "192.88.99.64/26",
+			SharedKey:       "SharedKey2",
+			VLAN:            200,
+		},
 	}
 
 	logger.Info("Buying Azure ExpressRoute VXC (B End).")
@@ -397,14 +412,14 @@ func TestBuyAzureExpressRoute(t *testing.T) {
 	}
 
 	// get partner config
-	partnerConfig, partnerConfigErr := vxc.MarshallPartnerConfig(serviceKey, PARTNER_AZURE, peers)
+	partnerConfig, partnerConfigErr := vxc.MarshallPartnerConfig(serviceKey, PARTNER_AZURE, peerings)
 	if partnerConfigErr != nil {
 		t.FailNow()
 	}
 
 	expressRouteId, buyErr := vxc.BuyPartnerVXC(
 		portId,
-		"Test Express Route",
+		"Azure ExpressRoute Test VXC",
 		1000,
 		types.VXCOrderAEndConfiguration{
 			VLAN: 0,

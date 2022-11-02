@@ -1,3 +1,8 @@
+# 0.1.12 Release
+
+## New Features
+ - Support for manually supplying peering values for Azure VXC's.
+
 # 0.1.11 Release
 
 ## New Features

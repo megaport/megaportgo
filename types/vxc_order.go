@@ -129,9 +129,19 @@ type PartnerOrderBEndConfiguration struct {
 }
 
 type PartnerOrderAzurePartnerConfig struct {
-	ConnectType string              `json:"connectType"`
-	ServiceKey  string              `json:"serviceKey"`
-	Peers       []map[string]string `json:"peers"`
+	ConnectType string                           `json:"connectType"`
+	ServiceKey  string                           `json:"serviceKey"`
+	Peers       []PartnerOrderAzurePeeringConfig `json:"peers"`
+}
+
+type PartnerOrderAzurePeeringConfig struct {
+	Type            string `json:"type"`
+	PeerASN         string `json:"peer_asn"`
+	PrimarySubnet   string `json:"primary_subnet"`
+	SecondarySubnet string `json:"secondary_subnet"`
+	Prefixes        string `json:"prefixes,omitempty"`
+	SharedKey       string `json:"shared_key,omitempty"`
+	VLAN            int    `json:"vlan"`
 }
 
 type PartnerOrderGooglePartnerConfig struct {

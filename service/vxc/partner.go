@@ -27,9 +27,6 @@ import (
 const PARTNER_AZURE string = "AZURE"
 const PARTNER_GOOGLE string = "GOOGLE"
 const PARTNER_AWS string = "AWS"
-const PEERING_AZURE_PRIVATE string = "private"
-const PEERING_AZURE_PUBLIC string = "public"
-const PEERING_AZURE_MICROSOFT string = "microsoft"
 
 // LookupPartnerPorts is used to find available partner ports. This is Step 1 of the purchase process for most partner
 // ports as outlined at https://dev.megaport.com/#cloud-partner-api-orders.
@@ -117,59 +114,13 @@ func (v *VXC) BuyPartnerVXC(
 func (v *VXC) MarshallPartnerConfig(
 	key string,
 	partner string,
-	attributes map[string]interface{},
+	attributes interface{},
 ) (interface{}, error) {
 
 	var partnerConfig interface{} = nil
 
 	if partner == PARTNER_AZURE {
-		var azurePeerings []map[string]string
-
-		private := false
-		public := false
-		microsoft := false
-
-		if v, ok := attributes["private_peer"].(bool); ok && v {
-			private = true
-		}
-
-		if v, ok := attributes["public_peer"].(bool); ok && v {
-			public = true
-		}
-
-		if v, ok := attributes["microsoft_peer"].(bool); ok && v {
-			microsoft = true
-		}
-
-		peers := map[string]bool{
-			PEERING_AZURE_PRIVATE:   private,
-			PEERING_AZURE_PUBLIC:    public,
-			PEERING_AZURE_MICROSOFT: microsoft,
-		}
-
-		if attributes != nil {
-			if private, ok := peers[PEERING_AZURE_PRIVATE]; ok && private {
-				envelope := map[string]string{
-					"type": PEERING_AZURE_PRIVATE,
-				}
-				azurePeerings = append(azurePeerings, envelope)
-			}
-
-			if public, ok := peers[PEERING_AZURE_PUBLIC]; ok && public {
-				envelope := map[string]string{
-					"type": PEERING_AZURE_PUBLIC,
-				}
-				azurePeerings = append(azurePeerings, envelope)
-			}
-
-			if microsoft, ok := peers[PEERING_AZURE_MICROSOFT]; ok && microsoft {
-				envelope := map[string]string{
-					"type": PEERING_AZURE_MICROSOFT,
-				}
-				azurePeerings = append(azurePeerings, envelope)
-			}
-		}
-
+		azurePeerings := attributes.([]types.PartnerOrderAzurePeeringConfig)
 		partnerConfig = types.PartnerOrderAzurePartnerConfig{
 			ConnectType: partner,
 			ServiceKey:  key,
