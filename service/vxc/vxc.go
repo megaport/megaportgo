@@ -334,6 +334,13 @@ func (v *VXC) UnmarshallMcrAEndConfig(vxcDetails types.VXC) (interface{}, error)
 							"med_in":           bgp_connection_map["medIn"],
 							"med_out":          bgp_connection_map["medOut"],
 							"bfd_enabled":      bgp_connection_map["bfdEnabled"],
+							"export_policy":    bgp_connection_map["exportPolicy"],
+							"permit_export_to": bgp_connection_map["permitExportTo"],
+							"deny_export_to":   bgp_connection_map["denyExportTo"],
+							"import_whitelist": bgp_connection_map["importWhitelist"],
+							"import_blacklist": bgp_connection_map["importBlacklist"],
+							"export_whitelist": bgp_connection_map["exportWhitelist"],
+							"export_blacklist": bgp_connection_map["exportBlacklist"],
 						}
 
 						bgp_connection_list = append(bgp_connection_list, new_bgp_connection)
@@ -390,4 +397,10 @@ func (v *VXC) GetCspConnection(cspIdentifier string, cspIdentifierValue string, 
 	}
 
 	return nil
+}
+
+// GetPrefixFilterLists returns all Prefix Filter Lists on an MCR.
+func (v *VXC) GetPrefixFilterLists(id string) ([]types.PrefixFilterList, error) {
+	prefix, prefixErr := v.product.GetMCRPrefixFilterLists(id)
+	return prefix, prefixErr
 }

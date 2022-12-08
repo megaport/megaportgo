@@ -144,3 +144,52 @@ func (p *Product) ManageProductLock(productId string, shouldLock bool) (bool, er
 		return true, nil
 	}
 }
+
+// GetMCRPrefixFilterLists returns prefix filter lists for the specified MCR2.
+func (p *Product) GetMCRPrefixFilterLists(id string) ([]types.PrefixFilterList, error) {
+	url := "/v2/product/mcr2/" + id + "/prefixLists?"
+
+	response, err := p.Config.MakeAPICall("GET", url, nil)
+	isError, errorMessage := p.Config.IsErrorResponse(response, &err, 200)
+
+	if isError {
+		return nil, errorMessage
+	}
+	defer response.Body.Close()
+
+	body, fileErr := ioutil.ReadAll(response.Body)
+	if fileErr != nil {
+		return []types.PrefixFilterList{}, fileErr
+	}
+
+	prefixFilterList := types.MCRPrefixFilterListResponse{}
+	unmarshalErr := json.Unmarshal(body, &prefixFilterList)
+
+	if unmarshalErr != nil {
+		return []types.PrefixFilterList{}, unmarshalErr
+	}
+
+	return prefixFilterList.Data, nil
+}
+
+// CreateMCRPrefixFilterList will create an MCR2 product prefix filter list.
+func (p *Product) CreateMCRPrefixFilterList(id string, prefixFilterList types.MCRPrefixFilterList) (bool, error) {
+	url := "/v2/product/mcr2/" + id + "/prefixList"
+
+	body, marshalErr := json.Marshal(prefixFilterList)
+	if marshalErr != nil {
+		return false, marshalErr
+	}
+
+	response, err := p.Config.MakeAPICall("POST", url, []byte(body))
+	if response != nil {
+		defer response.Body.Close()
+	}
+
+	isError, errorMessage := p.Config.IsErrorResponse(response, &err, 200)
+	if isError {
+		return false, errorMessage
+	} else {
+		return true, nil
+	}
+}

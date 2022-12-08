@@ -66,15 +66,22 @@ type BfdConfig struct {
 }
 
 type BgpConnectionConfig struct {
-	PeerAsn        int    `json:"peerAsn"`
-	LocalIpAddress string `json:"localIpAddress"`
-	PeerIpAddress  string `json:"peerIpAddress"`
-	Password       string `json:"password,omitempty"`
-	Shutdown       bool   `json:"shutdown"`
-	Description    string `json:"description,omitempty"`
-	MedIn          int    `json:"medIn,omitempty"`
-	MedOut         int    `json:"medOut,omitempty"`
-	BfdEnabled     bool   `json:"bfdEnabled"`
+	PeerAsn         int      `json:"peerAsn"`
+	LocalIpAddress  string   `json:"localIpAddress"`
+	PeerIpAddress   string   `json:"peerIpAddress"`
+	Password        string   `json:"password,omitempty"`
+	Shutdown        bool     `json:"shutdown"`
+	Description     string   `json:"description,omitempty"`
+	MedIn           int      `json:"medIn,omitempty"`
+	MedOut          int      `json:"medOut,omitempty"`
+	BfdEnabled      bool     `json:"bfdEnabled"`
+	ExportPolicy    string   `json:"exportPolicy,omitempty"`
+	PermitExportTo  []string `json:"permitExportTo,omitempty"`
+	DenyExportTo    []string `json:"denyExportTo,omitempty"`
+	ImportWhitelist int      `json:"importWhitelist,omitempty"`
+	ImportBlacklist int      `json:"importBlacklist,omitempty"`
+	ExportWhitelist int      `json:"exportWhitelist,omitempty"`
+	ExportBlacklist int      `json:"exportBlacklist,omitempty"`
 }
 
 // AWS STUFF

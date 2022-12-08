@@ -86,6 +86,12 @@ func (m *MCR) BuyMCR(locationID int, name string, portSpeed int, mcrASN int) (st
 	return orderInfo.Data[0].TechnicalServiceUID, nil
 }
 
+// CreatePrefixFilterList creates a Prefix Filter List on an MCR.
+func (m *MCR) CreatePrefixFilterList(id string, prefixFilterList types.MCRPrefixFilterList) (bool, error) {
+	prefix, prefixErr := m.product.CreateMCRPrefixFilterList(id, prefixFilterList)
+	return prefix, prefixErr
+}
+
 // BuyMCR get the details of an MCR.
 func (m *MCR) GetMCRDetails(id string) (types.MCR, error) {
 	url := "/v2/product/" + id
@@ -129,7 +135,7 @@ func (m *MCR) RestoreMCR(id string) (bool, error) {
 	return m.product.RestoreProduct(id)
 }
 
-// DebugWaitMCRLive will should be used for testing only.
+// DebugWaitMCRLive should be used for testing only.
 func (m *MCR) WaitForMcrProvisioning(mcrId string) (bool, error) {
 	mcrInfo, _ := m.GetMCRDetails(mcrId)
 	wait := 0

@@ -1,3 +1,9 @@
+# 0.1.13 Release
+
+## New Features
+ - Support for MCR Prefix Filter Lists.
+ - Support for BGP Peer Filters and BGP Prefix Filters on VXC's.
+
 # 0.1.12 Release
 
 ## New Features

@@ -78,3 +78,16 @@ type MCRVirtualRouter struct {
 	ResourceType string `json:"resource_type"`
 	Speed        int    `json:"speed"`
 }
+
+type MCRPrefixFilterList struct {
+	Description   string               `json:"description"`
+	AddressFamily string               `json:"addressFamily"`
+	Entries       []MCRPrefixListEntry `json:"entries"`
+}
+
+type MCRPrefixListEntry struct {
+	Action string `json:"action"`
+	Prefix string `json:"prefix"`
+	Ge     int    `json:"ge,omitempty"`
+	Le     int    `json:"le,omitempty"`
+}

@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 // Copyright 2020 Megaport Pty Ltd
@@ -236,4 +237,63 @@ func TestPortSpeedValidation(t *testing.T) {
 	testLocation, _ := location.GetLocationByName("Global Switch Sydney")
 	_, buyErr := mcr.BuyMCR(testLocation.ID, "Test MCR", 500, 0)
 	assert.EqualError(buyErr, mega_err.ERR_MCR_INVALID_PORT_SPEED)
+}
+
+func TestCreatePrefixFilterList(t *testing.T) {
+	assert := assert.New(t)
+	mcr := New(&cfg)
+	location := location.New(&cfg)
+
+	logger.Info("Buying MCR Port.")
+	testLocation := location.GetRandom(TEST_MCR_TEST_LOCATION_MARKET)
+
+	logger.Infof("Test location determined, Location: %s", testLocation.Name)
+	mcrId, portErr := mcr.BuyMCR(testLocation.ID, "Buy MCR", 1000, 0)
+
+	if !assert.NoError(portErr) && assert.False(shared.IsGuid(mcrId)) {
+		mcr.Config.PurchaseError(mcrId, portErr)
+	}
+
+	logger.Infof("MCR Purchased: %s", mcrId)
+	logger.Info("Waiting for MCR to be provisioned")
+
+	mcr.WaitForMcrProvisioning(mcrId)
+
+	logger.Info("Creating prefix filter list")
+
+	prefixFilterEntries := []types.MCRPrefixListEntry{
+		{
+			Action: "permit",
+			Prefix: "10.0.1.0/24",
+			Ge:     24,
+			Le:     24,
+		},
+		{
+			Action: "deny",
+			Prefix: "10.0.2.0/24",
+			Ge:     24,
+			Le:     24,
+		},
+	}
+
+	validatedPrefixFilterList := types.MCRPrefixFilterList{
+		Description:   "Test Prefix Filter List",
+		AddressFamily: "IPv4",
+		Entries:       prefixFilterEntries,
+	}
+
+	_, prefixErr := mcr.CreatePrefixFilterList(mcrId, validatedPrefixFilterList)
+
+	if prefixErr != nil {
+		logger.Infof("%s", prefixErr.Error())
+	}
+
+	logger.Info("Deleting MCR now.")
+	hardDeleteStatus, deleteErr := mcr.DeleteMCR(mcrId, true)
+	assert.True(hardDeleteStatus)
+	assert.NoError(deleteErr)
+
+	mcrDeleteInfo, _ := mcr.GetMCRDetails(mcrId)
+	assert.EqualValues(types.STATUS_DECOMMISSIONED, mcrDeleteInfo.ProvisioningStatus)
+	logger.Debugf("Status is: %s", mcrDeleteInfo.ProvisioningStatus)
 }

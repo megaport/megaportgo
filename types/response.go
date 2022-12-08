@@ -74,6 +74,18 @@ type MCRResponse struct {
 	Data    MCR    `json:"data"`
 }
 
+type PrefixFilterList struct {
+	Id            int    `json:"id"`
+	Description   string `json:"description"`
+	AddressFamily string `json:"addressFamily"`
+}
+
+type MCRPrefixFilterListResponse struct {
+	Message string             `json:"message"`
+	Terms   string             `json:"terms"`
+	Data    []PrefixFilterList `json:"data"`
+}
+
 type PartnerLookupResponse struct {
 	Message string        `json:"message"`
 	Data    PartnerLookup `json:"data"`
