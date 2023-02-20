@@ -1,3 +1,8 @@
+# 0.1.14 Release
+
+## New Features
+ - Support for filtering Partner Megaports by Diversity Zone.
+
 # 0.1.13 Release
 
 ## New Features

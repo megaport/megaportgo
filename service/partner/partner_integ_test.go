@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 // Copyright 2020 Megaport Pty Ltd
@@ -147,6 +148,18 @@ func TestFilterPartnerMegaportByProductName(t *testing.T) {
 
 	for i := 0; i < len(partnerMegaports); i++ {
 		logger.Infof("Item found. ProductName: %s", partnerMegaports[i].ProductName)
+	}
+}
+
+func TestFilterPartnerMegaportByDiversityZone(t *testing.T) {
+	assert := assert.New(t)
+	partner := New(&cfg)
+
+	partnerMegaports, _ := partner.GetAllPartnerMegaports()
+	partner.FilterPartnerMegaportByDiversityZone(&partnerMegaports, "red", true)
+
+	for i := 0; i < len(partnerMegaports); i++ {
+		assert.Equal(partnerMegaports[i].DiversityZone, "red")
 	}
 }
 

@@ -191,3 +191,34 @@ func (p *Partner) FilterPartnerMegaportByLocationId(partnerMegaports *[]types.Pa
 		return nil
 	}
 }
+
+func (p *Partner) FilterPartnerMegaportByDiversityZone(partnerMegaports *[]types.PartnerMegaport, diversityZone string, exactMatch bool) error {
+	existingMegaports := *partnerMegaports
+	var filteredMegaports []types.PartnerMegaport
+
+	for i := 0; i < len(existingMegaports); i++ {
+		match := false
+
+		if diversityZone != "" {
+			if exactMatch { // Exact Match
+				if diversityZone == existingMegaports[i].DiversityZone {
+					match = true
+				}
+			}
+		} else {
+			match = true
+		}
+
+		if match && existingMegaports[i].VXCPermitted {
+			filteredMegaports = append(filteredMegaports, existingMegaports[i])
+		}
+	}
+
+	*partnerMegaports = filteredMegaports
+
+	if len(*partnerMegaports) == 0 {
+		return errors.New(mega_err.ERR_PARTNER_PORT_NO_RESULTS)
+	} else {
+		return nil
+	}
+}

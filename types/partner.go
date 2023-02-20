@@ -15,13 +15,14 @@
 package types
 
 type PartnerMegaport struct {
-	ConnectType  string `json:"connectType"`
-	ProductUID   string `json:"productUid"`
-	ProductName  string `json:"title"`
-	CompanyUID   string `json:"companyUid"`
-	CompanyName  string `json:"companyName"`
-	LocationId   int    `json:"locationId"`
-	Speed        int    `json:"speed"`
-	Rank         int    `json:"rank"`
-	VXCPermitted bool   `json:"vxcPermitted"`
+	ConnectType   string `json:"connectType"`
+	ProductUID    string `json:"productUid"`
+	ProductName   string `json:"title"`
+	CompanyUID    string `json:"companyUid"`
+	CompanyName   string `json:"companyName"`
+	DiversityZone string `json:"diversityZone"`
+	LocationId    int    `json:"locationId"`
+	Speed         int    `json:"speed"`
+	Rank          int    `json:"rank"`
+	VXCPermitted  bool   `json:"vxcPermitted"`
 }
