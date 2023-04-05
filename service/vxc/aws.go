@@ -65,12 +65,26 @@ func (v *VXC) BuyAWSVXC(
 
 func (v *VXC) ExtractAwsId(vxcDetails types.VXC) string {
 
-	// extract fid id from csp connection data
+	// extract vif id from csp connection data
 	cspConnection := v.GetCspConnection("connectType", "AWS", vxcDetails)
 
 	if cspConnection != nil {
 		if _, exists := cspConnection["vif_id"]; exists {
 			return cspConnection["vif_id"].(string)
+		}
+	}
+
+	return ""
+}
+
+func (v *VXC) ExtractConnectionId(vxcDetails types.VXC) string {
+
+	// extract connection id from csp connection data
+	cspConnection := v.GetCspConnection("connectType", "AWSHC", vxcDetails)
+
+	if cspConnection != nil {
+		if _, exists := cspConnection["connectionId"]; exists {
+			return cspConnection["connectionId"].(string)
 		}
 	}
 

@@ -1,3 +1,8 @@
+# 0.1.15 Release
+
+## New Features
+ - Support for extracting AWS Hosted Connection ID's.
+
 # 0.1.14 Release
 
 ## New Features
