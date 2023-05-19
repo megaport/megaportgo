@@ -15,6 +15,7 @@
 package vxc
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -84,11 +85,12 @@ func (v *VXC) BuyVXC(
 func (v *VXC) GetVXCDetails(id string) (types.VXC, error) {
 	url := "/v2/product/" + id
 	response, err := v.Config.MakeAPICall("GET", url, nil)
-	defer response.Body.Close()
 
 	if err != nil {
 		return types.VXC{}, err
 	}
+
+	defer ioutil.NopCloser(response.Body)
 
 	body, fileErr := ioutil.ReadAll(response.Body)
 
@@ -106,11 +108,12 @@ func (v *VXC) GetVXCDetails(id string) (types.VXC, error) {
 	return vxcDetails.Data, nil
 }
 
-// GetVXCDetails deletes a VXC.
+// DeleteVXC deletes a VXC.
 func (v *VXC) DeleteVXC(id string, deleteNow bool) (bool, error) {
 	return v.product.DeleteProduct(id, deleteNow)
 }
 
+// UpdateVXC updates a VXC
 func (v *VXC) UpdateVXC(id string, name string, rateLimit int, aEndVLAN int, bEndVLAN int) (bool, error) {
 	url := fmt.Sprintf("/v2/product/%s/%s", types.PRODUCT_VXC, id)
 	var update interface{}
@@ -146,78 +149,161 @@ func (v *VXC) UpdateVXC(id string, name string, rateLimit int, aEndVLAN int, bEn
 	}
 }
 
+// WaitForVXCProvisioning waits up to 15 minutes for the VXC to reach the "LIVE" status.
+// See WaitForVXCProvisioningCtx
 func (v *VXC) WaitForVXCProvisioning(vxcId string) (bool, error) {
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 15*time.Minute)
+	defer cancelFunc()
+	return v.WaitForVXCProvisioningCtx(ctx, 30*time.Second, vxcId)
+}
+
+// WaitForVXCProvisioningCtx waits for the VXC to reach the "LIVE" status, retrying every [pollFrequency]
+// seconds until the "LIVE" status is reached or the specified context expires or is canceled.
+func (v *VXC) WaitForVXCProvisioningCtx(ctx context.Context, pollFrequency time.Duration, vxcId string) (bool, error) {
 	vxcInfo, _ := v.GetVXCDetails(vxcId)
-	wait := 0
+	if strings.Compare(vxcInfo.ProvisioningStatus, "LIVE") != 0 {
+		return true, nil
+	}
 
 	// Go-Live
 	v.Log.Info("Waiting for VXC status transition.")
-	for strings.Compare(vxcInfo.ProvisioningStatus, "LIVE") != 0 && wait < 30 {
-		time.Sleep(30 * time.Second)
+
+	wait := 0
+	timer := time.NewTicker(pollFrequency)
+	defer timer.Stop()
+	for {
 		wait++
-		vxcInfo, _ = v.GetVXCDetails(vxcId)
 
-		if wait%5 == 0 {
-			v.Log.Infoln("VXC is currently being provisioned. Status: ", vxcInfo.ProvisioningStatus)
-		}
-	}
+		select {
 
-	vxcInfo, _ = v.GetVXCDetails(vxcId)
-	v.Log.Debugln("VXC waiting cycle complete. Status: ", vxcInfo.ProvisioningStatus)
+		case <-ctx.Done():
+			vxcInfo, _ = v.GetVXCDetails(vxcId)
+			if strings.Compare(vxcInfo.ProvisioningStatus, "LIVE") != 0 {
+				return true, nil
+			}
 
-	if vxcInfo.ProvisioningStatus == "LIVE" {
-		return true, nil
-	} else {
-		if wait >= 30 {
-			return false, errors.New(mega_err.ERR_VXC_PROVISION_TIMEOUT_EXCEED)
-		} else {
-			return false, errors.New(mega_err.ERR_VXC_NOT_LIVE)
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				return false, errors.New(mega_err.ERR_VXC_PROVISION_TIMEOUT_EXCEED)
+			} else {
+				return false, ctx.Err()
+			}
+
+		case t, ok := <-timer.C:
+			vxcInfo, _ = v.GetVXCDetails(vxcId)
+			if strings.Compare(vxcInfo.ProvisioningStatus, "LIVE") != 0 {
+				return true, nil
+			}
+
+			deadline, hasDeadline := ctx.Deadline()
+			if !ok || (hasDeadline && t.After(deadline)) {
+				v.Log.Debugln("VXC waiting cycle complete. Status: ", vxcInfo.ProvisioningStatus)
+				return false, errors.New(mega_err.ERR_VXC_PROVISION_TIMEOUT_EXCEED)
+			}
+
+			if wait%5 == 0 {
+				v.Log.Infoln("VXC is currently being provisioned. Status: ", vxcInfo.ProvisioningStatus)
+			}
 		}
 	}
 }
 
+// WaitForVXCUpdated waits up to 15 minutes for the VXC update to get applied.
+// See WaitForVXCUpdatedCtx
 func (v *VXC) WaitForVXCUpdated(id string, name string, rateLimit int, aEndVLAN int, bEndVLAN int) (bool, error) {
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 15*time.Minute)
+	defer cancelFunc()
+	return v.WaitForVXCUpdatedCtx(ctx, 30*time.Second, id, name, rateLimit, aEndVLAN, bEndVLAN)
+}
+
+// WaitForVXCUpdatedCtx waits for the VXC update to be applied successfully, retrying every  [pollFrequency]
+// seconds until the update completes or the specified context expires or is canceled.
+func (v *VXC) WaitForVXCUpdatedCtx(
+	ctx context.Context, pollFrequency time.Duration, id string, name string, rateLimit int, aEndVLAN int, bEndVLAN int,
+) (bool, error) {
 	wait := 0
-	hasUpdated := false
 
-	for !hasUpdated && wait < 30 {
-		time.Sleep(30 * time.Second)
+	timer := time.NewTicker(pollFrequency)
+	defer timer.Stop()
+	for {
 		wait++
-		vxcDetails, _ := v.GetVXCDetails(id)
+		select {
+		case <-ctx.Done():
+			vxcDetails, _ := v.GetVXCDetails(id)
+			if isUpdated(name, rateLimit, aEndVLAN, bEndVLAN, vxcDetails) {
+				return true, nil
+			}
 
-		if aEndVLAN == 0 {
-			aEndVLAN = vxcDetails.AEndConfiguration.VLAN
-		}
+			v.logUpdateStatus("VXC wait cycle complete", name, rateLimit, aEndVLAN, bEndVLAN, vxcDetails)
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				return false, errors.New(mega_err.ERR_VXC_UPDATE_TIMEOUT_EXCEED)
+			} else {
+				return false, ctx.Err()
+			}
 
-		if bEndVLAN == 0 {
-			bEndVLAN = vxcDetails.BEndConfiguration.VLAN
-		}
+		case t, ok := <-timer.C:
+			vxcDetails, _ := v.GetVXCDetails(id)
+			if isUpdated(name, rateLimit, aEndVLAN, bEndVLAN, vxcDetails) {
+				return true, nil
+			}
 
-		if wait%5 == 0 {
-			v.Log.Debugf("VXC Update in progress: Name %t; RateLimit %t; AEndVLAN %t; BEndVLAN %t\n",
-				vxcDetails.Name == name,
-				vxcDetails.RateLimit == rateLimit,
-				vxcDetails.AEndConfiguration.VLAN == aEndVLAN,
-				vxcDetails.BEndConfiguration.VLAN == bEndVLAN)
-		}
+			deadline, hasDeadline := ctx.Deadline()
+			if !ok || (hasDeadline && t.After(deadline)) {
+				v.logUpdateStatus("VXC wait cycle complete", name, rateLimit, aEndVLAN, bEndVLAN, vxcDetails)
+				return false, errors.New(mega_err.ERR_VXC_UPDATE_TIMEOUT_EXCEED)
+			}
 
-		if vxcDetails.Name == name && vxcDetails.RateLimit == rateLimit && vxcDetails.AEndConfiguration.VLAN == aEndVLAN && vxcDetails.BEndConfiguration.VLAN == bEndVLAN {
-			hasUpdated = true
+			if wait%5 == 0 {
+				v.logUpdateStatus("VXC Update in progress", name, rateLimit, aEndVLAN, bEndVLAN, vxcDetails)
+			}
 		}
 	}
+}
 
-	vxcDetails, _ := v.GetVXCDetails(id)
-	v.Log.Debugf("VXC wait cyclecomplete: Name %t; RateLimit %t; AEndVLAN %t; BEndVLAN %t\n",
+func (v *VXC) logUpdateStatus(
+	prefix string,
+	name string,
+	rateLimit int,
+	aEndVLAN int,
+	bEndVLAN int,
+	vxcDetails types.VXC,
+) {
+	if aEndVLAN == 0 {
+		aEndVLAN = vxcDetails.AEndConfiguration.VLAN
+	}
+
+	if bEndVLAN == 0 {
+		bEndVLAN = vxcDetails.BEndConfiguration.VLAN
+	}
+	v.Log.Debugf("%s: Name %t; RateLimit %t; AEndVLAN %t; BEndVLAN %t\n",
+		prefix,
 		vxcDetails.Name == name,
 		vxcDetails.RateLimit == rateLimit,
 		vxcDetails.AEndConfiguration.VLAN == aEndVLAN,
 		vxcDetails.BEndConfiguration.VLAN == bEndVLAN)
+}
 
-	if wait >= 30 {
-		return false, errors.New(mega_err.ERR_VXC_UPDATE_TIMEOUT_EXCEED)
-	} else {
-		return true, nil
+func isUpdated(
+	name string,
+	rateLimit int,
+	aEndVLAN int,
+	bEndVLAN int,
+	vxcDetails types.VXC,
+) bool {
+	if aEndVLAN == 0 {
+		aEndVLAN = vxcDetails.AEndConfiguration.VLAN
 	}
+
+	if bEndVLAN == 0 {
+		bEndVLAN = vxcDetails.BEndConfiguration.VLAN
+	}
+
+	if vxcDetails.Name == name &&
+		vxcDetails.RateLimit == rateLimit &&
+		vxcDetails.AEndConfiguration.VLAN == aEndVLAN &&
+		vxcDetails.BEndConfiguration.VLAN == bEndVLAN {
+		return true
+	}
+	return false
 }
 
 func (v *VXC) UnmarshallMcrAEndConfig(vxcDetails types.VXC) (interface{}, error) {

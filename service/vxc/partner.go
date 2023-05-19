@@ -33,12 +33,12 @@ const PARTNER_AWS string = "AWS"
 func (v *VXC) LookupPartnerPorts(key string, portSpeed int, partner string, requestedProductID string) (string, error) {
 	lookupUrl := "/v2/secure/" + strings.ToLower(partner) + "/" + key
 	response, resErr := v.Config.MakeAPICall("GET", lookupUrl, nil)
-	defer response.Body.Close()
 	isErr, compiledErr := v.Config.IsErrorResponse(response, &resErr, 200)
 
 	if isErr {
 		return "", compiledErr
 	}
+	defer ioutil.NopCloser(response.Body)
 
 	body, fileErr := ioutil.ReadAll(response.Body)
 
@@ -68,7 +68,7 @@ func (v *VXC) LookupPartnerPorts(key string, portSpeed int, partner string, requ
 	return "", errors.New(mega_err.ERR_NO_AVAILABLE_VXC_PORTS)
 }
 
-// BuyAWSVXC buys an AWS VXC.
+// BuyPartnerVXC buys a partner VXC.
 func (v *VXC) BuyPartnerVXC(
 	portUID string,
 	vxcName string,
@@ -109,8 +109,8 @@ func (v *VXC) BuyPartnerVXC(
 	return orderInfo.Data[0].TechnicalServiceUID, nil
 }
 
-// BuyPartnerVXC performs Step 2 of the partner port purchase process. These are for partners that require some kind
-// of partner pairing key (e.g. GCP, Azure).
+// MarshallPartnerConfig performs Step 2 of the partner port purchase process. These are for partners that require
+// some kind of partner pairing key (e.g. GCP, Azure).
 func (v *VXC) MarshallPartnerConfig(
 	key string,
 	partner string,
