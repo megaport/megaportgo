@@ -35,10 +35,10 @@ import (
 
 const (
 	MEGAPORTURL     = "https://api-staging.megaport.com/"
-	TEST_LOCATION_A = "Global Switch Sydney"
+	TEST_LOCATION_A = "Denver"
 	TEST_LOCATION_B = "Equinix SY3"
 	TEST_LOCATION_C = "90558833-e14f-49cf-84ba-bce1c2c40f2d"
-	MCR_LOCATION    = "AU"
+	MCR_LOCATION    = "US"
 )
 
 var logger *config.DefaultLogger
@@ -363,6 +363,20 @@ func TestAWSConnectionBuyDefaults(t *testing.T) {
 	assert.NoError(t, portDeleteErr)
 	assert.True(t, portDeleteStatus)
 
+}
+
+func TestAzureServiceKeyLookup(t *testing.T) {
+	vxc := New(&cfg)
+
+	serviceKey := "1b2329a5-56dc-45d0-8a0d-87b706297777"
+
+	serviceKeyLookup, serviceKeyLookupErr := vxc.LookupAzureServiceKey(serviceKey)
+	if serviceKeyLookupErr != nil {
+		logger.Errorf("error: %v", serviceKeyLookupErr)
+		t.FailNow()
+	}
+	data := serviceKeyLookup["data"].(map[string]interface{})
+	assert.Equal(t, serviceKey, data["service_key"])
 }
 
 func TestBuyAzureExpressRoute(t *testing.T) {

@@ -148,3 +148,24 @@ func (v *VXC) MarshallPartnerConfig(
 
 	return partnerConfig, nil
 }
+
+func (v *VXC) LookupAzureServiceKey(key string) (map[string]interface{}, error) {
+	// TODO: should we validate that key is a uuid?
+	lookupUrl := "/v2/secure/azure/" + key
+	response, resErr := v.Config.MakeAPICall("GET", lookupUrl, nil)
+	_, err := v.Config.IsErrorResponse(response, &resErr, 200)
+	if err != nil {
+		return nil, err
+	}
+	readResult, readError := ioutil.ReadAll(response.Body)
+	if readError != nil {
+		return nil, readError
+	}
+	output := make(map[string]interface{})
+
+	unmarshalErr := json.Unmarshal(readResult, &output)
+	if unmarshalErr != nil {
+		return nil, unmarshalErr
+	}
+	return output, nil
+}
