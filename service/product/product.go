@@ -193,3 +193,57 @@ func (p *Product) CreateMCRPrefixFilterList(id string, prefixFilterList types.MC
 		return true, nil
 	}
 }
+
+func (p *Product) GetProductList(status string) (types.ProductList, error) {
+	productList := types.ProductList{}
+	url := "/v2/products?status=" + status
+	response, err := p.Config.MakeAPICall("GET", url, nil)
+	if response != nil {
+		defer response.Body.Close()
+	}
+	isError, errorMessage := p.Config.IsErrorResponse(response, &err, 200)
+	if isError {
+		return productList, errorMessage
+	}
+	body, fileErr := ioutil.ReadAll(response.Body)
+	if fileErr != nil {
+		return productList, fileErr
+	}
+	unmarshalErr := json.Unmarshal(body, &productList)
+	if unmarshalErr != nil {
+		return productList, unmarshalErr
+	}
+	return productList, nil
+}
+
+// GetProductTelemetry returns the telemetry data for a product.
+// productType types are vxc, mve, mcr, mcr2, or megaport.
+// productId is the UUID of the product to get telemetry for.
+// telemetryType differs for each product type. To get the list of telemetry types for each product type, use {{baseUrl}}/v2/products/telemetry
+func (p *Product) GetProductTelemetry(productType string, productUid string, telemetryType string, from int64, to int64) (types.ProductTelemetry, error) {
+	telemetryData := types.ProductTelemetry{}
+	url := fmt.Sprintf("/v2/product/%s/%s/telemetry?type=%s&from=%d&to=%d", productType, productUid, telemetryType, from, to)
+
+	response, err := p.Config.MakeAPICall("GET", url, nil)
+	if response != nil {
+		defer response.Body.Close()
+	}
+
+	isError, errorMessage := p.Config.IsErrorResponse(response, &err, 200)
+	if isError {
+		return telemetryData, errorMessage
+	}
+
+	body, fileErr := ioutil.ReadAll(response.Body)
+	fmt.Println(string(body))
+	if fileErr != nil {
+		return telemetryData, fileErr
+	}
+
+	unmarshalErr := json.Unmarshal(body, &telemetryData)
+	if unmarshalErr != nil {
+		return telemetryData, unmarshalErr
+	}
+
+	return telemetryData, nil
+}
