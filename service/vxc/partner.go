@@ -27,6 +27,7 @@ import (
 const PARTNER_AZURE string = "AZURE"
 const PARTNER_GOOGLE string = "GOOGLE"
 const PARTNER_AWS string = "AWS"
+const PARTNER_OCI string = "ORACLE"
 
 // LookupPartnerPorts is used to find available partner ports. This is Step 1 of the purchase process for most partner
 // ports as outlined at https://dev.megaport.com/#cloud-partner-api-orders.
@@ -142,6 +143,11 @@ func (v *VXC) MarshallPartnerConfig(
 			return nil, err
 		}
 		partnerConfig = newPartnerConfig
+	} else if partner == PARTNER_OCI {
+		partnerConfig = types.PartnerOrderOciPartnerConfig{
+			ConnectType: partner,
+			VirtualCircutId:  key,
+		}
 	} else {
 		return "", errors.New(mega_err.ERR_INVALID_PARTNER)
 	}
