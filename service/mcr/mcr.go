@@ -43,8 +43,12 @@ func New(cfg *config.Config) *MCR {
 }
 
 // BuyMCR purchases an MCR.
-func (m *MCR) BuyMCR(locationID int, name string, portSpeed int, mcrASN int) (string, error) {
+func (m *MCR) BuyMCR(locationID int, name string, term int, portSpeed int, mcrASN int) (string, error) {
 	orderConfig := types.MCROrderConfig{}
+
+	if term != 1 && term != 12 && term != 24 && term != 36 {
+		return "", errors.New(mega_err.ERR_TERM_NOT_VALID)
+	}
 
 	if mcrASN != 0 {
 		orderConfig.ASN = mcrASN
@@ -58,6 +62,7 @@ func (m *MCR) BuyMCR(locationID int, name string, portSpeed int, mcrASN int) (st
 		{
 			LocationID: locationID,
 			Name:       name,
+			Term:       term,
 			Type:       "MCR2",
 			PortSpeed:  portSpeed,
 			Config:     orderConfig,

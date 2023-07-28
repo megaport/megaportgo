@@ -157,6 +157,6 @@ type PartnerOrderGooglePartnerConfig struct {
 }
 
 type PartnerOrderOciPartnerConfig struct {
-	ConnectType string `json:"connectType"`
-	VirtualCircutId  string `json:"virtualCircuitId"`
+	ConnectType     string `json:"connectType"`
+	VirtualCircutId string `json:"virtualCircuitId"`
 }

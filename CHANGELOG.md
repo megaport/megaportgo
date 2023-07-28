@@ -1,3 +1,9 @@
+# 0.1.16 Release
+
+## New Features
+ - Support for MCR contract term.
+ - Oracle partner support and OCI VXC connectivity. Credit @aszynkow
+
 # 0.1.15 Release
 
 ## New Features

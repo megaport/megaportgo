@@ -17,6 +17,7 @@ package types
 type MCROrder struct {
 	LocationID int            `json:"locationId"`
 	Name       string         `json:"productName"`
+	Term       int            `json:"term"`
 	Type       string         `json:"productType"`
 	PortSpeed  int            `json:"portSpeed"`
 	Config     MCROrderConfig `json:"config"`

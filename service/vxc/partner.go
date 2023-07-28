@@ -145,8 +145,8 @@ func (v *VXC) MarshallPartnerConfig(
 		partnerConfig = newPartnerConfig
 	} else if partner == PARTNER_OCI {
 		partnerConfig = types.PartnerOrderOciPartnerConfig{
-			ConnectType: partner,
-			VirtualCircutId:  key,
+			ConnectType:     partner,
+			VirtualCircutId: key,
 		}
 	} else {
 		return "", errors.New(mega_err.ERR_INVALID_PARTNER)
