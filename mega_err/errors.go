@@ -36,3 +36,4 @@ const ERR_PARSING_ERR_RESPONSE = "status code '%v' received from api and there h
 const ERR_PARTNER_PORT_NO_RESULTS = "sorry there were no results returned based on the given filters"
 const ERR_SESSION_TOKEN_STILL_EXIST = "it looks like the session was not removed and still exists, logout did not work"
 const ERR_MEGAPORT_URL_NOT_SET = "The variable megaport_url has not been set correctly"
+const ERR_ZONE_NOT_VALID = "invalid zone, valid values are red, blue, or any"
