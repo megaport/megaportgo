@@ -45,8 +45,8 @@ func New(cfg *config.Config) *Port {
 	}
 }
 
-// BuyPort orders a Port.
-func (p *Port) BuyPort(name string, term int, portSpeed int, locationId int, market string, isLAG bool, lagCount int, isPrivate bool, diversityZone string) (string, error) {
+// buyPort orders a Port.
+func (p *Port) buyPort(name string, term int, portSpeed int, locationId int, market string, isLAG bool, lagCount int, isPrivate bool, diversityZone string) (string, error) {
 	var buyOrder []types.PortOrder
 	var portConfig types.PortOrderConfig
 
@@ -115,24 +115,29 @@ func (p *Port) BuyPort(name string, term int, portSpeed int, locationId int, mar
 	return orderInfo.Data[0].TechnicalServiceUID, nil
 }
 
-// BuySinglePort orders a single Port. Same as BuyPort, with isLag set to false and Diversity Zone set to any.
+// BuyPort orders a Port or LAG with unspecified zone. Used for compatability with older versions of megaportgo.
+func (p *Port) BuyPort(name string, term int, portSpeed int, locationId int, market string, isLAG bool, lagCount int, isPrivate bool) (string, error) {
+	return p.buyPort(name, term, portSpeed, locationId, market, isLAG, lagCount, isPrivate, "any")
+}
+
+// BuySinglePort orders a single Port with unspecified zone.
 func (p *Port) BuySinglePort(name string, term int, portSpeed int, locationId int, market string, isPrivate bool) (string, error) {
-	return p.BuyPort(name, term, portSpeed, locationId, market, false, 0, isPrivate, "any")
+	return p.buyPort(name, term, portSpeed, locationId, market, false, 0, isPrivate, "any")
 }
 
-// BuyZonedSinglePort orders a single Port. Same as BuyPort, with isLag set to false and Diversity Zone required.
+// BuyZonedSinglePort orders a single Port in the requested zone.
 func (p *Port) BuyZonedSinglePort(name string, term int, portSpeed int, locationId int, market string, isPrivate bool, diversityZone string) (string, error) {
-	return p.BuyPort(name, term, portSpeed, locationId, market, false, 0, isPrivate, diversityZone)
+	return p.buyPort(name, term, portSpeed, locationId, market, false, 0, isPrivate, diversityZone)
 }
 
-// BuyLAGPort orders a LAG Port. Same as BuyPort, with isLag set to true and Diversity Zone set to any.
+// BuyLAGPort orders a LAG Port/s with unspecified zone.
 func (p *Port) BuyLAGPort(name string, term int, portSpeed int, locationId int, market string, lagCount int, isPrivate bool) (string, error) {
-	return p.BuyPort(name, term, portSpeed, locationId, market, true, lagCount, isPrivate, "any")
+	return p.buyPort(name, term, portSpeed, locationId, market, true, lagCount, isPrivate, "any")
 }
 
-// BuyZonedLAGPort orders a LAG Port. Same as BuyPort, with isLag set to true and Diversity Zone required.
+// BuyZonedLAGPort orders a LAG Port/s in the requested zone.
 func (p *Port) BuyZonedLAGPort(name string, term int, portSpeed int, locationId int, market string, lagCount int, isPrivate bool, diversityZone string) (string, error) {
-	return p.BuyPort(name, term, portSpeed, locationId, market, true, lagCount, isPrivate, diversityZone)
+	return p.buyPort(name, term, portSpeed, locationId, market, true, lagCount, isPrivate, diversityZone)
 }
 
 func (p *Port) GetPortDetails(id string) (types.Port, error) {
