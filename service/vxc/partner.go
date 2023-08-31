@@ -34,12 +34,12 @@ const PARTNER_OCI string = "ORACLE"
 func (v *VXC) LookupPartnerPorts(key string, portSpeed int, partner string, requestedProductID string) (string, error) {
 	lookupUrl := "/v2/secure/" + strings.ToLower(partner) + "/" + key
 	response, resErr := v.Config.MakeAPICall("GET", lookupUrl, nil)
-	defer response.Body.Close()
 	isErr, compiledErr := v.Config.IsErrorResponse(response, &resErr, 200)
 
 	if isErr {
 		return "", compiledErr
 	}
+	defer ioutil.NopCloser(response.Body)
 
 	body, fileErr := ioutil.ReadAll(response.Body)
 
@@ -69,7 +69,7 @@ func (v *VXC) LookupPartnerPorts(key string, portSpeed int, partner string, requ
 	return "", errors.New(mega_err.ERR_NO_AVAILABLE_VXC_PORTS)
 }
 
-// BuyAWSVXC buys an AWS VXC.
+// BuyPartnerVXC buys a partner VXC.
 func (v *VXC) BuyPartnerVXC(
 	portUID string,
 	vxcName string,
@@ -110,8 +110,8 @@ func (v *VXC) BuyPartnerVXC(
 	return orderInfo.Data[0].TechnicalServiceUID, nil
 }
 
-// BuyPartnerVXC performs Step 2 of the partner port purchase process. These are for partners that require some kind
-// of partner pairing key (e.g. GCP, Azure).
+// MarshallPartnerConfig performs Step 2 of the partner port purchase process. These are for partners that require
+// some kind of partner pairing key (e.g. GCP, Azure).
 func (v *VXC) MarshallPartnerConfig(
 	key string,
 	partner string,
@@ -153,4 +153,25 @@ func (v *VXC) MarshallPartnerConfig(
 	}
 
 	return partnerConfig, nil
+}
+
+func (v *VXC) LookupAzureServiceKey(key string) (map[string]interface{}, error) {
+	// TODO: should we validate that key is a uuid?
+	lookupUrl := "/v2/secure/azure/" + key
+	response, resErr := v.Config.MakeAPICall("GET", lookupUrl, nil)
+	_, err := v.Config.IsErrorResponse(response, &resErr, 200)
+	if err != nil {
+		return nil, err
+	}
+	readResult, readError := ioutil.ReadAll(response.Body)
+	if readError != nil {
+		return nil, readError
+	}
+	output := make(map[string]interface{})
+
+	unmarshalErr := json.Unmarshal(readResult, &output)
+	if unmarshalErr != nil {
+		return nil, unmarshalErr
+	}
+	return output, nil
 }

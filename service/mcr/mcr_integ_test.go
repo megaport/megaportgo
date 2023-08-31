@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	TEST_MCR_TEST_LOCATION_MARKET = "AU"
+	TEST_MCR_TEST_LOCATION_MARKET = "US"
 	MEGAPORTURL                   = "https://api-staging.megaport.com/"
 )
 
