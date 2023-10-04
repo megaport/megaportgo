@@ -6,26 +6,23 @@ To begin using this library, you must first generate a config Object that contai
 ``` go
 import (
     "github.com/megaport/megaportgo/service/authentication"
-     "github.com/megaport/megaportgo/service/port"
+    "github.com/megaport/megaportgo/service/port"
     "github.com/megaport/megaportgo/config"
 )
 
 func main() {
     logger := config.NewDefaultLogger()
 
-    username := os.Getenv("MEGAPORT_USERNAME")
-    password := os.Getenv("MEGAPORT_PASSWORD")
-    otp := os.Getenv("MEGAPORT_MFA_OTP_KEY")
+    clientID := os.Getenv("MEGAPORT_ACCESS_KEY")
+    clientSecret := os.Getenv("MEGAPORT_SECRET_KEY")
 
     cfg := config.Config{
         Log:      logger,
         Endpoint: "https://api-staging.megaport.com/",
     }
 
-    auth := authentication.New(&cfg, username, password, otp)
-    token, _ := auth.Login()
-
-    cfg.SessionToken = token
+    auth := authentication.New(&cfg)
+    token, _ := auth.LoginOauth(clientID, clientSecret)
 
     port := port.New(&cfg)
     port.GetPortDetails("1234")
@@ -51,10 +48,11 @@ Tests can be executed for this library by running `make integration` to run all 
 In order to run theses tests valid user Credentials will need to be provided as per the Credentials section below.
 
 ### Credentials
+Go to Tools > API Key Generator in Megaport Portal to manage Active API Keys.
+
 For the purposes of testing Megaport Credentials can be passed to the integration tests by setting the following environment variables:
-* MEGAPORT_USERNAME: The username used to login to the Megaport Portal.
-* MEGAPORT_PASSWORD: The password used to login to the Megaport Portal.
-* MEGAPORT_MFA_OTP_KEY: The key taken from the "Add Authentication" screen in the Megaport Portal (_this is __not__ your OTP, it is the key you used to setup your Authenticator_).
+* MEGAPORT_ACCESS_KEY: The access key used to generate a token to authenticate API requests.
+* MEGAPORT_SECRET_KEY: The secret key used to generate a token to authenticate API requests.
 
 ### Test User
 

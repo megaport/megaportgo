@@ -26,6 +26,26 @@ type ErrorResponse struct {
 	Data    string `json:"data"`
 }
 
+type AccessTokenResponse struct {
+	AccessToken  string `json:"access_token"`
+	TokenType    string `json:"token_type"`
+	ExpiresIn    int    `json:"expires_in"`
+	RefreshToken string `json:"refresh_token,omitempty"`
+	Error        string `json:"error"`
+}
+
+type LoginResponse struct {
+	Message string `json:"message"`
+	Terms   string `json:"terms"`
+	Data    struct {
+		Permissions map[string][]string `json:"permissions"`
+		OAuthToken  struct {
+			AccessToken string `json:"accessToken"`
+			ExpiresIn   int
+		}
+	}
+}
+
 type LocationResponse struct {
 	Message string     `json:"message"`
 	Terms   string     `json:"terms"`

@@ -21,12 +21,14 @@
 package authentication
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/megaport/megaportgo/config"
 	"github.com/megaport/megaportgo/mega_err"
@@ -37,51 +39,108 @@ import (
 type Authentication struct {
 	*config.Config
 
-	username        string
-	password        string
-	oneTimePassword string
+	bearerToken string
+	tokenExpiry time.Time
 }
 
-func New(cfg *config.Config, username string, password string, oneTimePassword string) *Authentication {
+func New(cfg *config.Config) *Authentication {
 	return &Authentication{
-		Config:          cfg,
-		username:        username,
-		password:        password,
-		oneTimePassword: oneTimePassword,
+		Config: cfg,
 	}
 }
 
-// Login is a wrapper around `GetSessionToken` which loads a username and password from file first before initiating
-// the retrieval of a Session Token.
-func (auth *Authentication) Login() (string, error) {
-	auth.Log.Debugln("Creating Session for:", auth.username)
-	token, err := auth.getSessionToken()
+// LoginOauth performs an OAuth-style logi using an API key and API
+// secret key. It returns the bearer token or an error if the login
+// was unsuccessful.
+func (auth *Authentication) LoginOauth(accessKey, secretKey string) (string, error) {
+	auth.Log.Debugln("Creating Session for:", accessKey)
 
-	if err != nil {
-		auth.Log.Debugln("Unable to get Session token: ", err)
-		return "", err
+	// Shortcut if we've already authenticated.
+	if time.Now().Before(auth.tokenExpiry) {
+		return auth.bearerToken, nil
 	}
 
-	auth.Log.Debugln("Session Established")
-	return token, nil
-}
+	// Encode the client ID and client secret to create Basic Authentication
+	authHeader := base64.StdEncoding.EncodeToString([]byte(accessKey + ":" + secretKey))
 
-func (a *Authentication) getSessionToken() (string, error) {
-	loginURL := a.Config.Endpoint + "/v2/login"
+	// Set the URL for the token endpoint
+	var tokenURL string
+	if auth.Config.Endpoint == "https://api.megaport.com/" {
+		tokenURL = "https://auth-m2m.megaport.com/oauth2/token"
+	} else if auth.Config.Endpoint == "https://api-staging.megaport.com/" {
+		tokenURL = "https://oauth-m2m-staging.auth.ap-southeast-2.amazoncognito.com/oauth2/token"
+	} else if auth.Config.Endpoint == "https://api-uat.megaport.com/" {
+		tokenURL = "https://oauth-m2m-uat.auth.ap-southeast-2.amazoncognito.com/oauth2/token"
+	} else if auth.Config.Endpoint == "https://api-uat2.megaport.com/" {
+		tokenURL = "https://oauth-m2m-uat2.auth.ap-southeast-2.amazoncognito.com/oauth2/token"
+	}
+
+	// Create form data for the request body
 	data := url.Values{}
-	client := &http.Client{}
+	data.Set("grant_type", "client_credentials")
 
-	data.Add("username", a.username)
-	data.Add("password", a.password)
+	// Create an HTTP request
+	req, _ := http.NewRequest("POST", tokenURL, strings.NewReader(data.Encode()))
 
-	if a.oneTimePassword != "" {
-		oneTimePassword, otpErr := generateOneTimePassword(a.oneTimePassword)
+	// Set the request headers
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Authorization", "Basic "+authHeader)
+
+	// Create an HTTP client and send the request
+	auth.Log.Debugln("Login request to:", tokenURL)
+	resp, resErr := auth.Client.Do(req)
+	if resErr != nil {
+		return "", resErr
+	}
+	defer resp.Body.Close()
+
+	// Read the response body
+	body, fileErr := io.ReadAll(resp.Body)
+	if fileErr != nil {
+		return "", fileErr
+	}
+
+	// Parse the response JSON to extract the access token and expiration time
+	authResponse := types.AccessTokenResponse{}
+	if parseErr := json.Unmarshal(body, &authResponse); parseErr != nil {
+		return "", parseErr
+	}
+
+	if authResponse.Error != "" {
+		return "", errors.New("authentication error: " + authResponse.Error)
+	}
+
+	// Calculate the token expiration time
+	auth.tokenExpiry = time.Now().Add(time.Duration(authResponse.ExpiresIn) * time.Second)
+
+	// Store the access token
+	auth.bearerToken = authResponse.AccessToken
+	auth.SessionToken = authResponse.AccessToken
+
+	auth.Log.Debugln("session established")
+	return auth.bearerToken, nil
+}
+
+// LoginUsername performs a login against the portal endpoint. This
+// method is being deprecated in favour of the OAuth method. It returns
+// the bearer token or an error if authentication fails.
+func (auth *Authentication) LoginUsername(username, password, oneTimePassword string) (string, error) {
+	auth.Log.Debugln("Creating Session for:", username)
+
+	loginURL := auth.Config.Endpoint + "/v2/login"
+	data := url.Values{}
+
+	data.Add("username", username)
+	data.Add("password", password)
+
+	if oneTimePassword != "" {
+		otpVal, otpErr := generateOneTimePassword(oneTimePassword)
 
 		if otpErr != nil {
 			return "", otpErr
 		}
 
-		data.Add("oneTimePassword", oneTimePassword)
+		data.Add("oneTimePassword", otpVal)
 	}
 
 	loginRequest, _ := http.NewRequest("POST", loginURL, strings.NewReader(data.Encode()))
@@ -89,35 +148,39 @@ func (a *Authentication) getSessionToken() (string, error) {
 	loginRequest.Header.Set("Accept", "application/json")
 	loginRequest.Header.Set("User-Agent", "Go-Megaport-Library/0.1")
 
-	response, resErr := client.Do(loginRequest)
+	response, resErr := auth.Client.Do(loginRequest)
 
 	if resErr != nil {
 		return "", resErr
 	}
-
 	defer response.Body.Close()
 
-	isError, compiledError := a.Config.IsErrorResponse(response, &resErr, 200)
-
+	isError, compiledError := auth.Config.IsErrorResponse(response, &resErr, 200)
 	if isError {
 		return "", compiledError
 	}
 
-	body, fileErr := ioutil.ReadAll(response.Body)
-
+	body, fileErr := io.ReadAll(response.Body)
 	if fileErr != nil {
 		return "", fileErr
 	}
 
-	authResponse := types.GenericResponse{}
-
+	authResponse := types.LoginResponse{}
 	parseErr := json.Unmarshal([]byte(body), &authResponse)
-
 	if parseErr != nil {
 		return "", parseErr
 	}
+	oauth := authResponse.Data.OAuthToken
 
-	return authResponse.Data["session"].(string), nil
+	// Calculate the token expiration time
+	auth.tokenExpiry = time.Now().Add(time.Duration(oauth.ExpiresIn) * time.Second)
+
+	// Store the access token
+	auth.bearerToken = oauth.AccessToken
+	auth.SessionToken = oauth.AccessToken
+
+	auth.Log.Debugln("session created")
+	return auth.bearerToken, nil
 }
 
 // generateOneTimePassword Generates a OTP using a Google Authenticator-compatible OTP Key. The field `one_time_password_key` must be set in

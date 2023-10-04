@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 // Copyright 2020 Megaport Pty Ltd
@@ -26,6 +27,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var accessKey string
+var secretKey string
 var username string
 var password string
 var otp string
@@ -41,6 +44,8 @@ func TestMain(m *testing.M) {
 	logger = config.NewDefaultLogger()
 	logger.SetLevel(config.DebugLevel)
 
+	accessKey = os.Getenv("MEGAPORT_ACCESS_KEY")
+	secretKey = os.Getenv("MEGAPORT_SECRET_KEY")
 	username = os.Getenv("MEGAPORT_USERNAME")
 	password = os.Getenv("MEGAPORT_PASSWORD")
 	otp = os.Getenv("MEGAPORT_MFA_OTP_KEY")
@@ -51,16 +56,6 @@ func TestMain(m *testing.M) {
 		logger.SetLevel(config.StringToLogLevel(logLevel))
 	}
 
-	if username == "" {
-		logger.Error("MEGAPORT_USERNAME environment variable not set.")
-		os.Exit(1)
-	}
-
-	if password == "" {
-		logger.Error("MEGAPORT_PASSWORD environment variable not set.")
-		os.Exit(1)
-	}
-
 	cfg = config.Config{
 		Log:      logger,
 		Endpoint: MEGAPORTURL,
@@ -69,11 +64,20 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-// TestLogin tests that the package can login and get a session token from the API
-func TestLogin(t *testing.T) {
+func TestLoginOauth(t *testing.T) {
 
-	auth := New(&cfg, username, password, otp)
-	token, loginErr := auth.Login()
+	if accessKey == "" {
+		logger.Error("MEGAPORT_ACCESS_KEY environment variable not set.")
+		os.Exit(1)
+	}
+
+	if secretKey == "" {
+		logger.Error("MEGAPORT_SECRET_KEY environment variable not set.")
+		os.Exit(1)
+	}
+
+	auth := New(&cfg)
+	token, loginErr := auth.LoginOauth(accessKey, secretKey)
 
 	assert.NoError(t, loginErr)
 
@@ -85,4 +89,35 @@ func TestLogin(t *testing.T) {
 	assert.NotEmpty(t, token)
 	// SessionToken is a valid guid
 	assert.NotNil(t, shared.IsGuid(token))
+
+	logger.Info(token)
+}
+
+func TestLoginUsername(t *testing.T) {
+
+	if username == "" {
+		logger.Error("MEGAPORT_USERNAME environment variable not set.")
+		os.Exit(1)
+	}
+
+	if password == "" {
+		logger.Error("MEGAPORT_PASSWORD environment variable not set.")
+		os.Exit(1)
+	}
+
+	auth := New(&cfg)
+	token, loginErr := auth.LoginUsername(username, password, otp)
+
+	assert.NoError(t, loginErr)
+
+	if loginErr != nil {
+		logger.Errorf("LoginError: %s", loginErr.Error())
+	}
+
+	// Session Token is not empty
+	assert.NotEmpty(t, token)
+	// SessionToken is a valid guid
+	assert.NotNil(t, shared.IsGuid(token))
+
+	logger.Info(token)
 }

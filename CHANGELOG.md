@@ -1,3 +1,11 @@
+# 0.2.0 Release
+
+## New Features
+- X-Auth tokens are being deprecated from October 2023, authentication has been updated to
+  support API keys in addition to username/password.
+
+  NOTE: The username & password is being deprecated and will be removed from v0.3.0
+
 # 0.1.16 Release
 
 ## New Features
@@ -55,7 +63,7 @@
 
 ## New Features
  - Migrate BGP Connection support from AWS-VXC to all VXC Connections.
- 
+
 ## Changes
  - VXC type resources now expect aEnd and bEnd configuration objects to represent these configurations.
 
@@ -63,7 +71,7 @@
 
 ## New Features
  - Add BGP Connection support for AWS VXC Connections
- 
+
 ## Changes
  - Rewrite and rename BuyAWSHostedVIF to BuyAWSVXC to handle new parameters and use cases
 
@@ -89,7 +97,7 @@ Welcome to the first release of the `megaportgo` library!
    - AWS Hosted VIF and Hosted Connection.
    - Google Cloud Interconnect.
    - Azure ExpressRoute
-   
+
  - The following lookup functionality is available:
    - Locations.
    - Partners Ports.
@@ -97,9 +105,9 @@ Welcome to the first release of the `megaportgo` library!
 ## Changes
  - (added in 0.1.2) Changed the `WaitForPortProvisioning` function so that it considers
    "LIVE" or "CONFIGURED" as an active status.
-   
+
 ## Notes
 This product is a `beta` release, please test all your changes in the
 Megaport staging environment before running on Production. Details can
-be found in the documentation. If you run into any issues, please log 
+be found in the documentation. If you run into any issues, please log
 an issue on GitHub issues.

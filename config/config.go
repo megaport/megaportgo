@@ -25,9 +25,23 @@ type httpClientInterface interface {
 	Do(req *http.Request) (retres *http.Response, reterr error)
 }
 
+// Wrap http.RoundTripper to append the user-agent header.
+type roundTripper struct {
+	T http.RoundTripper
+}
+
+func (t *roundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.Header.Add("User-Agent", "Go-Megaport-Library/0.1")
+
+	return t.T.RoundTrip(req)
+}
+
+func NewHttpClient() *http.Client {
+	return &http.Client{Transport: &roundTripper{http.DefaultTransport}}
+}
+
 // MakeAPICall
 func (c *Config) MakeAPICall(verb string, endpoint string, body []byte) (*http.Response, error) {
-
 	var request *http.Request
 	var reqErr error
 
@@ -45,9 +59,8 @@ func (c *Config) MakeAPICall(verb string, endpoint string, body []byte) (*http.R
 		return nil, reqErr
 	}
 
-	request.Header.Set("X-Auth-Token", c.SessionToken)
-	request.Header.Set("Accept", "application/json")
-	request.Header.Set("User-Agent", "Go-Megaport-Library/0.1")
+	// Set the bearer token in the request header
+	request.Header.Set("Authorization", "Bearer "+c.SessionToken)
 
 	if body != nil {
 		request.Header.Set("Content-Type", "application/json")
@@ -55,7 +68,8 @@ func (c *Config) MakeAPICall(verb string, endpoint string, body []byte) (*http.R
 
 	// check config for http client, create a new client if one was not provided at instantiation
 	if c.Client == nil {
-		c.Client = new(http.Client)
+		c.Client = NewHttpClient()
+
 	}
 
 	response, resErr := c.Client.Do(request)

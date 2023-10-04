@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 // Copyright 2020 Megaport Pty Ltd
@@ -33,7 +34,7 @@ import (
 
 const (
 	TEST_LOCATION_ID_A = 19 // 	Interactive 437 Williamstown
-	MEGAPORTURL     = "https://api-staging.megaport.com/"
+	MEGAPORTURL        = "https://api-staging.megaport.com/"
 )
 
 var logger *config.DefaultLogger
@@ -43,22 +44,21 @@ func TestMain(m *testing.M) {
 	logger = config.NewDefaultLogger()
 	logger.SetLevel(config.DebugLevel)
 
-	username := os.Getenv("MEGAPORT_USERNAME")
-	password := os.Getenv("MEGAPORT_PASSWORD")
-	otp := os.Getenv("MEGAPORT_MFA_OTP_KEY")
+	clientID := os.Getenv("MEGAPORT_ACCESS_KEY")
+	clientSecret := os.Getenv("MEGAPORT_SECRET_KEY")
 	logLevel := os.Getenv("LOG_LEVEL")
 
 	if logLevel != "" {
 		logger.SetLevel(config.StringToLogLevel(logLevel))
 	}
 
-	if username == "" {
-		logger.Error("MEGAPORT_USERNAME environment variable not set.")
+	if clientID == "" {
+		logger.Error("MEGAPORT_ACCESS_KEY environment variable not set.")
 		os.Exit(1)
 	}
 
-	if password == "" {
-		logger.Error("MEGAPORT_PASSWORD environment variable not set.")
+	if clientSecret == "" {
+		logger.Error("MEGAPORT_SECRET_KEY environment variable not set.")
 		os.Exit(1)
 	}
 
@@ -67,7 +67,7 @@ func TestMain(m *testing.M) {
 		Endpoint: MEGAPORTURL,
 	}
 
-	auth := authentication.New(&cfg, username, password, otp)
+	auth := authentication.New(&cfg, clientID, clientSecret)
 	token, loginErr := auth.Login()
 
 	if loginErr != nil {

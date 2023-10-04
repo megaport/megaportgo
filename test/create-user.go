@@ -1,4 +1,4 @@
-//usr/bin/env go run $0 "$@"; exit $?
+// usr/bin/env go run $0 "$@"; exit $?
 package main
 
 import (
@@ -74,7 +74,7 @@ func createUser(username string, password string) error {
 	createUserUrl := ENDPOINTURL + "/v2/social/registration"
 
 	data := url.Values{}
-	client := &http.Client{}
+	client := config.NewHttpClient()
 
 	data.Add("firstName", "Go")
 	data.Add("lastName", "Testing")
@@ -85,7 +85,6 @@ func createUser(username string, password string) error {
 	loginRequest, _ := http.NewRequest("POST", createUserUrl, strings.NewReader(data.Encode()))
 	loginRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	loginRequest.Header.Set("Accept", "application/json")
-	loginRequest.Header.Set("User-Agent", "Go-Megaport-Library/0.1")
 
 	response, resErr := client.Do(loginRequest)
 

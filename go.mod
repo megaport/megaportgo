@@ -1,6 +1,6 @@
 module github.com/megaport/megaportgo
 
-go 1.13
+go 1.16
 
 require (
 	github.com/lithammer/fuzzysearch v1.1.5
