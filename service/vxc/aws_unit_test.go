@@ -1,3 +1,4 @@
+//go:build unit
 // +build unit
 
 // This file is present as a "Guide" for the seperation of unit and
@@ -26,7 +27,7 @@ import (
 *********************/
 
 const (
-	TEST_1_REFERENCE_STRING = `[{"associatedVxcs":[{"productName":"VXC MCR to AWSHC from GO","rateLimit":500,"aEnd":{"vlan":0,"partnerConfig":{"interfaces":[{"ipAddresses":["10.192.0.25/29"],"natIpAddresses":["10.192.0.25"],"bfd":{"txInterval":300,"rxInterval":300,"multiplier":3},"bgpConnections":[{"peerAsn":64512,"localIpAddress":"10.192.0.25","peerIpAddress":"10.192.0.26","password":"cnn6eaeaETSjvjvjvjv","shutdown":false,"description":"BGP with MED and BFD enabled","medIn":100,"medOut":100,"bfdEnabled":true}]}]}},"bEnd":{"productUid":"b2e0b6b8-2943-4c44-8a07-9ec13060afb2","partnerConfig":{"connectType":"AWSHC","type":"private","ownerAccount":"684021030471"}}}],"productUid":"mcr-id-here"}]`
+	TEST_1_REFERENCE_STRING = `[{"associatedVxcs":[{"productName":"VXC MCR to AWSHC from GO","rateLimit":500,"aEnd":{"partnerConfig":{"interfaces":[{"ipAddresses":["10.192.0.25/29"],"natIpAddresses":["10.192.0.25"],"bfd":{"txInterval":300,"rxInterval":300,"multiplier":3},"bgpConnections":[{"peerAsn":64512,"localIpAddress":"10.192.0.25","peerIpAddress":"10.192.0.26","password":"cnn6eaeaETSjvjvjvjv","shutdown":false,"description":"BGP with MED and BFD enabled","medIn":100,"medOut":100,"bfdEnabled":true}]}]}},"bEnd":{"productUid":"b2e0b6b8-2943-4c44-8a07-9ec13060afb2","partnerConfig":{"connectType":"AWSHC","type":"private","ownerAccount":"684021030471"}}}],"productUid":"mcr-id-here"}]`
 )
 
 func SUCCESS_RESPONSE_MOCK(req *http.Request) *http.Response {
@@ -113,7 +114,7 @@ func Test_VXC_MCR_AWS(t *testing.T) {
 	vxcRteLimit := 500
 
 	partnerConfigInterface := types.PartnerConfigInterface{
-		IpAddresses: []string{"10.192.0.25/29"},
+		IpAddresses:    []string{"10.192.0.25/29"},
 		NatIpAddresses: []string{"10.192.0.25"},
 		Bfd: types.BfdConfig{
 			TxInterval: 300,

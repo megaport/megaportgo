@@ -31,9 +31,7 @@ import (
 	"time"
 
 	"github.com/megaport/megaportgo/config"
-	"github.com/megaport/megaportgo/mega_err"
 	"github.com/megaport/megaportgo/types"
-	"github.com/xlzd/gotp"
 )
 
 type Authentication struct {
@@ -119,76 +117,4 @@ func (auth *Authentication) LoginOauth(accessKey, secretKey string) (string, err
 
 	auth.Log.Debugln("session established")
 	return auth.bearerToken, nil
-}
-
-// LoginUsername performs a login against the portal endpoint. This
-// method is being deprecated in favour of the OAuth method. It returns
-// the bearer token or an error if authentication fails.
-func (auth *Authentication) LoginUsername(username, password, oneTimePassword string) (string, error) {
-	auth.Log.Debugln("Creating Session for:", username)
-
-	loginURL := auth.Config.Endpoint + "/v2/login"
-	data := url.Values{}
-
-	data.Add("username", username)
-	data.Add("password", password)
-
-	if oneTimePassword != "" {
-		otpVal, otpErr := generateOneTimePassword(oneTimePassword)
-
-		if otpErr != nil {
-			return "", otpErr
-		}
-
-		data.Add("oneTimePassword", otpVal)
-	}
-
-	loginRequest, _ := http.NewRequest("POST", loginURL, strings.NewReader(data.Encode()))
-	loginRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	loginRequest.Header.Set("Accept", "application/json")
-	loginRequest.Header.Set("User-Agent", "Go-Megaport-Library/0.1")
-
-	response, resErr := auth.Client.Do(loginRequest)
-
-	if resErr != nil {
-		return "", resErr
-	}
-	defer response.Body.Close()
-
-	isError, compiledError := auth.Config.IsErrorResponse(response, &resErr, 200)
-	if isError {
-		return "", compiledError
-	}
-
-	body, fileErr := io.ReadAll(response.Body)
-	if fileErr != nil {
-		return "", fileErr
-	}
-
-	authResponse := types.LoginResponse{}
-	parseErr := json.Unmarshal([]byte(body), &authResponse)
-	if parseErr != nil {
-		return "", parseErr
-	}
-	oauth := authResponse.Data.OAuthToken
-
-	// Calculate the token expiration time
-	auth.tokenExpiry = time.Now().Add(time.Duration(oauth.ExpiresIn) * time.Second)
-
-	// Store the access token
-	auth.bearerToken = oauth.AccessToken
-	auth.SessionToken = oauth.AccessToken
-
-	auth.Log.Debugln("session created")
-	return auth.bearerToken, nil
-}
-
-// generateOneTimePassword Generates a OTP using a Google Authenticator-compatible OTP Key. The field `one_time_password_key` must be set in
-// your Megaport credentials file.
-func generateOneTimePassword(otp string) (string, error) {
-	if otp == "" {
-		return "", errors.New(mega_err.ERR_NO_OTP_KEY_DEFINED)
-	}
-
-	return gotp.NewDefaultTOTP(otp).Now(), nil
 }

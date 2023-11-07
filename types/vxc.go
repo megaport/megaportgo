@@ -45,13 +45,15 @@ type VXC struct {
 }
 
 type VXCEndConfiguration struct {
-	OwnerUID      string `json:"ownerUid"`
-	UID           string `json:"productUid"`
-	Name          string `json:"productName"`
-	LocationID    int    `json:"locationId"`
-	Location      string `json:"location"`
-	VLAN          int    `json:"vlan"`
-	SecondaryName string `json:"secondaryName"`
+	OwnerUID              string `json:"ownerUid"`
+	UID                   string `json:"productUid"`
+	Name                  string `json:"productName"`
+	LocationID            int    `json:"locationId"`
+	Location              string `json:"location"`
+	VLAN                  int    `json:"vlan"`
+	InnerVLAN             int    `json:"innerVlan"`
+	NetworkInterfaceIndex int    `json:"vNicIndex"`
+	SecondaryName         string `json:"secondaryName"`
 }
 
 type VXCResources struct {

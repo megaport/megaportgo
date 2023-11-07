@@ -19,13 +19,14 @@ package mcr
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
-	"strings"
+	"io"
+	"slices"
 	"time"
 
 	"github.com/megaport/megaportgo/config"
 	"github.com/megaport/megaportgo/mega_err"
 	"github.com/megaport/megaportgo/service/product"
+	"github.com/megaport/megaportgo/shared"
 	"github.com/megaport/megaportgo/types"
 )
 
@@ -97,7 +98,7 @@ func (m *MCR) CreatePrefixFilterList(id string, prefixFilterList types.MCRPrefix
 	return prefix, prefixErr
 }
 
-// BuyMCR get the details of an MCR.
+// GetMCRDetails get the details of an MCR.
 func (m *MCR) GetMCRDetails(id string) (types.MCR, error) {
 	url := "/v2/product/" + id
 	response, err := m.Config.MakeAPICall("GET", url, nil)
@@ -109,7 +110,7 @@ func (m *MCR) GetMCRDetails(id string) (types.MCR, error) {
 		return types.MCR{}, parsedError
 	}
 
-	body, fileErr := ioutil.ReadAll(response.Body)
+	body, fileErr := io.ReadAll(response.Body)
 
 	if fileErr != nil {
 		return types.MCR{}, fileErr
@@ -142,31 +143,21 @@ func (m *MCR) RestoreMCR(id string) (bool, error) {
 
 // DebugWaitMCRLive should be used for testing only.
 func (m *MCR) WaitForMcrProvisioning(mcrId string) (bool, error) {
-	mcrInfo, _ := m.GetMCRDetails(mcrId)
-	wait := 0
-
-	// Go-Live
-	m.Log.Debugln("Waiting for MCR to transition to 'LIVE'.")
-	for strings.Compare(mcrInfo.ProvisioningStatus, "LIVE") != 0 && wait < 30 {
-		time.Sleep(30 * time.Second)
-		wait++
-		mcrInfo, _ = m.GetMCRDetails(mcrId)
-
-		if wait%5 == 0 {
-			m.Log.Debugln("MCR is currently being provisioned. Status: ", mcrInfo.ProvisioningStatus)
+	// Try for ~5mins.
+	for i := 0; i < 30; i++ {
+		details, err := m.GetMCRDetails(mcrId)
+		if err != nil {
+			return false, err
 		}
+
+		if slices.Contains(shared.SERVICE_STATE_READY, details.ProvisioningStatus) {
+			return true, nil
+		}
+
+		// Wrong status, wait a bit and try again.
+		m.Log.Debugf("MVE status is %q - waiting", details.ProvisioningStatus)
+		time.Sleep(10 * time.Second)
 	}
 
-	mcrInfo, _ = m.GetMCRDetails(mcrId)
-	m.Log.Debugln("MCR waiting cycle complete. Status: ", mcrInfo.ProvisioningStatus)
-
-	if mcrInfo.ProvisioningStatus == "LIVE" {
-		return true, nil
-	} else {
-		if wait >= 30 {
-			return false, errors.New(mega_err.ERR_MCR_PROVISION_TIMEOUT_EXCEED)
-		} else {
-			return false, errors.New(mega_err.ERR_MCR_NOT_LIVE)
-		}
-	}
+	return false, errors.New(mega_err.ERR_MCR_PROVISION_TIMEOUT_EXCEED)
 }

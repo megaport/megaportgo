@@ -14,7 +14,11 @@
 
 package mega_err
 
-const ERR_VXC_PROVISION_TIMEOUT_EXCEED = "the VXC took longer than 15 minutes to provision, and has failed"
+const ERR_PORT_PROVISION_TIMEOUT_EXCEED = "the port took too long to provision"
+const ERR_MCR_PROVISION_TIMEOUT_EXCEED = "the MCR took too long to provision"
+const ERR_MVE_PROVISION_TIMEOUT_EXCEED = "the MVE took too long to provision"
+const ERR_VXC_PROVISION_TIMEOUT_EXCEED = "the VXC took too long to provision"
+
 const ERR_VXC_NOT_LIVE = "the VXC is not in the expected LIVE state"
 const ERR_VXC_UPDATE_TIMEOUT_EXCEED = "the VXC took longer than 15 minutes to update, and has failed"
 const ERR_WRONG_PRODUCT_MODIFY = "sorry you can only update Ports and MCR2 using this method"
@@ -23,10 +27,8 @@ const ERR_INVALID_PARTNER = "the partner type you have passed is not valid"
 const ERR_TERM_NOT_VALID = "invalid term, valid values are 1, 12, 24, and 36"
 const ERR_PORT_ALREADY_LOCKED = "that port is already locked, cannot lock"
 const ERR_PORT_NOT_LOCKED = "that port not locked, cannot unlock"
-const ERR_PORT_PROVISION_TIMEOUT_EXCEED = "the port took longer than 15 minutes to provision, and has failed"
 const ERR_PORT_NOT_LIVE = "the port is not in the expected LIVE state"
 const ERR_MCR_INVALID_PORT_SPEED = "invalid port speed, valid speeds are 1000, 2500, 5000, and 10000"
-const ERR_MCR_PROVISION_TIMEOUT_EXCEED = "the MCR took longer than 15 minutes to provision, and has failed"
 const ERR_MCR_NOT_LIVE = "the MCR is not in the expected LIVE state"
 const ERR_LOCATION_NOT_FOUND = "unable to find location"
 const ERR_NO_MATCHING_LOCATIONS = "unable to find location based on search criteria"

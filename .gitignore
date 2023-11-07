@@ -4,6 +4,7 @@
 .scannerwork
 
 .mpt_test_credentials
+.envrc
 
 *.exe
 *.exe~

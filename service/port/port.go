@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
+	"slices"
 	"time"
 
 	"github.com/megaport/megaportgo/config"
@@ -228,30 +229,21 @@ func (p *Port) UnlockPort(id string) (bool, error) {
 }
 
 func (p *Port) WaitForPortProvisioning(portId string) (bool, error) {
-	portInfo, _ := p.GetPortDetails(portId)
-	wait := 0
-
-	p.Log.Debugln("Waiting for port status transition.")
-	for portInfo.ProvisioningStatus != "CONFIGURED" && portInfo.ProvisioningStatus != "LIVE" && wait < 30 {
-		time.Sleep(30 * time.Second)
-		wait++
-		portInfo, _ = p.GetPortDetails(portId)
-
-		if wait%5 == 0 {
-			p.Log.Debugln("Port is currently being provisioned. Status: ", portInfo.ProvisioningStatus)
+	// Try for ~5mins.
+	for i := 0; i < 30; i++ {
+		details, err := p.GetPortDetails(portId)
+		if err != nil {
+			return false, err
 		}
+
+		if slices.Contains(shared.SERVICE_STATE_READY, details.ProvisioningStatus) {
+			return true, nil
+		}
+
+		// Wrong status, wait a bit and try again.
+		p.Log.Debugf("Port status is currently %q - waiting", details.ProvisioningStatus)
+		time.Sleep(10 * time.Second)
 	}
 
-	portInfo, _ = p.GetPortDetails(portId)
-	p.Log.Debugln("Port waiting cycle complete. Status:", portInfo.ProvisioningStatus)
-
-	if portInfo.ProvisioningStatus == "CONFIGURED" || portInfo.ProvisioningStatus == "LIVE" {
-		return true, nil
-	} else {
-		if wait >= 30 {
-			return false, errors.New(mega_err.ERR_PORT_PROVISION_TIMEOUT_EXCEED)
-		} else {
-			return false, errors.New(mega_err.ERR_PORT_NOT_LIVE)
-		}
-	}
+	return false, errors.New(mega_err.ERR_PORT_PROVISION_TIMEOUT_EXCEED)
 }

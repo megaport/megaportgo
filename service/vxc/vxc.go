@@ -19,12 +19,13 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"strings"
+	"slices"
 	"time"
 
 	"github.com/megaport/megaportgo/config"
 	"github.com/megaport/megaportgo/mega_err"
 	"github.com/megaport/megaportgo/service/product"
+	"github.com/megaport/megaportgo/shared"
 	"github.com/megaport/megaportgo/types"
 )
 
@@ -48,24 +49,20 @@ func (v *VXC) BuyVXC(
 	bEndConfiguration types.VXCOrderBEndConfiguration,
 ) (string, error) {
 
-	buyOrder := []types.VXCOrder{
-		{
-			PortID: portUID,
-			AssociatedVXCs: []types.VXCOrderConfiguration{
-				{
-					Name:      vxcName,
-					RateLimit: rateLimit,
-					AEnd:      aEndConfiguration,
-					BEnd:      bEndConfiguration,
-				},
+	buyOrder := []types.VXCOrder{{
+		PortID: portUID,
+		AssociatedVXCs: []types.VXCOrderConfiguration{
+			{
+				Name:      vxcName,
+				RateLimit: rateLimit,
+				AEnd:      aEndConfiguration,
+				BEnd:      bEndConfiguration,
 			},
 		},
-	}
+	}}
 
 	requestBody, _ := json.Marshal(buyOrder)
-
 	responseBody, responseErr := v.product.ExecuteOrder(&requestBody)
-
 	if responseErr != nil {
 		return "", responseErr
 	}
@@ -147,33 +144,23 @@ func (v *VXC) UpdateVXC(id string, name string, rateLimit int, aEndVLAN int, bEn
 }
 
 func (v *VXC) WaitForVXCProvisioning(vxcId string) (bool, error) {
-	vxcInfo, _ := v.GetVXCDetails(vxcId)
-	wait := 0
-
-	// Go-Live
-	v.Log.Info("Waiting for VXC status transition.")
-	for strings.Compare(vxcInfo.ProvisioningStatus, "LIVE") != 0 && wait < 30 {
-		time.Sleep(30 * time.Second)
-		wait++
-		vxcInfo, _ = v.GetVXCDetails(vxcId)
-
-		if wait%5 == 0 {
-			v.Log.Infoln("VXC is currently being provisioned. Status: ", vxcInfo.ProvisioningStatus)
+	// Try for ~5mins.
+	for i := 0; i < 30; i++ {
+		details, err := v.GetVXCDetails(vxcId)
+		if err != nil {
+			return false, err
 		}
+
+		if slices.Contains(shared.SERVICE_STATE_READY, details.ProvisioningStatus) {
+			return true, nil
+		}
+
+		// Wrong status, wait a bit and try again.
+		v.Log.Debugf("VXC status is %q - waiting", details.ProvisioningStatus)
+		time.Sleep(10 * time.Second)
 	}
 
-	vxcInfo, _ = v.GetVXCDetails(vxcId)
-	v.Log.Debugln("VXC waiting cycle complete. Status: ", vxcInfo.ProvisioningStatus)
-
-	if vxcInfo.ProvisioningStatus == "LIVE" {
-		return true, nil
-	} else {
-		if wait >= 30 {
-			return false, errors.New(mega_err.ERR_VXC_PROVISION_TIMEOUT_EXCEED)
-		} else {
-			return false, errors.New(mega_err.ERR_VXC_NOT_LIVE)
-		}
-	}
+	return false, errors.New(mega_err.ERR_VXC_PROVISION_TIMEOUT_EXCEED)
 }
 
 func (v *VXC) WaitForVXCUpdated(id string, name string, rateLimit int, aEndVLAN int, bEndVLAN int) (bool, error) {

@@ -94,6 +94,18 @@ type MCRResponse struct {
 	Data    MCR    `json:"data"`
 }
 
+type MVEOrderResponse struct {
+	Message string                 `json:"message"`
+	Terms   string                 `json:"terms"`
+	Data    []MVEOrderConfirmation `json:"data"`
+}
+
+type MVEResponse struct {
+	Message string `json:"message"`
+	Terms   string `json:"terms"`
+	Data    MVE    `json:"data"`
+}
+
 type PrefixFilterList struct {
 	Id            int    `json:"id"`
 	Description   string `json:"description"`

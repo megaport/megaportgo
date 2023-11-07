@@ -32,6 +32,7 @@ const APPLICATION_SHORT_NAME = "mpt"
 const PRODUCT_MEGAPORT = "megaport"
 const PRODUCT_VXC = "vxc"
 const PRODUCT_MCR = "mcr2"
+const PRODUCT_MVE = "mve"
 const PRODUCT_IX = "ix"
 
 const STATUS_DECOMMISSIONED string = "DECOMMISSIONED"

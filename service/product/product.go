@@ -19,7 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 
 	"github.com/megaport/megaportgo/config"
 	"github.com/megaport/megaportgo/mega_err"
@@ -38,9 +38,12 @@ func New(cfg *config.Config) *Product {
 
 // ExecuteOrder executes an order against the Megaport API.
 func (p *Product) ExecuteOrder(requestBody *[]byte) (*[]byte, error) {
-	url := "/v2/networkdesign/buy"
-
+	url := "/v3/networkdesign/buy"
 	response, resErr := p.Config.MakeAPICall("POST", url, *requestBody)
+	// TODO: fix. unit test returns a nil response..
+	if response != nil {
+		p.Log.Debugf("%s %d", url, response.StatusCode)
+	}
 
 	if response != nil {
 		defer response.Body.Close()
@@ -52,7 +55,7 @@ func (p *Product) ExecuteOrder(requestBody *[]byte) (*[]byte, error) {
 		return nil, parsedError
 	}
 
-	body, fileErr := ioutil.ReadAll(response.Body)
+	body, fileErr := io.ReadAll(response.Body)
 	if fileErr != nil {
 		return nil, fileErr
 	}
@@ -71,7 +74,7 @@ func (p *Product) DeleteProduct(id string, deleteNow bool) (bool, error) {
 		action = "CANCEL"
 	}
 
-	url := "/v2/product/" + id + "/action/" + action
+	url := "/v3/product/" + id + "/action/" + action
 	response, err := p.Config.MakeAPICall("POST", url, nil)
 	defer response.Body.Close()
 
@@ -157,7 +160,7 @@ func (p *Product) GetMCRPrefixFilterLists(id string) ([]types.PrefixFilterList, 
 	}
 	defer response.Body.Close()
 
-	body, fileErr := ioutil.ReadAll(response.Body)
+	body, fileErr := io.ReadAll(response.Body)
 	if fileErr != nil {
 		return []types.PrefixFilterList{}, fileErr
 	}

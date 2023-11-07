@@ -18,6 +18,7 @@ type VXCOrder struct {
 	AssociatedVXCs []VXCOrderConfiguration `json:"associatedVxcs"`
 	PortID         string                  `json:"productUid"`
 }
+
 type VXCOrderConfiguration struct {
 	Name      string                    `json:"productName"`
 	RateLimit int                       `json:"rateLimit"`
@@ -26,8 +27,16 @@ type VXCOrderConfiguration struct {
 }
 
 type VXCOrderAEndConfiguration struct {
-	VLAN          int                       `json:"vlan"`
+	VLAN          int                       `json:"vlan,omitempty"`
 	PartnerConfig VXCOrderAEndPartnerConfig `json:"partnerConfig,omitempty"`
+	// Embed this instead of having it top-level so that it's omitted if nil
+	// and the marshalled JSON looks right.
+	*VXCOrderMVEConfig
+}
+
+type VXCOrderMVEConfig struct {
+	InnerVLAN             int `json:"innerVlan,omitempty"`
+	NetworkInterfaceIndex int `json:"vNicIndex"`
 }
 
 type VXCOrderAEndPartnerConfig struct {
@@ -35,8 +44,11 @@ type VXCOrderAEndPartnerConfig struct {
 }
 
 type VXCOrderBEndConfiguration struct {
-	VLAN       int    `json:"vlan,omitempty"`
 	ProductUID string `json:"productUid"`
+	VLAN       int    `json:"vlan,omitempty"`
+	// Embed this instead of having it top-level so that it's omitted if nil
+	// and the marshalled JSON looks right.
+	*VXCOrderMVEConfig
 }
 
 type VXCOrderConfirmation struct {
