@@ -31,7 +31,7 @@ type roundTripper struct {
 }
 
 func (t *roundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.Header.Add("User-Agent", "Go-Megaport-Library/0.2.1")
+	req.Header.Add("User-Agent", "Go-Megaport-Library/0.2.2")
 
 	return t.T.RoundTrip(req)
 }
