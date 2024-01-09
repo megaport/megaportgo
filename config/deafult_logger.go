@@ -69,7 +69,7 @@ func (d *DefaultLogger) SetLevel(l Level) {
 func (d *DefaultLogger) log(level Level, args ...interface{}) {
 	if level >= d.level {
 		msg := fmt.Sprint(args...)
-		log.Print(fmt.Sprintf("%s: %s", strings.ToUpper(level.String()), msg))
+		log.Printf("%s: %s", strings.ToUpper(level.String()), msg)
 	}
 }
 
@@ -101,7 +101,7 @@ func (d *DefaultLogger) Error(args ...interface{}) {
 func (d *DefaultLogger) logf(level Level, format string, args ...interface{}) {
 	if level >= d.level {
 		msg := fmt.Sprintf(format, args...)
-		log.Print(fmt.Sprintf("%s: %s", strings.ToUpper(level.String()), msg))
+		log.Printf("%s: %s", strings.ToUpper(level.String()), msg)
 	}
 }
 

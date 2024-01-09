@@ -42,6 +42,7 @@ type Authentication struct {
 }
 
 func New(cfg *config.Config) *Authentication {
+	cfg.Client = config.NewHttpClient()
 	return &Authentication{
 		Config: cfg,
 	}

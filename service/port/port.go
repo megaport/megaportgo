@@ -19,7 +19,7 @@ package port
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"slices"
 	"time"
 
@@ -56,7 +56,7 @@ func (p *Port) BuyPort(name string, term int, portSpeed int, locationId int, mar
 
 	if isLAG {
 		buyOrder = []types.PortOrder{
-			types.PortOrder{
+			{
 				Name:                  name,
 				Term:                  term,
 				ProductType:           "MEGAPORT",
@@ -71,7 +71,7 @@ func (p *Port) BuyPort(name string, term int, portSpeed int, locationId int, mar
 		}
 	} else {
 		buyOrder = []types.PortOrder{
-			types.PortOrder{
+			{
 				Name:                  name,
 				Term:                  term,
 				ProductType:           "MEGAPORT",
@@ -123,7 +123,7 @@ func (p *Port) GetPortDetails(id string) (types.Port, error) {
 		return types.Port{}, parsedError
 	}
 
-	body, fileErr := ioutil.ReadAll(response.Body)
+	body, fileErr := io.ReadAll(response.Body)
 
 	if fileErr != nil {
 		return types.Port{}, fileErr
@@ -156,7 +156,7 @@ func (p *Port) GetPorts() ([]types.Port, error) {
 		return []types.Port{}, parsedError
 	}
 
-	body, fileErr := ioutil.ReadAll(response.Body)
+	body, fileErr := io.ReadAll(response.Body)
 
 	if fileErr != nil {
 		return []types.Port{}, fileErr

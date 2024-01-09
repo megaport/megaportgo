@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	ENDPOINTURL    = "https://api-staging.megaport.com/"
+	ENDPOINTURL    = "https://api.staging.megaport.com/"
 	CHARSET        = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	CREDENTIALFILE = ".mpt_test_credentials"
 )
@@ -40,15 +40,18 @@ func main() {
 	logger := config.NewDefaultLogger()
 	logger.SetLevel(config.Off)
 
+	client := config.NewHttpClient()
+
 	cfg := config.Config{
 		Log:      logger,
 		Endpoint: ENDPOINTURL,
+		Client:   client,
 	}
 
-	auth := authentication.New(&cfg, username, password, "")
+	auth := authentication.New(&cfg)
 
 	fmt.Println("Establishing Session for user")
-	session, err := auth.Login()
+	session, err := auth.LoginOauth(username, password)
 	if err != nil {
 		fmt.Println("Unable to establish session for user: ", err)
 		os.Exit(1)
@@ -150,8 +153,14 @@ func generateEnvironmentVaribles(username string, password string) {
 	usrStr := fmt.Sprintf("export MEGAPORT_USERNAME=\"%s\"\n", username)
 	pwdStr := fmt.Sprintf("export MEGAPORT_PASSWORD=\"%s\"\n", password)
 
-	file.WriteString(usrStr)
-	file.WriteString(pwdStr)
+	_, err = file.WriteString(usrStr)
+	if err != nil {
+		return
+	}
+	_, err = file.WriteString(pwdStr)
+	if err != nil {
+		return
+	}
 }
 
 func createMarket(contactEmail string, cfg config.Config) error {

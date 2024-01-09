@@ -23,6 +23,7 @@ package location
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"io/ioutil"
 
 	"github.com/lithammer/fuzzysearch/fuzzy"
@@ -91,7 +92,7 @@ func (l *Location) GetAllLocations() ([]types.Location, error) {
 		return nil, compiledResError
 	}
 
-	body, fileErr := ioutil.ReadAll(response.Body)
+	body, fileErr := io.ReadAll(response.Body)
 
 	if fileErr != nil {
 		return nil, fileErr

@@ -67,8 +67,8 @@ func TestMain(m *testing.M) {
 		Endpoint: MEGAPORTURL,
 	}
 
-	auth := authentication.New(&cfg, clientID, clientSecret)
-	token, loginErr := auth.Login()
+	auth := authentication.New(&cfg)
+	token, loginErr := auth.LoginOauth(clientID, clientSecret)
 
 	if loginErr != nil {
 		logger.Errorf("LoginError: %s", loginErr.Error())

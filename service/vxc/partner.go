@@ -17,7 +17,7 @@ package vxc
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"strings"
 
 	"github.com/megaport/megaportgo/mega_err"
@@ -41,7 +41,7 @@ func (v *VXC) LookupPartnerPorts(key string, portSpeed int, partner string, requ
 		return "", compiledErr
 	}
 
-	body, fileErr := ioutil.ReadAll(response.Body)
+	body, fileErr := io.ReadAll(response.Body)
 
 	if fileErr != nil {
 		return "", fileErr
