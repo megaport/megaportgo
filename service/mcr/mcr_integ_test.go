@@ -67,8 +67,8 @@ func TestMain(m *testing.M) {
 		Endpoint: MEGAPORTURL,
 	}
 
-	auth := authentication.New(&cfg, clientID, clientSecret)
-	token, loginErr := auth.Login()
+	auth := authentication.New(&cfg)
+	token, loginErr := auth.LoginOauth(clientID, clientSecret)
 
 	if loginErr != nil {
 		logger.Errorf("LoginError: %s", loginErr.Error())
@@ -87,7 +87,7 @@ func TestMCRLifecycle(t *testing.T) {
 	testLocation := location.GetRandom(TEST_MCR_TEST_LOCATION_MARKET)
 
 	logger.Debugf("Test location determined, Location: %s", testLocation.Name)
-	mcrId, portErr := mcr.BuyMCR(testLocation.ID, "Buy MCR", 1000, 0)
+	mcrId, portErr := mcr.BuyMCR(testLocation.ID, "Buy MCR", 1, 1000, 0)
 
 	if !assert.NoError(portErr) && assert.False(shared.IsGuid(mcrId)) {
 		mcr.Config.PurchaseError(mcrId, portErr)
@@ -150,7 +150,7 @@ func TestMCRConnectionAdd(t *testing.T) {
 	logger.Infof("Test location determined, Location: %s", testLocation.Name)
 	logger.Debug("Buying MCR")
 
-	mcrId, mcrErr := mcr.BuyMCR(testLocation.ID, "MCR and AWS Interconnectivity", 1000, 0)
+	mcrId, mcrErr := mcr.BuyMCR(testLocation.ID, "MCR and AWS Interconnectivity", 1, 1000, 0)
 
 	logger.Infof("MCR Purchased: %s", mcrId)
 
@@ -234,7 +234,7 @@ func TestPortSpeedValidation(t *testing.T) {
 	location := location.New(&cfg)
 
 	testLocation, _ := location.GetLocationByName("Global Switch Sydney")
-	_, buyErr := mcr.BuyMCR(testLocation.ID, "Test MCR", 500, 0)
+	_, buyErr := mcr.BuyMCR(testLocation.ID, "Test MCR", 1, 500, 0)
 	assert.EqualError(buyErr, mega_err.ERR_MCR_INVALID_PORT_SPEED)
 }
 
@@ -247,7 +247,7 @@ func TestCreatePrefixFilterList(t *testing.T) {
 	testLocation := location.GetRandom(TEST_MCR_TEST_LOCATION_MARKET)
 
 	logger.Infof("Test location determined, Location: %s", testLocation.Name)
-	mcrId, portErr := mcr.BuyMCR(testLocation.ID, "Buy MCR", 1000, 0)
+	mcrId, portErr := mcr.BuyMCR(testLocation.ID, "Buy MCR", 1, 1000, 0)
 
 	if !assert.NoError(portErr) && assert.False(shared.IsGuid(mcrId)) {
 		mcr.Config.PurchaseError(mcrId, portErr)

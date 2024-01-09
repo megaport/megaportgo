@@ -18,7 +18,7 @@ package partner
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 
 	"github.com/lithammer/fuzzysearch/fuzzy"
 	"github.com/megaport/megaportgo/config"
@@ -48,7 +48,7 @@ func (p *Partner) GetAllPartnerMegaports() ([]types.PartnerMegaport, error) {
 	}
 	defer response.Body.Close()
 
-	body, fileErr := ioutil.ReadAll(response.Body)
+	body, fileErr := io.ReadAll(response.Body)
 
 	if fileErr != nil {
 		return []types.PartnerMegaport{}, fileErr

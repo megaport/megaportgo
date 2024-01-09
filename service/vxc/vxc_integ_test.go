@@ -71,8 +71,8 @@ func TestMain(m *testing.M) {
 		Endpoint: MEGAPORTURL,
 	}
 
-	auth := authentication.New(&cfg, clientID, clientSecret)
-	token, loginErr := auth.Login()
+	auth := authentication.New(&cfg)
+	token, loginErr := auth.LoginOauth(clientID, clientSecret)
 
 	if loginErr != nil {
 		logger.Errorf("LoginError: %s", loginErr.Error())
@@ -230,7 +230,7 @@ func TestAWSHostedConnectionBuy(t *testing.T) {
 	testLocation := loc.GetRandom(MCR_LOCATION)
 
 	logger.Info("Buying AWS Hosted Connection MCR (A End).")
-	mcrId, mcrErr := mcr.BuyMCR(testLocation.ID, "AWS Hosted Conection Test MCR", 1000, 0)
+	mcrId, mcrErr := mcr.BuyMCR(testLocation.ID, "AWS Hosted Conection Test MCR", 1, 1000, 0)
 	logger.Infof("MCR Purchased: %s", mcrId)
 
 	if !assert.NoError(t, mcrErr) && !assert.True(t, shared.IsGuid(mcrId)) {
@@ -249,7 +249,7 @@ func TestAWSHostedConnectionBuy(t *testing.T) {
 			VLAN: shared.GenerateRandomVLAN(),
 			PartnerConfig: types.VXCOrderAEndPartnerConfig{
 				Interfaces: []types.PartnerConfigInterface{
-					types.PartnerConfigInterface{
+					{
 						IpAddresses: []string{"10.0.0.1/30"},
 						IpRoutes: []types.IpRoute{
 							{
@@ -282,7 +282,7 @@ func TestAWSHostedConnectionBuy(t *testing.T) {
 			},
 		},
 		types.AWSVXCOrderBEndConfiguration{
-			ProductUID: "b2e0b6b8-2943-4c44-8a07-9ec13060afb2",
+			ProductUID: "b047870a-adcf-441f-ae34-27a796cdafeb",
 			PartnerConfig: types.AWSVXCOrderBEndPartnerConfig{
 				ConnectType:  "AWSHC",
 				Type:         "private",
