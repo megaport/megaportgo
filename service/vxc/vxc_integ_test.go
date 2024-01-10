@@ -20,7 +20,6 @@ package vxc
 // TODO: Add in tests for port-port using Service Keys.
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
@@ -407,14 +406,12 @@ func TestBuyAzureExpressRoute(t *testing.T) {
 	// get partner port
 	partnerPortId, partnerLookupErr := vxc.LookupPartnerPorts(serviceKey, 1000, PARTNER_AZURE, "")
 	if partnerLookupErr != nil {
-		fmt.Println("Partner lookup error", partnerLookupErr)
 		t.FailNow()
 	}
 
 	// get partner config
 	partnerConfig, partnerConfigErr := vxc.MarshallPartnerConfig(serviceKey, PARTNER_AZURE, peerings)
 	if partnerConfigErr != nil {
-		fmt.Println("Partner Config Error", partnerConfigErr)
 		t.FailNow()
 	}
 
