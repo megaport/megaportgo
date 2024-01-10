@@ -153,14 +153,8 @@ func generateEnvironmentVaribles(username string, password string) {
 	usrStr := fmt.Sprintf("export MEGAPORT_USERNAME=\"%s\"\n", username)
 	pwdStr := fmt.Sprintf("export MEGAPORT_PASSWORD=\"%s\"\n", password)
 
-	_, err = file.WriteString(usrStr)
-	if err != nil {
-		return
-	}
-	_, err = file.WriteString(pwdStr)
-	if err != nil {
-		return
-	}
+	file.WriteString(usrStr)
+	file.WriteString(pwdStr)
 }
 
 func createMarket(contactEmail string, cfg config.Config) error {
