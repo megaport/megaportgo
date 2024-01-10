@@ -6,8 +6,6 @@
 .mpt_test_credentials
 .envrc
 
-.vscode
-
 *.exe
 *.exe~
 *.dll
