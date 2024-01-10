@@ -285,6 +285,7 @@ func TestAWSHostedConnectionBuy(t *testing.T) {
 			ProductUID: "b047870a-adcf-441f-ae34-27a796cdafeb",
 			PartnerConfig: types.AWSVXCOrderBEndPartnerConfig{
 				ConnectType:  "AWSHC",
+				Type:         "private",
 				OwnerAccount: "684021030471",
 			},
 		},
