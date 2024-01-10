@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	ENDPOINTURL    = "https://api.staging.megaport.com/"
+	ENDPOINTURL    = "https://api-staging.megaport.com/"
 	CHARSET        = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	CREDENTIALFILE = ".mpt_test_credentials"
 )
