@@ -40,15 +40,18 @@ func main() {
 	logger := config.NewDefaultLogger()
 	logger.SetLevel(config.Off)
 
+	client := config.NewHttpClient()
+
 	cfg := config.Config{
 		Log:      logger,
 		Endpoint: ENDPOINTURL,
+		Client:   client,
 	}
 
-	auth := authentication.New(&cfg, username, password, "")
+	auth := authentication.New(&cfg)
 
 	fmt.Println("Establishing Session for user")
-	session, err := auth.Login()
+	session, err := auth.LoginOauth(username, password)
 	if err != nil {
 		fmt.Println("Unable to establish session for user: ", err)
 		os.Exit(1)

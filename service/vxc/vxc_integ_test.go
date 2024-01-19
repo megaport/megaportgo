@@ -71,8 +71,8 @@ func TestMain(m *testing.M) {
 		Endpoint: MEGAPORTURL,
 	}
 
-	auth := authentication.New(&cfg, clientID, clientSecret)
-	token, loginErr := auth.Login()
+	auth := authentication.New(&cfg)
+	token, loginErr := auth.LoginOauth(clientID, clientSecret)
 
 	if loginErr != nil {
 		logger.Errorf("LoginError: %s", loginErr.Error())
@@ -230,7 +230,7 @@ func TestAWSHostedConnectionBuy(t *testing.T) {
 	testLocation := loc.GetRandom(MCR_LOCATION)
 
 	logger.Info("Buying AWS Hosted Connection MCR (A End).")
-	mcrId, mcrErr := mcr.BuyMCR(testLocation.ID, "AWS Hosted Conection Test MCR", 1000, 0)
+	mcrId, mcrErr := mcr.BuyMCR(testLocation.ID, "AWS Hosted Conection Test MCR", 1, 1000, 0)
 	logger.Infof("MCR Purchased: %s", mcrId)
 
 	if !assert.NoError(t, mcrErr) && !assert.True(t, shared.IsGuid(mcrId)) {
@@ -249,7 +249,7 @@ func TestAWSHostedConnectionBuy(t *testing.T) {
 			VLAN: shared.GenerateRandomVLAN(),
 			PartnerConfig: types.VXCOrderAEndPartnerConfig{
 				Interfaces: []types.PartnerConfigInterface{
-					types.PartnerConfigInterface{
+					{
 						IpAddresses: []string{"10.0.0.1/30"},
 						IpRoutes: []types.IpRoute{
 							{
@@ -282,7 +282,7 @@ func TestAWSHostedConnectionBuy(t *testing.T) {
 			},
 		},
 		types.AWSVXCOrderBEndConfiguration{
-			ProductUID: "b2e0b6b8-2943-4c44-8a07-9ec13060afb2",
+			ProductUID: "b047870a-adcf-441f-ae34-27a796cdafeb",
 			PartnerConfig: types.AWSVXCOrderBEndPartnerConfig{
 				ConnectType:  "AWSHC",
 				Type:         "private",
@@ -407,12 +407,14 @@ func TestBuyAzureExpressRoute(t *testing.T) {
 	// get partner port
 	partnerPortId, partnerLookupErr := vxc.LookupPartnerPorts(serviceKey, 1000, PARTNER_AZURE, "")
 	if partnerLookupErr != nil {
+		logger.Errorf("Partner lookup error: %s", partnerLookupErr)
 		t.FailNow()
 	}
 
 	// get partner config
 	partnerConfig, partnerConfigErr := vxc.MarshallPartnerConfig(serviceKey, PARTNER_AZURE, peerings)
 	if partnerConfigErr != nil {
+		logger.Errorf("Partner config error: %s", partnerConfigErr)
 		t.FailNow()
 	}
 
@@ -448,7 +450,6 @@ func TestBuyAzureExpressRoute(t *testing.T) {
 	portDeleteStatus, portDeleteErr := port.DeletePort(portId, true)
 	assert.NoError(t, portDeleteErr)
 	assert.True(t, portDeleteStatus)
-
 }
 
 func TestBuyGoogleInterconnect(t *testing.T) {
@@ -466,18 +467,20 @@ func TestBuyGoogleInterconnect(t *testing.T) {
 	}
 	port.WaitForPortProvisioning(portId)
 
-	pairingKey := "7e51371e-72a3-40b5-b844-2e3efefaee59/us-central1/2"
+	pairingKey := "27325c3a-b640-4b69-a2d5-cdcca797a151/us-west2/1"
 	logger.Info("Buying Google Interconnect VXC (B End).")
 
 	// get partner port
 	partnerPortId, partnerLookupErr := vxc.LookupPartnerPorts(pairingKey, 1000, PARTNER_GOOGLE, "")
 	if partnerLookupErr != nil {
+		logger.Errorf("Partner lookup error: %s", partnerLookupErr)
 		t.FailNow()
 	}
 
 	// get partner config
 	partnerConfig, partnerConfigErr := vxc.MarshallPartnerConfig(pairingKey, PARTNER_GOOGLE, nil)
 	if partnerConfigErr != nil {
+		logger.Errorf("Partner config error: %s", partnerConfigErr)
 		t.FailNow()
 	}
 
@@ -536,12 +539,14 @@ func TestBuyGoogleInterconnectLocation(t *testing.T) {
 	// get partner port
 	partnerPortId, partnerLookupErr := vxc.LookupPartnerPorts(pairingKey, 1000, PARTNER_GOOGLE, TEST_LOCATION_C)
 	if partnerLookupErr != nil {
+		logger.Errorf("Partner lookup error: %s", partnerLookupErr)
 		t.FailNow()
 	}
 
 	// get partner config
 	partnerConfig, partnerConfigErr := vxc.MarshallPartnerConfig(pairingKey, PARTNER_GOOGLE, nil)
 	if partnerConfigErr != nil {
+		logger.Errorf("Partner config error: %s", partnerConfigErr)
 		t.FailNow()
 	}
 
