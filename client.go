@@ -16,7 +16,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/go-querystring/query"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/megaport/megaportgo/mega_err"
 	"github.com/megaport/megaportgo/types"
@@ -124,32 +123,32 @@ type ErrorResponse struct {
 	Attempts int
 }
 
-func addOptions(s string, opt interface{}) (string, error) {
-	v := reflect.ValueOf(opt)
+// func addOptions(s string, opt interface{}) (string, error) {
+// 	v := reflect.ValueOf(opt)
 
-	if v.Kind() == reflect.Ptr && v.IsNil() {
-		return s, nil
-	}
+// 	if v.Kind() == reflect.Ptr && v.IsNil() {
+// 		return s, nil
+// 	}
 
-	origURL, err := url.Parse(s)
-	if err != nil {
-		return s, err
-	}
+// 	origURL, err := url.Parse(s)
+// 	if err != nil {
+// 		return s, err
+// 	}
 
-	origValues := origURL.Query()
+// 	origValues := origURL.Query()
 
-	newValues, err := query.Values(opt)
-	if err != nil {
-		return s, err
-	}
+// 	newValues, err := query.Values(opt)
+// 	if err != nil {
+// 		return s, err
+// 	}
 
-	for k, v := range newValues {
-		origValues[k] = v
-	}
+// 	for k, v := range newValues {
+// 		origValues[k] = v
+// 	}
 
-	origURL.RawQuery = origValues.Encode()
-	return origURL.String(), nil
-}
+// 	origURL.RawQuery = origValues.Encode()
+// 	return origURL.String(), nil
+// }
 
 // NewFromToken returns a new Megaport API client with the given API
 // token.

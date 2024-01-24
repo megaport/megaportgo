@@ -45,23 +45,23 @@ func testMethod(t *testing.T, r *http.Request, expected string) {
 	}
 }
 
-type values map[string]string
+// type values map[string]string
 
-func testFormValues(t *testing.T, r *http.Request, values values) {
-	expected := url.Values{}
-	for k, v := range values {
-		expected.Add(k, v)
-	}
+// func testFormValues(t *testing.T, r *http.Request, values values) {
+// 	expected := url.Values{}
+// 	for k, v := range values {
+// 		expected.Add(k, v)
+// 	}
 
-	err := r.ParseForm()
-	if err != nil {
-		t.Fatalf("parseForm(): %v", err)
-	}
+// 	err := r.ParseForm()
+// 	if err != nil {
+// 		t.Fatalf("parseForm(): %v", err)
+// 	}
 
-	if !reflect.DeepEqual(expected, r.Form) {
-		t.Errorf("Request parameters = %v, expected %v", r.Form, expected)
-	}
-}
+// 	if !reflect.DeepEqual(expected, r.Form) {
+// 		t.Errorf("Request parameters = %v, expected %v", r.Form, expected)
+// 	}
+// }
 
 func testURLParseError(t *testing.T, err error) {
 	if err == nil {
@@ -282,17 +282,22 @@ func TestWithRetryAndBackoffs(t *testing.T) {
 	setup()
 	defer teardown()
 
+	ctx := context.Background()
+
 	url, _ := url.Parse(server.URL)
 	mux.HandleFunc("/foo", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`{"id": "bad_request", "message": "broken"}`))
+		_, err := w.Write([]byte(`{"id": "bad_request", "message": "broken"}`))
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
 	})
 
 	tokenSrc := oauth2.StaticTokenSource(&oauth2.Token{
 		AccessToken: "new_token",
 	})
 
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSrc)
+	oauthClient := oauth2.NewClient(ctx, tokenSrc)
 
 	waitMax := PtrTo(6.0)
 	waitMin := PtrTo(3.0)
@@ -329,6 +334,8 @@ func TestWithRetryAndBackoffsLogger(t *testing.T) {
 	setup()
 	defer teardown()
 
+	ctx := context.Background()
+
 	url, _ := url.Parse(server.URL)
 	mux.HandleFunc("/foo", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusAccepted)
@@ -338,7 +345,7 @@ func TestWithRetryAndBackoffsLogger(t *testing.T) {
 		AccessToken: "new_token",
 	})
 
-	oauth_client := oauth2.NewClient(oauth2.NoContext, tokenSrc)
+	oauth_client := oauth2.NewClient(ctx, tokenSrc)
 
 	var buf bytes.Buffer
 	retryConfig := RetryConfig{
