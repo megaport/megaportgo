@@ -53,6 +53,6 @@ func GenerateRandomVLAN() int {
 
 // GenerateRandomNumber generates a random number between an upper and lower bound.
 func GenerateRandomNumber(lowerBound int, upperBound int) int {
-	rand.Seed(time.Now().UnixNano())
-	return rand.Intn(upperBound) + lowerBound
+	random := rand.New(rand.NewSource(time.Now().UnixNano()))
+	return random.Intn(upperBound) + lowerBound
 }
