@@ -382,3 +382,150 @@ func TestGetPort(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, want, got)
 }
+
+func TestModifyPort(t *testing.T) {
+	setup()
+	defer teardown()
+
+	ctx := context.Background()
+
+	portSvc := client.PortService
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	req := &ModifyPortRequest{
+		PortID:                productUid,
+		Name:                  "updated-test-product",
+		CostCentre:            "US",
+		MarketplaceVisibility: false,
+	}
+	jblob := `{
+    "message": "Product [36b3f68e-2f54-4331-bf94-f8984449365f] has been updated",
+    "terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+    "data": {
+        "serviceName": "updated-test-product",
+        "name": "updated-test-product",
+        "secondaryName": null,
+        "technicalServiceId": 185927,
+        "technicalServiceUid": "ef60d544-00e1-4ccc-bcff-3e2050bface5",
+        "requestedDate": 1706202200307,
+        "configuredDate": null,
+        "currentEstimatedDelivery": null,
+        "companyName": "test-company",
+        "companyId": 1153,
+        "billingContactName": null,
+        "billingContactId": null,
+        "adminContactName": null,
+        "adminContactId": null,
+        "technicalContactName": null,
+        "technicalContactId": null,
+        "salesName": null,
+        "salesId": null,
+        "billableId": 177726,
+        "billableUsageAlgorithm": null,
+        "productType": "MEGAPORT",
+        "provisioningStatus": "DEPLOYABLE",
+        "failedReason": null,
+        "inAdvanceBillingStatus": null,
+        "provisioningItems": [],
+        "tags": [],
+        "vxcDistanceBand": null,
+        "intercapPath": null,
+        "marketplaceVisibility": false,
+        "vxcPermitted": true,
+        "vxcAutoApproval": false,
+        "createDate": 1706202200307,
+        "terminationDate": null,
+        "contractStartDate": null,
+        "contractTermMonths": 1,
+        "rateType": "MONTHLY",
+        "trialAgreement": false,
+        "payerCompanyId": null,
+        "nonPayerCompanyId": null,
+        "minimumSpeed": null,
+        "maximumSpeed": null,
+        "rateLimit": 10000,
+        "errorMessage": null,
+        "lagId": null,
+        "aggregationId": null,
+        "lagPrimary": null,
+        "market": "USA",
+        "accountManager": null,
+        "promptUid": null,
+        "components": [],
+        "attributes": [],
+        "aLocation": null,
+        "bLocation": null,
+        "aMetro": null,
+        "aCountry": null,
+        "aLocationId": null,
+        "bLocationId": null,
+        "bMetro": null,
+        "bCountry": null,
+        "attributeTags": {},
+        "createdBy": "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
+        "buyoutPort": false,
+        "virtual": false,
+        "locked": false,
+        "adminLocked": false,
+        "bgpShutdownDefault": false,
+        "originDomain": null
+    	}
+	}`
+	wantReq := &types.ProductUpdate{
+		Name:                 req.Name,
+		CostCentre:           req.CostCentre,
+		MarketplaceVisbility: req.MarketplaceVisibility,
+	}
+	path := fmt.Sprintf("/v2/product/%s/%s", types.PRODUCT_MEGAPORT, productUid)
+	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		v := new(types.ProductUpdate)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatal(err)
+		}
+		testMethod(t, r, http.MethodPut)
+		fmt.Fprint(w, jblob)
+		require.Equal(t, wantReq, v)
+	})
+	want := &ModifyPortResponse{
+		IsUpdated: true,
+	}
+	got, err := portSvc.ModifyPort(ctx, req)
+	require.NoError(t, err)
+	require.Equal(t, want, got)
+}
+
+func TestDeletePort(t *testing.T) {
+	setup()
+	defer teardown()
+
+	ctx := context.Background()
+
+	portSvc := client.PortService
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	jblob := `{
+    "message": "Action [CANCEL_NOW Service 36b3f68e-2f54-4331-bf94-f8984449365f] has been done.",
+    "terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"
+	}`
+
+	req := &DeletePortRequest{
+		PortID:    productUid,
+		DeleteNow: true,
+	}
+
+	path := "/v3/product/" + req.PortID + "/action/CANCEL_NOW"
+
+	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodPost)
+		fmt.Fprint(w, jblob)
+	})
+
+	want := &DeletePortResponse{
+		IsDeleting: true,
+	}
+
+	got, err := portSvc.DeletePort(ctx, req)
+
+	require.NoError(t, err)
+	require.Equal(t, want, got)
+}
