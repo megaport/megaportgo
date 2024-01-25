@@ -3,7 +3,6 @@ module github.com/megaport/megaportgo
 go 1.21
 
 require (
-	github.com/google/go-querystring v1.1.0
 	github.com/hashicorp/go-retryablehttp v0.7.5
 	github.com/lithammer/fuzzysearch v1.1.5
 	github.com/stretchr/testify v1.7.2

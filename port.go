@@ -214,7 +214,7 @@ func (svc *PortServiceOp) ListPorts(ctx context.Context) ([]*types.Port, error) 
 		return nil, err
 	}
 
-	defer response.Body.Close() // nolint
+	defer response.Body.Close()
 
 	isError, parsedError := svc.Client.IsErrorResponse(response, &err, 200)
 	if isError {
