@@ -10,15 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// ListLocations(ctx context.Context) ([]types.Location, error)
-// GetLocationByID(ctx context.Context, locationID int) (*types.Location, error)
-// GetLocationByName(ctx context.Context, locationName string) (*types.Location, error)
-// GetLocationByNameFuzzy(ctx context.Context, search string) ([]types.Location, error)
-// ListCountries(ctx context.Context) ([]types.Country, error)
-// ListMarketCodes(ctx context.Context) ([]string, error)
-// IsValidMarketCode(ctx context.Context, marketCode string) (*bool, error)
-// FilterLocationsByMarketCode(ctx context.Context, marketCode string, locations *[]types.Location) error
-
 func TestListLocations(t *testing.T) {
 	setup()
 	defer teardown()
@@ -741,5 +732,5 @@ func TestIsValidMarketCode(t *testing.T) {
 	require.Equal(t, &want1, got1)
 	got2, err := locSvc.IsValidMarketCode(ctx, "BADCODE")
 	require.NoError(t, err)
-	require.Equal(t, &want2, got2)
+	require.Equal(t, want2, got2)
 }
