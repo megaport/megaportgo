@@ -11,11 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// ModifyProduct(ctx context.Context, req *ModifyProductRequest) (*ModifyProductResponse, error)
-// DeleteProduct(ctx context.Context, req *DeleteProductRequest) (*DeleteProductResponse, error)
-// RestoreProduct(ctx context.Context, req *RestoreProductRequest) (*RestoreProductResponse, error)
-// ManageProductLock(ctx context.Context, req *ManageProductLockRequest) (*ManageProductLockResponse, error)
-
 func TestExecuteOrder(t *testing.T) {
 	setup()
 	defer teardown()
@@ -180,13 +175,103 @@ func TestModifyProduct(t *testing.T) {
 }
 
 func TestDeleteProduct(t *testing.T) {
+	setup()
+	defer teardown()
 
+	ctx := context.Background()
+
+	productSvc := client.ProductService
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	jblob := `{
+    "message": "Action [CANCEL_NOW Service 36b3f68e-2f54-4331-bf94-f8984449365f] has been done.",
+    "terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"
+	}`
+
+	req := &DeleteProductRequest{
+		ProductID: productUid,
+		DeleteNow: true,
+	}
+
+	path := "/v3/product/" + req.ProductID + "/action/CANCEL_NOW"
+
+	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodPost)
+		fmt.Fprint(w, jblob)
+	})
+
+	wantRes := &DeleteProductResponse{}
+
+	gotRes, err := productSvc.DeleteProduct(ctx, req)
+
+	require.NoError(t, err)
+	require.Equal(t, wantRes, gotRes)
 }
 
-func RestoreProduct(t *testing.T) {
+func TestRestoreProduct(t *testing.T) {
+	setup()
+	defer teardown()
 
+	ctx := context.Background()
+
+	productSvc := client.ProductService
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	jblob := `{
+	"message": "Action [UN_CANCEL Service 36b3f68e-2f54-4331-bf94-f8984449365f] has been done.",
+	"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"
+	}`
+
+	req := &RestoreProductRequest{
+		ProductID: productUid,
+	}
+
+	path := "/v3/product/" + productUid + "/action/UN_CANCEL"
+
+	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodPost)
+		fmt.Fprint(w, jblob)
+	})
+
+	wantRes := &RestoreProductResponse{}
+
+	gotRes, err := productSvc.RestoreProduct(ctx, req)
+	require.NoError(t, err)
+	require.Equal(t, wantRes, gotRes)
 }
 
-func ManageProductLuck(t *testing.T) {
+func TestManageProductLuck(t *testing.T) {
+	setup()
+	defer teardown()
 
+	ctx := context.Background()
+
+	productSvc := client.ProductService
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	jblob := `{
+	"message": "Service locked",
+	"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+	"data": {
+			"productId":999999,"productUid":"36b3f68e-2f54-4331-bf94-f8984449365f","productName":"test-port","productType":"MEGAPORT","provisioningStatus":"LIVE","createDate":0,"createdBy":"","portSpeed":10000,"terminateDate":0,"liveDate":0,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":true,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0
+            	}
+        	}
+    	}
+	}`
+
+	req := &ManageProductLockRequest{
+		ProductID:  productUid,
+		ShouldLock: true,
+	}
+
+	mux.HandleFunc(fmt.Sprintf("/v2/product/%s/lock", productUid), func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodPost)
+		fmt.Fprint(w, jblob)
+	})
+
+	wantRes := &ManageProductLockResponse{}
+
+	gotRes, err := productSvc.ManageProductLock(ctx, req)
+	require.NoError(t, err)
+	require.Equal(t, wantRes, gotRes)
 }
