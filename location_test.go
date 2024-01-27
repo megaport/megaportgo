@@ -732,5 +732,5 @@ func TestIsValidMarketCode(t *testing.T) {
 	require.Equal(t, &want1, got1)
 	got2, err := locSvc.IsValidMarketCode(ctx, "BADCODE")
 	require.NoError(t, err)
-	require.Equal(t, want2, got2)
+	require.Equal(t, &want2, got2)
 }
