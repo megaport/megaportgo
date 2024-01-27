@@ -47,9 +47,9 @@ type LoginResponse struct {
 }
 
 type LocationResponse struct {
-	Message string     `json:"message"`
-	Terms   string     `json:"terms"`
-	Data    []Location `json:"data"`
+	Message string      `json:"message"`
+	Terms   string      `json:"terms"`
+	Data    []*Location `json:"data"`
 }
 
 type PortOrderResponse struct {
@@ -125,12 +125,12 @@ type PartnerLookupResponse struct {
 }
 
 type CountryResponse struct {
-	Message string                 `json:"message"`
-	Terms   string                 `json:"terms"`
-	Data    []CountryInnerResponse `json:"data"`
+	Message string                  `json:"message"`
+	Terms   string                  `json:"terms"`
+	Data    []*CountryInnerResponse `json:"data"`
 }
 
 type CountryInnerResponse struct {
-	Countries     []Country `json:"countries"`
-	NetworkRegion string    `json:"networkRegion"`
+	Countries     []*Country `json:"countries"`
+	NetworkRegion string     `json:"networkRegion"`
 }
