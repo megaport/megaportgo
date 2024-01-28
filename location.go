@@ -20,7 +20,7 @@ type LocationService interface {
 	ListCountries(ctx context.Context) ([]*types.Country, error)
 	ListMarketCodes(ctx context.Context) ([]string, error)
 	IsValidMarketCode(ctx context.Context, marketCode string) (*bool, error)
-	FilterLocationsByMarketCode(ctx context.Context, marketCode string, locations *[]types.Location) error
+	FilterLocationsByMarketCode(ctx context.Context, marketCode string, locations []*types.Location) ([]*types.Location, error)
 }
 
 type LocationServiceOp struct {
@@ -181,19 +181,19 @@ func (svc *LocationServiceOp) IsValidMarketCode(ctx context.Context, marketCode 
 	return PtrTo(found), nil
 }
 
-func (svc *LocationServiceOp) FilterLocationsByMarketCode(ctx context.Context, marketCode string, locations *[]types.Location) error {
-	existingLocations := *locations
-	*locations = nil
+func (svc *LocationServiceOp) FilterLocationsByMarketCode(ctx context.Context, marketCode string, locations []*types.Location) ([]*types.Location, error) {
+	existingLocations := locations
+	toReturn := []*types.Location{}
 	isValid, err := svc.IsValidMarketCode(ctx, marketCode)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if *isValid {
-		for i := 0; i < len(existingLocations); i++ {
-			if existingLocations[i].Market == marketCode {
-				*locations = append(*locations, existingLocations[i])
+		for _, loc := range existingLocations {
+			if loc.Market == marketCode {
+				toReturn = append(toReturn, loc)
 			}
 		}
 	}
-	return nil
+	return toReturn, nil
 }

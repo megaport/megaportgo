@@ -5,16 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"testing"
 
 	"github.com/megaport/megaportgo/types"
-	"github.com/stretchr/testify/require"
 )
 
-func TestExecuteOrder(t *testing.T) {
-	setup()
-	defer teardown()
-
+func (suite *ClientTestSuite) TestExecuteOrder() {
 	ctx := context.Background()
 	productSvc := client.ProductService
 
@@ -42,30 +37,27 @@ func TestExecuteOrder(t *testing.T) {
 		v := new([]types.PortOrder)
 		err := json.NewDecoder(r.Body).Decode(v)
 		if err != nil {
-			t.Fatal(err)
+			suite.FailNowf("could not decode json", "could not decode json %v", err)
 		}
 		orders := *v
 		wantOrder := portOrder[0]
 		gotOrder := orders[0]
-		testMethod(t, r, http.MethodPost)
+		suite.testMethod(r, http.MethodPost)
 		fmt.Fprint(w, jblob)
-		require.Equal(t, wantOrder.Name, gotOrder.Name)
-		require.Equal(t, wantOrder.Term, gotOrder.Term)
-		require.Equal(t, wantOrder.PortSpeed, gotOrder.PortSpeed)
-		require.Equal(t, wantOrder.LocationID, gotOrder.LocationID)
-		require.Equal(t, wantOrder.Virtual, gotOrder.Virtual)
-		require.Equal(t, wantOrder.MarketplaceVisibility, gotOrder.MarketplaceVisibility)
+		suite.Equal(wantOrder.Name, gotOrder.Name)
+		suite.Equal(wantOrder.Term, gotOrder.Term)
+		suite.Equal(wantOrder.PortSpeed, gotOrder.PortSpeed)
+		suite.Equal(wantOrder.LocationID, gotOrder.LocationID)
+		suite.Equal(wantOrder.Virtual, gotOrder.Virtual)
+		suite.Equal(wantOrder.MarketplaceVisibility, gotOrder.MarketplaceVisibility)
 	})
 	wantRes := PtrTo([]byte(jblob))
 	gotRes, err := productSvc.ExecuteOrder(ctx, portOrder)
-	require.NoError(t, err)
-	require.Equal(t, wantRes, gotRes)
+	suite.NoError(err)
+	suite.Equal(wantRes, gotRes)
 }
 
-func TestModifyProduct(t *testing.T) {
-	setup()
-	defer teardown()
-
+func (suite *ClientTestSuite) TestModifyProduct() {
 	ctx := context.Background()
 	productSvc := client.ProductService
 	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
@@ -160,24 +152,21 @@ func TestModifyProduct(t *testing.T) {
 		v := new(types.ProductUpdate)
 		err := json.NewDecoder(r.Body).Decode(v)
 		if err != nil {
-			t.Fatal(err)
+			suite.FailNowf("could not decode json", "could  not decode json %v", err)
 		}
-		testMethod(t, r, http.MethodPut)
+		suite.testMethod(r, http.MethodPut)
 		fmt.Fprint(w, jblob)
-		require.Equal(t, wantUpdate, v)
+		suite.Equal(wantUpdate, v)
 	})
 	wantRes := &ModifyProductResponse{
 		IsUpdated: true,
 	}
 	gotRes, err := productSvc.ModifyProduct(ctx, wantReq)
-	require.NoError(t, err)
-	require.Equal(t, wantRes, gotRes)
+	suite.NoError(err)
+	suite.Equal(wantRes, gotRes)
 }
 
-func TestDeleteProduct(t *testing.T) {
-	setup()
-	defer teardown()
-
+func (suite *ClientTestSuite) TestDeleteProduct() {
 	ctx := context.Background()
 
 	productSvc := client.ProductService
@@ -196,7 +185,7 @@ func TestDeleteProduct(t *testing.T) {
 	path := "/v3/product/" + req.ProductID + "/action/CANCEL_NOW"
 
 	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		testMethod(t, r, http.MethodPost)
+		suite.testMethod(r, http.MethodPost)
 		fmt.Fprint(w, jblob)
 	})
 
@@ -204,14 +193,11 @@ func TestDeleteProduct(t *testing.T) {
 
 	gotRes, err := productSvc.DeleteProduct(ctx, req)
 
-	require.NoError(t, err)
-	require.Equal(t, wantRes, gotRes)
+	suite.NoError(err)
+	suite.Equal(wantRes, gotRes)
 }
 
-func TestRestoreProduct(t *testing.T) {
-	setup()
-	defer teardown()
-
+func (suite *ClientTestSuite) TestRestoreProduct() {
 	ctx := context.Background()
 
 	productSvc := client.ProductService
@@ -229,21 +215,18 @@ func TestRestoreProduct(t *testing.T) {
 	path := "/v3/product/" + productUid + "/action/UN_CANCEL"
 
 	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		testMethod(t, r, http.MethodPost)
+		suite.testMethod(r, http.MethodPost)
 		fmt.Fprint(w, jblob)
 	})
 
 	wantRes := &RestoreProductResponse{}
 
 	gotRes, err := productSvc.RestoreProduct(ctx, req)
-	require.NoError(t, err)
-	require.Equal(t, wantRes, gotRes)
+	suite.NoError(err)
+	suite.Equal(wantRes, gotRes)
 }
 
-func TestManageProductLuck(t *testing.T) {
-	setup()
-	defer teardown()
-
+func (suite *ClientTestSuite) TestManageProductLuck() {
 	ctx := context.Background()
 
 	productSvc := client.ProductService
@@ -265,13 +248,13 @@ func TestManageProductLuck(t *testing.T) {
 	}
 
 	mux.HandleFunc(fmt.Sprintf("/v2/product/%s/lock", productUid), func(w http.ResponseWriter, r *http.Request) {
-		testMethod(t, r, http.MethodPost)
+		suite.testMethod(r, http.MethodPost)
 		fmt.Fprint(w, jblob)
 	})
 
 	wantRes := &ManageProductLockResponse{}
 
 	gotRes, err := productSvc.ManageProductLock(ctx, req)
-	require.NoError(t, err)
-	require.Equal(t, wantRes, gotRes)
+	suite.NoError(err)
+	suite.Equal(wantRes, gotRes)
 }

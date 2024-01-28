@@ -4,15 +4,11 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"testing"
 
 	"github.com/megaport/megaportgo/types"
-	"github.com/stretchr/testify/require"
 )
 
-func TestListLocations(t *testing.T) {
-	setup()
-	defer teardown()
+func (suite *ClientTestSuite) TestListLocations() {
 	ctx := context.Background()
 	locSvc := client.LocationService
 	want := []*types.Location{
@@ -148,17 +144,15 @@ func TestListLocations(t *testing.T) {
 		}]
 	}`
 	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		testMethod(t, r, http.MethodGet)
+		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
 	})
 	got, err := locSvc.ListLocations(ctx)
-	require.NoError(t, err)
-	require.Equal(t, want, got)
+	suite.NoError(err)
+	suite.Equal(want, got)
 }
 
-func TestGetLocationByID(t *testing.T) {
-	setup()
-	defer teardown()
+func (suite *ClientTestSuite) TestGetLocationByID() {
 	ctx := context.Background()
 	locSvc := client.LocationService
 	want := &types.Location{
@@ -265,17 +259,15 @@ func TestGetLocationByID(t *testing.T) {
 		}]
 	}`
 	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		testMethod(t, r, http.MethodGet)
+		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
 	})
 	got, err := locSvc.GetLocationByID(ctx, 111)
-	require.NoError(t, err)
-	require.Equal(t, want, got)
+	suite.NoError(err)
+	suite.Equal(want, got)
 }
 
-func TestGetLocationByName(t *testing.T) {
-	setup()
-	defer teardown()
+func (suite *ClientTestSuite) TestGetLocationByName() {
 	ctx := context.Background()
 	locSvc := client.LocationService
 	want := &types.Location{
@@ -383,17 +375,15 @@ func TestGetLocationByName(t *testing.T) {
 		}]
 	}`
 	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		testMethod(t, r, http.MethodGet)
+		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
 	})
 	got, err := locSvc.GetLocationByName(ctx, "Test Data Center 2")
-	require.NoError(t, err)
-	require.Equal(t, want, got)
+	suite.NoError(err)
+	suite.Equal(want, got)
 }
 
-func TestGetLocationByNameFuzzy(t *testing.T) {
-	setup()
-	defer teardown()
+func (suite *ClientTestSuite) TestGetLocationByNameFuzzy() {
 	ctx := context.Background()
 	locSvc := client.LocationService
 	want := []*types.Location{
@@ -566,17 +556,15 @@ func TestGetLocationByNameFuzzy(t *testing.T) {
 	]
 	}`
 	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		testMethod(t, r, http.MethodGet)
+		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
 	})
 	got, err := locSvc.GetLocationByNameFuzzy(ctx, "Test")
-	require.NoError(t, err)
-	require.Equal(t, want, got)
+	suite.NoError(err)
+	suite.Equal(want, got)
 }
 
-func TestListCountries(t *testing.T) {
-	setup()
-	defer teardown()
+func (suite *ClientTestSuite) TestListCountries() {
 	ctx := context.Background()
 	locSvc := client.LocationService
 	want := []*types.Country{
@@ -631,17 +619,15 @@ func TestListCountries(t *testing.T) {
 	}`
 	path := "/v2/networkRegions"
 	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		testMethod(t, r, http.MethodGet)
+		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
 	})
 	got, err := locSvc.ListCountries(ctx)
-	require.NoError(t, err)
-	require.Equal(t, want, got)
+	suite.NoError(err)
+	suite.Equal(want, got)
 }
 
-func TestListMarketCodes(t *testing.T) {
-	setup()
-	defer teardown()
+func (suite *ClientTestSuite) TestListMarketCodes() {
 	ctx := context.Background()
 	locSvc := client.LocationService
 	want := []string{"AU", "GB", "US"}
@@ -677,17 +663,15 @@ func TestListMarketCodes(t *testing.T) {
 	}`
 	path := "/v2/networkRegions"
 	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		testMethod(t, r, http.MethodGet)
+		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
 	})
 	got, err := locSvc.ListMarketCodes(ctx)
-	require.NoError(t, err)
-	require.Equal(t, want, got)
+	suite.NoError(err)
+	suite.Equal(want, got)
 }
 
-func TestIsValidMarketCode(t *testing.T) {
-	setup()
-	defer teardown()
+func (suite *ClientTestSuite) TestIsValidMarketCode() {
 	ctx := context.Background()
 	locSvc := client.LocationService
 	want1 := true
@@ -724,13 +708,13 @@ func TestIsValidMarketCode(t *testing.T) {
 	}`
 	path := "/v2/networkRegions"
 	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		testMethod(t, r, http.MethodGet)
+		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
 	})
 	got1, err := locSvc.IsValidMarketCode(ctx, "US")
-	require.NoError(t, err)
-	require.Equal(t, &want1, got1)
+	suite.NoError(err)
+	suite.Equal(&want1, got1)
 	got2, err := locSvc.IsValidMarketCode(ctx, "BADCODE")
-	require.NoError(t, err)
-	require.Equal(t, &want2, got2)
+	suite.NoError(err)
+	suite.Equal(&want2, got2)
 }

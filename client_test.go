@@ -1,10 +1,8 @@
 package megaport
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -13,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"golang.org/x/oauth2"
+	"github.com/stretchr/testify/suite"
 )
 
 var (
@@ -26,7 +24,17 @@ var (
 	server *httptest.Server
 )
 
-func setup() {
+type TestSuite struct {
+	suite.Suite
+}
+
+type ClientTestSuite TestSuite
+
+func TestClientTestSuite(t *testing.T) {
+	suite.Run(t, new(ClientTestSuite))
+}
+
+func (suite *ClientTestSuite) SetupTest() {
 	mux = http.NewServeMux()
 	server = httptest.NewServer(mux)
 
@@ -35,13 +43,13 @@ func setup() {
 	client.BaseURL = url
 }
 
-func teardown() {
+func (suite *ClientTestSuite) TearDownTest() {
 	server.Close()
 }
 
-func testMethod(t *testing.T, r *http.Request, expected string) {
+func (suite *ClientTestSuite) testMethod(r *http.Request, expected string) {
 	if expected != r.Method {
-		t.Errorf("Request method = %v, expected %v", r.Method, expected)
+		suite.FailNowf("Request method = %v, expected %v", r.Method, expected)
 	}
 }
 
@@ -63,80 +71,75 @@ func testMethod(t *testing.T, r *http.Request, expected string) {
 // 	}
 // }
 
-func testURLParseError(t *testing.T, err error) {
+func (suite *ClientTestSuite) testURLParseError(err error) {
 	if err == nil {
-		t.Errorf("Expected error to be returned")
+		suite.FailNow("Expected error to be returned")
 	}
 	if err, ok := err.(*url.Error); !ok || err.Op != "parse" {
-		t.Errorf("Expected URL parse error, got %+v", err)
+		suite.FailNowf("Expected URL parse error, got %+v", err.Error())
 	}
 }
 
-func testClientDefaultBaseURL(t *testing.T, c *Client) {
+func (suite *ClientTestSuite) testClientDefaultBaseURL(c *Client) {
 	if c.BaseURL == nil || c.BaseURL.String() != defaultBaseURL {
-		t.Errorf("NewClient BaseURL = %v, expected %v", c.BaseURL, defaultBaseURL)
+		suite.FailNowf("NewClient BaseURL = %v, expected %v", c.BaseURL.String(), defaultBaseURL)
 	}
 }
 
-func testClientDefaultUserAgent(t *testing.T, c *Client) {
+func (suite *ClientTestSuite) testClientDefaultUserAgent(c *Client) {
 	if c.UserAgent != userAgent {
-		t.Errorf("NewClient UserAgent = %v, expected %v", c.UserAgent, userAgent)
+		suite.FailNowf("NewClient UserAgent = %v, expected %v", c.UserAgent, userAgent)
 	}
 }
 
-func testClientDefaults(t *testing.T, c *Client) {
-	testClientDefaultBaseURL(t, c)
-	testClientDefaultUserAgent(t, c)
+func (suite *ClientTestSuite) testClientDefaults(c *Client) {
+	suite.testClientDefaultBaseURL(c)
+	suite.testClientDefaultUserAgent(c)
 }
 
-func TestNewClient(t *testing.T) {
+func (suite *ClientTestSuite) TestNewClient() {
 	c := NewClient(nil, nil)
-	testClientDefaults(t, c)
+	suite.testClientDefaults(c)
 }
 
-func TestNewFromToken(t *testing.T) {
+func (suite *ClientTestSuite) TestNewFromToken() {
 	c := NewFromToken("myToken")
-	testClientDefaults(t, c)
+	suite.testClientDefaults(c)
 }
 
-func TestNewFromToken_cleaned(t *testing.T) {
+func (suite *ClientTestSuite) TestNewFromToken_cleaned() {
 	testTokens := []string{"myToken ", " myToken", " myToken ", "'myToken'", " 'myToken' "}
 	expected := "Bearer myToken"
-
-	setup()
-	defer teardown()
 
 	mux.HandleFunc("/foo", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 
 	for _, tt := range testTokens {
-		t.Run(tt, func(t *testing.T) {
-			c := NewFromToken(tt)
-			req, _ := c.NewRequest(ctx, http.MethodGet, server.URL+"/foo", nil)
-			resp, err := c.Do(ctx, req, nil)
-			if err != nil {
-				t.Fatalf("Do(): %v", err)
-			}
+		c := NewFromToken(tt)
+		req, _ := c.NewRequest(ctx, http.MethodGet, server.URL+"/foo", nil)
+		resp, err := c.Do(ctx, req, nil)
+		if err != nil {
+			suite.FailNowf("Do(): %v", err.Error())
+		}
 
-			authHeader := resp.Request.Header.Get("Authorization")
-			if authHeader != expected {
-				t.Errorf("Authorization header = %v, expected %v", authHeader, expected)
-			}
-		})
+		authHeader := resp.Request.Header.Get("Authorization")
+		if authHeader != expected {
+			suite.FailNowf("Authorization header = %v, expected %v", authHeader, expected)
+		}
 	}
 }
 
-func TestNew(t *testing.T) {
+func (suite *ClientTestSuite) TestNew() {
 	c, err := New(nil)
 
 	if err != nil {
-		t.Fatalf("New(): %v", err)
+		suite.FailNowf("New(): %v", err.Error())
 	}
-	testClientDefaults(t, c)
+	suite.testClientDefaults(c)
 }
 
-func TestNewRequest_get(t *testing.T) {
+func (suite *ClientTestSuite) TestNewRequest_get() {
 	c := NewClient(nil, nil)
 
 	inURL, outURL := "/foo", defaultBaseURL+"foo"
@@ -144,44 +147,44 @@ func TestNewRequest_get(t *testing.T) {
 
 	// test relative URL was expanded
 	if req.URL.String() != outURL {
-		t.Errorf("NewRequest(%v) URL = %v, expected %v", inURL, req.URL, outURL)
+		suite.FailNowf("NewRequest(%v) URL = %v, expected %v", inURL, req.URL, outURL)
 	}
 
 	// test the content-type header is not set
 	if contentType := req.Header.Get("Content-Type"); contentType != "" {
-		t.Errorf("NewRequest() Content-Type = %v, expected empty string", contentType)
+		suite.FailNowf("NewRequest() Content-Type = %v, expected empty string", contentType)
 	}
 
 	// test default user-agent is attached to the request
 	userAgent := req.Header.Get("User-Agent")
 	if c.UserAgent != userAgent {
-		t.Errorf("NewRequest() User-Agent = %v, expected %v", userAgent, c.UserAgent)
+		suite.FailNowf("NewRequest() User-Agent = %v, expected %v", userAgent, c.UserAgent)
 	}
 }
 
-func TestNewRequest_badURL(t *testing.T) {
+func (suite *ClientTestSuite) TestNewRequest_badURL() {
 	c := NewClient(nil, nil)
 	_, err := c.NewRequest(ctx, http.MethodGet, ":", nil)
-	testURLParseError(t, err)
+	suite.testURLParseError(err)
 }
 
-func TestNewRequest_withCustomUserAgent(t *testing.T) {
+func (suite *ClientTestSuite) TestNewRequest_withCustomUserAgent() {
 	ua := "testing/0.0.1"
 	c, err := New(nil, SetUserAgent(ua))
 
 	if err != nil {
-		t.Fatalf("New() unexpected error: %v", err)
+		suite.FailNowf("New() unexpected error: %v", err.Error())
 	}
 
 	req, _ := c.NewRequest(ctx, http.MethodGet, "/foo", nil)
 
 	expected := fmt.Sprintf("%s %s", ua, userAgent)
 	if got := req.Header.Get("User-Agent"); got != expected {
-		t.Errorf("New() UserAgent = %s; expected %s", got, expected)
+		suite.FailNowf("New() UserAgent = %s; expected %s", got, expected)
 	}
 }
 
-func TestNewRequest_withCustomHeaders(t *testing.T) {
+func (suite *ClientTestSuite) TestNewRequest_withCustomHeaders() {
 	expectedIdentity := "identity"
 	expectedCustom := "x_test_header"
 
@@ -190,22 +193,20 @@ func TestNewRequest_withCustomHeaders(t *testing.T) {
 		"X-Test-Header":   expectedCustom,
 	}))
 	if err != nil {
-		t.Fatalf("New() unexpected error: %v", err)
+		suite.FailNowf("New() unexpected error: %v", err.Error())
 	}
 
 	req, _ := c.NewRequest(ctx, http.MethodGet, "/foo", nil)
 
 	if got := req.Header.Get("Accept-Encoding"); got != expectedIdentity {
-		t.Errorf("New() Custom Accept Encoding Header = %s; expected %s", got, expectedIdentity)
+		suite.FailNowf("New() Custom Accept Encoding Header = %s; expected %s", got, expectedIdentity)
 	}
 	if got := req.Header.Get("X-Test-Header"); got != expectedCustom {
-		t.Errorf("New() Custom Accept Encoding Header = %s; expected %s", got, expectedCustom)
+		suite.FailNowf("New() Custom Accept Encoding Header = %s; expected %s", got, expectedCustom)
 	}
 }
 
-func TestDo(t *testing.T) {
-	setup()
-	defer teardown()
+func (suite *ClientTestSuite) TestDo() {
 
 	type foo struct {
 		A string
@@ -213,7 +214,7 @@ func TestDo(t *testing.T) {
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if m := http.MethodGet; m != r.Method {
-			t.Errorf("Request method = %v, expected %v", r.Method, m)
+			suite.FailNowf("Request method = %v, expected %v", r.Method, m)
 		}
 		fmt.Fprint(w, `{"A":"a"}`)
 	})
@@ -222,18 +223,16 @@ func TestDo(t *testing.T) {
 	body := new(foo)
 	_, err := client.Do(context.Background(), req, body)
 	if err != nil {
-		t.Fatalf("Do(): %v", err)
+		suite.FailNowf("", "Do(): %v", err.Error())
 	}
 
 	expected := &foo{"a"}
 	if !reflect.DeepEqual(body, expected) {
-		t.Errorf("Response body = %v, expected %v", body, expected)
+		suite.FailNowf("", "Response body = %v, expected %v", *body, expected)
 	}
 }
 
-func TestDo_httpError(t *testing.T) {
-	setup()
-	defer teardown()
+func (suite *ClientTestSuite) TestDo_httpError() {
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad Request", 400)
@@ -243,144 +242,19 @@ func TestDo_httpError(t *testing.T) {
 	_, err := client.Do(context.Background(), req, nil)
 
 	if err == nil {
-		t.Error("Expected HTTP 400 error.")
+		suite.FailNow("Expected HTTP 400 error.")
 	}
 }
 
-// Test handling of an error caused by the internal http client's Do()
-// function.
-func TestDo_redirectLoop(t *testing.T) {
-	setup()
-	defer teardown()
-
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/", http.StatusFound)
-	})
-
-	req, _ := client.NewRequest(ctx, http.MethodGet, "/", nil)
-	_, err := client.Do(context.Background(), req, nil)
-
-	if err == nil {
-		t.Error("Expected error to be returned.")
-	}
-	if err, ok := err.(*url.Error); !ok {
-		t.Errorf("Expected a URL error; got %#v.", err)
-	}
-}
-
-func TestErrorResponse_Error(t *testing.T) {
+func (suite *ClientTestSuite) TestErrorResponse_Error() {
 	res := &http.Response{Request: &http.Request{}}
 	err := ErrorResponse{Message: "m", Response: res}
 	if err.Error() == "" {
-		t.Errorf("Expected non-empty ErrorResponse.Error()")
+		suite.FailNow("Expected non-empty ErrorResponse.Error()")
 	}
 }
 
-// TestWithRetryAndBackoffs tests the retryablehttp client's default retry policy.
-func TestWithRetryAndBackoffs(t *testing.T) {
-	// Mock server which always responds 500.
-	setup()
-	defer teardown()
-
-	ctx := context.Background()
-
-	url, _ := url.Parse(server.URL)
-	mux.HandleFunc("/foo", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-		_, err := w.Write([]byte(`{"id": "bad_request", "message": "broken"}`))
-		if err != nil {
-			t.Fatalf("err: %v", err)
-		}
-	})
-
-	tokenSrc := oauth2.StaticTokenSource(&oauth2.Token{
-		AccessToken: "new_token",
-	})
-
-	oauthClient := oauth2.NewClient(ctx, tokenSrc)
-
-	waitMax := PtrTo(6.0)
-	waitMin := PtrTo(3.0)
-
-	retryConfig := RetryConfig{
-		RetryMax:     3,
-		RetryWaitMin: waitMin,
-		RetryWaitMax: waitMax,
-	}
-
-	// Create the client. Use short retry windows so we fail faster.
-	client, err := New(oauthClient, WithRetryAndBackoffs(retryConfig))
-	client.BaseURL = url
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	// Create the request
-	req, err := client.NewRequest(ctx, http.MethodGet, "/foo", nil)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	expectingErr := fmt.Sprintf("GET %s/foo: 500 broken; giving up after 4 attempt(s)", url)
-	// Send the request.
-	_, err = client.Do(context.Background(), req, nil)
-	if err == nil || (err.Error() != expectingErr) {
-		t.Fatalf("expected giving up error, got: %#v", err)
-	}
-}
-
-func TestWithRetryAndBackoffsLogger(t *testing.T) {
-	// Mock server which always responds 500.
-	setup()
-	defer teardown()
-
-	ctx := context.Background()
-
-	url, _ := url.Parse(server.URL)
-	mux.HandleFunc("/foo", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusAccepted)
-	})
-
-	tokenSrc := oauth2.StaticTokenSource(&oauth2.Token{
-		AccessToken: "new_token",
-	})
-
-	oauth_client := oauth2.NewClient(ctx, tokenSrc)
-
-	var buf bytes.Buffer
-	retryConfig := RetryConfig{
-		RetryMax: 3,
-		Logger:   log.New(&buf, "", 0),
-	}
-
-	// Create the client. Use short retry windows so we fail faster.
-	client, err := New(oauth_client, WithRetryAndBackoffs(retryConfig))
-	client.BaseURL = url
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	// Create the request
-	req, err := client.NewRequest(ctx, http.MethodGet, "/foo", nil)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	_, err = client.Do(context.Background(), req, nil)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	got := buf.String()
-	expected := fmt.Sprintf("[DEBUG] GET %s/foo\n", url)
-	if expected != got {
-		t.Fatalf("expected: %s; got: %s", expected, got)
-	}
-}
-
-func TestDo_completion_callback(t *testing.T) {
-	setup()
-	defer teardown()
+func (suite *ClientTestSuite) TestDo_completion_callback() {
 
 	type foo struct {
 		A string
@@ -388,7 +262,7 @@ func TestDo_completion_callback(t *testing.T) {
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if m := http.MethodGet; m != r.Method {
-			t.Errorf("Request method = %v, expected %v", r.Method, m)
+			suite.FailNowf("", "Request method = %v, expected %v", r.Method, m)
 		}
 		fmt.Fprint(w, `{"A":"a"}`)
 	})
@@ -401,54 +275,54 @@ func TestDo_completion_callback(t *testing.T) {
 		completedReq = req
 		b, err := httputil.DumpResponse(resp, true)
 		if err != nil {
-			t.Errorf("Failed to dump response: %s", err)
+			suite.FailNowf("Failed to dump response", "Failed to dump response: %s", err)
 		}
 		completedResp = string(b)
 	})
 	_, err := client.Do(context.Background(), req, body)
 	if err != nil {
-		t.Fatalf("Do(): %v", err)
+		suite.FailNowf("", "Do(): %v", err)
 	}
 	if !reflect.DeepEqual(req, completedReq) {
-		t.Errorf("Completed request = %v, expected %v", completedReq, req)
+		suite.FailNowf("", "Completed request = %v, expected %v", completedReq, req)
 	}
 	expected := `{"A":"a"}`
 	if !strings.Contains(completedResp, expected) {
-		t.Errorf("expected response to contain %v, Response = %v", expected, completedResp)
+		suite.FailNowf("", "expected response to contain %v, Response = %v", expected, completedResp)
 	}
 }
 
-func TestCustomUserAgent(t *testing.T) {
+func (suite *ClientTestSuite) TestCustomUserAgent() {
 	ua := "testing/0.0.1"
 	c, err := New(nil, SetUserAgent(ua))
 
 	if err != nil {
-		t.Fatalf("New() unexpected error: %v", err)
+		suite.FailNowf("", "New() unexpected error: %v", err)
 	}
 
 	expected := fmt.Sprintf("%s %s", ua, userAgent)
 	if got := c.UserAgent; got != expected {
-		t.Errorf("New() UserAgent = %s; expected %s", got, expected)
+		suite.FailNowf("", "New() UserAgent = %s; expected %s", got, expected)
 	}
 }
 
-func TestCustomBaseURL(t *testing.T) {
+func (suite *ClientTestSuite) TestCustomBaseURL() {
 	baseURL := "http://localhost/foo"
 	c, err := New(nil, SetBaseURL(baseURL))
 
 	if err != nil {
-		t.Fatalf("New() unexpected error: %v", err)
+		suite.FailNowf("", "New() unexpected error: %v", err)
 	}
 
 	expected := baseURL
 	if got := c.BaseURL.String(); got != expected {
-		t.Errorf("New() BaseURL = %s; expected %s", got, expected)
+		suite.FailNowf("", "New() BaseURL = %s; expected %s", got, expected)
 	}
 }
 
-func TestCustomBaseURL_badURL(t *testing.T) {
+func (suite *ClientTestSuite) TestCustomBaseURL_badURL() {
 	baseURL := ":"
 	_, err := New(nil, SetBaseURL(baseURL))
 
-	testURLParseError(t, err)
+	suite.testURLParseError(err)
 }

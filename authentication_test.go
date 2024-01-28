@@ -1,60 +1,74 @@
 package megaport
 
-// var accessKey string
-// var secretKey string
+import (
+	"context"
+	"log/slog"
+	"os"
+	"testing"
 
-// var megaportClient *Client
+	"github.com/megaport/megaportgo/shared"
+	"github.com/stretchr/testify/suite"
+)
 
-// var programLevel = new(slog.LevelVar)
+var accessKey string
+var secretKey string
 
-// const (
-// 	MEGAPORTURL = "https://api-staging.megaport.com/"
-// )
+var megaportClient *Client
 
-// func TestMain(m *testing.M) {
+var programLevel = new(slog.LevelVar)
 
-// 	accessKey = os.Getenv("MEGAPORT_ACCESS_KEY")
-// 	secretKey = os.Getenv("MEGAPORT_SECRET_KEY")
+const (
+	MEGAPORTURL = "https://api-staging.megaport.com/"
+)
 
-// 	httpClient := NewHttpClient()
+type IntegrationTestSuite TestSuite
 
-// 	handler := slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: programLevel})
-// 	programLevel.Set(slog.LevelDebug)
+func TestIntegrationTestSuite(t *testing.T) {
+	if os.Getenv("CI") != "true" {
+		suite.Run(t, new(IntegrationTestSuite))
+	}
+}
 
-// 	var err error
+func (suite *IntegrationTestSuite) SetupSuite() {
+	accessKey = os.Getenv("MEGAPORT_ACCESS_KEY")
+	secretKey = os.Getenv("MEGAPORT_SECRET_KEY")
 
-// 	megaportClient, err = New(httpClient, SetBaseURL(MEGAPORTURL), SetLogHandler(handler))
-// 	if err != nil {
-// 		log.Fatalf("could not initialize megaport test client: %s", err.Error())
-// 	}
+	httpClient := NewHttpClient()
 
-// 	os.Exit(m.Run())
-// }
+	handler := slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: programLevel})
+	programLevel.Set(slog.LevelDebug)
 
-// func TestLoginOauth(t *testing.T) {
-// 	megaportClient.Logger.Debug("testing login oauth")
-// 	if accessKey == "" {
-// 		megaportClient.Logger.Error("MEGAPORT_ACCESS_KEY environment variable not set.")
-// 		os.Exit(1)
-// 	}
+	var err error
 
-// 	if secretKey == "" {
-// 		megaportClient.Logger.Error("MEGAPORT_SECRET_KEY environment variable not set.")
-// 		os.Exit(1)
-// 	}
+	megaportClient, err = New(httpClient, SetBaseURL(MEGAPORTURL), SetLogHandler(handler))
+	if err != nil {
+		suite.FailNowf("", "could not initialize megaport test client: %s", err.Error())
+	}
+}
+func (suite *IntegrationTestSuite) TestLoginOauth() {
+	megaportClient.Logger.Debug("testing login oauth")
+	if accessKey == "" {
+		megaportClient.Logger.Error("MEGAPORT_ACCESS_KEY environment variable not set.")
+		os.Exit(1)
+	}
 
-// 	ctx := context.Background()
-// 	token, loginErr := megaportClient.AuthenticationService.LoginOauth(ctx, accessKey, secretKey)
-// 	if loginErr != nil {
-// 		megaportClient.Logger.Error("login error", "error", loginErr.Error())
-// 	}
-// 	assert.NoError(t, loginErr)
+	if secretKey == "" {
+		megaportClient.Logger.Error("MEGAPORT_SECRET_KEY environment variable not set.")
+		os.Exit(1)
+	}
 
-// 	// Session Token is not empty
-// 	assert.NotEmpty(t, token)
-// 	// SessionToken is a valid guid
-// 	assert.NotNil(t, shared.IsGuid(token))
+	ctx := context.Background()
+	token, loginErr := megaportClient.AuthenticationService.LoginOauth(ctx, accessKey, secretKey)
+	if loginErr != nil {
+		megaportClient.Logger.Error("login error", "error", loginErr.Error())
+	}
+	suite.NoError(loginErr)
 
-// 	megaportClient.Logger.Info("", "token", token)
-// 	megaportClient.SessionToken = token
-// }
+	// Session Token is not empty
+	suite.NotEmpty(token)
+	// SessionToken is a valid guid
+	suite.NotNil(shared.IsGuid(token))
+
+	megaportClient.Logger.Info("", "token", token)
+	megaportClient.SessionToken = token
+}
