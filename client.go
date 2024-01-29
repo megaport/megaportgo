@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -13,8 +12,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/megaport/megaportgo/mega_err"
-	"github.com/megaport/megaportgo/types"
 	"golang.org/x/oauth2"
 )
 
@@ -74,18 +71,6 @@ func NewHttpClient() *http.Client {
 
 // RequestCompletionCallback defines the type of the request callback function
 type RequestCompletionCallback func(*http.Request, *http.Response)
-
-// An ErrorResponse reports the error caused by an API request
-type ErrorResponse struct {
-	// HTTP response that caused this error
-	Response *http.Response
-
-	// Error message
-	Message string `json:"message"`
-
-	// RequestID returned from the API, useful to contact support.
-	RequestID string `json:"request_id"`
-}
 
 // func addOptions(s string, opt interface{}) (string, error) {
 // 	v := reflect.ValueOf(opt)
@@ -326,33 +311,6 @@ func (r *ErrorResponse) Error() string {
 	}
 	return fmt.Sprintf("%v %v: %d %s",
 		r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, r.Message)
-}
-
-// IsErrorResponse returns an error report if an error response is detected from the API.
-func (c *Client) IsErrorResponse(response *http.Response, responseErr *error, expectedReturnCode int) (bool, error) {
-	if *responseErr != nil {
-		return true, *responseErr
-	}
-
-	if response.StatusCode != expectedReturnCode {
-		body, fileErr := io.ReadAll(response.Body)
-
-		if fileErr != nil {
-			return false, fileErr
-		}
-
-		errResponse := types.ErrorResponse{}
-		errParseErr := json.Unmarshal([]byte(body), &errResponse)
-
-		if errParseErr != nil {
-			errorReport := fmt.Sprintf(mega_err.ERR_PARSING_ERR_RESPONSE, response.StatusCode, errParseErr.Error(), string(body))
-			return true, errors.New(errorReport)
-		}
-
-		return true, errors.New(errResponse.Message + ": " + errResponse.Data)
-	}
-
-	return false, nil
 }
 
 // CheckResponse checks the API response for errors, and returns them if present. A response is considered an
