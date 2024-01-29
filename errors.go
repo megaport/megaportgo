@@ -65,3 +65,12 @@ func NewArgError(arg, reason string) *ArgError {
 func (e *ArgError) Error() string {
 	return fmt.Sprintf("%s is invalid because %s", e.arg, e.reason)
 }
+
+func (r *ErrorResponse) Error() string {
+	if r.RequestID != "" {
+		return fmt.Sprintf("%v %v: %d (request %q) %s",
+			r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, r.RequestID, r.Message)
+	}
+	return fmt.Sprintf("%v %v: %d %s",
+		r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, r.Message)
+}
