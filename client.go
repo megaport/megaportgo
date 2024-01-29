@@ -85,6 +85,8 @@ type ErrorResponse struct {
 
 	// RequestID returned from the API, useful to contact support.
 	RequestID string `json:"request_id"`
+
+	Code int
 }
 
 // func addOptions(s string, opt interface{}) (string, error) {
@@ -285,7 +287,7 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*htt
 
 	err = CheckResponse(resp)
 	if err != nil {
-		return resp, err
+		return nil, err
 	}
 
 	if resp.StatusCode != http.StatusNoContent && v != nil {
@@ -302,7 +304,7 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*htt
 		}
 	}
 
-	return resp, err
+	return resp, nil
 }
 
 // DoRequest submits an HTTP request.

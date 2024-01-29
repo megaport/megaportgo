@@ -58,7 +58,7 @@ func (suite *PortIntegrationTestSuite) SetupTest() {
 	ctx := context.Background()
 	token, loginErr := suite.client.AuthenticationService.LoginOauth(ctx, accessKey, secretKey)
 	if loginErr != nil {
-		suite.client.Logger.Error("login error", "error", loginErr.Error())
+		suite.client.Logger.Error("login error", slog.String("error", loginErr.Error()))
 		suite.FailNowf("login error", "login error %v", loginErr)
 	}
 
@@ -183,7 +183,7 @@ func (suite *PortIntegrationTestSuite) TestLAGPort() {
 	}
 
 	if !foundNewPort {
-		suite.client.Logger.Debug("Failed to find port we just created in ports list", "port_id", mainPortId)
+		suite.client.Logger.Debug("Failed to find port we just created in ports list", slog.String("port_id", mainPortId))
 		suite.FailNowf("Failed to find port we just created in ports list", "Failed to find port we just created in ports list %v", mainPortId)
 	}
 
@@ -196,7 +196,7 @@ func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Con
 	var portErr error
 	var orderRes *BuyPortResponse
 
-	suite.client.Logger.Debug("Buying Port", "port_type", portType)
+	suite.client.Logger.Debug("Buying Port", slog.String("port_type", portType))
 	if portType == types.LAG_PORT {
 		orderRes, portErr = c.PortService.BuyLAGPort(ctx, &BuyLAGPortRequest{
 			Name:       "Buy Port (LAG) Test",
@@ -218,7 +218,7 @@ func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Con
 		})
 	}
 	if portErr != nil {
-		return nil, portErr
+		suite.FailNowf("could not find port", "could not find port %v", portErr)
 	}
 	return orderRes, nil
 }
@@ -227,23 +227,29 @@ func (suite *PortIntegrationTestSuite) testModifyPort(c *Client, ctx context.Con
 	portInfo, err := c.PortService.GetPort(ctx, &GetPortRequest{
 		PortID: portId,
 	})
-	suite.NoError(err)
+	if err != nil {
+		suite.FailNowf("could not find port", "could not find port %v", err)
+	}
 
 	newPortName := fmt.Sprintf("Buy Port (%s) [Modified]", portType)
 
-	suite.client.Logger.Debug("Modifying Port", "port_id", portId, "port_type", portType)
+	suite.client.Logger.Debug("Modifying Port", slog.String("port_id", portId), slog.String("port_type", portType))
 	_, modifyErr := c.PortService.ModifyPort(ctx, &ModifyPortRequest{
 		PortID:                portId,
 		Name:                  newPortName,
 		CostCentre:            "",
 		MarketplaceVisibility: portInfo.MarketplaceVisibility,
 	})
-	suite.NoError(modifyErr)
+	if err != nil {
+		suite.FailNowf("could not modify port", "could not modify port %v", modifyErr)
+	}
 
 	secondGetPortInfo, err := c.PortService.GetPort(ctx, &GetPortRequest{
 		PortID: portId,
 	})
-	suite.NoError(err)
+	if err != nil {
+		suite.FailNowf("could not find port", "could not find port %v", err)
+	}
 	suite.EqualValues(newPortName, secondGetPortInfo.Name)
 }
 
@@ -251,67 +257,82 @@ func (suite *PortIntegrationTestSuite) testModifyPort(c *Client, ctx context.Con
 // and Soft/Hard Deletes.
 func (suite *PortIntegrationTestSuite) testCancelPort(c *Client, ctx context.Context, portId string, portType string) {
 	// Soft Delete
-	suite.client.Logger.Debug("Scheduling Port for deletion (30 days).", "port_id", portId, "port_type", portType)
+	suite.client.Logger.Debug("Scheduling Port for deletion (30 days).", slog.String("port_id", portId), slog.String("port_type", portType))
 	resp, deleteErr := c.PortService.DeletePort(ctx, &DeletePortRequest{
 		PortID:    portId,
 		DeleteNow: false,
 	})
-	suite.NoError(deleteErr)
+	if deleteErr != nil {
+		suite.FailNowf("could not cancel port", "could not cancel port %v", deleteErr)
+	}
 	suite.True(resp.IsDeleting)
 
 	portInfo, err := c.PortService.GetPort(ctx, &GetPortRequest{PortID: portId})
-	suite.NoError(err)
+	if err != nil {
+		suite.FailNowf("could not find port", "could not find port %v", err)
+	}
 	suite.EqualValues(types.STATUS_CANCELLED, portInfo.ProvisioningStatus)
 
-	suite.client.Logger.Debug("", "status", portInfo.ProvisioningStatus, "port_id", portId)
+	suite.client.Logger.Debug("port scheduled for cancellation", slog.String("status", portInfo.ProvisioningStatus), slog.String("port_id", portId))
 	restoreResp, restoreErr := c.PortService.RestorePort(ctx, &RestorePortRequest{PortID: portId})
-	suite.NoError(restoreErr)
+	if restoreErr != nil {
+		suite.FailNowf("could not restore port", "could not restore port %v", restoreErr)
+	}
 	suite.True(restoreResp.IsRestoring)
 
 }
 
 func (suite *PortIntegrationTestSuite) testDeletePort(c *Client, ctx context.Context, portId string, portType string) {
 	// Hard Delete
-	suite.client.Logger.Debug("Deleting Port now.", "port_type", portType, "port_id", portId)
+	suite.client.Logger.Debug("Deleting Port now.", slog.String("port_type", portType), slog.String("port_id", portId))
 	hardDeleteResp, deleteErr := c.PortService.DeletePort(ctx, &DeletePortRequest{
 		PortID:    portId,
 		DeleteNow: true,
 	})
+	if deleteErr != nil {
+		suite.FailNowf("could not delete port", "could not delete port %v", deleteErr)
+	}
 	suite.True(hardDeleteResp.IsDeleting)
-	suite.NoError(deleteErr)
 
 	portInfo, err := c.PortService.GetPort(ctx, &GetPortRequest{
 		PortID: portId,
 	})
-	suite.NoError(err)
-
+	if err != nil {
+		suite.FailNowf("could not find port", "could not find port %v", err)
+	}
 	suite.EqualValues(types.STATUS_DECOMMISSIONED, portInfo.ProvisioningStatus)
-	suite.client.Logger.Debug("", "status", portInfo.ProvisioningStatus, "port_id", portId)
+	suite.client.Logger.Debug("port deleted", slog.String("status", portInfo.ProvisioningStatus), slog.String("port_id", portId))
 }
 
 func (suite *PortIntegrationTestSuite) testLockPort(c *Client, ctx context.Context, portId string) {
-	suite.client.Logger.Debug("Locking Port now.", "port_id", portId)
+	suite.client.Logger.Debug("Locking Port now.", slog.String("port_id", portId))
 	lockResp, lockErr := c.PortService.LockPort(ctx, &LockPortRequest{PortID: portId})
+	if lockErr != nil {
+		suite.FailNowf("could not lock port", "could not lock port %v", lockErr)
+	}
 	suite.True(lockResp.IsLocking)
-	suite.NoError(lockErr)
 
 	portInfo, err := c.PortService.GetPort(ctx, &GetPortRequest{
 		PortID: portId,
 	})
-	suite.NoError(err)
+	if err != nil {
+		suite.FailNowf("could not find port", "could not find port %v", err)
+	}
 	suite.EqualValues(true, portInfo.Locked)
 
-	suite.client.Logger.Debug("Test lock of an already locked port.", "port_id", portId)
+	suite.client.Logger.Debug("Test lock of an already locked port.", slog.String("port_id", portId))
 	lockRes, lockErr := c.PortService.LockPort(ctx, &LockPortRequest{PortID: portId})
 	suite.Nil(lockRes)
 	suite.Error(errors.New(mega_err.ERR_PORT_ALREADY_LOCKED), lockErr)
 
-	suite.client.Logger.Debug("Unlocking Port now.", "port_id", portId)
+	suite.client.Logger.Debug("Unlocking Port now.", slog.String("port_id", portId))
 	unlockResp, unlockErr := c.PortService.UnlockPort(ctx, &UnlockPortRequest{PortID: portId})
+	if unlockErr != nil {
+		suite.FailNowf("could not unlock port", "could not unlock port %v", unlockErr)
+	}
 	suite.True(unlockResp.IsUnlocking)
-	suite.NoError(unlockErr)
 
-	suite.client.Logger.Debug("Test unlocking of a port that doesn't have a lock.", "port_id", portId)
+	suite.client.Logger.Debug("Test unlocking of a port that doesn't have a lock.", slog.String("port_id", portId))
 	unlockResp, unlockErr = c.PortService.UnlockPort(ctx, &UnlockPortRequest{PortID: portId})
 	suite.Nil(unlockResp)
 	suite.Error(errors.New(mega_err.ERR_PORT_NOT_LOCKED), unlockErr)

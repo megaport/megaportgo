@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -402,8 +403,8 @@ func (svc *PortServiceOp) WaitForPortProvisioning(ctx context.Context, portId st
 			return true, nil
 		}
 
-		// Wrong status, wait a bit and try again.
-		svc.Client.Logger.Debug(fmt.Sprintf("Port status is currently %q - waiting", details.ProvisioningStatus), "status", details.ProvisioningStatus, "port_id", portId)
+		// Port is not in ready status - keep waiting
+		svc.Client.Logger.Debug("Waiting for port", slog.String("status", details.ProvisioningStatus), slog.String("port_id", portId))
 		time.Sleep(10 * time.Second)
 	}
 
