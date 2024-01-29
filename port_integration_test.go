@@ -76,7 +76,7 @@ func (suite *PortIntegrationTestSuite) SetupTest() {
 }
 
 // TestSinglePort tests the creation of a LAG Port, then passes the id to PortScript to finalise lifecycle testing.
-func (suite *IntegrationTestSuite) TestSinglePort() {
+func (suite *PortIntegrationTestSuite) TestSinglePort() {
 	ctx := context.Background()
 
 	testLocation, err := suite.client.LocationService.GetLocationByID(ctx, TEST_LOCATION_ID_A)
@@ -134,7 +134,7 @@ func (suite *IntegrationTestSuite) TestSinglePort() {
 }
 
 // TestLAGPort tests the creation of a LAG Port, then passes the id to PortScript to finalise lifecycle testing.
-func (suite *IntegrationTestSuite) TestLAGPort() {
+func (suite *PortIntegrationTestSuite) TestLAGPort() {
 	ctx := context.Background()
 
 	testLocation, err := suite.client.LocationService.GetLocationByID(ctx, TEST_LOCATION_ID_A)
@@ -189,7 +189,7 @@ func (suite *IntegrationTestSuite) TestLAGPort() {
 	suite.testCancelPort(suite.client, ctx, portId, types.LAG_PORT)
 }
 
-func (suite *IntegrationTestSuite) testCreatePort(c *Client, ctx context.Context, portType string, location types.Location) (*types.PortOrderConfirmation, error) {
+func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Context, portType string, location types.Location) (*types.PortOrderConfirmation, error) {
 	var portConfirm *types.PortOrderConfirmation
 	var portErr error
 
@@ -221,7 +221,7 @@ func (suite *IntegrationTestSuite) testCreatePort(c *Client, ctx context.Context
 	return portConfirm, portErr
 }
 
-func (suite *IntegrationTestSuite) testModifyPort(c *Client, ctx context.Context, portId string, portType string) {
+func (suite *PortIntegrationTestSuite) testModifyPort(c *Client, ctx context.Context, portId string, portType string) {
 	portInfo, err := c.PortService.GetPort(ctx, &GetPortRequest{
 		PortID: portId,
 	})
@@ -247,7 +247,7 @@ func (suite *IntegrationTestSuite) testModifyPort(c *Client, ctx context.Context
 
 // PortScript tests the remaining lifecycle for a Port (not dependant on port-type), Go-Live, Modification,
 // and Soft/Hard Deletes.
-func (suite *IntegrationTestSuite) testCancelPort(c *Client, ctx context.Context, portId string, portType string) {
+func (suite *PortIntegrationTestSuite) testCancelPort(c *Client, ctx context.Context, portId string, portType string) {
 	// Soft Delete
 	suite.client.Logger.Debug("Scheduling Port for deletion (30 days).", "port_id", portId, "port_type", portType)
 	resp, deleteErr := c.PortService.DeletePort(ctx, &DeletePortRequest{
@@ -268,7 +268,7 @@ func (suite *IntegrationTestSuite) testCancelPort(c *Client, ctx context.Context
 
 }
 
-func (suite *IntegrationTestSuite) testDeletePort(c *Client, ctx context.Context, portId string, portType string) {
+func (suite *PortIntegrationTestSuite) testDeletePort(c *Client, ctx context.Context, portId string, portType string) {
 	// Hard Delete
 	suite.client.Logger.Debug("Deleting Port now.", "port_type", portType, "port_id", portId)
 	hardDeleteResp, deleteErr := c.PortService.DeletePort(ctx, &DeletePortRequest{
@@ -287,7 +287,7 @@ func (suite *IntegrationTestSuite) testDeletePort(c *Client, ctx context.Context
 	suite.client.Logger.Debug("", "status", portInfo.ProvisioningStatus, "port_id", portId)
 }
 
-func (suite *IntegrationTestSuite) testLockPort(c *Client, ctx context.Context, portId string) {
+func (suite *PortIntegrationTestSuite) testLockPort(c *Client, ctx context.Context, portId string) {
 	suite.client.Logger.Debug("Locking Port now.", "port_id", portId)
 	lockResp, lockErr := c.PortService.LockPort(ctx, &LockPortRequest{PortID: portId})
 	suite.True(lockResp.IsLocking)
