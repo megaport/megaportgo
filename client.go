@@ -85,8 +85,6 @@ type ErrorResponse struct {
 
 	// RequestID returned from the API, useful to contact support.
 	RequestID string `json:"request_id"`
-
-	Code int
 }
 
 // func addOptions(s string, opt interface{}) (string, error) {

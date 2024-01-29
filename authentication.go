@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log/slog"
 	"net/url"
 	"time"
 
@@ -33,7 +34,7 @@ func NewAuthenticationServiceOp(c *Client) *AuthenticationServiceOp {
 // secret key. It returns the bearer token or an error if the login
 // was unsuccessful.
 func (svc *AuthenticationServiceOp) LoginOauth(ctx context.Context, accessKey, secretKey string) (string, error) {
-	svc.Logger.Debug("creating session", "access_key", accessKey)
+	svc.Logger.Debug("creating session", slog.String("access_key", accessKey))
 
 	// Shortcut if we've already authenticated.
 	if time.Now().Before(svc.tokenExpiry) {
@@ -72,11 +73,8 @@ func (svc *AuthenticationServiceOp) LoginOauth(ctx context.Context, accessKey, s
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Authorization", "Basic "+authHeader)
 
-	svc.Logger.Debug(req.Header.Get("Authorization"))
-	svc.Logger.Debug(req.Header.Get("Content-Type"))
-
 	// Create an HTTP client and send the request
-	svc.Logger.Debug("login request", "token_url", tokenURL)
+	svc.Logger.Debug("login request", slog.String("token_url", tokenURL), slog.String("authorization_header", req.Header.Get("Authorization")), slog.String("content_type", req.Header.Get("Content_Type")))
 	resp, resErr := svc.Client.Do(ctx, req, nil)
 	if resErr != nil {
 		return "", resErr
