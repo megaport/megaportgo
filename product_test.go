@@ -5,13 +5,38 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"testing"
 
 	"github.com/megaport/megaportgo/types"
+	"github.com/stretchr/testify/suite"
 )
 
-func (suite *ClientTestSuite) TestExecuteOrder() {
+type ProductClientTestSuite struct {
+	ClientTestSuite
+}
+
+func TestProductClientTestSuite(t *testing.T) {
+	suite.Run(t, new(ProductClientTestSuite))
+}
+
+func (suite *ProductClientTestSuite) SetupTest() {
+	suite.mux = http.NewServeMux()
+	suite.server = httptest.NewServer(suite.mux)
+
+	suite.client = NewClient(nil, nil)
+	url, _ := url.Parse(suite.server.URL)
+	suite.client.BaseURL = url
+}
+
+func (suite *ProductClientTestSuite) TearDownTest() {
+	suite.server.Close()
+}
+
+func (suite *ProductClientTestSuite) TestExecuteOrder() {
 	ctx := context.Background()
-	productSvc := client.ProductService
+	productSvc := suite.client.ProductService
 
 	jblob := `{
 			"message": "test-message",
@@ -33,7 +58,7 @@ func (suite *ClientTestSuite) TestExecuteOrder() {
 		},
 	}
 
-	mux.HandleFunc("/v3/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc("/v3/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
 		v := new([]types.PortOrder)
 		err := json.NewDecoder(r.Body).Decode(v)
 		if err != nil {
@@ -57,9 +82,9 @@ func (suite *ClientTestSuite) TestExecuteOrder() {
 	suite.Equal(wantRes, gotRes)
 }
 
-func (suite *ClientTestSuite) TestModifyProduct() {
+func (suite *ProductClientTestSuite) TestModifyProduct() {
 	ctx := context.Background()
-	productSvc := client.ProductService
+	productSvc := suite.client.ProductService
 	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
 	jblob := `{
     "message": "Product [36b3f68e-2f54-4331-bf94-f8984449365f] has been updated",
@@ -148,7 +173,7 @@ func (suite *ClientTestSuite) TestModifyProduct() {
 		MarketplaceVisbility: wantReq.MarketplaceVisibility,
 	}
 	path := fmt.Sprintf("/v2/product/%s/%s", productType, productUid)
-	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		v := new(types.ProductUpdate)
 		err := json.NewDecoder(r.Body).Decode(v)
 		if err != nil {
@@ -166,10 +191,10 @@ func (suite *ClientTestSuite) TestModifyProduct() {
 	suite.Equal(wantRes, gotRes)
 }
 
-func (suite *ClientTestSuite) TestDeleteProduct() {
+func (suite *ProductClientTestSuite) TestDeleteProduct() {
 	ctx := context.Background()
 
-	productSvc := client.ProductService
+	productSvc := suite.client.ProductService
 	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
 
 	jblob := `{
@@ -184,7 +209,7 @@ func (suite *ClientTestSuite) TestDeleteProduct() {
 
 	path := "/v3/product/" + req.ProductID + "/action/CANCEL_NOW"
 
-	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodPost)
 		fmt.Fprint(w, jblob)
 	})
@@ -197,10 +222,10 @@ func (suite *ClientTestSuite) TestDeleteProduct() {
 	suite.Equal(wantRes, gotRes)
 }
 
-func (suite *ClientTestSuite) TestRestoreProduct() {
+func (suite *ProductClientTestSuite) TestRestoreProduct() {
 	ctx := context.Background()
 
-	productSvc := client.ProductService
+	productSvc := suite.client.ProductService
 	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
 
 	jblob := `{
@@ -214,7 +239,7 @@ func (suite *ClientTestSuite) TestRestoreProduct() {
 
 	path := "/v3/product/" + productUid + "/action/UN_CANCEL"
 
-	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodPost)
 		fmt.Fprint(w, jblob)
 	})
@@ -226,10 +251,10 @@ func (suite *ClientTestSuite) TestRestoreProduct() {
 	suite.Equal(wantRes, gotRes)
 }
 
-func (suite *ClientTestSuite) TestManageProductLuck() {
+func (suite *ProductClientTestSuite) TestManageProductLuck() {
 	ctx := context.Background()
 
-	productSvc := client.ProductService
+	productSvc := suite.client.ProductService
 	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
 
 	jblob := `{
@@ -247,7 +272,7 @@ func (suite *ClientTestSuite) TestManageProductLuck() {
 		ShouldLock: true,
 	}
 
-	mux.HandleFunc(fmt.Sprintf("/v2/product/%s/lock", productUid), func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/%s/lock", productUid), func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodPost)
 		fmt.Fprint(w, jblob)
 	})

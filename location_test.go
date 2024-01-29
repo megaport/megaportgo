@@ -4,13 +4,38 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"testing"
 
 	"github.com/megaport/megaportgo/types"
+	"github.com/stretchr/testify/suite"
 )
 
-func (suite *ClientTestSuite) TestListLocations() {
+type LocationClientTestSuite struct {
+	ClientTestSuite
+}
+
+func TestLocationClientTestSuite(t *testing.T) {
+	suite.Run(t, new(LocationClientTestSuite))
+}
+
+func (suite *LocationClientTestSuite) SetupTest() {
+	suite.mux = http.NewServeMux()
+	suite.server = httptest.NewServer(suite.mux)
+
+	suite.client = NewClient(nil, nil)
+	url, _ := url.Parse(suite.server.URL)
+	suite.client.BaseURL = url
+}
+
+func (suite *LocationClientTestSuite) TearDownTest() {
+	suite.server.Close()
+}
+
+func (suite *LocationClientTestSuite) TestListLocations() {
 	ctx := context.Background()
-	locSvc := client.LocationService
+	locSvc := suite.client.LocationService
 	want := []*types.Location{
 		{
 			Name:          "Test Data Center",
@@ -143,7 +168,7 @@ func (suite *ClientTestSuite) TestListLocations() {
 			"diversityZones": {}
 		}]
 	}`
-	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
 	})
@@ -152,9 +177,9 @@ func (suite *ClientTestSuite) TestListLocations() {
 	suite.Equal(want, got)
 }
 
-func (suite *ClientTestSuite) TestGetLocationByID() {
+func (suite *LocationClientTestSuite) TestGetLocationByID() {
 	ctx := context.Background()
-	locSvc := client.LocationService
+	locSvc := suite.client.LocationService
 	want := &types.Location{
 		Name:          "Test Data Center",
 		Country:       "USA",
@@ -258,7 +283,7 @@ func (suite *ClientTestSuite) TestGetLocationByID() {
 			"diversityZones": {}
 		}]
 	}`
-	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
 	})
@@ -267,9 +292,9 @@ func (suite *ClientTestSuite) TestGetLocationByID() {
 	suite.Equal(want, got)
 }
 
-func (suite *ClientTestSuite) TestGetLocationByName() {
+func (suite *LocationClientTestSuite) TestGetLocationByName() {
 	ctx := context.Background()
-	locSvc := client.LocationService
+	locSvc := suite.client.LocationService
 	want := &types.Location{
 
 		ID:            112,
@@ -374,7 +399,7 @@ func (suite *ClientTestSuite) TestGetLocationByName() {
 			"diversityZones": {}
 		}]
 	}`
-	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
 	})
@@ -383,9 +408,9 @@ func (suite *ClientTestSuite) TestGetLocationByName() {
 	suite.Equal(want, got)
 }
 
-func (suite *ClientTestSuite) TestGetLocationByNameFuzzy() {
+func (suite *LocationClientTestSuite) TestGetLocationByNameFuzzy() {
 	ctx := context.Background()
-	locSvc := client.LocationService
+	locSvc := suite.client.LocationService
 	want := []*types.Location{
 		{
 			Name:          "Test Data Center",
@@ -555,7 +580,7 @@ func (suite *ClientTestSuite) TestGetLocationByNameFuzzy() {
 		}
 	]
 	}`
-	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
 	})
@@ -564,9 +589,9 @@ func (suite *ClientTestSuite) TestGetLocationByNameFuzzy() {
 	suite.Equal(want, got)
 }
 
-func (suite *ClientTestSuite) TestListCountries() {
+func (suite *LocationClientTestSuite) TestListCountries() {
 	ctx := context.Background()
-	locSvc := client.LocationService
+	locSvc := suite.client.LocationService
 	want := []*types.Country{
 		{
 			Code:      "AUS",
@@ -618,7 +643,7 @@ func (suite *ClientTestSuite) TestListCountries() {
 	]
 	}`
 	path := "/v2/networkRegions"
-	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
 	})
@@ -627,9 +652,9 @@ func (suite *ClientTestSuite) TestListCountries() {
 	suite.Equal(want, got)
 }
 
-func (suite *ClientTestSuite) TestListMarketCodes() {
+func (suite *LocationClientTestSuite) TestListMarketCodes() {
 	ctx := context.Background()
-	locSvc := client.LocationService
+	locSvc := suite.client.LocationService
 	want := []string{"AU", "GB", "US"}
 	jblob := `
 	{
@@ -662,7 +687,7 @@ func (suite *ClientTestSuite) TestListMarketCodes() {
 	]
 	}`
 	path := "/v2/networkRegions"
-	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
 	})
@@ -673,7 +698,7 @@ func (suite *ClientTestSuite) TestListMarketCodes() {
 
 func (suite *ClientTestSuite) TestIsValidMarketCode() {
 	ctx := context.Background()
-	locSvc := client.LocationService
+	locSvc := suite.client.LocationService
 	want1 := true
 	want2 := false
 	jblob := `
@@ -707,7 +732,7 @@ func (suite *ClientTestSuite) TestIsValidMarketCode() {
 	]
 	}`
 	path := "/v2/networkRegions"
-	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
 	})

@@ -6,15 +6,40 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"testing"
 
 	"github.com/megaport/megaportgo/mega_err"
 	"github.com/megaport/megaportgo/types"
+	"github.com/stretchr/testify/suite"
 )
 
-func (suite *ClientTestSuite) TestBuyPort() {
+type PortClientTestSuite struct {
+	ClientTestSuite
+}
+
+func TestPortClientTestSuite(t *testing.T) {
+	suite.Run(t, new(PortClientTestSuite))
+}
+
+func (suite *PortClientTestSuite) SetupTest() {
+	suite.mux = http.NewServeMux()
+	suite.server = httptest.NewServer(suite.mux)
+
+	suite.client = NewClient(nil, nil)
+	url, _ := url.Parse(suite.server.URL)
+	suite.client.BaseURL = url
+}
+
+func (suite *PortClientTestSuite) TearDownTest() {
+	suite.server.Close()
+}
+
+func (suite *PortClientTestSuite) TestBuyPort() {
 	ctx := context.Background()
 
-	portSvc := client.PortService
+	portSvc := suite.client.PortService
 
 	want := &types.PortOrderConfirmation{
 		TechnicalServiceUID: "36b3f68e-2f54-4331-bf94-f8984449365f",
@@ -48,7 +73,7 @@ func (suite *ClientTestSuite) TestBuyPort() {
 			MarketplaceVisibility: !req.IsPrivate,
 		},
 	}
-	mux.HandleFunc("/v3/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc("/v3/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
 		v := new([]types.PortOrder)
 		err := json.NewDecoder(r.Body).Decode(v)
 		if err != nil {
@@ -74,7 +99,7 @@ func (suite *ClientTestSuite) TestBuyPort() {
 func (suite *ClientTestSuite) TestBuySinglePort() {
 	ctx := context.Background()
 
-	portSvc := client.PortService
+	portSvc := suite.client.PortService
 
 	want := &types.PortOrderConfirmation{
 		TechnicalServiceUID: "36b3f68e-2f54-4331-bf94-f8984449365f",
@@ -106,7 +131,7 @@ func (suite *ClientTestSuite) TestBuySinglePort() {
 			MarketplaceVisibility: !req.IsPrivate,
 		},
 	}
-	mux.HandleFunc("/v3/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc("/v3/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
 		v := new([]types.PortOrder)
 		err := json.NewDecoder(r.Body).Decode(v)
 		if err != nil {
@@ -132,7 +157,7 @@ func (suite *ClientTestSuite) TestBuySinglePort() {
 func (suite *ClientTestSuite) TestBuyLAGPort() {
 	ctx := context.Background()
 
-	portSvc := client.PortService
+	portSvc := suite.client.PortService
 
 	want := &types.PortOrderConfirmation{
 		TechnicalServiceUID: "36b3f68e-2f54-4331-bf94-f8984449365f",
@@ -167,7 +192,7 @@ func (suite *ClientTestSuite) TestBuyLAGPort() {
 			LagPortCount:          req.LagCount,
 		},
 	}
-	mux.HandleFunc("/v3/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc("/v3/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
 		v := new([]types.PortOrder)
 		err := json.NewDecoder(r.Body).Decode(v)
 		if err != nil {
@@ -194,7 +219,7 @@ func (suite *ClientTestSuite) TestBuyLAGPort() {
 func (suite *ClientTestSuite) TestBuyPortInvalidTerm() {
 	ctx := context.Background()
 
-	portSvc := client.PortService
+	portSvc := suite.client.PortService
 
 	req := &BuyPortRequest{
 		Name:       "test-port-bad-term",
@@ -213,7 +238,7 @@ func (suite *ClientTestSuite) TestBuyPortInvalidTerm() {
 func (suite *ClientTestSuite) TestListPorts() {
 	ctx := context.Background()
 
-	portSvc := client.PortService
+	portSvc := suite.client.PortService
 
 	companyUid := "32df7107-fdca-4c2a-8ccb-c6867813b3f2"
 	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
@@ -302,7 +327,7 @@ func (suite *ClientTestSuite) TestListPorts() {
 			"data": [{
 			"productId":999999,"productUid":"36b3f68e-2f54-4331-bf94-f8984449365f","productName":"test-port","productType":"MEGAPORT","provisioningStatus":"CONFIGURED","createDate":0,"createdBy":"","portSpeed":10000,"terminateDate":0,"liveDate":0,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":false,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0}}}, {"productId":999998,"productUid":"9b1c46c7-1e8d-4035-bf38-1bc60d346d57","productName":"test-port2","productType":"MEGAPORT","provisioningStatus":"CONFIGURED","createDate":0,"createdBy":"","portSpeed":10000,"terminateDate":0,"liveDate":0,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name2","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":false,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0}}}, {"productId":999997,"productUid":"91ededc2-473f-4a30-ad24-0703c7f35e50","productName":"test-port3","productType":"MEGAPORT","provisioningStatus":"CONFIGURED","createDate":0,"createdBy":"","portSpeed":10000,"terminateDate":0,"liveDate":0,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name3","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":false,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0}}}]
 	}`
-	mux.HandleFunc("/v2/products", func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc("/v2/products", func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
 	})
@@ -314,7 +339,7 @@ func (suite *ClientTestSuite) TestListPorts() {
 func (suite *ClientTestSuite) TestGetPort() {
 	ctx := context.Background()
 
-	portSvc := client.PortService
+	portSvc := suite.client.PortService
 
 	companyUid := "32df7107-fdca-4c2a-8ccb-c6867813b3f2"
 	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
@@ -352,7 +377,7 @@ func (suite *ClientTestSuite) TestGetPort() {
 			"productId":999999,"productUid":"36b3f68e-2f54-4331-bf94-f8984449365f","productName":"test-port","productType":"MEGAPORT","provisioningStatus":"CONFIGURED","createDate":0,"createdBy":"","portSpeed":10000,"terminateDate":0,"liveDate":0,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":false,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0}}
 			}
 			}`
-	mux.HandleFunc(fmt.Sprintf("/v2/product/%s", productUid), func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/%s", productUid), func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
 	})
@@ -366,7 +391,7 @@ func (suite *ClientTestSuite) TestGetPort() {
 func (suite *ClientTestSuite) TestModifyPort() {
 	ctx := context.Background()
 
-	portSvc := client.PortService
+	portSvc := suite.client.PortService
 	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
 	req := &ModifyPortRequest{
 		PortID:                productUid,
@@ -453,7 +478,7 @@ func (suite *ClientTestSuite) TestModifyPort() {
 		MarketplaceVisbility: req.MarketplaceVisibility,
 	}
 	path := fmt.Sprintf("/v2/product/%s/%s", types.PRODUCT_MEGAPORT, productUid)
-	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		v := new(types.ProductUpdate)
 		err := json.NewDecoder(r.Body).Decode(v)
 		if err != nil {
@@ -474,7 +499,7 @@ func (suite *ClientTestSuite) TestModifyPort() {
 func (suite *ClientTestSuite) TestDeletePort() {
 	ctx := context.Background()
 
-	portSvc := client.PortService
+	portSvc := suite.client.PortService
 	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
 
 	jblob := `{
@@ -489,7 +514,7 @@ func (suite *ClientTestSuite) TestDeletePort() {
 
 	path := "/v3/product/" + req.PortID + "/action/CANCEL_NOW"
 
-	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodPost)
 		fmt.Fprint(w, jblob)
 	})
@@ -507,7 +532,7 @@ func (suite *ClientTestSuite) TestDeletePort() {
 func (suite *ClientTestSuite) TestRestorePort() {
 	ctx := context.Background()
 
-	portSvc := client.PortService
+	portSvc := suite.client.PortService
 	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
 
 	jblob := `{
@@ -521,7 +546,7 @@ func (suite *ClientTestSuite) TestRestorePort() {
 
 	path := "/v3/product/" + req.PortID + "/action/UN_CANCEL"
 
-	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodPost)
 		fmt.Fprint(w, jblob)
 	})
@@ -539,7 +564,7 @@ func (suite *ClientTestSuite) TestRestorePort() {
 func (suite *ClientTestSuite) TestLockPort() {
 	ctx := context.Background()
 
-	portSvc := client.PortService
+	portSvc := suite.client.PortService
 	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
 
 	jblob := `{
@@ -565,12 +590,12 @@ func (suite *ClientTestSuite) TestLockPort() {
 			"productId":999999,"productUid":"36b3f68e-2f54-4331-bf94-f8984449365f","productName":"test-port","productType":"MEGAPORT","provisioningStatus":"CONFIGURED","createDate":0,"createdBy":"","portSpeed":10000,"terminateDate":0,"liveDate":0,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":false,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0}}
 			}
 			}`
-	mux.HandleFunc(fmt.Sprintf("/v2/product/%s", productUid), func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/%s", productUid), func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblobGet)
 	})
 
-	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodPost)
 		fmt.Fprint(w, jblob)
 	})
@@ -588,7 +613,7 @@ func (suite *ClientTestSuite) TestLockPort() {
 func (suite *ClientTestSuite) TestUnlockPort() {
 	ctx := context.Background()
 
-	portSvc := client.PortService
+	portSvc := suite.client.PortService
 	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
 
 	jblobGet := `{
@@ -614,12 +639,12 @@ func (suite *ClientTestSuite) TestUnlockPort() {
 			"productId":999999,"productUid":"36b3f68e-2f54-4331-bf94-f8984449365f","productName":"test-port","productType":"MEGAPORT","provisioningStatus":"LIVE","createDate":0,"createdBy":"","portSpeed":10000,"terminateDate":0,"liveDate":0,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":false,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0}}
 			}
 			}`
-	mux.HandleFunc(fmt.Sprintf("/v2/product/%s", productUid), func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/%s", productUid), func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblobGet)
 	})
 
-	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodDelete)
 		fmt.Fprint(w, jblobUnlock)
 	})

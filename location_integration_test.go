@@ -3,72 +3,136 @@ package megaport
 import (
 	"context"
 	"errors"
+	"log/slog"
+	"os"
+	"testing"
 
 	"github.com/megaport/megaportgo/mega_err"
+	"github.com/megaport/megaportgo/shared"
+	"github.com/stretchr/testify/suite"
 )
 
-func (suite *IntegrationTestSuite) TestBadID() {
+type LocationIntegrationTestSuite IntegrationTestSuite
+
+func TestLocationIntegrationTestSuite(t *testing.T) {
+	if os.Getenv("CI") != "true" {
+		suite.Run(t, new(LocationIntegrationTestSuite))
+	}
+}
+
+func (suite *LocationIntegrationTestSuite) SetupSuite() {
+	accessKey = os.Getenv("MEGAPORT_ACCESS_KEY")
+	secretKey = os.Getenv("MEGAPORT_SECRET_KEY")
+
+	httpClient := NewHttpClient()
+
+	handler := slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: programLevel})
+	programLevel.Set(slog.LevelDebug)
+
+	var err error
+
+	megaportClient, err = New(httpClient, SetBaseURL(MEGAPORTURL), SetLogHandler(handler))
+	if err != nil {
+		suite.FailNowf("", "could not initialize megaport test client: %s", err.Error())
+	}
+
+	suite.client = megaportClient
+}
+
+func (suite *LocationIntegrationTestSuite) SetupTest() {
+	suite.client.Logger.Debug("logging in oauth")
+	if accessKey == "" {
+		suite.client.Logger.Error("MEGAPORT_ACCESS_KEY environment variable not set.")
+		os.Exit(1)
+	}
+
+	if secretKey == "" {
+		suite.client.Logger.Error("MEGAPORT_SECRET_KEY environment variable not set.")
+		os.Exit(1)
+	}
+
+	ctx := context.Background()
+	token, loginErr := suite.client.AuthenticationService.LoginOauth(ctx, accessKey, secretKey)
+	if loginErr != nil {
+		suite.client.Logger.Error("login error", "error", loginErr.Error())
+		suite.FailNowf("login error", "login error %v", loginErr)
+	}
+
+	// Session Token is not empty
+	if !suite.NotEmpty(token) {
+		suite.FailNow("empty token")
+	}
+
+	// SessionToken is a valid guid
+	if !suite.NotNil(shared.IsGuid(token)) {
+		suite.FailNowf("invalid guid for token", "invalid guid for token %v", token)
+	}
+
+	suite.client.SessionToken = token
+}
+
+func (suite *LocationIntegrationTestSuite) TestBadID() {
 	ctx := context.Background()
 	// Make sure that an id with no record returns an error as expected.
-	_, idErr := megaportClient.LocationService.GetLocationByID(ctx, -999999)
+	_, idErr := suite.client.LocationService.GetLocationByID(ctx, -999999)
 	suite.Equal(mega_err.ERR_LOCATION_NOT_FOUND, idErr.Error())
 }
 
-func (suite *IntegrationTestSuite) TestBadName() {
+func (suite *LocationIntegrationTestSuite) TestBadName() {
 	ctx := context.Background()
 
 	// Make sure that a name with no record returns an error as expected.
-	_, nameErr := megaportClient.LocationService.GetLocationByName(ctx, "DefinitelyNotARealName")
+	_, nameErr := suite.client.LocationService.GetLocationByName(ctx, "DefinitelyNotARealName")
 	suite.Equal(mega_err.ERR_LOCATION_NOT_FOUND, nameErr.Error())
 }
 
-func (suite *IntegrationTestSuite) TestGetLocationByID() {
+func (suite *LocationIntegrationTestSuite) TestGetLocationByID() {
 	ctx := context.Background()
 
 	// Make sure our location by id works as expected
-	byId, idErr := megaportClient.LocationService.GetLocationByID(ctx, 137)
+	byId, idErr := suite.client.LocationService.GetLocationByID(ctx, 137)
 	suite.Nil(idErr)
 	suite.Equal("3DC/Telecity Sofia", byId.Name)
 
-	byId, idErr = megaportClient.LocationService.GetLocationByID(ctx, 383)
+	byId, idErr = suite.client.LocationService.GetLocationByID(ctx, 383)
 	suite.Nil(idErr)
 	suite.Equal("NextDC B2", byId.Name)
 }
 
-func (suite *IntegrationTestSuite) TestGetLocationByName() {
+func (suite *LocationIntegrationTestSuite) TestGetLocationByName() {
 	ctx := context.Background()
 
 	// Make sure our location by name works as expected
-	byName, nameErr := megaportClient.LocationService.GetLocationByName(ctx, "3DC/Telecity Sofia")
+	byName, nameErr := suite.client.LocationService.GetLocationByName(ctx, "3DC/Telecity Sofia")
 	suite.Nil(nameErr)
 	suite.Equal(137, byName.ID)
 
-	byName, nameErr = megaportClient.LocationService.GetLocationByName(ctx, "NextDC B2")
+	byName, nameErr = suite.client.LocationService.GetLocationByName(ctx, "NextDC B2")
 	suite.Nil(nameErr)
 	suite.Equal(383, byName.ID)
 
-	byName, nameErr = megaportClient.LocationService.GetLocationByName(ctx, "Equinix SY3")
+	byName, nameErr = suite.client.LocationService.GetLocationByName(ctx, "Equinix SY3")
 	suite.Nil(nameErr)
 	suite.Equal(6, byName.ID)
 }
 
-func (suite *IntegrationTestSuite) TestGetLocationByNameFuzzy() {
+func (suite *LocationIntegrationTestSuite) TestGetLocationByNameFuzzy() {
 	ctx := context.Background()
 
-	byFuzzy, fuzzyErr := megaportClient.LocationService.GetLocationByNameFuzzy(ctx, "NextDC")
+	byFuzzy, fuzzyErr := suite.client.LocationService.GetLocationByNameFuzzy(ctx, "NextDC")
 	suite.True(len(byFuzzy) > 0)
 	suite.NoError(fuzzyErr)
 
-	failFuzzy, failFuzzyErr := megaportClient.LocationService.GetLocationByNameFuzzy(ctx, "definitely not a location name at all")
+	failFuzzy, failFuzzyErr := suite.client.LocationService.GetLocationByNameFuzzy(ctx, "definitely not a location name at all")
 	suite.True(len(failFuzzy) == 0)
 	suite.Error(errors.New(mega_err.ERR_NO_MATCHING_LOCATIONS), failFuzzyErr)
 }
 
 // first one should always be Australia
-func (suite *IntegrationTestSuite) TestListCountries() {
+func (suite *LocationIntegrationTestSuite) TestListCountries() {
 	ctx := context.Background()
 
-	countries, countriesErr := megaportClient.LocationService.ListCountries(ctx)
+	countries, countriesErr := suite.client.LocationService.ListCountries(ctx)
 	suite.NoError(countriesErr)
 	suite.Equal("Australia", countries[0].Name)
 	suite.Equal("AUS", countries[0].Code)
@@ -76,10 +140,10 @@ func (suite *IntegrationTestSuite) TestListCountries() {
 	suite.Greater(countries[0].SiteCount, 0)
 }
 
-func (suite *IntegrationTestSuite) TestMarketCodes() {
+func (suite *LocationIntegrationTestSuite) TestMarketCodes() {
 	ctx := context.Background()
 
-	marketCodes, _ := megaportClient.LocationService.ListMarketCodes(ctx)
+	marketCodes, _ := suite.client.LocationService.ListMarketCodes(ctx)
 	found := false
 
 	for i := 0; i < len(marketCodes); i++ {
@@ -94,10 +158,10 @@ func (suite *IntegrationTestSuite) TestMarketCodes() {
 func (suite *IntegrationTestSuite) TestFilterLocationsByMarketCode() {
 	ctx := context.Background()
 
-	locations, err := megaportClient.LocationService.ListLocations(ctx)
+	locations, err := suite.client.LocationService.ListLocations(ctx)
 	suite.NoError(err)
 	currentCount := len(locations)
-	filtered, filterErr := megaportClient.LocationService.FilterLocationsByMarketCode(ctx, "AU", locations)
+	filtered, filterErr := suite.client.LocationService.FilterLocationsByMarketCode(ctx, "AU", locations)
 	suite.NoError(filterErr)
 
 	suite.Less(len(filtered), currentCount)

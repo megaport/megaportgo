@@ -21,15 +21,20 @@ const (
 	MEGAPORTURL = "https://api-staging.megaport.com/"
 )
 
-type IntegrationTestSuite TestSuite
+type IntegrationTestSuite struct {
+	suite.Suite
+	client *Client
+}
 
-func TestIntegrationTestSuite(t *testing.T) {
+type AuthIntegrationTestSuite IntegrationTestSuite
+
+func TestAuthIntegrationTestSuite(t *testing.T) {
 	if os.Getenv("CI") != "true" {
-		suite.Run(t, new(IntegrationTestSuite))
+		suite.Run(t, new(AuthIntegrationTestSuite))
 	}
 }
 
-func (suite *IntegrationTestSuite) SetupSuite() {
+func (suite *AuthIntegrationTestSuite) SetupSuite() {
 	accessKey = os.Getenv("MEGAPORT_ACCESS_KEY")
 	secretKey = os.Getenv("MEGAPORT_SECRET_KEY")
 
@@ -44,9 +49,12 @@ func (suite *IntegrationTestSuite) SetupSuite() {
 	if err != nil {
 		suite.FailNowf("", "could not initialize megaport test client: %s", err.Error())
 	}
+
+	suite.client = megaportClient
 }
-func (suite *IntegrationTestSuite) TestLoginOauth() {
-	megaportClient.Logger.Debug("testing login oauth")
+
+func (suite *AuthIntegrationTestSuite) TestLoginOauth() {
+	megaportClient.Logger.Debug("logging in oauth")
 	if accessKey == "" {
 		megaportClient.Logger.Error("MEGAPORT_ACCESS_KEY environment variable not set.")
 		os.Exit(1)
@@ -68,7 +76,4 @@ func (suite *IntegrationTestSuite) TestLoginOauth() {
 	suite.NotEmpty(token)
 	// SessionToken is a valid guid
 	suite.NotNil(shared.IsGuid(token))
-
-	megaportClient.Logger.Info("", "token", token)
-	megaportClient.SessionToken = token
 }

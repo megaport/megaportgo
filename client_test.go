@@ -15,42 +15,31 @@ import (
 )
 
 var (
-	mux *http.ServeMux
-
 	ctx = context.TODO()
-
-	client *Client
-
-	server *httptest.Server
 )
 
-type TestSuite struct {
+type ClientTestSuite struct {
 	suite.Suite
+	client *Client
+	server *httptest.Server
+	mux    *http.ServeMux
 }
-
-type ClientTestSuite TestSuite
 
 func TestClientTestSuite(t *testing.T) {
 	suite.Run(t, new(ClientTestSuite))
 }
 
 func (suite *ClientTestSuite) SetupTest() {
-	mux = http.NewServeMux()
-	server = httptest.NewServer(mux)
+	suite.mux = http.NewServeMux()
+	suite.server = httptest.NewServer(suite.mux)
 
-	client = NewClient(nil, nil)
-	url, _ := url.Parse(server.URL)
-	client.BaseURL = url
+	suite.client = NewClient(nil, nil)
+	url, _ := url.Parse(suite.server.URL)
+	suite.client.BaseURL = url
 }
 
 func (suite *ClientTestSuite) TearDownTest() {
-	server.Close()
-}
-
-func (suite *ClientTestSuite) testMethod(r *http.Request, expected string) {
-	if expected != r.Method {
-		suite.FailNowf("Request method = %v, expected %v", r.Method, expected)
-	}
+	suite.server.Close()
 }
 
 // type values map[string]string
@@ -111,13 +100,13 @@ func (suite *ClientTestSuite) TestNewFromToken_cleaned() {
 	testTokens := []string{"myToken ", " myToken", " myToken ", "'myToken'", " 'myToken' "}
 	expected := "Bearer myToken"
 
-	mux.HandleFunc("/foo", func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc("/foo", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 
 	for _, tt := range testTokens {
 		c := NewFromToken(tt)
-		req, _ := c.NewRequest(ctx, http.MethodGet, server.URL+"/foo", nil)
+		req, _ := c.NewRequest(ctx, http.MethodGet, suite.server.URL+"/foo", nil)
 		resp, err := c.Do(ctx, req, nil)
 		if err != nil {
 			suite.FailNowf("Do(): %v", err.Error())
@@ -212,16 +201,16 @@ func (suite *ClientTestSuite) TestDo() {
 		A string
 	}
 
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if m := http.MethodGet; m != r.Method {
 			suite.FailNowf("Request method = %v, expected %v", r.Method, m)
 		}
 		fmt.Fprint(w, `{"A":"a"}`)
 	})
 
-	req, _ := client.NewRequest(ctx, http.MethodGet, "/", nil)
+	req, _ := suite.client.NewRequest(ctx, http.MethodGet, "/", nil)
 	body := new(foo)
-	_, err := client.Do(context.Background(), req, body)
+	_, err := suite.client.Do(context.Background(), req, body)
 	if err != nil {
 		suite.FailNowf("", "Do(): %v", err.Error())
 	}
@@ -233,13 +222,12 @@ func (suite *ClientTestSuite) TestDo() {
 }
 
 func (suite *ClientTestSuite) TestDo_httpError() {
-
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad Request", 400)
 	})
 
-	req, _ := client.NewRequest(ctx, http.MethodGet, "/", nil)
-	_, err := client.Do(context.Background(), req, nil)
+	req, _ := suite.client.NewRequest(ctx, http.MethodGet, "/", nil)
+	_, err := suite.client.Do(context.Background(), req, nil)
 
 	if err == nil {
 		suite.FailNow("Expected HTTP 400 error.")
@@ -260,18 +248,18 @@ func (suite *ClientTestSuite) TestDo_completion_callback() {
 		A string
 	}
 
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if m := http.MethodGet; m != r.Method {
 			suite.FailNowf("", "Request method = %v, expected %v", r.Method, m)
 		}
 		fmt.Fprint(w, `{"A":"a"}`)
 	})
 
-	req, _ := client.NewRequest(ctx, http.MethodGet, "/", nil)
+	req, _ := suite.client.NewRequest(ctx, http.MethodGet, "/", nil)
 	body := new(foo)
 	var completedReq *http.Request
 	var completedResp string
-	client.OnRequestCompleted(func(req *http.Request, resp *http.Response) {
+	suite.client.OnRequestCompleted(func(req *http.Request, resp *http.Response) {
 		completedReq = req
 		b, err := httputil.DumpResponse(resp, true)
 		if err != nil {
@@ -279,7 +267,7 @@ func (suite *ClientTestSuite) TestDo_completion_callback() {
 		}
 		completedResp = string(b)
 	})
-	_, err := client.Do(context.Background(), req, body)
+	_, err := suite.client.Do(context.Background(), req, body)
 	if err != nil {
 		suite.FailNowf("", "Do(): %v", err)
 	}
@@ -325,4 +313,10 @@ func (suite *ClientTestSuite) TestCustomBaseURL_badURL() {
 	_, err := New(nil, SetBaseURL(baseURL))
 
 	suite.testURLParseError(err)
+}
+
+func (suite *ClientTestSuite) testMethod(r *http.Request, expected string) {
+	if expected != r.Method {
+		suite.FailNowf("Request method = %v, expected %v", r.Method, expected)
+	}
 }
