@@ -86,10 +86,11 @@ func (suite *PortIntegrationTestSuite) TestSinglePort() {
 	portsListInitial, err := suite.client.PortService.ListPorts(ctx)
 	suite.NoError(err)
 
-	portConfirmation, portErr := suite.testCreatePort(suite.client, ctx, types.SINGLE_PORT, *testLocation)
+	createRes, portErr := suite.testCreatePort(suite.client, ctx, types.SINGLE_PORT, *testLocation)
 	suite.NoError(portErr)
+	suite.Greater(len(createRes.PortOrderConfirmations), 0)
 
-	portId := portConfirmation.TechnicalServiceUID
+	portId := createRes.PortOrderConfirmations[0].TechnicalServiceUID
 
 	if !suite.NoError(portErr) && !suite.True(shared.IsGuid(portId)) {
 		suite.FailNow("")
@@ -144,16 +145,17 @@ func (suite *PortIntegrationTestSuite) TestLAGPort() {
 	portsListInitial, err := suite.client.PortService.ListPorts(ctx)
 	suite.NoError(err)
 
-	portConfirmation, portErr := suite.testCreatePort(suite.client, ctx, types.LAG_PORT, *testLocation)
+	orderRes, portErr := suite.testCreatePort(suite.client, ctx, types.LAG_PORT, *testLocation)
 	suite.NoError(portErr)
+	suite.Greater(len(orderRes.PortOrderConfirmations), 1)
 
-	portId := portConfirmation.TechnicalServiceUID
+	mainPortId := orderRes.PortOrderConfirmations[0].TechnicalServiceUID
 
-	if !suite.NoError(portErr) && !suite.True(shared.IsGuid(portId)) {
+	if !suite.NoError(portErr) && !suite.True(shared.IsGuid(mainPortId)) {
 		suite.FailNow("")
 	}
 
-	portCreated, err := suite.client.PortService.WaitForPortProvisioning(ctx, portId)
+	portCreated, err := suite.client.PortService.WaitForPortProvisioning(ctx, mainPortId)
 
 	if !suite.NoError(err) || !portCreated {
 		suite.FailNow("")
@@ -164,38 +166,39 @@ func (suite *PortIntegrationTestSuite) TestLAGPort() {
 
 	portIsActuallyNew := true
 	for _, p := range portsListInitial {
-		if p.UID == portId {
+		if p.UID == mainPortId {
 			portIsActuallyNew = false
 		}
 	}
 
 	if !portIsActuallyNew {
-		suite.FailNowf("Failed to find port we just created in ports list", "Failed to find port we just created in ports list %v", portId)
+		suite.FailNowf("Failed to find port we just created in ports list", "Failed to find port we just created in ports list %v", mainPortId)
 	}
 
 	foundNewPort := false
 	for _, p := range portsListPostCreate {
-		if p.UID == portId {
+		if p.UID == mainPortId {
 			foundNewPort = true
 		}
 	}
 
 	if !foundNewPort {
-		suite.client.Logger.Debug("Failed to find port we just created in ports list", "port_id", portId)
-		suite.FailNowf("Failed to find port we just created in ports list", "Failed to find port we just created in ports list %v", portId)
+		suite.client.Logger.Debug("Failed to find port we just created in ports list", "port_id", mainPortId)
+		suite.FailNowf("Failed to find port we just created in ports list", "Failed to find port we just created in ports list %v", mainPortId)
 	}
 
-	suite.testModifyPort(suite.client, ctx, portId, types.LAG_PORT)
-	suite.testCancelPort(suite.client, ctx, portId, types.LAG_PORT)
+	suite.testModifyPort(suite.client, ctx, mainPortId, types.LAG_PORT)
+	suite.testCancelPort(suite.client, ctx, mainPortId, types.LAG_PORT)
+	suite.testDeletePort(suite.client, ctx, mainPortId, types.LAG_PORT)
 }
 
-func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Context, portType string, location types.Location) (*types.PortOrderConfirmation, error) {
-	var portConfirm *types.PortOrderConfirmation
+func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Context, portType string, location types.Location) (*BuyPortResponse, error) {
 	var portErr error
+	var orderRes *BuyPortResponse
 
 	suite.client.Logger.Debug("Buying Port", "port_type", portType)
 	if portType == types.LAG_PORT {
-		portConfirm, portErr = c.PortService.BuyLAGPort(ctx, &BuyLAGPortRequest{
+		orderRes, portErr = c.PortService.BuyLAGPort(ctx, &BuyLAGPortRequest{
 			Name:       "Buy Port (LAG) Test",
 			Term:       1,
 			PortSpeed:  10000,
@@ -205,7 +208,7 @@ func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Con
 			IsPrivate:  true,
 		})
 	} else {
-		portConfirm, portErr = c.PortService.BuySinglePort(ctx, &BuySinglePortRequest{
+		orderRes, portErr = c.PortService.BuySinglePort(ctx, &BuySinglePortRequest{
 			Name:       "Buy Port (Single) Test",
 			Term:       1,
 			PortSpeed:  10000,
@@ -217,8 +220,7 @@ func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Con
 	if portErr != nil {
 		return nil, portErr
 	}
-	suite.client.Logger.Debug("Port Purchased", "port_confirmation", portConfirm)
-	return portConfirm, portErr
+	return orderRes, nil
 }
 
 func (suite *PortIntegrationTestSuite) testModifyPort(c *Client, ctx context.Context, portId string, portType string) {

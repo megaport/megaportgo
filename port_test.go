@@ -41,8 +41,10 @@ func (suite *PortClientTestSuite) TestBuyPort() {
 
 	portSvc := suite.client.PortService
 
-	want := &types.PortOrderConfirmation{
-		TechnicalServiceUID: "36b3f68e-2f54-4331-bf94-f8984449365f",
+	want := &BuyPortResponse{
+		PortOrderConfirmations: []*types.PortOrderConfirmation{
+			{TechnicalServiceUID: "36b3f68e-2f54-4331-bf94-f8984449365f"},
+		},
 	}
 	req := &BuyPortRequest{
 		Name:       "test-port",
@@ -96,13 +98,15 @@ func (suite *PortClientTestSuite) TestBuyPort() {
 	suite.Equal(want, got)
 }
 
-func (suite *ClientTestSuite) TestBuySinglePort() {
+func (suite *PortClientTestSuite) TestBuySinglePort() {
 	ctx := context.Background()
 
 	portSvc := suite.client.PortService
 
-	want := &types.PortOrderConfirmation{
-		TechnicalServiceUID: "36b3f68e-2f54-4331-bf94-f8984449365f",
+	want := &BuyPortResponse{
+		PortOrderConfirmations: []*types.PortOrderConfirmation{
+			{TechnicalServiceUID: "36b3f68e-2f54-4331-bf94-f8984449365f"},
+		},
 	}
 	req := &BuySinglePortRequest{
 		Name:       "test-port",
@@ -154,14 +158,18 @@ func (suite *ClientTestSuite) TestBuySinglePort() {
 	suite.Equal(want, got)
 }
 
-func (suite *ClientTestSuite) TestBuyLAGPort() {
+func (suite *PortClientTestSuite) TestBuyLAGPort() {
 	ctx := context.Background()
 
 	portSvc := suite.client.PortService
 
-	want := &types.PortOrderConfirmation{
-		TechnicalServiceUID: "36b3f68e-2f54-4331-bf94-f8984449365f",
+	want := &BuyPortResponse{
+		PortOrderConfirmations: []*types.PortOrderConfirmation{
+			{TechnicalServiceUID: "36b3f68e-2f54-4331-bf94-f8984449365f"},
+			{TechnicalServiceUID: "251238f5-89de-4a06-8ccd-76846453a33f"},
+		},
 	}
+
 	req := &BuyLAGPortRequest{
 		Name:       "test-port",
 		Term:       12,
@@ -171,12 +179,12 @@ func (suite *ClientTestSuite) TestBuyLAGPort() {
 		IsPrivate:  true,
 		LagCount:   2,
 	}
-
 	jblob := `{
 			"message": "test-message",
 			"terms": "test-terms",
 			"data": [
-			{"technicalServiceUid": "36b3f68e-2f54-4331-bf94-f8984449365f"}
+			{"technicalServiceUid": "36b3f68e-2f54-4331-bf94-f8984449365f"},
+			{"technicalServiceUid": "251238f5-89de-4a06-8ccd-76846453a33f"}
 			]
 			}`
 
@@ -216,7 +224,7 @@ func (suite *ClientTestSuite) TestBuyLAGPort() {
 	suite.Equal(want, got)
 }
 
-func (suite *ClientTestSuite) TestBuyPortInvalidTerm() {
+func (suite *PortClientTestSuite) TestBuyPortInvalidTerm() {
 	ctx := context.Background()
 
 	portSvc := suite.client.PortService
@@ -235,7 +243,7 @@ func (suite *ClientTestSuite) TestBuyPortInvalidTerm() {
 	suite.Equal(errors.New(mega_err.ERR_TERM_NOT_VALID), err)
 }
 
-func (suite *ClientTestSuite) TestListPorts() {
+func (suite *PortClientTestSuite) TestListPorts() {
 	ctx := context.Background()
 
 	portSvc := suite.client.PortService
@@ -336,7 +344,7 @@ func (suite *ClientTestSuite) TestListPorts() {
 	suite.Equal(wantPorts, got)
 }
 
-func (suite *ClientTestSuite) TestGetPort() {
+func (suite *PortClientTestSuite) TestGetPort() {
 	ctx := context.Background()
 
 	portSvc := suite.client.PortService
@@ -388,7 +396,7 @@ func (suite *ClientTestSuite) TestGetPort() {
 	suite.Equal(want, got)
 }
 
-func (suite *ClientTestSuite) TestModifyPort() {
+func (suite *PortClientTestSuite) TestModifyPort() {
 	ctx := context.Background()
 
 	portSvc := suite.client.PortService
@@ -496,7 +504,7 @@ func (suite *ClientTestSuite) TestModifyPort() {
 	suite.Equal(want, got)
 }
 
-func (suite *ClientTestSuite) TestDeletePort() {
+func (suite *PortClientTestSuite) TestDeletePort() {
 	ctx := context.Background()
 
 	portSvc := suite.client.PortService
@@ -529,7 +537,7 @@ func (suite *ClientTestSuite) TestDeletePort() {
 	suite.Equal(want, got)
 }
 
-func (suite *ClientTestSuite) TestRestorePort() {
+func (suite *PortClientTestSuite) TestRestorePort() {
 	ctx := context.Background()
 
 	portSvc := suite.client.PortService
@@ -561,7 +569,7 @@ func (suite *ClientTestSuite) TestRestorePort() {
 	suite.Equal(want, got)
 }
 
-func (suite *ClientTestSuite) TestLockPort() {
+func (suite *PortClientTestSuite) TestLockPort() {
 	ctx := context.Background()
 
 	portSvc := suite.client.PortService
@@ -610,7 +618,7 @@ func (suite *ClientTestSuite) TestLockPort() {
 	suite.Equal(want, got)
 }
 
-func (suite *ClientTestSuite) TestUnlockPort() {
+func (suite *PortClientTestSuite) TestUnlockPort() {
 	ctx := context.Background()
 
 	portSvc := suite.client.PortService

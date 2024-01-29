@@ -18,9 +18,9 @@ import (
 // of the Megaport API.
 
 type PortService interface {
-	BuyPort(ctx context.Context, req *BuyPortRequest) (*types.PortOrderConfirmation, error)
-	BuySinglePort(ctx context.Context, req *BuySinglePortRequest) (*types.PortOrderConfirmation, error)
-	BuyLAGPort(ctx context.Context, req *BuyLAGPortRequest) (*types.PortOrderConfirmation, error)
+	BuyPort(ctx context.Context, req *BuyPortRequest) (*BuyPortResponse, error)
+	BuySinglePort(ctx context.Context, req *BuySinglePortRequest) (*BuyPortResponse, error)
+	BuyLAGPort(ctx context.Context, req *BuyLAGPortRequest) (*BuyPortResponse, error)
 	ListPorts(ctx context.Context) ([]*types.Port, error)
 	GetPort(ctx context.Context, req *GetPortRequest) (*types.Port, error)
 	ModifyPort(ctx context.Context, req *ModifyPortRequest) (*ModifyPortResponse, error)
@@ -70,6 +70,10 @@ type BuyLAGPortRequest struct {
 	Market     string
 	LagCount   int
 	IsPrivate  bool
+}
+
+type BuyPortResponse struct {
+	PortOrderConfirmations []*types.PortOrderConfirmation
 }
 
 type GetPortRequest struct {
@@ -126,7 +130,7 @@ func NewPortServiceOp(c *Client) *PortServiceOp {
 	}
 }
 
-func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*types.PortOrderConfirmation, error) {
+func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*BuyPortResponse, error) {
 	var buyOrder []types.PortOrder
 	if req.Term != 1 && req.Term != 12 && req.Term != 24 && req.Term != 36 {
 		return nil, errors.New(mega_err.ERR_TERM_NOT_VALID)
@@ -171,12 +175,19 @@ func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*ty
 	if unmarshalErr != nil {
 		return nil, unmarshalErr
 	}
-	return &types.PortOrderConfirmation{
-		TechnicalServiceUID: orderInfo.Data[0].TechnicalServiceUID,
-	}, nil
+
+	toReturn := &BuyPortResponse{}
+
+	for _, order := range orderInfo.Data {
+		toReturn.PortOrderConfirmations = append(toReturn.PortOrderConfirmations, &types.PortOrderConfirmation{
+			TechnicalServiceUID: order.TechnicalServiceUID,
+		})
+	}
+
+	return toReturn, nil
 }
 
-func (svc *PortServiceOp) BuySinglePort(ctx context.Context, req *BuySinglePortRequest) (*types.PortOrderConfirmation, error) {
+func (svc *PortServiceOp) BuySinglePort(ctx context.Context, req *BuySinglePortRequest) (*BuyPortResponse, error) {
 	return svc.BuyPort(ctx, &BuyPortRequest{
 		Name:       req.Name,
 		Term:       req.Term,
@@ -189,7 +200,7 @@ func (svc *PortServiceOp) BuySinglePort(ctx context.Context, req *BuySinglePortR
 	})
 }
 
-func (svc *PortServiceOp) BuyLAGPort(ctx context.Context, req *BuyLAGPortRequest) (*types.PortOrderConfirmation, error) {
+func (svc *PortServiceOp) BuyLAGPort(ctx context.Context, req *BuyLAGPortRequest) (*BuyPortResponse, error) {
 	return svc.BuyPort(ctx, &BuyPortRequest{
 		Name:       req.Name,
 		Term:       req.Term,
