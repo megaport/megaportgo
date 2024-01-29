@@ -11,27 +11,18 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"reflect"
-	"strconv"
 	"strings"
-	"time"
 
-	"github.com/hashicorp/go-retryablehttp"
 	"github.com/megaport/megaportgo/mega_err"
 	"github.com/megaport/megaportgo/types"
 	"golang.org/x/oauth2"
 )
 
 const (
-	libraryVersion = "1.0"
-	defaultBaseURL = "https://api-staging.megaport.com/"
-	userAgent      = "Go-Megaport-Library/" + libraryVersion
-	mediaType      = "application/json"
-
-	defaultRetryMax     = 4
-	defaultRetryWaitMax = 30
-	defaultRetryWaitMin = 1
-
+	libraryVersion              = "1.0"
+	defaultBaseURL              = "https://api-staging.megaport.com/"
+	userAgent                   = "Go-Megaport-Library/" + libraryVersion
+	mediaType                   = "application/json"
 	headerRequestID             = "x-request-id"
 	internalHeaderRetryAttempts = "X-Megaport-Retry-Attempts"
 )
@@ -64,30 +55,6 @@ type Client struct {
 
 	// Optional extra HTTP headers to set on every request to the API.
 	headers map[string]string
-
-	// Optional retry values. Setting the RetryConfig.RetryMax value enables automatically retrying requests
-	// that fail with 429 or 500-level response codes using the go-retryablehttp client
-	RetryConfig RetryConfig
-}
-
-// RetryConfig sets the values used for enabling retries and backoffs for
-// requests that fail with 429 or 500-level response codes using the go-retryablehttp client.
-// RetryConfig.RetryMax must be configured to enable this behavior. RetryConfig.RetryWaitMin and
-// RetryConfig.RetryWaitMax are optional, with the default values being 1.0 and 30.0, respectively.
-//
-// You can use
-//
-//	megaport.PtrTo(1.0)
-//
-// to explicitly set the RetryWaitMin and RetryWaitMax values.
-//
-// Note: Opting to use the go-retryablehttp client will overwrite any custom HTTP client passed into New().
-// Only the oauth2.TokenSource and Timeout will be maintained.
-type RetryConfig struct {
-	RetryMax     int
-	RetryWaitMin *float64    // Minimum time to wait
-	RetryWaitMax *float64    // Maximum time to wait
-	Logger       interface{} // Customer logger instance. Must implement either go-retryablehttp.Logger or go-retryablehttp.LeveledLogger
 }
 
 // Wrap http.RoundTripper to append the user-agent header.
@@ -118,9 +85,6 @@ type ErrorResponse struct {
 
 	// RequestID returned from the API, useful to contact support.
 	RequestID string `json:"request_id"`
-
-	// Attempts is the number of times the request was attempted when retries are enabled.
-	Attempts int
 }
 
 // func addOptions(s string, opt interface{}) (string, error) {
@@ -158,13 +122,7 @@ func NewFromToken(token string) *Client {
 	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: cleanToken})
 
 	oauthClient := oauth2.NewClient(ctx, ts)
-	client, err := New(oauthClient, WithRetryAndBackoffs(
-		RetryConfig{
-			RetryMax:     defaultRetryMax,
-			RetryWaitMin: PtrTo(float64(defaultRetryWaitMin)),
-			RetryWaitMax: PtrTo(float64(defaultRetryWaitMax)),
-		},
-	))
+	client, err := New(oauthClient)
 	if err != nil {
 		panic(err)
 	}
@@ -218,59 +176,6 @@ func New(httpClient *http.Client, opts ...ClientOpt) (*Client, error) {
 		}
 	}
 
-	// if retryMax is set it will use the retryablehttp client.
-	if c.RetryConfig.RetryMax > 0 {
-		retryableClient := retryablehttp.NewClient()
-		retryableClient.RetryMax = c.RetryConfig.RetryMax
-
-		if c.RetryConfig.RetryWaitMin != nil {
-			retryableClient.RetryWaitMin = time.Duration(*c.RetryConfig.RetryWaitMin * float64(time.Second))
-		}
-		if c.RetryConfig.RetryWaitMax != nil {
-			retryableClient.RetryWaitMax = time.Duration(*c.RetryConfig.RetryWaitMax * float64(time.Second))
-		}
-
-		// By default this is nil and does not log.
-		retryableClient.Logger = c.RetryConfig.Logger
-
-		// if timeout is set, it is maintained before overwriting client with StandardClient()
-		retryableClient.HTTPClient.Timeout = c.HTTPClient.Timeout
-
-		// This custom ErrorHandler is required to provide errors that are consistent
-		// with a *megaport.ErrorResponse and a non-nil *megaport.Response while providing
-		// insight into retries using an internal header.
-		retryableClient.ErrorHandler = func(resp *http.Response, err error, numTries int) (*http.Response, error) {
-			if resp != nil {
-				resp.Header.Add(internalHeaderRetryAttempts, strconv.Itoa(numTries))
-
-				return resp, err
-			}
-
-			return resp, err
-		}
-
-		retryableClient.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {
-			// In addition to the default retry policy, we also retry HTTP/2 INTERNAL_ERROR errors.
-			// See: https://github.com/golang/go/issues/51323
-			if err != nil && strings.Contains(err.Error(), "INTERNAL_ERROR") && strings.Contains(reflect.TypeOf(err).String(), "http2") {
-				return true, nil
-			}
-
-			return retryablehttp.DefaultRetryPolicy(ctx, resp, err)
-		}
-
-		var source *oauth2.Transport
-		if _, ok := c.HTTPClient.Transport.(*oauth2.Transport); ok {
-			source = c.HTTPClient.Transport.(*oauth2.Transport)
-		}
-		c.HTTPClient = retryableClient.StandardClient()
-		c.HTTPClient.Transport = &oauth2.Transport{
-			Base:   c.HTTPClient.Transport,
-			Source: source.Source,
-		}
-
-	}
-
 	return c, nil
 }
 
@@ -310,18 +215,6 @@ func SetRequestHeaders(headers map[string]string) ClientOpt {
 		for k, v := range headers {
 			c.headers[k] = v
 		}
-		return nil
-	}
-}
-
-// WithRetryAndBackoffs sets retry values. Setting the RetryConfig.RetryMax value enables automatically retrying requests
-// that fail with 429 or 500-level response codes using the go-retryablehttp client
-func WithRetryAndBackoffs(retryConfig RetryConfig) ClientOpt {
-	return func(c *Client) error {
-		c.RetryConfig.RetryMax = retryConfig.RetryMax
-		c.RetryConfig.RetryWaitMax = retryConfig.RetryWaitMax
-		c.RetryConfig.RetryWaitMin = retryConfig.RetryWaitMin
-		c.RetryConfig.Logger = retryConfig.Logger
 		return nil
 	}
 }
@@ -427,17 +320,12 @@ func DoRequestWithClient(
 }
 
 func (r *ErrorResponse) Error() string {
-	var attempted string
-	if r.Attempts > 0 {
-		attempted = fmt.Sprintf("; giving up after %d attempt(s)", r.Attempts)
-	}
-
 	if r.RequestID != "" {
-		return fmt.Sprintf("%v %v: %d (request %q) %v%s",
-			r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, r.RequestID, r.Message, attempted)
+		return fmt.Sprintf("%v %v: %d (request %q) %s",
+			r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, r.RequestID, r.Message)
 	}
-	return fmt.Sprintf("%v %v: %d %v%s",
-		r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, r.Message, attempted)
+	return fmt.Sprintf("%v %v: %d %s",
+		r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, r.Message)
 }
 
 // IsErrorResponse returns an error report if an error response is detected from the API.
@@ -487,11 +375,6 @@ func CheckResponse(r *http.Response) error {
 
 	if errorResponse.RequestID == "" {
 		errorResponse.RequestID = r.Header.Get(headerRequestID)
-	}
-
-	attempts, strconvErr := strconv.Atoi(r.Header.Get(internalHeaderRetryAttempts))
-	if strconvErr == nil {
-		errorResponse.Attempts = attempts
 	}
 
 	return errorResponse
