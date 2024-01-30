@@ -56,23 +56,26 @@ func (suite *PortIntegrationTestSuite) SetupTest() {
 	}
 
 	ctx := context.Background()
-	token, loginErr := suite.client.AuthenticationService.LoginOauth(ctx, accessKey, secretKey)
+	loginResp, loginErr := suite.client.AuthenticationService.LoginOauth(ctx, &LoginOauthRequest{
+		AccessKey: accessKey,
+		SecretKey: secretKey,
+	})
 	if loginErr != nil {
 		suite.client.Logger.Error("login error", slog.String("error", loginErr.Error()))
 		suite.FailNowf("login error", "login error %v", loginErr)
 	}
 
 	// Session Token is not empty
-	if !suite.NotEmpty(token) {
+	if !suite.NotEmpty(loginResp.Token) {
 		suite.FailNow("empty token")
 	}
 
 	// SessionToken is a valid guid
-	if !suite.NotNil(shared.IsGuid(token)) {
-		suite.FailNowf("invalid guid for token", "invalid guid for token %v", token)
+	if !suite.NotNil(shared.IsGuid(loginResp.Token)) {
+		suite.FailNowf("invalid guid for token", "invalid guid for token %v", loginResp.Token)
 	}
 
-	suite.client.SessionToken = token
+	suite.client.SessionToken = loginResp.Token
 }
 
 // TestSinglePort tests the creation of a LAG Port, then passes the id to PortScript to finalise lifecycle testing.

@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"golang.org/x/oauth2"
 )
@@ -40,6 +41,8 @@ type Client struct {
 
 	// Session Token for client
 	SessionToken string
+	// Token Expiration
+	TokenExpiry time.Time
 
 	// Optional function called after every successful request made to the DO APIs
 	onRequestCompleted RequestCompletionCallback

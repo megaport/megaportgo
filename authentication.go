@@ -14,14 +14,20 @@ import (
 )
 
 type AuthenticationService interface {
-	LoginOauth(ctx context.Context, accessKey, secretKey string) (string, error)
+	LoginOauth(ctx context.Context, req *LoginOauthRequest) (*LoginOauthResponse, error)
 }
 
 type AuthenticationServiceOp struct {
 	*Client
+}
 
-	bearerToken string
-	tokenExpiry time.Time
+type LoginOauthRequest struct {
+	AccessKey string
+	SecretKey string
+}
+
+type LoginOauthResponse struct {
+	Token string
 }
 
 func NewAuthenticationServiceOp(c *Client) *AuthenticationServiceOp {
@@ -30,19 +36,21 @@ func NewAuthenticationServiceOp(c *Client) *AuthenticationServiceOp {
 	}
 }
 
-// LoginOauth performs an OAuth-style logi using an API key and API
+// LoginOauth performs an OAuth-style login using an API key and API
 // secret key. It returns the bearer token or an error if the login
 // was unsuccessful.
-func (svc *AuthenticationServiceOp) LoginOauth(ctx context.Context, accessKey, secretKey string) (string, error) {
-	svc.Logger.Debug("creating session", slog.String("access_key", accessKey))
+func (svc *AuthenticationServiceOp) LoginOauth(ctx context.Context, req *LoginOauthRequest) (*LoginOauthResponse, error) {
+	svc.Logger.Debug("creating session", slog.String("access_key", req.AccessKey))
 
 	// Shortcut if we've already authenticated.
-	if time.Now().Before(svc.tokenExpiry) {
-		return svc.bearerToken, nil
+	if time.Now().Before(svc.TokenExpiry) {
+		return &LoginOauthResponse{
+			Token: svc.SessionToken,
+		}, nil
 	}
 
 	// Encode the client ID and client secret to create Basic Authentication
-	authHeader := base64.StdEncoding.EncodeToString([]byte(accessKey + ":" + secretKey))
+	authHeader := base64.StdEncoding.EncodeToString([]byte(req.AccessKey + ":" + req.SecretKey))
 
 	// Set the URL for the token endpoint
 	var tokenURL string
@@ -62,22 +70,22 @@ func (svc *AuthenticationServiceOp) LoginOauth(ctx context.Context, accessKey, s
 	data.Set("grant_type", "client_credentials")
 
 	// Create an HTTP request
-	req, err := svc.Client.NewRequest(ctx, "POST", tokenURL, nil)
+	clientReq, err := svc.Client.NewRequest(ctx, "POST", tokenURL, nil)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	req.URL.RawQuery = data.Encode()
+	clientReq.URL.RawQuery = data.Encode()
 
 	// Set the request headers
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Authorization", "Basic "+authHeader)
+	clientReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	clientReq.Header.Set("Authorization", "Basic "+authHeader)
 
 	// Create an HTTP client and send the request
-	svc.Logger.Debug("login request", slog.String("token_url", tokenURL), slog.String("authorization_header", req.Header.Get("Authorization")), slog.String("content_type", req.Header.Get("Content_Type")))
-	resp, resErr := svc.Client.Do(ctx, req, nil)
+	svc.Logger.Debug("login request", slog.String("token_url", tokenURL), slog.String("authorization_header", clientReq.Header.Get("Authorization")), slog.String("content_type", clientReq.Header.Get("Content_Type")))
+	resp, resErr := svc.Client.Do(ctx, clientReq, nil)
 	if resErr != nil {
-		return "", resErr
+		return nil, resErr
 	}
 
 	defer resp.Body.Close()
@@ -85,27 +93,27 @@ func (svc *AuthenticationServiceOp) LoginOauth(ctx context.Context, accessKey, s
 	// Read the response body
 	body, fileErr := io.ReadAll(resp.Body)
 	if fileErr != nil {
-		return "", fileErr
+		return nil, fileErr
 	}
 
 	// Parse the response JSON to extract the access token and expiration time
 	authResponse := types.AccessTokenResponse{}
 	if parseErr := json.Unmarshal(body, &authResponse); parseErr != nil {
-		return "", parseErr
+		return nil, parseErr
 	}
 
 	if authResponse.Error != "" {
-		return "", errors.New("authentication error: " + authResponse.Error)
+		return nil, errors.New("authentication error: " + authResponse.Error)
 	}
 
-	// Calculate the token expiration time
-	svc.tokenExpiry = time.Now().Add(time.Duration(authResponse.ExpiresIn) * time.Second)
-
 	// Store the access token
-	svc.bearerToken = authResponse.AccessToken
+	svc.TokenExpiry = time.Now().Add(time.Duration(authResponse.ExpiresIn) * time.Second)
+	// Calculate the token expiration time
 	svc.SessionToken = authResponse.AccessToken
 
 	svc.Logger.Debug("session established")
 
-	return svc.bearerToken, nil
+	return &LoginOauthResponse{
+		Token: authResponse.AccessToken,
+	}, nil
 }

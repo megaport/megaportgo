@@ -66,14 +66,17 @@ func (suite *AuthIntegrationTestSuite) TestLoginOauth() {
 	}
 
 	ctx := context.Background()
-	token, loginErr := megaportClient.AuthenticationService.LoginOauth(ctx, accessKey, secretKey)
+	loginResp, loginErr := megaportClient.AuthenticationService.LoginOauth(ctx, &LoginOauthRequest{
+		AccessKey: accessKey,
+		SecretKey: secretKey,
+	})
 	if loginErr != nil {
 		megaportClient.Logger.Error("login error", "error", loginErr.Error())
 	}
 	suite.NoError(loginErr)
 
 	// Session Token is not empty
-	suite.NotEmpty(token)
+	suite.NotEmpty(loginResp.Token)
 	// SessionToken is a valid guid
-	suite.NotNil(shared.IsGuid(token))
+	suite.NotNil(shared.IsGuid(loginResp.Token))
 }
