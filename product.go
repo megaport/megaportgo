@@ -2,6 +2,7 @@ package megaport
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -14,11 +15,19 @@ type ProductService interface {
 	DeleteProduct(ctx context.Context, req *DeleteProductRequest) (*DeleteProductResponse, error)
 	RestoreProduct(ctx context.Context, req *RestoreProductRequest) (*RestoreProductResponse, error)
 	ManageProductLock(ctx context.Context, req *ManageProductLockRequest) (*ManageProductLockResponse, error)
+	GetMCRPrefixFilterLists(ctx context.Context, id string) ([]*PrefixFilterList, error)
+	CreateMCRPrefixFilterList(ctx context.Context, req *CreateMCRPrefixFilterListRequest) (*CreateMCRPrefixFilterListResponse, error)
 }
 
 // ProductServiceOp handles communication with Product methods of the Megaport API.
 type ProductServiceOp struct {
 	Client *Client
+}
+
+func NewProductServiceOp(c *Client) *ProductServiceOp {
+	return &ProductServiceOp{
+		Client: c,
+	}
 }
 
 type ModifyProductRequest struct {
@@ -52,10 +61,10 @@ type ManageProductLockRequest struct {
 
 type ManageProductLockResponse struct{}
 
-func NewProductServiceOp(c *Client) *ProductServiceOp {
-	return &ProductServiceOp{
-		Client: c,
-	}
+type ParsedProductsResponse struct {
+	Message string        `json:"message"`
+	Terms   string        `json:"terms"`
+	Data    []interface{} `json:"data"`
 }
 
 func (svc *ProductServiceOp) ExecuteOrder(ctx context.Context, requestBody interface{}) (*[]byte, error) {
@@ -170,4 +179,54 @@ func (svc *ProductServiceOp) ManageProductLock(ctx context.Context, req *ManageP
 		return nil, err
 	}
 	return &ManageProductLockResponse{}, nil
+}
+
+// GetMCRPrefixFilterLists returns prefix filter lists for the specified MCR2.
+func (svc *ProductServiceOp) GetMCRPrefixFilterLists(ctx context.Context, id string) ([]*PrefixFilterList, error) {
+	url := "/v2/product/mcr2/" + id + "/prefixLists?"
+
+	req, err := svc.Client.NewRequest(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := svc.Client.Do(ctx, req, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	body, fileErr := io.ReadAll(response.Body)
+	if fileErr != nil {
+		return nil, fileErr
+	}
+
+	prefixFilterList := &MCRPrefixFilterListResponse{}
+	unmarshalErr := json.Unmarshal(body, prefixFilterList)
+
+	if unmarshalErr != nil {
+		return nil, unmarshalErr
+	}
+
+	return prefixFilterList.Data, nil
+}
+
+// CreateMCRPrefixFilterList will create an MCR2 product prefix filter list.
+func (svc *ProductServiceOp) CreateMCRPrefixFilterList(ctx context.Context, req *CreateMCRPrefixFilterListRequest) (*CreateMCRPrefixFilterListResponse, error) {
+	url := "/v2/product/mcr2/" + req.MCRID + "/prefixList"
+
+	clientReq, err := svc.Client.NewRequest(ctx, "POST", url, req.PrefixFilterList)
+
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = svc.Client.Do(ctx, clientReq, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return &CreateMCRPrefixFilterListResponse{
+		IsCreated: true,
+	}, nil
 }

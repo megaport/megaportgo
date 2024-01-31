@@ -34,12 +34,6 @@ func NewPortServiceOp(c *Client) *PortServiceOp {
 	}
 }
 
-type ParsedProductsResponse struct {
-	Message string        `json:"message"`
-	Terms   string        `json:"terms"`
-	Data    []interface{} `json:"data"`
-}
-
 // PortServiceOp handles communication with Port methods of the Megaport API.
 type PortServiceOp struct {
 	Client *Client
