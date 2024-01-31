@@ -224,10 +224,6 @@ func (svc *PortServiceOp) ListPorts(ctx context.Context) ([]*Port, error) {
 
 	defer response.Body.Close()
 
-	isError, parsedError := svc.Client.IsErrorResponse(response, &err, 200)
-	if isError {
-		return nil, parsedError
-	}
 	body, fileErr := io.ReadAll(response.Body)
 
 	if fileErr != nil {
@@ -282,11 +278,6 @@ func (svc *PortServiceOp) GetPort(ctx context.Context, req *GetPortRequest) (*Po
 		return nil, err
 	}
 	defer response.Body.Close()
-	isError, parsedError := svc.Client.IsErrorResponse(response, &err, 200)
-
-	if isError {
-		return nil, parsedError
-	}
 
 	body, fileErr := io.ReadAll(response.Body)
 

@@ -85,10 +85,6 @@ func (svc *LocationServiceOp) ListLocations(ctx context.Context) ([]*Location, e
 		return nil, resErr
 	}
 	defer response.Body.Close()
-	isResErr, compiledResError := svc.Client.IsErrorResponse(response, &resErr, 200)
-	if isResErr {
-		return nil, compiledResError
-	}
 	body, fileErr := io.ReadAll(response.Body)
 
 	if fileErr != nil {
@@ -163,10 +159,6 @@ func (svc *LocationServiceOp) ListCountries(ctx context.Context) ([]*Country, er
 		return nil, resErr
 	}
 	defer response.Body.Close()
-	isResErr, compiledResError := svc.Client.IsErrorResponse(response, &resErr, 200)
-	if isResErr {
-		return nil, compiledResError
-	}
 
 	body, fileErr := io.ReadAll(response.Body)
 	if fileErr != nil {

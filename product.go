@@ -78,12 +78,6 @@ func (svc *ProductServiceOp) ExecuteOrder(ctx context.Context, requestBody inter
 		defer response.Body.Close()
 	}
 
-	isError, parsedError := svc.Client.IsErrorResponse(response, &resErr, 200)
-
-	if isError {
-		return nil, parsedError
-	}
-
 	body, fileErr := io.ReadAll(response.Body)
 	if fileErr != nil {
 		return nil, fileErr
@@ -105,15 +99,11 @@ func (svc *ProductServiceOp) ModifyProduct(ctx context.Context, req *ModifyProdu
 			return nil, err
 		}
 
-		updateResponse, err := svc.Client.Do(ctx, req, nil)
-
-		isResErr, compiledResErr := svc.Client.IsErrorResponse(updateResponse, &err, 200)
-
-		if isResErr {
-			return nil, compiledResErr
-		} else {
-			return &ModifyProductResponse{IsUpdated: true}, nil
+		_, err = svc.Client.Do(ctx, req, nil)
+		if err != nil {
+			return nil, err
 		}
+		return &ModifyProductResponse{IsUpdated: true}, nil
 	} else {
 		return nil, errors.New(ERR_WRONG_PRODUCT_MODIFY)
 	}
@@ -138,18 +128,11 @@ func (svc *ProductServiceOp) DeleteProduct(ctx context.Context, req *DeleteProdu
 		return nil, err
 	}
 
-	deleteResp, err := svc.Client.Do(ctx, clientReq, nil)
+	_, err = svc.Client.Do(ctx, clientReq, nil)
 	if err != nil {
 		return nil, err
 	}
-	defer deleteResp.Body.Close() // nolint
-
-	isError, errorMessage := svc.Client.IsErrorResponse(deleteResp, &err, 200)
-	if isError {
-		return nil, errorMessage
-	} else {
-		return &DeleteProductResponse{}, nil
-	}
+	return &DeleteProductResponse{}, nil
 }
 
 func (svc *ProductServiceOp) RestoreProduct(ctx context.Context, req *RestoreProductRequest) (*RestoreProductResponse, error) {
@@ -159,18 +142,12 @@ func (svc *ProductServiceOp) RestoreProduct(ctx context.Context, req *RestorePro
 	if err != nil {
 		return nil, err
 	}
-	response, err := svc.Client.Do(ctx, clientReq, nil)
+	_, err = svc.Client.Do(ctx, clientReq, nil)
 	if err != nil {
 		return nil, err
 	}
-	defer response.Body.Close() // nolint
 
-	isError, errorMessage := svc.Client.IsErrorResponse(response, &err, 200)
-	if isError {
-		return nil, errorMessage
-	} else {
-		return &RestoreProductResponse{}, nil
-	}
+	return &RestoreProductResponse{}, nil
 }
 
 func (svc *ProductServiceOp) ManageProductLock(ctx context.Context, req *ManageProductLockRequest) (*ManageProductLockResponse, error) {
@@ -188,14 +165,9 @@ func (svc *ProductServiceOp) ManageProductLock(ctx context.Context, req *ManageP
 		return nil, err
 	}
 
-	lockResponse, err := svc.Client.Do(ctx, clientReq, nil)
+	_, err = svc.Client.Do(ctx, clientReq, nil)
 	if err != nil {
 		return nil, err
 	}
-	isResErr, compiledResErr := svc.Client.IsErrorResponse(lockResponse, &err, 200)
-	if isResErr {
-		return nil, compiledResErr
-	} else {
-		return &ManageProductLockResponse{}, nil
-	}
+	return &ManageProductLockResponse{}, nil
 }
