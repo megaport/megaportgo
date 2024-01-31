@@ -58,7 +58,7 @@ type LoginResponse struct {
 // secret key. It returns the bearer token or an error if the login
 // was unsuccessful.
 func (svc *AuthenticationServiceOp) LoginOauth(ctx context.Context, req *LoginOauthRequest) (*LoginOauthResponse, error) {
-	svc.Logger.Debug("creating session", slog.String("access_key", req.AccessKey))
+	svc.Logger.DebugContext(ctx, "creating session", slog.String("access_key", req.AccessKey))
 
 	// Shortcut if we've already authenticated.
 	if time.Now().Before(svc.TokenExpiry) {
@@ -100,7 +100,7 @@ func (svc *AuthenticationServiceOp) LoginOauth(ctx context.Context, req *LoginOa
 	clientReq.Header.Set("Authorization", "Basic "+authHeader)
 
 	// Create an HTTP client and send the request
-	svc.Logger.Debug("login request", slog.String("token_url", tokenURL), slog.String("authorization_header", clientReq.Header.Get("Authorization")), slog.String("content_type", clientReq.Header.Get("Content_Type")))
+	svc.Logger.DebugContext(ctx, "login request", slog.String("token_url", tokenURL), slog.String("authorization_header", clientReq.Header.Get("Authorization")), slog.String("content_type", clientReq.Header.Get("Content_Type")))
 	resp, resErr := svc.Client.Do(ctx, clientReq, nil)
 	if resErr != nil {
 		return nil, resErr
@@ -129,7 +129,7 @@ func (svc *AuthenticationServiceOp) LoginOauth(ctx context.Context, req *LoginOa
 	// Calculate the token expiration time
 	svc.SessionToken = authResponse.AccessToken
 
-	svc.Logger.Debug("session established")
+	svc.Logger.DebugContext(ctx, "session established")
 
 	return &LoginOauthResponse{
 		Token: authResponse.AccessToken,

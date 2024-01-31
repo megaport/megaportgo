@@ -250,13 +250,13 @@ func (svc *PortServiceOp) ListPorts(ctx context.Context) ([]*Port, error) {
 		// Unfortunately I know of no better (maintainable) method of making this work.
 		remarshaled, err := json.Marshal(unmarshaledData)
 		if err != nil {
-			svc.Client.Logger.Debug(fmt.Sprintf("Could not remarshal %v as port.", err.Error()))
+			svc.Client.Logger.WarnContext(ctx, fmt.Sprintf("Could not remarshal %v as port.", err.Error()))
 			continue
 		}
 		port := Port{}
 		unmarshalErr = json.Unmarshal(remarshaled, &port)
 		if unmarshalErr != nil {
-			svc.Client.Logger.Debug(fmt.Sprintf("Could not unmarshal %v as port.", unmarshalErr.Error()))
+			svc.Client.Logger.WarnContext(ctx, fmt.Sprintf("Could not unmarshal %v as port.", unmarshalErr.Error()))
 			continue
 		}
 		ports = append(ports, &port)
@@ -391,7 +391,7 @@ func (svc *PortServiceOp) WaitForPortProvisioning(ctx context.Context, portId st
 		}
 
 		// Port is not in ready status - keep waiting
-		svc.Client.Logger.Debug("Waiting for port", slog.String("status", details.ProvisioningStatus), slog.String("port_id", portId))
+		svc.Client.Logger.DebugContext(ctx, "Waiting for port", slog.String("status", details.ProvisioningStatus), slog.String("port_id", portId))
 		time.Sleep(10 * time.Second)
 	}
 
