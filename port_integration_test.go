@@ -8,9 +8,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/megaport/megaportgo/mega_err"
-	"github.com/megaport/megaportgo/shared"
-	"github.com/megaport/megaportgo/types"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -71,7 +68,7 @@ func (suite *PortIntegrationTestSuite) SetupTest() {
 	}
 
 	// SessionToken is a valid guid
-	if !suite.NotNil(shared.IsGuid(loginResp.Token)) {
+	if !suite.NotNil(IsGuid(loginResp.Token)) {
 		suite.FailNowf("invalid guid for token", "invalid guid for token %v", loginResp.Token)
 	}
 
@@ -89,13 +86,13 @@ func (suite *PortIntegrationTestSuite) TestSinglePort() {
 	portsListInitial, err := suite.client.PortService.ListPorts(ctx)
 	suite.NoError(err)
 
-	createRes, portErr := suite.testCreatePort(suite.client, ctx, types.SINGLE_PORT, *testLocation)
+	createRes, portErr := suite.testCreatePort(suite.client, ctx, SINGLE_PORT, *testLocation)
 	suite.NoError(portErr)
 	suite.Greater(len(createRes.PortOrderConfirmations), 0)
 
 	portId := createRes.PortOrderConfirmations[0].TechnicalServiceUID
 
-	if !suite.NoError(portErr) && !suite.True(shared.IsGuid(portId)) {
+	if !suite.NoError(portErr) && !suite.True(IsGuid(portId)) {
 		suite.FailNow("")
 	}
 
@@ -130,10 +127,10 @@ func (suite *PortIntegrationTestSuite) TestSinglePort() {
 		suite.FailNowf("Failed to find port we just created in ports list", "Failed to find port we just created in ports list: %v", portId)
 	}
 
-	suite.testModifyPort(suite.client, ctx, portId, types.SINGLE_PORT)
+	suite.testModifyPort(suite.client, ctx, portId, SINGLE_PORT)
 	suite.testLockPort(suite.client, ctx, portId)
-	suite.testCancelPort(suite.client, ctx, portId, types.SINGLE_PORT)
-	suite.testDeletePort(suite.client, ctx, portId, types.SINGLE_PORT)
+	suite.testCancelPort(suite.client, ctx, portId, SINGLE_PORT)
+	suite.testDeletePort(suite.client, ctx, portId, SINGLE_PORT)
 
 }
 
@@ -148,13 +145,13 @@ func (suite *PortIntegrationTestSuite) TestLAGPort() {
 	portsListInitial, err := suite.client.PortService.ListPorts(ctx)
 	suite.NoError(err)
 
-	orderRes, portErr := suite.testCreatePort(suite.client, ctx, types.LAG_PORT, *testLocation)
+	orderRes, portErr := suite.testCreatePort(suite.client, ctx, LAG_PORT, *testLocation)
 	suite.NoError(portErr)
 	suite.Greater(len(orderRes.PortOrderConfirmations), 1)
 
 	mainPortId := orderRes.PortOrderConfirmations[0].TechnicalServiceUID
 
-	if !suite.NoError(portErr) && !suite.True(shared.IsGuid(mainPortId)) {
+	if !suite.NoError(portErr) && !suite.True(IsGuid(mainPortId)) {
 		suite.FailNow("")
 	}
 
@@ -190,9 +187,9 @@ func (suite *PortIntegrationTestSuite) TestLAGPort() {
 		suite.FailNowf("Failed to find port we just created in ports list", "Failed to find port we just created in ports list %v", mainPortId)
 	}
 
-	suite.testModifyPort(suite.client, ctx, mainPortId, types.LAG_PORT)
-	suite.testCancelPort(suite.client, ctx, mainPortId, types.LAG_PORT)
-	suite.testDeletePort(suite.client, ctx, mainPortId, types.LAG_PORT)
+	suite.testModifyPort(suite.client, ctx, mainPortId, LAG_PORT)
+	suite.testCancelPort(suite.client, ctx, mainPortId, LAG_PORT)
+	suite.testDeletePort(suite.client, ctx, mainPortId, LAG_PORT)
 }
 
 func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Context, portType string, location Location) (*BuyPortResponse, error) {
@@ -200,7 +197,7 @@ func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Con
 	var orderRes *BuyPortResponse
 
 	suite.client.Logger.Debug("Buying Port", slog.String("port_type", portType))
-	if portType == types.LAG_PORT {
+	if portType == LAG_PORT {
 		orderRes, portErr = c.PortService.BuyLAGPort(ctx, &BuyLAGPortRequest{
 			Name:       "Buy Port (LAG) Test",
 			Term:       1,
@@ -274,7 +271,7 @@ func (suite *PortIntegrationTestSuite) testCancelPort(c *Client, ctx context.Con
 	if err != nil {
 		suite.FailNowf("could not find port", "could not find port %v", err)
 	}
-	suite.EqualValues(types.STATUS_CANCELLED, portInfo.ProvisioningStatus)
+	suite.EqualValues(STATUS_CANCELLED, portInfo.ProvisioningStatus)
 
 	suite.client.Logger.Debug("port scheduled for cancellation", slog.String("status", portInfo.ProvisioningStatus), slog.String("port_id", portId))
 	restoreResp, restoreErr := c.PortService.RestorePort(ctx, &RestorePortRequest{PortID: portId})
@@ -303,7 +300,7 @@ func (suite *PortIntegrationTestSuite) testDeletePort(c *Client, ctx context.Con
 	if err != nil {
 		suite.FailNowf("could not find port", "could not find port %v", err)
 	}
-	suite.EqualValues(types.STATUS_DECOMMISSIONED, portInfo.ProvisioningStatus)
+	suite.EqualValues(STATUS_DECOMMISSIONED, portInfo.ProvisioningStatus)
 	suite.client.Logger.Debug("port deleted", slog.String("status", portInfo.ProvisioningStatus), slog.String("port_id", portId))
 }
 
@@ -326,7 +323,7 @@ func (suite *PortIntegrationTestSuite) testLockPort(c *Client, ctx context.Conte
 	suite.client.Logger.Debug("Test lock of an already locked port.", slog.String("port_id", portId))
 	lockRes, lockErr := c.PortService.LockPort(ctx, &LockPortRequest{PortID: portId})
 	suite.Nil(lockRes)
-	suite.Error(errors.New(mega_err.ERR_PORT_ALREADY_LOCKED), lockErr)
+	suite.Error(errors.New(ERR_PORT_ALREADY_LOCKED), lockErr)
 
 	suite.client.Logger.Debug("Unlocking Port now.", slog.String("port_id", portId))
 	unlockResp, unlockErr := c.PortService.UnlockPort(ctx, &UnlockPortRequest{PortID: portId})
@@ -338,5 +335,5 @@ func (suite *PortIntegrationTestSuite) testLockPort(c *Client, ctx context.Conte
 	suite.client.Logger.Debug("Test unlocking of a port that doesn't have a lock.", slog.String("port_id", portId))
 	unlockResp, unlockErr = c.PortService.UnlockPort(ctx, &UnlockPortRequest{PortID: portId})
 	suite.Nil(unlockResp)
-	suite.Error(errors.New(mega_err.ERR_PORT_NOT_LOCKED), unlockErr)
+	suite.Error(errors.New(ERR_PORT_NOT_LOCKED), unlockErr)
 }

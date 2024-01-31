@@ -9,8 +9,6 @@ import (
 	"log/slog"
 	"net/url"
 	"time"
-
-	"github.com/megaport/megaportgo/types"
 )
 
 type AuthenticationService interface {
@@ -19,6 +17,12 @@ type AuthenticationService interface {
 
 type AuthenticationServiceOp struct {
 	*Client
+}
+
+func NewAuthenticationServiceOp(c *Client) *AuthenticationServiceOp {
+	return &AuthenticationServiceOp{
+		Client: c,
+	}
 }
 
 type LoginOauthRequest struct {
@@ -30,9 +34,23 @@ type LoginOauthResponse struct {
 	Token string
 }
 
-func NewAuthenticationServiceOp(c *Client) *AuthenticationServiceOp {
-	return &AuthenticationServiceOp{
-		Client: c,
+type AccessTokenResponse struct {
+	AccessToken  string `json:"access_token"`
+	TokenType    string `json:"token_type"`
+	ExpiresIn    int    `json:"expires_in"`
+	RefreshToken string `json:"refresh_token,omitempty"`
+	Error        string `json:"error"`
+}
+
+type LoginResponse struct {
+	Message string `json:"message"`
+	Terms   string `json:"terms"`
+	Data    struct {
+		Permissions map[string][]string `json:"permissions"`
+		OAuthToken  struct {
+			AccessToken string `json:"accessToken"`
+			ExpiresIn   int
+		}
 	}
 }
 
@@ -97,7 +115,7 @@ func (svc *AuthenticationServiceOp) LoginOauth(ctx context.Context, req *LoginOa
 	}
 
 	// Parse the response JSON to extract the access token and expiration time
-	authResponse := types.AccessTokenResponse{}
+	authResponse := AccessTokenResponse{}
 	if parseErr := json.Unmarshal(body, &authResponse); parseErr != nil {
 		return nil, parseErr
 	}

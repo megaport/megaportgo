@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/megaport/megaportgo/types"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -46,7 +45,7 @@ func (suite *ProductClientTestSuite) TestExecuteOrder() {
 		]
 	}`
 
-	portOrder := []types.PortOrder{
+	portOrder := []PortOrder{
 		{
 			Name:                  "test-port",
 			Term:                  12,
@@ -59,7 +58,7 @@ func (suite *ProductClientTestSuite) TestExecuteOrder() {
 	}
 
 	suite.mux.HandleFunc("/v3/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
-		v := new([]types.PortOrder)
+		v := new([]PortOrder)
 		err := json.NewDecoder(r.Body).Decode(v)
 		if err != nil {
 			suite.FailNowf("could not decode json", "could not decode json %v", err)
@@ -110,7 +109,7 @@ func (suite *ProductClientTestSuite) TestModifyProduct() {
         "salesId": null,
         "billableId": 177726,
         "billableUsageAlgorithm": null,
-        "productType": "MEGAPORT",
+        "productType": "megaport",
         "provisioningStatus": "DEPLOYABLE",
         "failedReason": null,
         "inAdvanceBillingStatus": null,
@@ -159,7 +158,7 @@ func (suite *ProductClientTestSuite) TestModifyProduct() {
         "originDomain": null
     	}
 	}`
-	productType := types.PRODUCT_MEGAPORT
+	productType := PRODUCT_MEGAPORT
 	wantReq := &ModifyProductRequest{
 		ProductID:             productUid,
 		ProductType:           productType,
@@ -167,21 +166,16 @@ func (suite *ProductClientTestSuite) TestModifyProduct() {
 		CostCentre:            "US",
 		MarketplaceVisibility: false,
 	}
-	wantUpdate := &types.ProductUpdate{
-		Name:                 wantReq.Name,
-		CostCentre:           wantReq.CostCentre,
-		MarketplaceVisbility: wantReq.MarketplaceVisibility,
-	}
 	path := fmt.Sprintf("/v2/product/%s/%s", productType, productUid)
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		v := new(types.ProductUpdate)
+		v := new(ModifyProductRequest)
 		err := json.NewDecoder(r.Body).Decode(v)
 		if err != nil {
 			suite.FailNowf("could not decode json", "could  not decode json %v", err)
 		}
 		suite.testMethod(r, http.MethodPut)
 		fmt.Fprint(w, jblob)
-		suite.Equal(wantUpdate, v)
+		suite.Equal(wantReq, v)
 	})
 	wantRes := &ModifyProductResponse{
 		IsUpdated: true,

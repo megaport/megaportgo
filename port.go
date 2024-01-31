@@ -9,10 +9,6 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
-
-	"github.com/megaport/megaportgo/mega_err"
-	"github.com/megaport/megaportgo/shared"
-	"github.com/megaport/megaportgo/types"
 )
 
 // PortService is an interface for interfacing with the Port endpoints
@@ -22,14 +18,20 @@ type PortService interface {
 	BuyPort(ctx context.Context, req *BuyPortRequest) (*BuyPortResponse, error)
 	BuySinglePort(ctx context.Context, req *BuySinglePortRequest) (*BuyPortResponse, error)
 	BuyLAGPort(ctx context.Context, req *BuyLAGPortRequest) (*BuyPortResponse, error)
-	ListPorts(ctx context.Context) ([]*types.Port, error)
-	GetPort(ctx context.Context, req *GetPortRequest) (*types.Port, error)
+	ListPorts(ctx context.Context) ([]*Port, error)
+	GetPort(ctx context.Context, req *GetPortRequest) (*Port, error)
 	ModifyPort(ctx context.Context, req *ModifyPortRequest) (*ModifyPortResponse, error)
 	DeletePort(ctx context.Context, req *DeletePortRequest) (*DeletePortResponse, error)
 	RestorePort(ctx context.Context, req *RestorePortRequest) (*RestorePortResponse, error)
 	LockPort(ctx context.Context, req *LockPortRequest) (*LockPortResponse, error)
 	UnlockPort(ctx context.Context, req *UnlockPortRequest) (*UnlockPortResponse, error)
 	WaitForPortProvisioning(ctx context.Context, portID string) (bool, error)
+}
+
+func NewPortServiceOp(c *Client) *PortServiceOp {
+	return &PortServiceOp{
+		Client: c,
+	}
 }
 
 type ParsedProductsResponse struct {
@@ -74,7 +76,7 @@ type BuyLAGPortRequest struct {
 }
 
 type BuyPortResponse struct {
-	PortOrderConfirmations []*types.PortOrderConfirmation
+	PortOrderConfirmations []*PortOrderConfirmation
 }
 
 type GetPortRequest struct {
@@ -125,26 +127,20 @@ type UnlockPortResponse struct {
 	IsUnlocking bool
 }
 
-func NewPortServiceOp(c *Client) *PortServiceOp {
-	return &PortServiceOp{
-		Client: c,
-	}
-}
-
 func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*BuyPortResponse, error) {
-	var buyOrder []types.PortOrder
+	var buyOrder []PortOrder
 	if req.Term != 1 && req.Term != 12 && req.Term != 24 && req.Term != 36 {
-		return nil, errors.New(mega_err.ERR_TERM_NOT_VALID)
+		return nil, errors.New(ERR_TERM_NOT_VALID)
 	}
 	if req.IsLag {
-		buyOrder = []types.PortOrder{
+		buyOrder = []PortOrder{
 			{
 				Name:                  req.Name,
 				Term:                  req.Term,
 				ProductType:           "MEGAPORT",
 				PortSpeed:             req.PortSpeed,
 				LocationID:            req.LocationId,
-				CreateDate:            shared.GetCurrentTimestamp(),
+				CreateDate:            GetCurrentTimestamp(),
 				Virtual:               false,
 				Market:                req.Market,
 				LagPortCount:          req.LagCount,
@@ -152,14 +148,14 @@ func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*Bu
 			},
 		}
 	} else {
-		buyOrder = []types.PortOrder{
+		buyOrder = []PortOrder{
 			{
 				Name:                  req.Name,
 				Term:                  req.Term,
 				ProductType:           "MEGAPORT",
 				PortSpeed:             req.PortSpeed,
 				LocationID:            req.LocationId,
-				CreateDate:            shared.GetCurrentTimestamp(),
+				CreateDate:            GetCurrentTimestamp(),
 				Virtual:               false,
 				Market:                req.Market,
 				MarketplaceVisibility: !req.IsPrivate,
@@ -171,7 +167,7 @@ func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*Bu
 	if responseError != nil {
 		return nil, responseError
 	}
-	orderInfo := types.PortOrderResponse{}
+	orderInfo := PortOrderResponse{}
 	unmarshalErr := json.Unmarshal(*responseBody, &orderInfo)
 	if unmarshalErr != nil {
 		return nil, unmarshalErr
@@ -180,7 +176,7 @@ func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*Bu
 	toReturn := &BuyPortResponse{}
 
 	for _, order := range orderInfo.Data {
-		toReturn.PortOrderConfirmations = append(toReturn.PortOrderConfirmations, &types.PortOrderConfirmation{
+		toReturn.PortOrderConfirmations = append(toReturn.PortOrderConfirmations, &PortOrderConfirmation{
 			TechnicalServiceUID: order.TechnicalServiceUID,
 		})
 	}
@@ -214,7 +210,7 @@ func (svc *PortServiceOp) BuyLAGPort(ctx context.Context, req *BuyLAGPortRequest
 	})
 }
 
-func (svc *PortServiceOp) ListPorts(ctx context.Context) ([]*types.Port, error) {
+func (svc *PortServiceOp) ListPorts(ctx context.Context) ([]*Port, error) {
 	path := "/v2/products"
 	url := svc.Client.BaseURL.JoinPath(path).String()
 	req, err := svc.Client.NewRequest(ctx, http.MethodGet, url, nil)
@@ -246,7 +242,7 @@ func (svc *PortServiceOp) ListPorts(ctx context.Context) ([]*types.Port, error) 
 		return nil, unmarshalErr
 	}
 
-	ports := []*types.Port{}
+	ports := []*Port{}
 
 	for _, unmarshaledData := range parsed.Data {
 		// The products query response will likely contain non-port objects.  As a result
@@ -261,7 +257,7 @@ func (svc *PortServiceOp) ListPorts(ctx context.Context) ([]*types.Port, error) 
 			svc.Client.Logger.Debug(fmt.Sprintf("Could not remarshal %v as port.", err.Error()))
 			continue
 		}
-		port := types.Port{}
+		port := Port{}
 		unmarshalErr = json.Unmarshal(remarshaled, &port)
 		if unmarshalErr != nil {
 			svc.Client.Logger.Debug(fmt.Sprintf("Could not unmarshal %v as port.", unmarshalErr.Error()))
@@ -272,7 +268,7 @@ func (svc *PortServiceOp) ListPorts(ctx context.Context) ([]*types.Port, error) 
 	return ports, nil
 }
 
-func (svc *PortServiceOp) GetPort(ctx context.Context, req *GetPortRequest) (*types.Port, error) {
+func (svc *PortServiceOp) GetPort(ctx context.Context, req *GetPortRequest) (*Port, error) {
 	path := "/v2/product/" + req.PortID
 	url := svc.Client.BaseURL.JoinPath(path).String()
 
@@ -298,7 +294,7 @@ func (svc *PortServiceOp) GetPort(ctx context.Context, req *GetPortRequest) (*ty
 		return nil, fileErr
 	}
 
-	portDetails := types.PortResponse{}
+	portDetails := PortResponse{}
 	unmarshalErr := json.Unmarshal(body, &portDetails)
 	if unmarshalErr != nil {
 		return nil, unmarshalErr
@@ -309,7 +305,7 @@ func (svc *PortServiceOp) GetPort(ctx context.Context, req *GetPortRequest) (*ty
 func (svc *PortServiceOp) ModifyPort(ctx context.Context, req *ModifyPortRequest) (*ModifyPortResponse, error) {
 	modifyRes, err := svc.Client.ProductService.ModifyProduct(ctx, &ModifyProductRequest{
 		ProductID:             req.PortID,
-		ProductType:           types.PRODUCT_MEGAPORT,
+		ProductType:           PRODUCT_MEGAPORT,
 		Name:                  req.Name,
 		CostCentre:            req.CostCentre,
 		MarketplaceVisibility: req.MarketplaceVisibility,
@@ -364,7 +360,7 @@ func (svc *PortServiceOp) LockPort(ctx context.Context, req *LockPortRequest) (*
 		}
 		return &LockPortResponse{IsLocking: true}, nil
 	} else {
-		return nil, errors.New(mega_err.ERR_PORT_ALREADY_LOCKED)
+		return nil, errors.New(ERR_PORT_ALREADY_LOCKED)
 	}
 }
 
@@ -385,7 +381,7 @@ func (svc *PortServiceOp) UnlockPort(ctx context.Context, req *UnlockPortRequest
 		}
 		return &UnlockPortResponse{IsUnlocking: true}, nil
 	} else {
-		return nil, errors.New(mega_err.ERR_PORT_NOT_LOCKED)
+		return nil, errors.New(ERR_PORT_NOT_LOCKED)
 	}
 }
 
@@ -399,7 +395,7 @@ func (svc *PortServiceOp) WaitForPortProvisioning(ctx context.Context, portId st
 			return false, err
 		}
 
-		if details.ProvisioningStatus == shared.SERVICE_LIVE {
+		if details.ProvisioningStatus == SERVICE_LIVE {
 			return true, nil
 		}
 
@@ -408,5 +404,5 @@ func (svc *PortServiceOp) WaitForPortProvisioning(ctx context.Context, portId st
 		time.Sleep(10 * time.Second)
 	}
 
-	return false, errors.New(mega_err.ERR_PORT_PROVISION_TIMEOUT_EXCEED)
+	return false, errors.New(ERR_PORT_PROVISION_TIMEOUT_EXCEED)
 }

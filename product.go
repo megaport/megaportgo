@@ -6,9 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-
-	"github.com/megaport/megaportgo/mega_err"
-	"github.com/megaport/megaportgo/types"
 )
 
 type ProductService interface {
@@ -27,15 +24,14 @@ type ProductServiceOp struct {
 type ModifyProductRequest struct {
 	ProductID             string
 	ProductType           string
-	Name                  string
-	CostCentre            string
-	MarketplaceVisibility bool
+	Name                  string `json:"name"`
+	CostCentre            string `json:"costCentre"`
+	MarketplaceVisibility bool   `json:"marketplaceVisibility"`
 }
 
 type ModifyProductResponse struct {
 	IsUpdated bool
 }
-
 type DeleteProductRequest struct {
 	ProductID string
 	DeleteNow bool
@@ -99,16 +95,11 @@ func (svc *ProductServiceOp) ExecuteOrder(ctx context.Context, requestBody inter
 // ModifyProduct modifies a product. The available fields to modify are Name, Cost Centre, and Marketplace Visibility.
 func (svc *ProductServiceOp) ModifyProduct(ctx context.Context, req *ModifyProductRequest) (*ModifyProductResponse, error) {
 
-	if req.ProductType == types.PRODUCT_MEGAPORT || req.ProductType == types.PRODUCT_MCR {
-		update := types.ProductUpdate{
-			Name:                 req.Name,
-			CostCentre:           req.CostCentre,
-			MarketplaceVisbility: req.MarketplaceVisibility,
-		}
+	if req.ProductType == PRODUCT_MEGAPORT || req.ProductType == PRODUCT_MCR {
 		path := fmt.Sprintf("/v2/product/%s/%s", req.ProductType, req.ProductID)
 		url := svc.Client.BaseURL.JoinPath(path).String()
 
-		req, err := svc.Client.NewRequest(ctx, http.MethodPut, url, update)
+		req, err := svc.Client.NewRequest(ctx, http.MethodPut, url, req)
 
 		if err != nil {
 			return nil, err
@@ -124,7 +115,7 @@ func (svc *ProductServiceOp) ModifyProduct(ctx context.Context, req *ModifyProdu
 			return &ModifyProductResponse{IsUpdated: true}, nil
 		}
 	} else {
-		return nil, errors.New(mega_err.ERR_WRONG_PRODUCT_MODIFY)
+		return nil, errors.New(ERR_WRONG_PRODUCT_MODIFY)
 	}
 }
 

@@ -10,8 +10,6 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/megaport/megaportgo/mega_err"
-	"github.com/megaport/megaportgo/types"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -42,7 +40,7 @@ func (suite *PortClientTestSuite) TestBuyPort() {
 	portSvc := suite.client.PortService
 
 	want := &BuyPortResponse{
-		PortOrderConfirmations: []*types.PortOrderConfirmation{
+		PortOrderConfirmations: []*PortOrderConfirmation{
 			{TechnicalServiceUID: "36b3f68e-2f54-4331-bf94-f8984449365f"},
 		},
 	}
@@ -64,7 +62,7 @@ func (suite *PortClientTestSuite) TestBuyPort() {
 			{"technicalServiceUid": "36b3f68e-2f54-4331-bf94-f8984449365f"}
 			]
 			}`
-	portOrder := []types.PortOrder{
+	portOrder := []PortOrder{
 		{
 			Name:                  req.Name,
 			Term:                  req.Term,
@@ -76,7 +74,7 @@ func (suite *PortClientTestSuite) TestBuyPort() {
 		},
 	}
 	suite.mux.HandleFunc("/v3/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
-		v := new([]types.PortOrder)
+		v := new([]PortOrder)
 		err := json.NewDecoder(r.Body).Decode(v)
 		if err != nil {
 			suite.FailNowf("could not decode json", "could not decode json %v", err)
@@ -104,7 +102,7 @@ func (suite *PortClientTestSuite) TestBuySinglePort() {
 	portSvc := suite.client.PortService
 
 	want := &BuyPortResponse{
-		PortOrderConfirmations: []*types.PortOrderConfirmation{
+		PortOrderConfirmations: []*PortOrderConfirmation{
 			{TechnicalServiceUID: "36b3f68e-2f54-4331-bf94-f8984449365f"},
 		},
 	}
@@ -124,7 +122,7 @@ func (suite *PortClientTestSuite) TestBuySinglePort() {
 			{"technicalServiceUid": "36b3f68e-2f54-4331-bf94-f8984449365f"}
 			]
 			}`
-	portOrder := []types.PortOrder{
+	portOrder := []PortOrder{
 		{
 			Name:                  req.Name,
 			Term:                  req.Term,
@@ -136,7 +134,7 @@ func (suite *PortClientTestSuite) TestBuySinglePort() {
 		},
 	}
 	suite.mux.HandleFunc("/v3/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
-		v := new([]types.PortOrder)
+		v := new([]PortOrder)
 		err := json.NewDecoder(r.Body).Decode(v)
 		if err != nil {
 			suite.FailNowf("could not decode json", "could not decode json %v", err)
@@ -164,7 +162,7 @@ func (suite *PortClientTestSuite) TestBuyLAGPort() {
 	portSvc := suite.client.PortService
 
 	want := &BuyPortResponse{
-		PortOrderConfirmations: []*types.PortOrderConfirmation{
+		PortOrderConfirmations: []*PortOrderConfirmation{
 			{TechnicalServiceUID: "36b3f68e-2f54-4331-bf94-f8984449365f"},
 			{TechnicalServiceUID: "251238f5-89de-4a06-8ccd-76846453a33f"},
 		},
@@ -188,7 +186,7 @@ func (suite *PortClientTestSuite) TestBuyLAGPort() {
 			]
 			}`
 
-	portOrder := []types.PortOrder{
+	portOrder := []PortOrder{
 		{
 			Name:                  req.Name,
 			Term:                  req.Term,
@@ -201,7 +199,7 @@ func (suite *PortClientTestSuite) TestBuyLAGPort() {
 		},
 	}
 	suite.mux.HandleFunc("/v3/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
-		v := new([]types.PortOrder)
+		v := new([]PortOrder)
 		err := json.NewDecoder(r.Body).Decode(v)
 		if err != nil {
 			suite.FailNowf("could not decode json", "could not decode json %v", err)
@@ -240,7 +238,7 @@ func (suite *PortClientTestSuite) TestBuyPortInvalidTerm() {
 		IsPrivate:  true,
 	}
 	_, err := portSvc.BuyPort(ctx, req)
-	suite.Equal(errors.New(mega_err.ERR_TERM_NOT_VALID), err)
+	suite.Equal(errors.New(ERR_TERM_NOT_VALID), err)
 }
 
 func (suite *PortClientTestSuite) TestListPorts() {
@@ -253,11 +251,11 @@ func (suite *PortClientTestSuite) TestListPorts() {
 	productUid2 := "9b1c46c7-1e8d-4035-bf38-1bc60d346d57"
 	productUid3 := "91ededc2-473f-4a30-ad24-0703c7f35e50"
 
-	want1 := &types.Port{
+	want1 := &Port{
 		ID:                    999999,
 		UID:                   productUid,
 		Name:                  "test-port",
-		Type:                  "MEGAPORT",
+		Type:                  PRODUCT_MEGAPORT,
 		SecondaryName:         "test-secondary-name",
 		ProvisioningStatus:    "CONFIGURED",
 		PortSpeed:             10000,
@@ -278,11 +276,11 @@ func (suite *PortClientTestSuite) TestListPorts() {
 		AdminLocked:           false,
 		Cancelable:            true,
 	}
-	want2 := &types.Port{
+	want2 := &Port{
 		ID:                    999998,
 		UID:                   productUid2,
 		Name:                  "test-port2",
-		Type:                  "MEGAPORT",
+		Type:                  PRODUCT_MEGAPORT,
 		SecondaryName:         "test-secondary-name2",
 		ProvisioningStatus:    "CONFIGURED",
 		PortSpeed:             10000,
@@ -303,12 +301,12 @@ func (suite *PortClientTestSuite) TestListPorts() {
 		AdminLocked:           false,
 		Cancelable:            true,
 	}
-	want3 := &types.Port{
+	want3 := &Port{
 		ID:                    999997,
 		UID:                   productUid3,
 		Name:                  "test-port3",
 		SecondaryName:         "test-secondary-name3",
-		Type:                  "MEGAPORT",
+		Type:                  PRODUCT_MEGAPORT,
 		ProvisioningStatus:    "CONFIGURED",
 		PortSpeed:             10000,
 		LocationID:            226,
@@ -328,12 +326,12 @@ func (suite *PortClientTestSuite) TestListPorts() {
 		AdminLocked:           false,
 		Cancelable:            true,
 	}
-	wantPorts := []*types.Port{want1, want2, want3}
+	wantPorts := []*Port{want1, want2, want3}
 	jblob := `{
 			"message": "test-message",
 			"terms": "test-terms",
 			"data": [{
-			"productId":999999,"productUid":"36b3f68e-2f54-4331-bf94-f8984449365f","productName":"test-port","productType":"MEGAPORT","provisioningStatus":"CONFIGURED","createDate":0,"createdBy":"","portSpeed":10000,"terminateDate":0,"liveDate":0,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":false,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0}}}, {"productId":999998,"productUid":"9b1c46c7-1e8d-4035-bf38-1bc60d346d57","productName":"test-port2","productType":"MEGAPORT","provisioningStatus":"CONFIGURED","createDate":0,"createdBy":"","portSpeed":10000,"terminateDate":0,"liveDate":0,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name2","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":false,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0}}}, {"productId":999997,"productUid":"91ededc2-473f-4a30-ad24-0703c7f35e50","productName":"test-port3","productType":"MEGAPORT","provisioningStatus":"CONFIGURED","createDate":0,"createdBy":"","portSpeed":10000,"terminateDate":0,"liveDate":0,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name3","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":false,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0}}}]
+			"productId":999999,"productUid":"36b3f68e-2f54-4331-bf94-f8984449365f","productName":"test-port","productType":"megaport","provisioningStatus":"CONFIGURED","createDate":0,"createdBy":"","portSpeed":10000,"terminateDate":0,"liveDate":0,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":false,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0}}}, {"productId":999998,"productUid":"9b1c46c7-1e8d-4035-bf38-1bc60d346d57","productName":"test-port2","productType":"megaport","provisioningStatus":"CONFIGURED","createDate":0,"createdBy":"","portSpeed":10000,"terminateDate":0,"liveDate":0,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name2","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":false,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0}}}, {"productId":999997,"productUid":"91ededc2-473f-4a30-ad24-0703c7f35e50","productName":"test-port3","productType":"megaport","provisioningStatus":"CONFIGURED","createDate":0,"createdBy":"","portSpeed":10000,"terminateDate":0,"liveDate":0,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name3","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":false,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0}}}]
 	}`
 	suite.mux.HandleFunc("/v2/products", func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
@@ -352,13 +350,13 @@ func (suite *PortClientTestSuite) TestGetPort() {
 	companyUid := "32df7107-fdca-4c2a-8ccb-c6867813b3f2"
 	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
 
-	want := &types.Port{
+	want := &Port{
 		ID:                    999999,
 		UID:                   productUid,
 		Name:                  "test-port",
 		SecondaryName:         "test-secondary-name",
 		ProvisioningStatus:    "CONFIGURED",
-		Type:                  "MEGAPORT",
+		Type:                  PRODUCT_MEGAPORT,
 		PortSpeed:             10000,
 		LocationID:            226,
 		LAGPrimary:            false,
@@ -382,7 +380,7 @@ func (suite *PortClientTestSuite) TestGetPort() {
 			"message": "Found Product 36b3f68e-2f54-4331-bf94-f8984449365f",
 			"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
 			"data": {
-			"productId":999999,"productUid":"36b3f68e-2f54-4331-bf94-f8984449365f","productName":"test-port","productType":"MEGAPORT","provisioningStatus":"CONFIGURED","createDate":0,"createdBy":"","portSpeed":10000,"terminateDate":0,"liveDate":0,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":false,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0}}
+			"productId":999999,"productUid":"36b3f68e-2f54-4331-bf94-f8984449365f","productName":"test-port","productType":"megaport","provisioningStatus":"CONFIGURED","createDate":0,"createdBy":"","portSpeed":10000,"terminateDate":0,"liveDate":0,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":false,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0}}
 			}
 			}`
 	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/%s", productUid), func(w http.ResponseWriter, r *http.Request) {
@@ -431,7 +429,7 @@ func (suite *PortClientTestSuite) TestModifyPort() {
         "salesId": null,
         "billableId": 177726,
         "billableUsageAlgorithm": null,
-        "productType": "MEGAPORT",
+        "productType": "megaport",
         "provisioningStatus": "DEPLOYABLE",
         "failedReason": null,
         "inAdvanceBillingStatus": null,
@@ -480,14 +478,16 @@ func (suite *PortClientTestSuite) TestModifyPort() {
         "originDomain": null
     	}
 	}`
-	wantReq := &types.ProductUpdate{
-		Name:                 req.Name,
-		CostCentre:           req.CostCentre,
-		MarketplaceVisbility: req.MarketplaceVisibility,
+	wantReq := &ModifyProductRequest{
+		ProductID:             req.PortID,
+		ProductType:           PRODUCT_MEGAPORT,
+		Name:                  req.Name,
+		CostCentre:            req.CostCentre,
+		MarketplaceVisibility: req.MarketplaceVisibility,
 	}
-	path := fmt.Sprintf("/v2/product/%s/%s", types.PRODUCT_MEGAPORT, productUid)
+	path := fmt.Sprintf("/v2/product/%s/%s", PRODUCT_MEGAPORT, productUid)
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		v := new(types.ProductUpdate)
+		v := new(ModifyProductRequest)
 		err := json.NewDecoder(r.Body).Decode(v)
 		if err != nil {
 			suite.FailNowf("could not decode json", "could not decode json %V", err)
@@ -579,7 +579,7 @@ func (suite *PortClientTestSuite) TestLockPort() {
 	"message": "Service locked",
 	"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
 	"data": {
-			"productId":999999,"productUid":"36b3f68e-2f54-4331-bf94-f8984449365f","productName":"test-port","productType":"MEGAPORT","provisioningStatus":"LIVE","createDate":0,"createdBy":"","portSpeed":10000,"terminateDate":0,"liveDate":0,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":true,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0
+			"productId":999999,"productUid":"36b3f68e-2f54-4331-bf94-f8984449365f","productName":"test-port","productType":"megaport","provisioningStatus":"LIVE","createDate":0,"createdBy":"","portSpeed":10000,"terminateDate":0,"liveDate":0,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":true,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0
             	}
         	}
     	}
@@ -595,7 +595,7 @@ func (suite *PortClientTestSuite) TestLockPort() {
 			"message": "test-message",
 			"terms": "test-terms",
 			"data": {
-			"productId":999999,"productUid":"36b3f68e-2f54-4331-bf94-f8984449365f","productName":"test-port","productType":"MEGAPORT","provisioningStatus":"CONFIGURED","createDate":0,"createdBy":"","portSpeed":10000,"terminateDate":0,"liveDate":0,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":false,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0}}
+			"productId":999999,"productUid":"36b3f68e-2f54-4331-bf94-f8984449365f","productName":"test-port","productType":"megaport","provisioningStatus":"CONFIGURED","createDate":0,"createdBy":"","portSpeed":10000,"terminateDate":0,"liveDate":0,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":false,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0}}
 			}
 			}`
 	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/%s", productUid), func(w http.ResponseWriter, r *http.Request) {
@@ -628,7 +628,7 @@ func (suite *PortClientTestSuite) TestUnlockPort() {
 	"message": "Found Product 36b3f68e-2f54-4331-bf94-f8984449365f",
 	"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
 	"data": {
-			"productId":999999,"productUid":"36b3f68e-2f54-4331-bf94-f8984449365f","productName":"test-port","productType":"MEGAPORT","provisioningStatus":"LIVE","createDate":0,"createdBy":"","portSpeed":10000,"terminateDate":0,"liveDate":0,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":true,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0
+			"productId":999999,"productUid":"36b3f68e-2f54-4331-bf94-f8984449365f","productName":"test-port","productType":"megaport","provisioningStatus":"LIVE","createDate":0,"createdBy":"","portSpeed":10000,"terminateDate":0,"liveDate":0,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":true,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0
             	}
         	}
     	}
@@ -644,7 +644,7 @@ func (suite *PortClientTestSuite) TestUnlockPort() {
 			"message": "Service unlocked",
 			"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
 			"data": {
-			"productId":999999,"productUid":"36b3f68e-2f54-4331-bf94-f8984449365f","productName":"test-port","productType":"MEGAPORT","provisioningStatus":"LIVE","createDate":0,"createdBy":"","portSpeed":10000,"terminateDate":0,"liveDate":0,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":false,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0}}
+			"productId":999999,"productUid":"36b3f68e-2f54-4331-bf94-f8984449365f","productName":"test-port","productType":"megaport","provisioningStatus":"LIVE","createDate":0,"createdBy":"","portSpeed":10000,"terminateDate":0,"liveDate":0,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":false,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0}}
 			}
 			}`
 	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/%s", productUid), func(w http.ResponseWriter, r *http.Request) {

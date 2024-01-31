@@ -7,8 +7,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/megaport/megaportgo/mega_err"
-	"github.com/megaport/megaportgo/shared"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -67,7 +65,7 @@ func (suite *LocationIntegrationTestSuite) SetupTest() {
 	}
 
 	// SessionToken is a valid guid
-	if !suite.NotNil(shared.IsGuid(loginResp.Token)) {
+	if !suite.NotNil(IsGuid(loginResp.Token)) {
 		suite.FailNowf("invalid guid for token", "invalid guid for token %v", loginResp.Token)
 	}
 
@@ -78,7 +76,7 @@ func (suite *LocationIntegrationTestSuite) TestBadID() {
 	ctx := context.Background()
 	// Make sure that an id with no record returns an error as expected.
 	_, idErr := suite.client.LocationService.GetLocationByID(ctx, -999999)
-	suite.Equal(mega_err.ERR_LOCATION_NOT_FOUND, idErr.Error())
+	suite.Equal(ERR_LOCATION_NOT_FOUND, idErr.Error())
 }
 
 func (suite *LocationIntegrationTestSuite) TestBadName() {
@@ -86,7 +84,7 @@ func (suite *LocationIntegrationTestSuite) TestBadName() {
 
 	// Make sure that a name with no record returns an error as expected.
 	_, nameErr := suite.client.LocationService.GetLocationByName(ctx, "DefinitelyNotARealName")
-	suite.Equal(mega_err.ERR_LOCATION_NOT_FOUND, nameErr.Error())
+	suite.Equal(ERR_LOCATION_NOT_FOUND, nameErr.Error())
 }
 
 func (suite *LocationIntegrationTestSuite) TestGetLocationByID() {
@@ -128,7 +126,7 @@ func (suite *LocationIntegrationTestSuite) TestGetLocationByNameFuzzy() {
 
 	failFuzzy, failFuzzyErr := suite.client.LocationService.GetLocationByNameFuzzy(ctx, "definitely not a location name at all")
 	suite.True(len(failFuzzy) == 0)
-	suite.Error(errors.New(mega_err.ERR_NO_MATCHING_LOCATIONS), failFuzzyErr)
+	suite.Error(errors.New(ERR_NO_MATCHING_LOCATIONS), failFuzzyErr)
 }
 
 // first one should always be Australia

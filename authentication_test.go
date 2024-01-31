@@ -6,7 +6,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/megaport/megaportgo/shared"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -78,5 +77,5 @@ func (suite *AuthIntegrationTestSuite) TestLoginOauth() {
 	// Session Token is not empty
 	suite.NotEmpty(loginResp.Token)
 	// SessionToken is a valid guid
-	suite.NotNil(shared.IsGuid(loginResp.Token))
+	suite.NotNil(IsGuid(loginResp.Token))
 }
