@@ -74,7 +74,7 @@ func (svc *ProductServiceOp) ExecuteOrder(ctx context.Context, requestBody inter
 	}
 
 	if response != nil {
-		svc.Client.Logger.Debug("Executing product order", "url", url, "status_code", response.StatusCode)
+		svc.Client.Logger.DebugContext(ctx, "Executing product order", "url", url, "status_code", response.StatusCode)
 		defer response.Body.Close()
 	}
 
