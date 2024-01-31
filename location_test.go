@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/megaport/megaportgo/types"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -36,7 +35,7 @@ func (suite *LocationClientTestSuite) TearDownTest() {
 func (suite *LocationClientTestSuite) TestListLocations() {
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
-	want := []*types.Location{
+	want := []*Location{
 		{
 			Name:          "Test Data Center",
 			Country:       "USA",
@@ -180,7 +179,7 @@ func (suite *LocationClientTestSuite) TestListLocations() {
 func (suite *LocationClientTestSuite) TestGetLocationByID() {
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
-	want := &types.Location{
+	want := &Location{
 		Name:          "Test Data Center",
 		Country:       "USA",
 		LiveDate:      1595340000000,
@@ -295,7 +294,7 @@ func (suite *LocationClientTestSuite) TestGetLocationByID() {
 func (suite *LocationClientTestSuite) TestGetLocationByName() {
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
-	want := &types.Location{
+	want := &Location{
 
 		ID:            112,
 		Name:          "Test Data Center 2",
@@ -411,7 +410,7 @@ func (suite *LocationClientTestSuite) TestGetLocationByName() {
 func (suite *LocationClientTestSuite) TestGetLocationByNameFuzzy() {
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
-	want := []*types.Location{
+	want := []*Location{
 		{
 			Name:          "Test Data Center",
 			Country:       "USA",
@@ -592,7 +591,7 @@ func (suite *LocationClientTestSuite) TestGetLocationByNameFuzzy() {
 func (suite *LocationClientTestSuite) TestListCountries() {
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
-	want := []*types.Country{
+	want := []*Country{
 		{
 			Code:      "AUS",
 			Name:      "Australia",

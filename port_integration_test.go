@@ -195,7 +195,7 @@ func (suite *PortIntegrationTestSuite) TestLAGPort() {
 	suite.testDeletePort(suite.client, ctx, mainPortId, types.LAG_PORT)
 }
 
-func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Context, portType string, location types.Location) (*BuyPortResponse, error) {
+func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Context, portType string, location Location) (*BuyPortResponse, error) {
 	var portErr error
 	var orderRes *BuyPortResponse
 

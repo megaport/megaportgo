@@ -9,18 +9,17 @@ import (
 
 	"github.com/lithammer/fuzzysearch/fuzzy"
 	"github.com/megaport/megaportgo/mega_err"
-	"github.com/megaport/megaportgo/types"
 )
 
 type LocationService interface {
-	ListLocations(ctx context.Context) ([]*types.Location, error)
-	GetLocationByID(ctx context.Context, locationID int) (*types.Location, error)
-	GetLocationByName(ctx context.Context, locationName string) (*types.Location, error)
-	GetLocationByNameFuzzy(ctx context.Context, search string) ([]*types.Location, error)
-	ListCountries(ctx context.Context) ([]*types.Country, error)
+	ListLocations(ctx context.Context) ([]*Location, error)
+	GetLocationByID(ctx context.Context, locationID int) (*Location, error)
+	GetLocationByName(ctx context.Context, locationName string) (*Location, error)
+	GetLocationByNameFuzzy(ctx context.Context, search string) ([]*Location, error)
+	ListCountries(ctx context.Context) ([]*Country, error)
 	ListMarketCodes(ctx context.Context) ([]string, error)
 	IsValidMarketCode(ctx context.Context, marketCode string) (*bool, error)
-	FilterLocationsByMarketCode(ctx context.Context, marketCode string, locations []*types.Location) ([]*types.Location, error)
+	FilterLocationsByMarketCode(ctx context.Context, marketCode string, locations []*Location) ([]*Location, error)
 }
 
 type LocationServiceOp struct {
@@ -33,7 +32,49 @@ func NewLocationServiceOp(c *Client) *LocationServiceOp {
 	}
 }
 
-func (svc *LocationServiceOp) ListLocations(ctx context.Context) ([]*types.Location, error) {
+type Location struct {
+	Name             string                 `json:"name"`
+	Country          string                 `json:"country"`
+	LiveDate         int                    `json:"liveDate"`
+	SiteCode         string                 `json:"siteCode"`
+	NetworkRegion    string                 `json:"networkRegion"`
+	Address          map[string]string      `json:"address"`
+	Campus           string                 `json:"campus"`
+	Latitude         float64                `json:"latitude"`
+	Longitude        float64                `json:"longitude"`
+	Products         map[string]interface{} `json:"products"`
+	Market           string                 `json:"market"`
+	Metro            string                 `json:"metro"`
+	VRouterAvailable bool                   `json:"vRouterAvailable"`
+	ID               int                    `json:"id"`
+	Status           string                 `json:"status"`
+}
+
+type Country struct {
+	Code      string `json:"code"`
+	Name      string `json:"name"`
+	Prefix    string `json:"prefix"`
+	SiteCount int    `json:"siteCount"`
+}
+
+type LocationResponse struct {
+	Message string      `json:"message"`
+	Terms   string      `json:"terms"`
+	Data    []*Location `json:"data"`
+}
+
+type CountryResponse struct {
+	Message string                  `json:"message"`
+	Terms   string                  `json:"terms"`
+	Data    []*CountryInnerResponse `json:"data"`
+}
+
+type CountryInnerResponse struct {
+	Countries     []*Country `json:"countries"`
+	NetworkRegion string     `json:"networkRegion"`
+}
+
+func (svc *LocationServiceOp) ListLocations(ctx context.Context) ([]*Location, error) {
 	path := "/v2/locations"
 	url := svc.Client.BaseURL.JoinPath(path).String()
 	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, url, nil)
@@ -55,7 +96,7 @@ func (svc *LocationServiceOp) ListLocations(ctx context.Context) ([]*types.Locat
 		return nil, fileErr
 	}
 
-	locationResponse := &types.LocationResponse{}
+	locationResponse := &LocationResponse{}
 
 	unmarshalErr := json.Unmarshal(body, locationResponse)
 	if unmarshalErr != nil {
@@ -65,7 +106,7 @@ func (svc *LocationServiceOp) ListLocations(ctx context.Context) ([]*types.Locat
 	return locationResponse.Data, nil
 }
 
-func (svc *LocationServiceOp) GetLocationByID(ctx context.Context, locationID int) (*types.Location, error) {
+func (svc *LocationServiceOp) GetLocationByID(ctx context.Context, locationID int) (*Location, error) {
 	allLocations, locErr := svc.ListLocations(ctx)
 	if locErr != nil {
 		return nil, locErr
@@ -78,7 +119,7 @@ func (svc *LocationServiceOp) GetLocationByID(ctx context.Context, locationID in
 	return nil, errors.New(mega_err.ERR_LOCATION_NOT_FOUND)
 }
 
-func (svc *LocationServiceOp) GetLocationByName(ctx context.Context, locationName string) (*types.Location, error) {
+func (svc *LocationServiceOp) GetLocationByName(ctx context.Context, locationName string) (*Location, error) {
 	allLocations, locErr := svc.ListLocations(ctx)
 	if locErr != nil {
 		return nil, locErr
@@ -91,12 +132,12 @@ func (svc *LocationServiceOp) GetLocationByName(ctx context.Context, locationNam
 	return nil, errors.New(mega_err.ERR_LOCATION_NOT_FOUND)
 }
 
-func (svc *LocationServiceOp) GetLocationByNameFuzzy(ctx context.Context, search string) ([]*types.Location, error) {
+func (svc *LocationServiceOp) GetLocationByNameFuzzy(ctx context.Context, search string) ([]*Location, error) {
 	locations, err := svc.ListLocations(ctx)
 	if err != nil {
 		return nil, err
 	}
-	var matchedLocations []*types.Location
+	var matchedLocations []*Location
 
 	for i := 0; i < len(locations); i++ {
 		if fuzzy.Match(search, locations[i].Name) {
@@ -111,7 +152,7 @@ func (svc *LocationServiceOp) GetLocationByNameFuzzy(ctx context.Context, search
 	}
 }
 
-func (svc *LocationServiceOp) ListCountries(ctx context.Context) ([]*types.Country, error) {
+func (svc *LocationServiceOp) ListCountries(ctx context.Context) ([]*Country, error) {
 	path := "/v2/networkRegions"
 	url := svc.Client.BaseURL.JoinPath(path).String()
 	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, url, nil)
@@ -133,7 +174,7 @@ func (svc *LocationServiceOp) ListCountries(ctx context.Context) ([]*types.Count
 		return nil, fileErr
 	}
 
-	countryResponse := types.CountryResponse{}
+	countryResponse := CountryResponse{}
 
 	unmarshalErr := json.Unmarshal(body, &countryResponse)
 
@@ -141,7 +182,7 @@ func (svc *LocationServiceOp) ListCountries(ctx context.Context) ([]*types.Count
 		return nil, unmarshalErr
 	}
 
-	allCountries := make([]*types.Country, 0)
+	allCountries := make([]*Country, 0)
 
 	for i := 0; i < len(countryResponse.Data); i++ {
 		if countryResponse.Data[i].NetworkRegion == "MP1" {
@@ -181,9 +222,9 @@ func (svc *LocationServiceOp) IsValidMarketCode(ctx context.Context, marketCode 
 	return PtrTo(found), nil
 }
 
-func (svc *LocationServiceOp) FilterLocationsByMarketCode(ctx context.Context, marketCode string, locations []*types.Location) ([]*types.Location, error) {
+func (svc *LocationServiceOp) FilterLocationsByMarketCode(ctx context.Context, marketCode string, locations []*Location) ([]*Location, error) {
 	existingLocations := locations
-	toReturn := []*types.Location{}
+	toReturn := []*Location{}
 	isValid, err := svc.IsValidMarketCode(ctx, marketCode)
 	if err != nil {
 		return nil, err
