@@ -44,7 +44,7 @@ type Client struct {
 	// Token Expiration
 	TokenExpiry time.Time
 
-	// Optional function called after every successful request made to the DO APIs
+	// Optional function called after every successful request made to the API
 	onRequestCompleted RequestCompletionCallback
 
 	// Services used for communicating with the Megaport API
@@ -52,6 +52,7 @@ type Client struct {
 	PortService           PortService
 	ProductService        ProductService
 	LocationService       LocationService
+	VXCService            VXCService
 
 	// Optional extra HTTP headers to set on every request to the API.
 	headers map[string]string
@@ -74,33 +75,6 @@ func NewHttpClient() *http.Client {
 
 // RequestCompletionCallback defines the type of the request callback function
 type RequestCompletionCallback func(*http.Request, *http.Response)
-
-// func addOptions(s string, opt interface{}) (string, error) {
-// 	v := reflect.ValueOf(opt)
-
-// 	if v.Kind() == reflect.Ptr && v.IsNil() {
-// 		return s, nil
-// 	}
-
-// 	origURL, err := url.Parse(s)
-// 	if err != nil {
-// 		return s, err
-// 	}
-
-// 	origValues := origURL.Query()
-
-// 	newValues, err := query.Values(opt)
-// 	if err != nil {
-// 		return s, err
-// 	}
-
-// 	for k, v := range newValues {
-// 		origValues[k] = v
-// 	}
-
-// 	origURL.RawQuery = origValues.Encode()
-// 	return origURL.String(), nil
-// }
 
 // NewFromToken returns a new Megaport API client with the given API
 // token.
