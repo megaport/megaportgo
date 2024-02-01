@@ -13,7 +13,7 @@ import (
 type MCRService interface {
 	BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMCRResponse, error)
 	GetMCR(ctx context.Context, mcrId string) (*MCR, error)
-	CreatePrefixFilterList(ctx context.Context, req *CreateMCRPrefixFilterListRequest)
+	CreatePrefixFilterList(ctx context.Context, req *CreateMCRPrefixFilterListRequest) (*CreateMCRPrefixFilterListResponse, error)
 	ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (*ModifyMCRResponse, error)
 	DeleteMCR(ctx context.Context, req *DeleteMCRRequest) (*DeleteMCRResponse, error)
 	RestoreMCR(ctx context.Context, mcrId string) (*RestoreMCRResponse, error)

@@ -52,6 +52,7 @@ type Client struct {
 	PortService           PortService
 	ProductService        ProductService
 	LocationService       LocationService
+	MCRService            MCRService
 
 	// Optional extra HTTP headers to set on every request to the API.
 	headers map[string]string
@@ -146,6 +147,7 @@ func NewClient(httpClient *http.Client, base *url.URL) *Client {
 	c.ProductService = NewProductServiceOp(c)
 	c.PortService = NewPortServiceOp(c)
 	c.LocationService = NewLocationServiceOp(c)
+	c.MCRService = NewMCRServiceOp(c)
 
 	c.headers = make(map[string]string)
 
