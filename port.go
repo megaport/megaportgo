@@ -19,13 +19,13 @@ type PortService interface {
 	BuySinglePort(ctx context.Context, req *BuySinglePortRequest) (*BuyPortResponse, error)
 	BuyLAGPort(ctx context.Context, req *BuyLAGPortRequest) (*BuyPortResponse, error)
 	ListPorts(ctx context.Context) ([]*Port, error)
-	GetPort(ctx context.Context, req *GetPortRequest) (*Port, error)
+	GetPort(ctx context.Context, portId string) (*Port, error)
 	ModifyPort(ctx context.Context, req *ModifyPortRequest) (*ModifyPortResponse, error)
 	DeletePort(ctx context.Context, req *DeletePortRequest) (*DeletePortResponse, error)
-	RestorePort(ctx context.Context, req *RestorePortRequest) (*RestorePortResponse, error)
-	LockPort(ctx context.Context, req *LockPortRequest) (*LockPortResponse, error)
-	UnlockPort(ctx context.Context, req *UnlockPortRequest) (*UnlockPortResponse, error)
-	WaitForPortProvisioning(ctx context.Context, portID string) (bool, error)
+	RestorePort(ctx context.Context, portId string) (*RestorePortResponse, error)
+	LockPort(ctx context.Context, portId string) (*LockPortResponse, error)
+	UnlockPort(ctx context.Context, portId string) (*UnlockPortResponse, error)
+	WaitForPortProvisioning(ctx context.Context, portId string) (bool, error)
 }
 
 func NewPortServiceOp(c *Client) *PortServiceOp {
@@ -258,8 +258,8 @@ func (svc *PortServiceOp) ListPorts(ctx context.Context) ([]*Port, error) {
 	return ports, nil
 }
 
-func (svc *PortServiceOp) GetPort(ctx context.Context, req *GetPortRequest) (*Port, error) {
-	path := "/v2/product/" + req.PortID
+func (svc *PortServiceOp) GetPort(ctx context.Context, portId string) (*Port, error) {
+	path := "/v2/product/" + portId
 	url := svc.Client.BaseURL.JoinPath(path).String()
 
 	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, url, nil)
@@ -316,10 +316,8 @@ func (svc *PortServiceOp) DeletePort(ctx context.Context, req *DeletePortRequest
 	}, nil
 }
 
-func (svc *PortServiceOp) RestorePort(ctx context.Context, req *RestorePortRequest) (*RestorePortResponse, error) {
-	_, err := svc.Client.ProductService.RestoreProduct(ctx, &RestoreProductRequest{
-		ProductID: req.PortID,
-	})
+func (svc *PortServiceOp) RestorePort(ctx context.Context, portId string) (*RestorePortResponse, error) {
+	_, err := svc.Client.ProductService.RestoreProduct(ctx, portId)
 	if err != nil {
 		return nil, err
 	}
@@ -328,16 +326,14 @@ func (svc *PortServiceOp) RestorePort(ctx context.Context, req *RestorePortReque
 	}, nil
 }
 
-func (svc *PortServiceOp) LockPort(ctx context.Context, req *LockPortRequest) (*LockPortResponse, error) {
-	port, err := svc.GetPort(ctx, &GetPortRequest{
-		PortID: req.PortID,
-	})
+func (svc *PortServiceOp) LockPort(ctx context.Context, portId string) (*LockPortResponse, error) {
+	port, err := svc.GetPort(ctx, portId)
 	if err != nil {
 		return nil, err
 	}
 	if !port.Locked {
 		_, err = svc.Client.ProductService.ManageProductLock(ctx, &ManageProductLockRequest{
-			ProductID:  req.PortID,
+			ProductID:  portId,
 			ShouldLock: true,
 		})
 		if err != nil {
@@ -349,16 +345,14 @@ func (svc *PortServiceOp) LockPort(ctx context.Context, req *LockPortRequest) (*
 	}
 }
 
-func (svc *PortServiceOp) UnlockPort(ctx context.Context, req *UnlockPortRequest) (*UnlockPortResponse, error) {
-	port, err := svc.GetPort(ctx, &GetPortRequest{
-		PortID: req.PortID,
-	})
+func (svc *PortServiceOp) UnlockPort(ctx context.Context, portId string) (*UnlockPortResponse, error) {
+	port, err := svc.GetPort(ctx, portId)
 	if err != nil {
 		return nil, err
 	}
 	if port.Locked {
 		_, err = svc.Client.ProductService.ManageProductLock(ctx, &ManageProductLockRequest{
-			ProductID:  req.PortID,
+			ProductID:  portId,
 			ShouldLock: false,
 		})
 		if err != nil {
@@ -373,9 +367,7 @@ func (svc *PortServiceOp) UnlockPort(ctx context.Context, req *UnlockPortRequest
 func (svc *PortServiceOp) WaitForPortProvisioning(ctx context.Context, portId string) (bool, error) {
 	// Try for ~5mins.
 	for i := 0; i < 30; i++ {
-		details, err := svc.GetPort(ctx, &GetPortRequest{
-			PortID: portId,
-		})
+		details, err := svc.GetPort(ctx, portId)
 		if err != nil {
 			return false, err
 		}

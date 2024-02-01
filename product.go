@@ -13,9 +13,9 @@ type ProductService interface {
 	ExecuteOrder(ctx context.Context, requestBody interface{}) (*[]byte, error)
 	ModifyProduct(ctx context.Context, req *ModifyProductRequest) (*ModifyProductResponse, error)
 	DeleteProduct(ctx context.Context, req *DeleteProductRequest) (*DeleteProductResponse, error)
-	RestoreProduct(ctx context.Context, req *RestoreProductRequest) (*RestoreProductResponse, error)
+	RestoreProduct(ctx context.Context, productId string) (*RestoreProductResponse, error)
 	ManageProductLock(ctx context.Context, req *ManageProductLockRequest) (*ManageProductLockResponse, error)
-	GetMCRPrefixFilterLists(ctx context.Context, id string) ([]*PrefixFilterList, error)
+	GetMCRPrefixFilterLists(ctx context.Context, mcrId string) ([]*PrefixFilterList, error)
 	CreateMCRPrefixFilterList(ctx context.Context, req *CreateMCRPrefixFilterListRequest) (*CreateMCRPrefixFilterListResponse, error)
 }
 
@@ -144,8 +144,8 @@ func (svc *ProductServiceOp) DeleteProduct(ctx context.Context, req *DeleteProdu
 	return &DeleteProductResponse{}, nil
 }
 
-func (svc *ProductServiceOp) RestoreProduct(ctx context.Context, req *RestoreProductRequest) (*RestoreProductResponse, error) {
-	path := "/v3/product/" + req.ProductID + "/action/UN_CANCEL"
+func (svc *ProductServiceOp) RestoreProduct(ctx context.Context, productId string) (*RestoreProductResponse, error) {
+	path := "/v3/product/" + productId + "/action/UN_CANCEL"
 	url := svc.Client.BaseURL.JoinPath(path).String()
 	clientReq, err := svc.Client.NewRequest(ctx, http.MethodPost, url, nil)
 	if err != nil {
@@ -182,8 +182,8 @@ func (svc *ProductServiceOp) ManageProductLock(ctx context.Context, req *ManageP
 }
 
 // GetMCRPrefixFilterLists returns prefix filter lists for the specified MCR2.
-func (svc *ProductServiceOp) GetMCRPrefixFilterLists(ctx context.Context, id string) ([]*PrefixFilterList, error) {
-	url := "/v2/product/mcr2/" + id + "/prefixLists?"
+func (svc *ProductServiceOp) GetMCRPrefixFilterLists(ctx context.Context, mcrId string) ([]*PrefixFilterList, error) {
+	url := "/v2/product/mcr2/" + mcrId + "/prefixLists?"
 
 	req, err := svc.Client.NewRequest(ctx, "GET", url, nil)
 	if err != nil {

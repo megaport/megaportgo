@@ -12,11 +12,11 @@ import (
 
 type MCRService interface {
 	BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMCRResponse, error)
-	GetMCR(ctx context.Context, req *GetMCRRequest) (*MCR, error)
+	GetMCR(ctx context.Context, mcrId string) (*MCR, error)
 	CreatePrefixFilterList(ctx context.Context, req *CreateMCRPrefixFilterListRequest)
 	ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (*ModifyMCRResponse, error)
 	DeleteMCR(ctx context.Context, req *DeleteMCRRequest) (*DeleteMCRResponse, error)
-	RestoreMCR(ctx context.Context, req *RestoreMCRRequest) (*RestoreMCRResponse, error)
+	RestoreMCR(ctx context.Context, mcrId string) (*RestoreMCRResponse, error)
 }
 
 // ProductServiceOp handles communication with Product methods of the Megaport API.
@@ -31,24 +31,15 @@ func NewMCRServiceOp(c *Client) *MCRServiceOp {
 }
 
 type BuyMCRRequest struct {
-	BuyMCROrders []*BuyMCROrder
-}
-
-type BuyMCROrder struct {
 	LocationID int
 	Name       string
 	Term       int
 	PortSpeed  int
 	MCRAsn     int
-	Type       string
 }
 
 type BuyMCRResponse struct {
 	MCROrderConfirmations []*MCROrderConfirmation
-}
-
-type GetMCRRequest struct {
-	MCRID string
 }
 
 type CreateMCRPrefixFilterListRequest struct {
@@ -80,35 +71,32 @@ type DeleteMCRResponse struct {
 	IsDeleting bool
 }
 
-type RestoreMCRRequest struct {
-	MCRID string
-}
-
 type RestoreMCRResponse struct {
 	IsRestored bool
 }
 
 // BuyMCR purchases an MCR.
 func (svc *MCRServiceOp) BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMCRResponse, error) {
-	mcrOrders := []*MCROrder{}
+	err := validateBuyMCRRequest(req)
+	if err != nil {
+		return nil, err
+	}
 
-	for _, order := range req.BuyMCROrders {
-		err := validateMCROrder(order)
-		if err != nil {
-			return nil, err
-		}
-		toAppend := &MCROrder{
-			Type:       "MCR2",
-			LocationID: order.LocationID,
-			Name:       order.Name,
-			Term:       order.Term,
-			PortSpeed:  order.PortSpeed,
-			Config:     MCROrderConfig{},
-		}
-		if order.MCRAsn != 0 {
-			toAppend.Config.ASN = order.MCRAsn
-		}
-		mcrOrders = append(mcrOrders, toAppend)
+	order := &MCROrder{
+		LocationID: req.LocationID,
+		Name:       req.Name,
+		Term:       req.Term,
+		Type:       PRODUCT_MCR,
+		PortSpeed:  req.PortSpeed,
+		Config:     MCROrderConfig{},
+	}
+
+	if req.MCRAsn != 0 {
+		order.Config.ASN = req.MCRAsn
+	}
+
+	mcrOrders := []*MCROrder{
+		order,
 	}
 
 	requestBody, marshalErr := json.Marshal(mcrOrders)
@@ -141,7 +129,7 @@ func (svc *MCRServiceOp) BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMC
 	return toReturn, nil
 }
 
-func validateMCROrder(order *BuyMCROrder) error {
+func validateBuyMCRRequest(order *BuyMCRRequest) error {
 	if order.Term != 1 && order.Term != 12 && order.Term != 24 && order.Term != 36 {
 		return errors.New(ERR_TERM_NOT_VALID)
 	}
@@ -151,8 +139,8 @@ func validateMCROrder(order *BuyMCROrder) error {
 	return nil
 }
 
-func (svc *MCRServiceOp) GetMCR(ctx context.Context, req *GetMCRRequest) (*MCR, error) {
-	url := "/v2/product/" + req.MCRID
+func (svc *MCRServiceOp) GetMCR(ctx context.Context, mcrId string) (*MCR, error) {
+	url := "/v2/product/" + mcrId
 	clientReq, err := svc.Client.NewRequest(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -217,10 +205,8 @@ func (svc *MCRServiceOp) DeleteMCR(ctx context.Context, req *DeleteMCRRequest) (
 	}, nil
 }
 
-func (svc *MCRServiceOp) RestoreMCR(ctx context.Context, req *RestoreMCRRequest) (*RestoreMCRResponse, error) {
-	_, err := svc.Client.ProductService.RestoreProduct(ctx, &RestoreProductRequest{
-		ProductID: req.MCRID,
-	})
+func (svc *MCRServiceOp) RestoreMCR(ctx context.Context, mcrId string) (*RestoreMCRResponse, error) {
+	_, err := svc.Client.ProductService.RestoreProduct(ctx, mcrId)
 	if err != nil {
 		return nil, err
 	}

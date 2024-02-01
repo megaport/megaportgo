@@ -227,10 +227,6 @@ func (suite *ProductClientTestSuite) TestRestoreProduct() {
 	"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"
 	}`
 
-	req := &RestoreProductRequest{
-		ProductID: productUid,
-	}
-
 	path := "/v3/product/" + productUid + "/action/UN_CANCEL"
 
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
@@ -240,7 +236,7 @@ func (suite *ProductClientTestSuite) TestRestoreProduct() {
 
 	wantRes := &RestoreProductResponse{}
 
-	gotRes, err := productSvc.RestoreProduct(ctx, req)
+	gotRes, err := productSvc.RestoreProduct(ctx, productUid)
 	suite.NoError(err)
 	suite.Equal(wantRes, gotRes)
 }
