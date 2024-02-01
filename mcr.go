@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log/slog"
+	"slices"
+	"time"
 )
 
 // MCRService is an interface for interfacing with the MCR endpoints
@@ -17,6 +20,7 @@ type MCRService interface {
 	ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (*ModifyMCRResponse, error)
 	DeleteMCR(ctx context.Context, req *DeleteMCRRequest) (*DeleteMCRResponse, error)
 	RestoreMCR(ctx context.Context, mcrId string) (*RestoreMCRResponse, error)
+	WaitForMcrProvisioning(ctx context.Context, mcrId string) (bool, error)
 }
 
 // ProductServiceOp handles communication with Product methods of the Megaport API.
@@ -82,7 +86,7 @@ func (svc *MCRServiceOp) BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMC
 		return nil, err
 	}
 
-	order := &MCROrder{
+	order := MCROrder{
 		LocationID: req.LocationID,
 		Name:       req.Name,
 		Term:       req.Term,
@@ -91,21 +95,13 @@ func (svc *MCRServiceOp) BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMC
 		Config:     MCROrderConfig{},
 	}
 
-	if req.MCRAsn != 0 {
-		order.Config.ASN = req.MCRAsn
-	}
+	order.Config.ASN = req.MCRAsn
 
-	mcrOrders := []*MCROrder{
+	mcrOrders := []MCROrder{
 		order,
 	}
 
-	requestBody, marshalErr := json.Marshal(mcrOrders)
-
-	if marshalErr != nil {
-		return nil, marshalErr
-	}
-
-	body, resErr := svc.Client.ProductService.ExecuteOrder(ctx, requestBody)
+	body, resErr := svc.Client.ProductService.ExecuteOrder(ctx, mcrOrders)
 
 	if resErr != nil {
 		return nil, resErr
@@ -213,4 +209,25 @@ func (svc *MCRServiceOp) RestoreMCR(ctx context.Context, mcrId string) (*Restore
 	return &RestoreMCRResponse{
 		IsRestored: true,
 	}, nil
+}
+
+// DebugWaitMCRLive should be used for testing only.
+func (svc *MCRServiceOp) WaitForMcrProvisioning(ctx context.Context, mcrId string) (bool, error) {
+	// Try for ~5mins.
+	for i := 0; i < 30; i++ {
+		mcr, err := svc.GetMCR(ctx, mcrId)
+		if err != nil {
+			return false, err
+		}
+
+		if slices.Contains(SERVICE_STATE_READY, mcr.ProvisioningStatus) {
+			return true, nil
+		}
+
+		// Wrong status, wait a bit and try again.
+		svc.Client.Logger.DebugContext(ctx, "Waiting for MCR", slog.String("provisioning_status", mcr.ProvisioningStatus))
+		time.Sleep(10 * time.Second)
+	}
+
+	return false, errors.New(ERR_MCR_PROVISION_TIMEOUT_EXCEED)
 }

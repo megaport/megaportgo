@@ -19,6 +19,8 @@ type LocationService interface {
 	ListMarketCodes(ctx context.Context) ([]string, error)
 	IsValidMarketCode(ctx context.Context, marketCode string) (*bool, error)
 	FilterLocationsByMarketCode(ctx context.Context, marketCode string, locations []*Location) ([]*Location, error)
+	FilterLocationsByMcrAvailability(ctx context.Context, mcrAvailable bool, locations []*Location) []*Location
+	GetRandom(ctx context.Context, marketCode string) (*Location, error)
 }
 
 type LocationServiceOp struct {
@@ -228,4 +230,29 @@ func (svc *LocationServiceOp) FilterLocationsByMarketCode(ctx context.Context, m
 		}
 	}
 	return toReturn, nil
+}
+
+func (svc *LocationServiceOp) FilterLocationsByMcrAvailability(ctx context.Context, mcrAvailable bool, locations []*Location) []*Location {
+	existingLocations := locations
+	toReturn := []*Location{}
+	for _, location := range existingLocations {
+		if _, ok := location.Products["mcr2"]; ok {
+			toReturn = append(toReturn, location)
+		}
+	}
+	return toReturn
+}
+
+func (svc *LocationServiceOp) GetRandom(ctx context.Context, marketCode string) (*Location, error) {
+	testLocations, err := svc.ListLocations(ctx)
+	if err != nil {
+		return nil, err
+	}
+	filtered, err := svc.FilterLocationsByMarketCode(ctx, marketCode, testLocations)
+	if err != nil {
+		return nil, err
+	}
+	filteredByMCR := svc.FilterLocationsByMcrAvailability(ctx, true, filtered)
+	testLocation := filteredByMCR[GenerateRandomNumber(0, len(filteredByMCR)-1)]
+	return testLocation, nil
 }

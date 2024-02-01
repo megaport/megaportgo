@@ -78,7 +78,7 @@ func (svc *ProductServiceOp) ExecuteOrder(ctx context.Context, requestBody inter
 	}
 
 	response, resErr := svc.Client.Do(ctx, req, nil)
-	if err != nil {
+	if resErr != nil {
 		return nil, resErr
 	}
 
