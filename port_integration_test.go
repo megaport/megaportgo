@@ -274,7 +274,7 @@ func (suite *PortIntegrationTestSuite) testCancelPort(c *Client, ctx context.Con
 	if restoreErr != nil {
 		suite.FailNowf("could not restore port", "could not restore port %v", restoreErr)
 	}
-	suite.True(restoreResp.IsRestoring)
+	suite.True(restoreResp.IsRestored)
 
 }
 

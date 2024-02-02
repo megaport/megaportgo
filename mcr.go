@@ -90,7 +90,7 @@ func (svc *MCRServiceOp) BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMC
 		LocationID: req.LocationID,
 		Name:       req.Name,
 		Term:       req.Term,
-		Type:       PRODUCT_MCR,
+		Type:       "MCR2",
 		PortSpeed:  req.PortSpeed,
 		Config:     MCROrderConfig{},
 	}

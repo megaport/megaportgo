@@ -554,7 +554,7 @@ func (suite *PortClientTestSuite) TestRestorePort() {
 	})
 
 	want := &RestorePortResponse{
-		IsRestoring: true,
+		IsRestored: true,
 	}
 
 	got, err := portSvc.RestorePort(ctx, productUid)

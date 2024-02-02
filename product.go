@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 )
 
@@ -79,6 +80,7 @@ func (svc *ProductServiceOp) ExecuteOrder(ctx context.Context, requestBody inter
 
 	response, resErr := svc.Client.Do(ctx, req, nil)
 	if resErr != nil {
+		svc.Client.Logger.DebugContext(ctx, "", slog.String("trace-id", response.Header.Get("Trace-Id")))
 		return nil, resErr
 	}
 

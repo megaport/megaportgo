@@ -102,7 +102,7 @@ type RestorePortRequest struct {
 }
 
 type RestorePortResponse struct {
-	IsRestoring bool
+	IsRestored bool
 }
 
 type LockPortRequest struct {
@@ -322,7 +322,7 @@ func (svc *PortServiceOp) RestorePort(ctx context.Context, portId string) (*Rest
 		return nil, err
 	}
 	return &RestorePortResponse{
-		IsRestoring: true,
+		IsRestored: true,
 	}, nil
 }
 
