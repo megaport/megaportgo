@@ -17,12 +17,11 @@ import (
 )
 
 const (
-	libraryVersion              = "1.0"
-	defaultBaseURL              = "https://api-staging.megaport.com/"
-	userAgent                   = "Go-Megaport-Library/" + libraryVersion
-	mediaType                   = "application/json"
-	headerRequestID             = "x-request-id"
-	internalHeaderRetryAttempts = "X-Megaport-Retry-Attempts"
+	libraryVersion = "1.0"
+	defaultBaseURL = "https://api-staging.megaport.com/"
+	userAgent      = "Go-Megaport-Library/" + libraryVersion
+	mediaType      = "application/json"
+	headerTraceId  = "Trace-Id"
 )
 
 // Client manges communication with the Megaport API
@@ -327,8 +326,8 @@ func CheckResponse(r *http.Response) error {
 		}
 	}
 
-	if errorResponse.RequestID == "" {
-		errorResponse.RequestID = r.Header.Get(headerRequestID)
+	if errorResponse.TraceID == "" {
+		errorResponse.TraceID = r.Header.Get(headerTraceId)
 	}
 
 	return errorResponse

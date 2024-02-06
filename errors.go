@@ -13,14 +13,14 @@ type ErrorResponse struct {
 	// Error message
 	Message string `json:"message"`
 
-	// RequestID returned from the API, useful to contact support.
-	RequestID string `json:"request_id"`
+	// Trace ID returned from the API.
+	TraceID string `json:"trace_id"`
 }
 
 func (r *ErrorResponse) Error() string {
-	if r.RequestID != "" {
-		return fmt.Sprintf("%v %v: %d (request %q) %s",
-			r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, r.RequestID, r.Message)
+	if r.TraceID != "" {
+		return fmt.Sprintf("%v %v: %d (trace_id %q) %s",
+			r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, r.TraceID, r.Message)
 	}
 	return fmt.Sprintf("%v %v: %d %s",
 		r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, r.Message)
