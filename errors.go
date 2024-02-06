@@ -13,17 +13,20 @@ type ErrorResponse struct {
 	// Error message
 	Message string `json:"message"`
 
+	// Error Data
+	Data string `json:"data"`
+
 	// Trace ID returned from the API.
 	TraceID string `json:"trace_id"`
 }
 
 func (r *ErrorResponse) Error() string {
 	if r.TraceID != "" {
-		return fmt.Sprintf("%v %v: %d (trace_id %q) %s",
-			r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, r.TraceID, r.Message)
+		return fmt.Sprintf("%v %v: %d (trace_id %q) %s %s",
+			r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, r.TraceID, r.Message, r.Data)
 	}
-	return fmt.Sprintf("%v %v: %d %s",
-		r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, r.Message)
+	return fmt.Sprintf("%v %v: %d %s %s",
+		r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, r.Message, r.Data)
 }
 
 const ERR_PORT_PROVISION_TIMEOUT_EXCEED = "the port took too long to provision"

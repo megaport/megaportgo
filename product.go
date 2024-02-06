@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 )
 
@@ -80,7 +79,6 @@ func (svc *ProductServiceOp) ExecuteOrder(ctx context.Context, requestBody inter
 
 	response, resErr := svc.Client.Do(ctx, req, nil)
 	if resErr != nil {
-		svc.Client.Logger.DebugContext(ctx, "", slog.String("trace-id", response.Header.Get("Trace-Id")))
 		return nil, resErr
 	}
 
@@ -100,7 +98,7 @@ func (svc *ProductServiceOp) ExecuteOrder(ctx context.Context, requestBody inter
 // ModifyProduct modifies a product. The available fields to modify are Name, Cost Centre, and Marketplace Visibility.
 func (svc *ProductServiceOp) ModifyProduct(ctx context.Context, req *ModifyProductRequest) (*ModifyProductResponse, error) {
 
-	if req.ProductType == PRODUCT_MEGAPORT || req.ProductType == PRODUCT_MCR {
+	if req.ProductType == PRODUCT_MEGAPORT || req.ProductType == PRODUCT_MCR || req.ProductType == PRODUCT_MVE {
 		path := fmt.Sprintf("/v2/product/%s/%s", req.ProductType, req.ProductID)
 		url := svc.Client.BaseURL.JoinPath(path).String()
 

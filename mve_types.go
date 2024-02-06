@@ -5,7 +5,7 @@ type MVEOrderConfig struct {
 	Name              string                 `json:"productName"`
 	Term              int                    `json:"term"`
 	ProductType       string                 `json:"productType"`
-	NetworkInterfaces []*MVENetworkInterface `json:"vnics"`
+	NetworkInterfaces []MVENetworkInterface  `json:"vnics"`
 	VendorConfig      map[string]interface{} `json:"vendorConfig"`
 }
 
@@ -19,10 +19,10 @@ type MVENetworkInterface struct {
 type MVEInstanceSize string
 
 const (
-	SMALL  MVEInstanceSize = "SMALL"
-	MEDIUM MVEInstanceSize = "MEDIUM"
-	LARGE  MVEInstanceSize = "LARGE"
-	XLARGE MVEInstanceSize = "X_LARGE_12"
+	MVE_SMALL  MVEInstanceSize = "SMALL"
+	MVE_MEDIUM MVEInstanceSize = "MEDIUM"
+	MVE_LARGE  MVEInstanceSize = "LARGE"
+	MVE_XLARGE MVEInstanceSize = "X_LARGE_12"
 )
 
 type MVEOrderConfirmation struct {
@@ -64,13 +64,13 @@ type MVE struct {
 }
 
 type MVEOrderResponse struct {
-	Message string                 `json:"message"`
-	Terms   string                 `json:"terms"`
-	Data    []MVEOrderConfirmation `json:"data"`
+	Message string                  `json:"message"`
+	Terms   string                  `json:"terms"`
+	Data    []*MVEOrderConfirmation `json:"data"`
 }
 
 type MVEResponse struct {
 	Message string `json:"message"`
 	Terms   string `json:"terms"`
-	Data    MVE    `json:"data"`
+	Data    *MVE   `json:"data"`
 }
