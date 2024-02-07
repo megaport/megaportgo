@@ -6,7 +6,70 @@ type MVEOrderConfig struct {
 	Term              int                    `json:"term"`
 	ProductType       string                 `json:"productType"`
 	NetworkInterfaces []MVENetworkInterface  `json:"vnics"`
-	VendorConfig      map[string]interface{} `json:"vendorConfig"`
+	VendorConfig     vendorConfig `json:"vendorConfig"`
+}
+
+type vendorConfig interface {
+	isVendorConfig()
+}
+
+type ArubaConfig struct {
+	vendorConfig
+	Vendor string `json:"vendor"`
+	ImageID int `json:"imageId"`
+	ProductSize string `json:"productSize"`
+	AccountName string `json:"accountName"`
+	AccountKey string `json:"accountKey"`
+}
+
+type CiscoConfig struct {
+	vendorConfig
+	Vendor string `json:"vendor"`
+	ImageID int `json:"imageId"`
+	ProductSize string `json:"productSize"`
+	AdminSSHPublicKey string `json:"adminSshPublicKey"`
+	CloudInit string `json:"cloudInit"`
+}
+
+type FortinetConfig struct {
+	vendorConfig
+	Vendor string `json:"vendor"`
+	ImageID int `json:"imageId"`
+	ProductSize string `json:"productSize"`
+	AdminSSHPublicKey string `json:"adminSshPublicKey"`
+	LicenseData string `json:"licenseData"`
+}
+
+type PaloAltoConfig struct {
+	vendorConfig
+	Vendor string `json:"vendor"`
+	ImageID int `json:"imageId"`
+	ProductSize string `json:"productSize"`
+	AdminSSHPublicKey string `json:"adminSshPublicKey"`
+	AdminPasswordHash string `json:"adminPasswordHash"`
+	LicenseData string `json:"licenseData"`
+}
+
+type VersaConfig struct {
+	vendorConfig
+	Vendor string `json:"vendor"`
+	ImageID int `json:"imageId"`
+	ProductSize string `json:"productSize"`
+	DirectorAddress string `json:"directorAddress"`
+	ControllerAddress string `json:"controllerAddress"`
+	LocalAuth string `json:"localAuth"`
+	RemoteAuth string `json:"remoteAuth"`
+	SerialNumber string `json:"serialNumber"`
+}
+
+type VmwareConfig struct {
+	vendorConfig
+	Vendor string `json:"vendor"`
+	ImageID int `json:"imageId"`
+	ProductSize string `json:"productSize"`
+	AdminSSHPublicKey string `json:"adminSshPublicKey"`
+	VcoAddress string `json:"vcoAddress"`
+	VcoActivationCode string `json:"vcoActivationCode"`
 }
 
 // NetworkInterface represents a vNIC.

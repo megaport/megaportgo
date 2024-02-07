@@ -37,7 +37,7 @@ type BuyMVERequest struct {
 	LocationID   int
 	Name         string
 	Term         int
-	VendorConfig map[string]interface{}
+	VendorConfig vendorConfig
 	Vnics        []MVENetworkInterface
 }
 

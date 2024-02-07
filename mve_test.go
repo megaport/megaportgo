@@ -42,10 +42,10 @@ func (suite *MVEClientTestSuite) TestBuyMVE() {
 		Name:       "test-mve",
 		Term:       12,
 		LocationID: 1,
-		VendorConfig: map[string]interface{}{
-			"imageId":     float64(32),
-			"productSize": string(MVE_SMALL),
-			"vendor":      "palo alto",
+		VendorConfig: &PaloAltoConfig{
+			ImageID: 32,
+			ProductSize: "SMALL",
+			Vendor: "palo alto",
 		},
 	}
 	jblob := `{

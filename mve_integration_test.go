@@ -96,11 +96,11 @@ func (suite *MVEIntegrationTestSuite) TestC8KVAutoLifecycle() {
 		suite.FailNowf("could not get location", "could not get location %v", err)
 	}
 	logger.DebugContext(ctx, "test location determined", slog.String("location", testLocation.Name))
-	mveConfig := map[string]interface{}{
-		"vendor":       "Cisco",
-		"productSize":  "SMALL",
-		"imageId":      int(42),
-		"sshPublicKey": readSSHPubKey(),
+	mveConfig := &CiscoConfig{
+		Vendor: "cisco",
+		ProductSize: "SMALL",
+		ImageID: 42,
+		AdminSSHPublicKey: readSSHPubKey(),
 	}
 
 	buyMVERes, err := mveSvc.BuyMVE(ctx, &BuyMVERequest{
