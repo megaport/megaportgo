@@ -2,12 +2,15 @@ package megaport
 
 import (
 	"context"
+	"flag"
 	"log/slog"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
 )
+
+var runMveIntegrationTests = flag.Bool("integration", false, "perform integration tests")
 
 const (
 	TEST_MVE_TEST_LOCATION_MARKET = "AU"
@@ -16,7 +19,7 @@ const (
 type MVEIntegrationTestSuite IntegrationTestSuite
 
 func TestMVEIntegrationTestSuite(t *testing.T) {
-	if os.Getenv("CI") != "true" {
+	if *runMveIntegrationTests {
 		suite.Run(t, new(MVEIntegrationTestSuite))
 	}
 }
