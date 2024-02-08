@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-var runAuthIntegrationTests = flag.Bool("integration", false, "perform auth integration tests")
+var runIntegrationTests = flag.Bool("integration", false, "perform integration tests")
 
 var accessKey string
 var secretKey string
@@ -31,7 +31,7 @@ type IntegrationTestSuite struct {
 type AuthIntegrationTestSuite IntegrationTestSuite
 
 func TestAuthIntegrationTestSuite(t *testing.T) {
-	if *runAuthIntegrationTests {
+	if *runIntegrationTests {
 		suite.Run(t, new(AuthIntegrationTestSuite))
 	}
 }

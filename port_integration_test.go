@@ -3,7 +3,6 @@ package megaport
 import (
 	"context"
 	"errors"
-	"flag"
 	"fmt"
 	"log/slog"
 	"os"
@@ -12,8 +11,6 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-var runPortIntegrationTests = flag.Bool("integration", false, "perform integration tests")
-
 const (
 	TEST_LOCATION_ID_A = 19 // 	Interactive 437 Williamstown
 )
@@ -21,7 +18,7 @@ const (
 type PortIntegrationTestSuite IntegrationTestSuite
 
 func TestPortIntegrationTestSuite(t *testing.T) {
-	if *runPortIntegrationTests {
+	if *runIntegrationTests {
 		suite.Run(t, new(PortIntegrationTestSuite))
 	}
 }

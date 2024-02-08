@@ -72,8 +72,69 @@ func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMV
 		Name:         req.Name,
 		Term:         req.Term,
 		ProductType:  strings.ToUpper(PRODUCT_MVE),
-		VendorConfig: req.VendorConfig,
 	}
+	switch req.VendorConfig.(type) {
+	case *ArubaConfig:
+		c := req.VendorConfig.(ArubaConfig)
+		order.VendorConfig = &ArubaConfig{
+			Vendor: c.Vendor,
+			ImageID: c.ImageID,
+			ProductSize: c.ProductSize,
+			AccountName: c.AccountName,
+			AccountKey: c.AccountKey,
+		}
+	case *CiscoConfig:
+		c := req.VendorConfig.(CiscoConfig)
+		order.VendorConfig = &CiscoConfig{
+			Vendor: c.Vendor,
+			ImageID: c.ImageID,
+			ProductSize: c.ProductSize,
+			AdminSSHPublicKey: c.AdminSSHPublicKey,
+			CloudInit: c.CloudInit,
+		}
+	case *FortinetConfig:
+		c := req.VendorConfig.(FortinetConfig)
+		order.VendorConfig = &FortinetConfig{
+			Vendor: c.Vendor,
+			ImageID: c.ImageID,
+			ProductSize: c.ProductSize,
+			AdminSSHPublicKey: c.AdminSSHPublicKey,
+			LicenseData: c.LicenseData,
+		}
+	case *PaloAltoConfig:
+		c := req.VendorConfig.(PaloAltoConfig)
+		order.VendorConfig = &PaloAltoConfig{
+			Vendor: c.Vendor,
+			ImageID: c.ImageID,
+			ProductSize: c.ProductSize,
+			AdminSSHPublicKey: c.AdminSSHPublicKey,
+			AdminPasswordHash: c.AdminPasswordHash,
+			LicenseData: c.LicenseData,
+		}
+	case *VersaConfig:
+		c := req.VendorConfig.(VersaConfig)
+		order.VendorConfig = &VersaConfig{
+			Vendor: c.Vendor,
+			ImageID: c.ImageID,
+			ProductSize: c.ProductSize,
+			DirectorAddress: c.DirectorAddress,
+			ControllerAddress: c.ControllerAddress,
+			LocalAuth: c.LocalAuth,
+			RemoteAuth: c.RemoteAuth,
+			SerialNumber: c.SerialNumber,
+			}
+	case *VmwareConfig:
+		c := req.VendorConfig.(VmwareConfig)
+		order.VendorConfig = &VmwareConfig{
+			Vendor: c.Vendor,
+			ImageID: c.ImageID,
+			ProductSize: c.ProductSize,
+			AdminSSHPublicKey: c.AdminSSHPublicKey,
+			VcoAddress: c.VcoAddress,
+			VcoActivationCode: c.VcoActivationCode,
+		}	
+	}
+
 	if len(req.Vnics) == 0 {
 		order.NetworkInterfaces = []MVENetworkInterface{{Description: "Data Plane", VLAN: 0}}
 	} else {

@@ -3,7 +3,6 @@ package megaport
 import (
 	"context"
 	"errors"
-	"flag"
 	"log/slog"
 	"os"
 	"testing"
@@ -11,12 +10,10 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-var runLocationIntegrationTests = flag.Bool("integration", false, "perform location integration tests")
-
 type LocationIntegrationTestSuite IntegrationTestSuite
 
 func TestLocationIntegrationTestSuite(t *testing.T) {
-	if *runLocationIntegrationTests {
+	if *runIntegrationTests {
 		suite.Run(t, new(LocationIntegrationTestSuite))
 	}
 }

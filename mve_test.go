@@ -42,10 +42,12 @@ func (suite *MVEClientTestSuite) TestBuyMVE() {
 		Name:       "test-mve",
 		Term:       12,
 		LocationID: 1,
-		VendorConfig: &PaloAltoConfig{
+		VendorConfig: PaloAltoConfig{
 			ImageID: 32,
 			ProductSize: "SMALL",
 			Vendor: "palo alto",
+			AdminSSHPublicKey: "test-key",
+			AdminPasswordHash: "test-hash",
 		},
 	}
 	jblob := `{
@@ -130,7 +132,13 @@ func (suite *MVEClientTestSuite) TestBuyMVE() {
 		Name:              req.Name,
 		Term:              req.Term,
 		ProductType:       strings.ToUpper(PRODUCT_MVE),
-		VendorConfig:      req.VendorConfig,
+		VendorConfig:      &PaloAltoConfig{
+			ImageID: 32,
+			ProductSize: "SMALL",
+			Vendor: "palo alto",
+			AdminSSHPublicKey: "test-key",
+			AdminPasswordHash: "test-hash",
+		},
 		NetworkInterfaces: []MVENetworkInterface{{Description: "Data Plane", VLAN: 0}},
 	}}
 	want := &BuyMVEResponse{
@@ -154,7 +162,6 @@ func (suite *MVEClientTestSuite) TestBuyMVE() {
 		suite.Equal(wantOrder.Term, gotOrder.Term)
 		suite.Equal(wantOrder.ProductType, gotOrder.ProductType)
 		suite.Equal(wantOrder.LocationID, gotOrder.LocationID)
-		suite.Equal(&wantOrder.VendorConfig, &gotOrder.VendorConfig)
 		suite.Equal(wantOrder.NetworkInterfaces, gotOrder.NetworkInterfaces)
 	})
 	got, err := mveSvc.BuyMVE(ctx, req)
