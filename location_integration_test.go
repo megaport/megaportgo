@@ -13,7 +13,7 @@ import (
 type LocationIntegrationTestSuite IntegrationTestSuite
 
 func TestLocationIntegrationTestSuite(t *testing.T) {
-	if os.Getenv("CI") != "true" {
+	if *runIntegrationTests {
 		suite.Run(t, new(LocationIntegrationTestSuite))
 	}
 }

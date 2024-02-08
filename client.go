@@ -17,12 +17,11 @@ import (
 )
 
 const (
-	libraryVersion              = "1.0"
-	defaultBaseURL              = "https://api-staging.megaport.com/"
-	userAgent                   = "Go-Megaport-Library/" + libraryVersion
-	mediaType                   = "application/json"
-	headerRequestID             = "x-request-id"
-	internalHeaderRetryAttempts = "X-Megaport-Retry-Attempts"
+	libraryVersion = "1.0"
+	defaultBaseURL = "https://api-staging.megaport.com/"
+	userAgent      = "Go-Megaport-Library/" + libraryVersion
+	mediaType      = "application/json"
+	headerTraceId  = "Trace-Id"
 )
 
 // Client manges communication with the Megaport API
@@ -53,6 +52,8 @@ type Client struct {
 	ProductService        ProductService
 	LocationService       LocationService
 	VXCService            VXCService
+	MCRService            MCRService
+	MVEService            MVEService
 
 	// Optional extra HTTP headers to set on every request to the API.
 	headers map[string]string
@@ -120,6 +121,8 @@ func NewClient(httpClient *http.Client, base *url.URL) *Client {
 	c.ProductService = NewProductServiceOp(c)
 	c.PortService = NewPortServiceOp(c)
 	c.LocationService = NewLocationServiceOp(c)
+	c.MCRService = NewMCRServiceOp(c)
+	c.MVEService = NewMVEServiceOp(c)
 
 	c.headers = make(map[string]string)
 
@@ -299,8 +302,8 @@ func CheckResponse(r *http.Response) error {
 		}
 	}
 
-	if errorResponse.RequestID == "" {
-		errorResponse.RequestID = r.Header.Get(headerRequestID)
+	if errorResponse.TraceID == "" {
+		errorResponse.TraceID = r.Header.Get(headerTraceId)
 	}
 
 	return errorResponse

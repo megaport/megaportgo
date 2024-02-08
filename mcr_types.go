@@ -67,9 +67,9 @@ type MCRVirtualRouter struct {
 }
 
 type MCRPrefixFilterList struct {
-	Description   string               `json:"description"`
-	AddressFamily string               `json:"addressFamily"`
-	Entries       []MCRPrefixListEntry `json:"entries"`
+	Description   string                `json:"description"`
+	AddressFamily string                `json:"addressFamily"`
+	Entries       []*MCRPrefixListEntry `json:"entries"`
 }
 
 type MCRPrefixListEntry struct {
@@ -80,15 +80,15 @@ type MCRPrefixListEntry struct {
 }
 
 type MCROrderResponse struct {
-	Message string                 `json:"message"`
-	Terms   string                 `json:"terms"`
-	Data    []MCROrderConfirmation `json:"data"`
+	Message string                  `json:"message"`
+	Terms   string                  `json:"terms"`
+	Data    []*MCROrderConfirmation `json:"data"`
 }
 
 type MCRResponse struct {
 	Message string `json:"message"`
 	Terms   string `json:"terms"`
-	Data    MCR    `json:"data"`
+	Data    *MCR   `json:"data"`
 }
 
 type PrefixFilterList struct {
@@ -98,7 +98,7 @@ type PrefixFilterList struct {
 }
 
 type MCRPrefixFilterListResponse struct {
-	Message string             `json:"message"`
-	Terms   string             `json:"terms"`
-	Data    []PrefixFilterList `json:"data"`
+	Message string              `json:"message"`
+	Terms   string              `json:"terms"`
+	Data    []*PrefixFilterList `json:"data"`
 }

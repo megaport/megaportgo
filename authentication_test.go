@@ -2,12 +2,15 @@ package megaport
 
 import (
 	"context"
+	"flag"
 	"log/slog"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
 )
+
+var runIntegrationTests = flag.Bool("integration", false, "perform integration tests")
 
 var accessKey string
 var secretKey string
@@ -28,7 +31,7 @@ type IntegrationTestSuite struct {
 type AuthIntegrationTestSuite IntegrationTestSuite
 
 func TestAuthIntegrationTestSuite(t *testing.T) {
-	if os.Getenv("CI") != "true" {
+	if *runIntegrationTests {
 		suite.Run(t, new(AuthIntegrationTestSuite))
 	}
 }

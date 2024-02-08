@@ -13,38 +13,20 @@ type ErrorResponse struct {
 	// Error message
 	Message string `json:"message"`
 
-	// RequestID returned from the API, useful to contact support.
-	RequestID string `json:"request_id"`
-}
+	// Error Data
+	Data string `json:"data"`
 
-// ArgError is an error that represents an error with an input to godo. It
-// identifies the argument and the cause (if possible).
-type ArgError struct {
-	arg    string
-	reason string
-}
-
-var _ error = &ArgError{}
-
-// NewArgError creates an InputError.
-func NewArgError(arg, reason string) *ArgError {
-	return &ArgError{
-		arg:    arg,
-		reason: reason,
-	}
-}
-
-func (e *ArgError) Error() string {
-	return fmt.Sprintf("%s is invalid because %s", e.arg, e.reason)
+	// Trace ID returned from the API.
+	TraceID string `json:"trace_id"`
 }
 
 func (r *ErrorResponse) Error() string {
-	if r.RequestID != "" {
-		return fmt.Sprintf("%v %v: %d (request %q) %s",
-			r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, r.RequestID, r.Message)
+	if r.TraceID != "" {
+		return fmt.Sprintf("%v %v: %d (trace_id %q) %s %s",
+			r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, r.TraceID, r.Message, r.Data)
 	}
-	return fmt.Sprintf("%v %v: %d %s",
-		r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, r.Message)
+	return fmt.Sprintf("%v %v: %d %s %s",
+		r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, r.Message, r.Data)
 }
 
 const ERR_PORT_PROVISION_TIMEOUT_EXCEED = "the port took too long to provision"

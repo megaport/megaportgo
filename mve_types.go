@@ -5,8 +5,71 @@ type MVEOrderConfig struct {
 	Name              string                 `json:"productName"`
 	Term              int                    `json:"term"`
 	ProductType       string                 `json:"productType"`
-	NetworkInterfaces []*MVENetworkInterface `json:"vnics"`
-	VendorConfig      map[string]interface{} `json:"vendorConfig"`
+	NetworkInterfaces []MVENetworkInterface  `json:"vnics"`
+	VendorConfig     vendorConfig `json:"vendorConfig"`
+}
+
+type vendorConfig interface {
+	isVendorConfig()
+}
+
+type ArubaConfig struct {
+	vendorConfig
+	Vendor string `json:"vendor"`
+	ImageID int `json:"imageId"`
+	ProductSize string `json:"productSize"`
+	AccountName string `json:"accountName"`
+	AccountKey string `json:"accountKey"`
+}
+
+type CiscoConfig struct {
+	vendorConfig
+	Vendor string `json:"vendor"`
+	ImageID int `json:"imageId"`
+	ProductSize string `json:"productSize"`
+	AdminSSHPublicKey string `json:"adminSshPublicKey"`
+	CloudInit string `json:"cloudInit"`
+}
+
+type FortinetConfig struct {
+	vendorConfig
+	Vendor string `json:"vendor"`
+	ImageID int `json:"imageId"`
+	ProductSize string `json:"productSize"`
+	AdminSSHPublicKey string `json:"adminSshPublicKey"`
+	LicenseData string `json:"licenseData"`
+}
+
+type PaloAltoConfig struct {
+	vendorConfig
+	Vendor string `json:"vendor"`
+	ImageID int `json:"imageId"`
+	ProductSize string `json:"productSize"`
+	AdminSSHPublicKey string `json:"adminSshPublicKey"`
+	AdminPasswordHash string `json:"adminPasswordHash"`
+	LicenseData string `json:"licenseData"`
+}
+
+type VersaConfig struct {
+	vendorConfig
+	Vendor string `json:"vendor"`
+	ImageID int `json:"imageId"`
+	ProductSize string `json:"productSize"`
+	DirectorAddress string `json:"directorAddress"`
+	ControllerAddress string `json:"controllerAddress"`
+	LocalAuth string `json:"localAuth"`
+	RemoteAuth string `json:"remoteAuth"`
+	SerialNumber string `json:"serialNumber"`
+}
+
+type VmwareConfig struct {
+	vendorConfig
+	Vendor string `json:"vendor"`
+	ImageID int `json:"imageId"`
+	ProductSize string `json:"productSize"`
+	AdminSSHPublicKey string `json:"adminSshPublicKey"`
+	VcoAddress string `json:"vcoAddress"`
+	VcoActivationCode string `json:"vcoActivationCode"`
 }
 
 // NetworkInterface represents a vNIC.
@@ -19,10 +82,10 @@ type MVENetworkInterface struct {
 type MVEInstanceSize string
 
 const (
-	SMALL  MVEInstanceSize = "SMALL"
-	MEDIUM MVEInstanceSize = "MEDIUM"
-	LARGE  MVEInstanceSize = "LARGE"
-	XLARGE MVEInstanceSize = "X_LARGE_12"
+	MVE_SMALL  MVEInstanceSize = "SMALL"
+	MVE_MEDIUM MVEInstanceSize = "MEDIUM"
+	MVE_LARGE  MVEInstanceSize = "LARGE"
+	MVE_XLARGE MVEInstanceSize = "X_LARGE_12"
 )
 
 type MVEOrderConfirmation struct {
@@ -57,20 +120,41 @@ type MVE struct {
 	Locked                bool                   `json:"locked"`
 	AdminLocked           bool                   `json:"adminLocked"`
 	Cancelable            bool                   `json:"cancelable"`
-	Resources             map[string]interface{} `json:"resources"`
+	Resources             *MVEResources `json:"resources"`
 	Vendor                string                 `json:"vendor"`
 	Size                  string                 `json:"mveSize"`
 	NetworkInterfaces     []*MVENetworkInterface `json:"vnics"`
 }
 
+type MVEResources struct {
+	Interface *PortInterface `json:"interface"`
+	VirtualMachines []*MVEVirtualMachine `json:"virtual_machine"`
+}
+
+type MVEVirtualMachine struct {
+	ID int `json:"id"`
+	CpuCount int `json:"cpu_count"`
+	Image *MVEVirtualMachineImage `json:"image"`
+	ResourceType string `json:"resource_type"`
+	Up bool `json:"up"`
+	Vnics []*MVENetworkInterface `json:"vnics"`
+}
+
+type MVEVirtualMachineImage struct {
+	ID int `json:"id"`
+	Vendor string `json:"vendor"`
+	Product string `json:"product"`
+	Version string `json:"version"`
+}
+
 type MVEOrderResponse struct {
-	Message string                 `json:"message"`
-	Terms   string                 `json:"terms"`
-	Data    []MVEOrderConfirmation `json:"data"`
+	Message string                  `json:"message"`
+	Terms   string                  `json:"terms"`
+	Data    []*MVEOrderConfirmation `json:"data"`
 }
 
 type MVEResponse struct {
 	Message string `json:"message"`
 	Terms   string `json:"terms"`
-	Data    MVE    `json:"data"`
+	Data    *MVE   `json:"data"`
 }

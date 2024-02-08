@@ -429,7 +429,7 @@ func (suite *LocationClientTestSuite) TestGetLocationByNameFuzzy() {
 			Latitude:  39.762714,
 			Longitude: -104.761925,
 			Products: map[string]interface{}{
-				"mcr":      false,
+				"mcr":      true,
 				"megaport": []interface{}{float64(1), float64(10)},
 			},
 			Market:           "US",
@@ -461,7 +461,7 @@ func (suite *LocationClientTestSuite) TestGetLocationByNameFuzzy() {
 			Longitude:        -77.487442,
 			Latitude:         39.043757,
 			Products: map[string]interface{}{
-				"mcr":      false,
+				"mcr":      true,
 				"megaport": []interface{}{float64(10)},
 			},
 		},
@@ -498,7 +498,7 @@ func (suite *LocationClientTestSuite) TestGetLocationByNameFuzzy() {
 			"longitude": -104.761925,
 			"latitude": 39.762714,
 			"products": {
-				"mcr": false,
+				"mcr": true,
 				"megaport": [
 					1,
 					10
@@ -534,7 +534,7 @@ func (suite *LocationClientTestSuite) TestGetLocationByNameFuzzy() {
 			"longitude": -77.487442,
 			"latitude": 39.043757,
 			"products": {
-				"mcr": false,
+				"mcr": true,
 				"megaport": [
 					10
 				]
@@ -569,7 +569,7 @@ func (suite *LocationClientTestSuite) TestGetLocationByNameFuzzy() {
 			"longitude": -73.971321,
 			"latitude": 40.776676,
 			"products": {
-				"mcr": false,
+				"mcr": true,
 				"megaport": [
 					10
 				]
@@ -741,4 +741,417 @@ func (suite *ClientTestSuite) TestIsValidMarketCode() {
 	got2, err := locSvc.IsValidMarketCode(ctx, "BADCODE")
 	suite.NoError(err)
 	suite.Equal(&want2, got2)
+}
+
+func (suite *LocationClientTestSuite) TestFilterLocationsByMcrAvailability() {
+	ctx := context.Background()
+	locSvc := suite.client.LocationService
+	in := []*Location{
+		{
+			Name:          "Test Data Center",
+			Country:       "USA",
+			LiveDate:      1595340000000,
+			SiteCode:      "denverTest",
+			NetworkRegion: "MP1",
+			Address: map[string]string{
+				"street":   "Test Street Denver",
+				"suburb":   "Test Suburb Denver",
+				"city":     "Denver",
+				"state":    "CO",
+				"country":  "USA",
+				"postcode": "80011",
+			},
+			Campus:    "campus_deprecated",
+			Latitude:  39.762714,
+			Longitude: -104.761925,
+			Products: map[string]interface{}{
+				"mcr2":     true,
+				"megaport": []interface{}{float64(1), float64(10)},
+			},
+			Market:           "US",
+			Metro:            "Denver",
+			VRouterAvailable: false,
+			ID:               111,
+			Status:           "Active",
+		},
+		{
+			ID:            112,
+			Name:          "Test Data Center 2",
+			Campus:        "campus_deprecated",
+			Metro:         "Ashburn",
+			Country:       "USA",
+			SiteCode:      "ashburnTest",
+			NetworkRegion: "MP1",
+			Address: map[string]string{
+				"street":   "Test Street Ashburn",
+				"suburb":   "Test Suburb Ashburn",
+				"city":     "Ashburn",
+				"state":    "VA",
+				"country":  "USA",
+				"postcode": "20146",
+			},
+			Market:           "US",
+			VRouterAvailable: false,
+			LiveDate:         1483711200000,
+			Status:           "Active",
+			Longitude:        -73.971321,
+			Latitude:         39.043757,
+			Products: map[string]interface{}{
+				"mcr2":     true,
+				"megaport": []interface{}{float64(10)},
+			},
+		},
+		{
+			ID:            113,
+			Name:          "NYC Data Center",
+			Campus:        "campus_deprecated",
+			Metro:         "New York",
+			Country:       "USA",
+			SiteCode:      "nyc",
+			NetworkRegion: "MP1",
+			Address: map[string]string{
+				"street":   "Test Street New York",
+				"suburb":   "Test Suburb New York",
+				"city":     "New York",
+				"state":    "NY",
+				"country":  "USA",
+				"postcode": "10016",
+			},
+			Market:           "US",
+			VRouterAvailable: false,
+			LiveDate:         1483711200000,
+			Status:           "Active",
+			Longitude:        -73.971321,
+			Latitude:         40.776676,
+			Products: map[string]interface{}{
+				"mcr":      false,
+				"megaport": []interface{}{float64(10)},
+			},
+		},
+	}
+	want := []*Location{
+		{
+			Name:          "Test Data Center",
+			Country:       "USA",
+			LiveDate:      1595340000000,
+			SiteCode:      "denverTest",
+			NetworkRegion: "MP1",
+			Address: map[string]string{
+				"street":   "Test Street Denver",
+				"suburb":   "Test Suburb Denver",
+				"city":     "Denver",
+				"state":    "CO",
+				"country":  "USA",
+				"postcode": "80011",
+			},
+			Campus:    "campus_deprecated",
+			Latitude:  39.762714,
+			Longitude: -104.761925,
+			Products: map[string]interface{}{
+				"mcr2":     true,
+				"megaport": []interface{}{float64(1), float64(10)},
+			},
+			Market:           "US",
+			Metro:            "Denver",
+			VRouterAvailable: false,
+			ID:               111,
+			Status:           "Active",
+		},
+		{
+			ID:            112,
+			Name:          "Test Data Center 2",
+			Campus:        "campus_deprecated",
+			Metro:         "Ashburn",
+			Country:       "USA",
+			SiteCode:      "ashburnTest",
+			NetworkRegion: "MP1",
+			Address: map[string]string{
+				"street":   "Test Street Ashburn",
+				"suburb":   "Test Suburb Ashburn",
+				"city":     "Ashburn",
+				"state":    "VA",
+				"country":  "USA",
+				"postcode": "20146",
+			},
+			Market:           "US",
+			VRouterAvailable: false,
+			LiveDate:         1483711200000,
+			Status:           "Active",
+			Longitude:        -73.971321,
+			Latitude:         39.043757,
+			Products: map[string]interface{}{
+				"mcr2":     true,
+				"megaport": []interface{}{float64(10)},
+			},
+		},
+	}
+	got := locSvc.FilterLocationsByMcrAvailability(ctx, true, in)
+	suite.Equal(want, got)
+}
+
+func (suite *LocationClientTestSuite) TestGetRandom() {
+	ctx := context.Background()
+	locSvc := suite.client.LocationService
+	want := []*Location{
+		{
+			Name:          "Test Data Center",
+			Country:       "USA",
+			LiveDate:      1595340000000,
+			SiteCode:      "denverTest",
+			NetworkRegion: "MP1",
+			Address: map[string]string{
+				"street":   "Test Street Denver",
+				"suburb":   "Test Suburb Denver",
+				"city":     "Denver",
+				"state":    "CO",
+				"country":  "USA",
+				"postcode": "80011",
+			},
+			Campus:    "campus_deprecated",
+			Latitude:  39.762714,
+			Longitude: -104.761925,
+			Products: map[string]interface{}{
+				"mcr2": []interface{}{
+					float64(1000),
+					float64(2500),
+					float64(5000),
+					float64(10000),
+				},
+				"megaport": []interface{}{float64(1), float64(10)},
+			},
+			Market:           "US",
+			Metro:            "Denver",
+			VRouterAvailable: false,
+			ID:               111,
+			Status:           "Active",
+		},
+		{
+			ID:            112,
+			Name:          "Test Data Center 2",
+			Campus:        "campus_deprecated",
+			Metro:         "Ashburn",
+			Country:       "USA",
+			SiteCode:      "ashburnTest",
+			NetworkRegion: "MP1",
+			Address: map[string]string{
+				"street":   "Test Street Ashburn",
+				"suburb":   "Test Suburb Ashburn",
+				"city":     "Ashburn",
+				"state":    "VA",
+				"country":  "USA",
+				"postcode": "20146",
+			},
+			Market:           "US",
+			VRouterAvailable: false,
+			LiveDate:         1483711200000,
+			Status:           "Active",
+			Longitude:        -77.487442,
+			Latitude:         39.043757,
+			Products: map[string]interface{}{
+				"mcr2": []interface{}{
+					float64(1000),
+					float64(2500),
+					float64(5000),
+					float64(10000),
+				},
+				"megaport": []interface{}{float64(10)},
+			},
+		},
+	}
+	path := "/v2/locations"
+	jblob := `
+{
+    "message": "List all public locations",
+	"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+    "data": [{
+			"id": 111,
+			"name": "Test Data Center",
+			"campus": "campus_deprecated",
+			"metro": "Denver",
+			"country": "USA",
+			"siteCode": "denverTest",
+			"networkRegion": "MP1",
+			"address": {
+				"street": "Test Street Denver",
+				"suburb": "Test Suburb Denver",
+				"city": "Denver",
+				"state": "CO",
+				"country": "USA",
+				"postcode": "80011"
+			},
+			"dc": {
+				"id": 111,
+				"name": "Test Data Center"
+			},
+			"market": "US",
+			"vRouterAvailable": false,
+			"liveDate": 1595340000000,
+			"status": "Active",
+			"longitude": -104.761925,
+			"latitude": 39.762714,
+			"products": {
+				"mcr2": [
+					1000,
+					2500,
+					5000,
+					10000
+				],
+				"megaport": [
+					1,
+					10
+				]
+			},
+			"ordering_message": null,
+			"diversityZones": {}
+		},
+		{
+			"id": 112,
+			"name": "Test Data Center 2",
+			"campus": "campus_deprecated",
+			"metro": "Ashburn",
+			"country": "USA",
+			"siteCode": "ashburnTest",
+			"networkRegion": "MP1",
+			"address": {
+				"street": "Test Street Ashburn",
+				"suburb": "Test Suburb Ashburn",
+				"city": "Ashburn",
+				"state": "VA",
+				"country": "USA",
+				"postcode": "20146"
+			},
+			"dc": {
+				"id": 112,
+				"name": "Test Data Center 2"
+			},
+			"market": "US",
+			"vRouterAvailable": false,
+			"liveDate": 1483711200000,
+			"status": "Active",
+			"longitude": -77.487442,
+			"latitude": 39.043757,
+			"products": {
+				"mcr2": [
+					1000,
+					2500,
+					5000,
+					10000
+				],
+				"megaport": [
+					10
+				]
+			},
+			"ordering_message": null,
+			"diversityZones": {}
+		},
+		{
+			"id": 113,
+			"name": "New York Data Center",
+			"campus": "campus_deprecated",
+			"metro": "New York",
+			"country": "USA",
+			"siteCode": "nycTest",
+			"networkRegion": "MP1",
+			"address": {
+				"street": "Test Street New York",
+				"suburb": "Test Suburb New York",
+				"city": "New York",
+				"state": "NY",
+				"country": "USA",
+				"postcode": "10016"
+			},
+			"dc": {
+				"id": 113,
+				"name": "New York Data Center"
+			},
+			"market": "US",
+			"vRouterAvailable": false,
+			"liveDate": 1483711200000,
+			"status": "Active",
+			"longitude": -73.971321,
+			"latitude": 40.776676,
+			"products": {
+				"megaport": [
+					10
+				]
+			},
+			"ordering_message": null,
+			"diversityZones": {}
+		},
+		{
+			"id": 114,
+			"name": "London Data Center",
+			"campus": "campus_deprecated",
+			"metro": "London",
+			"country": "UK",
+			"siteCode": "londonTest",
+			"networkRegion": "MP1",
+			"address": {
+				"street": "Test Street London",
+				"city": "London",
+				"country": "United Kingdom",
+				"postcode": "SL1 4AX"
+			},
+			"dc": {
+				"id": 114,
+				"name": "London Data Center"
+			},
+			"market": "UK",
+			"vRouterAvailable": false,
+			"liveDate": 1483711200000,
+			"status": "Active",
+			"longitude": -0.628975,
+			"latitude": 51.522484,
+			"products": {
+				"megaport": [
+					10
+				]
+			},
+			"ordering_message": null,
+			"diversityZones": {}
+		}
+	]
+	}`
+	jblob2 := `
+	{
+	"message": "List all public network regions",
+	"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+	"data": [
+		{
+			"networkRegion": "MP1",
+			"countries": [
+				{
+					"siteCount": 54,
+					"code": "AUS",
+					"prefix": "AU",
+					"name": "Australia"
+				},
+				{
+					"siteCount": 21,
+					"code": "GBR",
+					"prefix": "GB",
+					"name": "United Kingdom"
+				},
+				{
+					"siteCount": 191,
+					"code": "USA",
+					"prefix": "US",
+					"name": "USA"
+				}
+			]
+		}
+	]
+	}`
+	path2 := "/v2/networkRegions"
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, jblob)
+	})
+	suite.mux.HandleFunc(path2, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, jblob2)
+	})
+	got, err := locSvc.GetRandom(ctx, "US")
+	suite.NoError(err)
+	suite.Contains(want, got)
 }

@@ -387,9 +387,7 @@ func (suite *PortClientTestSuite) TestGetPort() {
 		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
 	})
-	got, err := portSvc.GetPort(ctx, &GetPortRequest{
-		PortID: productUid,
-	})
+	got, err := portSvc.GetPort(ctx, productUid)
 	suite.NoError(err)
 	suite.Equal(want, got)
 }
@@ -548,11 +546,7 @@ func (suite *PortClientTestSuite) TestRestorePort() {
 	"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"
 	}`
 
-	req := &RestorePortRequest{
-		PortID: productUid,
-	}
-
-	path := "/v3/product/" + req.PortID + "/action/UN_CANCEL"
+	path := "/v3/product/" + productUid + "/action/UN_CANCEL"
 
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodPost)
@@ -560,10 +554,10 @@ func (suite *PortClientTestSuite) TestRestorePort() {
 	})
 
 	want := &RestorePortResponse{
-		IsRestoring: true,
+		IsRestored: true,
 	}
 
-	got, err := portSvc.RestorePort(ctx, req)
+	got, err := portSvc.RestorePort(ctx, productUid)
 
 	suite.NoError(err)
 	suite.Equal(want, got)
@@ -585,11 +579,7 @@ func (suite *PortClientTestSuite) TestLockPort() {
     	}
 	}`
 
-	req := &LockPortRequest{
-		PortID: productUid,
-	}
-
-	path := fmt.Sprintf("/v2/product/%s/lock", req.PortID)
+	path := fmt.Sprintf("/v2/product/%s/lock", productUid)
 
 	jblobGet := `{
 			"message": "test-message",
@@ -612,7 +602,7 @@ func (suite *PortClientTestSuite) TestLockPort() {
 		IsLocking: true,
 	}
 
-	got, err := portSvc.LockPort(ctx, req)
+	got, err := portSvc.LockPort(ctx, productUid)
 
 	suite.NoError(err)
 	suite.Equal(want, got)
@@ -634,11 +624,7 @@ func (suite *PortClientTestSuite) TestUnlockPort() {
     	}
 	}`
 
-	req := &UnlockPortRequest{
-		PortID: productUid,
-	}
-
-	path := fmt.Sprintf("/v2/product/%s/lock", req.PortID)
+	path := fmt.Sprintf("/v2/product/%s/lock", productUid)
 
 	jblobUnlock := `{
 			"message": "Service unlocked",
@@ -661,7 +647,7 @@ func (suite *PortClientTestSuite) TestUnlockPort() {
 		IsUnlocking: true,
 	}
 
-	got, err := portSvc.UnlockPort(ctx, req)
+	got, err := portSvc.UnlockPort(ctx, productUid)
 
 	suite.NoError(err)
 	suite.Equal(want, got)
