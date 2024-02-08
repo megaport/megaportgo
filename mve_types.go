@@ -120,10 +120,31 @@ type MVE struct {
 	Locked                bool                   `json:"locked"`
 	AdminLocked           bool                   `json:"adminLocked"`
 	Cancelable            bool                   `json:"cancelable"`
-	Resources             map[string]interface{} `json:"resources"`
+	Resources             *MVEResources `json:"resources"`
 	Vendor                string                 `json:"vendor"`
 	Size                  string                 `json:"mveSize"`
 	NetworkInterfaces     []*MVENetworkInterface `json:"vnics"`
+}
+
+type MVEResources struct {
+	Interface *PortInterface `json:"interface"`
+	VirtualMachines []*MVEVirtualMachine `json:"virtual_machine"`
+}
+
+type MVEVirtualMachine struct {
+	ID int `json:"id"`
+	CpuCount int `json:"cpu_count"`
+	Image *MVEVirtualMachineImage `json:"image"`
+	ResourceType string `json:"resource_type"`
+	Up bool `json:"up"`
+	Vnics []*MVENetworkInterface `json:"vnics"`
+}
+
+type MVEVirtualMachineImage struct {
+	ID int `json:"id"`
+	Vendor string `json:"vendor"`
+	Product string `json:"product"`
+	Version string `json:"version"`
 }
 
 type MVEOrderResponse struct {

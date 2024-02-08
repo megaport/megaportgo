@@ -224,7 +224,41 @@ func (suite *MVEClientTestSuite) TestGetMVE() {
 				"description": "Data Plane"
 			}
 		],
-		"resources": {},
+		"resources": {
+			"interface": {
+				"demarcation": "",
+				"loa_template": "megaport",
+				"media": "LR4",
+				"port_speed": 40000,
+				"resource_name": "interface",
+				"resource_type": "interface",
+				"up": 1
+			},
+			"virtual_machine": [
+				{
+					"cpu_count": 2,
+					"id": 0,
+					"image": {
+						"id": 0,
+						"vendor": "palo alto",
+						"product": "test product",
+						"version": "1.0"
+					},
+					"resource_type": "virtual_machine",
+					"up": true,
+					"vnics": [
+						{
+							"vlan": 0,
+							"description": "Management"
+						},
+						{
+							"vlan": 1,
+							"description": "Data Plane"
+						}
+					]
+				}
+			]
+		},
 		"diversityZone": "blue",
 		"up": false,
 		"cancelable": true
@@ -256,7 +290,35 @@ func (suite *MVEClientTestSuite) TestGetMVE() {
 		AdminLocked:           false,
 		Cancelable:            true,
 		AttributeTags:         map[string]string{},
-		Resources:             map[string]interface{}{},
+		Resources:             &MVEResources{
+			Interface: &PortInterface{
+				Demarcation: "",
+				LOATemplate: "megaport",
+				Media: "LR4",
+				PortSpeed: 40000,
+				ResourceName: "interface",
+				ResourceType: "interface",
+				Up: 1,
+			},
+			VirtualMachines: []*MVEVirtualMachine{
+				{
+					CpuCount: 2,
+					ID: 0,
+					Image: &MVEVirtualMachineImage{
+						ID: 0,
+						Vendor: "palo alto",
+						Product: "test product",
+						Version: "1.0",
+					},
+					ResourceType: "virtual_machine",
+					Up: true,
+					Vnics: []*MVENetworkInterface{
+						{VLAN: 0, Description: "Management"},
+						{VLAN: 1, Description: "Data Plane"},
+					},
+				},
+			},
+		},
 		Vendor:                "PALO_ALTO",
 		Size:                  "SMALL",
 		NetworkInterfaces: []*MVENetworkInterface{
