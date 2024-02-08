@@ -37,11 +37,7 @@ func (suite *MCRClientTestSuite) TestBuyMCR() {
 	ctx := context.Background()
 	mcrSvc := suite.client.MCRService
 	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
-	want := &BuyMCRResponse{
-		MCROrderConfirmations: []*MCROrderConfirmation{
-			{TechnicalServiceUID: productUid},
-		},
-	}
+	want := &BuyMCRResponse{TechnicalServiceUID: productUid}
 	req := &BuyMCRRequest{
 		LocationID: 1,
 		Name:       "test-mcr",

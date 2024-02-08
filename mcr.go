@@ -43,7 +43,7 @@ type BuyMCRRequest struct {
 }
 
 type BuyMCRResponse struct {
-	MCROrderConfirmations []*MCROrderConfirmation
+	TechnicalServiceUID string
 }
 
 type CreateMCRPrefixFilterListRequest struct {
@@ -114,12 +114,8 @@ func (svc *MCRServiceOp) BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMC
 		return nil, unmarshalErr
 	}
 
-	toReturn := &BuyMCRResponse{}
-
-	for _, confirmation := range orderInfo.Data {
-		toReturn.MCROrderConfirmations = append(toReturn.MCROrderConfirmations, &MCROrderConfirmation{
-			TechnicalServiceUID: confirmation.TechnicalServiceUID,
-		})
+	toReturn := &BuyMCRResponse{
+		TechnicalServiceUID: orderInfo.Data[0].TechnicalServiceUID,
 	}
 
 	return toReturn, nil

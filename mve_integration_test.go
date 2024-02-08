@@ -110,7 +110,7 @@ func (suite *MVEIntegrationTestSuite) TestC8KVAutoLifecycle() {
 	if err != nil {
 		suite.FailNowf("error buying mve", "error buying mve %v", err)
 	}
-	mveUid := buyMVERes.MVEOrderConfirmations[0].TechnicalServiceUID
+	mveUid := buyMVERes.TechnicalServiceUID
 	if !IsGuid(mveUid) {
 		suite.FailNowf("invalid mve uid", "invalid mve uid %s", mveUid)
 	}

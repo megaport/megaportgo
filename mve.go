@@ -42,7 +42,7 @@ type BuyMVERequest struct {
 }
 
 type BuyMVEResponse struct {
-	MVEOrderConfirmations []*MVEOrderConfirmation
+	TechnicalServiceUID string
 }
 
 type ModifyMVERequest struct {
@@ -152,9 +152,12 @@ func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMV
 		return nil, err
 	}
 
-	return &BuyMVEResponse{
-		MVEOrderConfirmations: orderInfo.Data,
-	}, nil
+	toReturn := &BuyMVEResponse{
+		TechnicalServiceUID: orderInfo.Data[0].TechnicalServiceUID,
+	}
+
+
+	return toReturn, nil
 }
 
 func (svc *MVEServiceOp) GetMVE(ctx context.Context, mveId string) (*MVE, error) {

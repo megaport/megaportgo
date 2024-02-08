@@ -141,11 +141,8 @@ func (suite *MVEClientTestSuite) TestBuyMVE() {
 		},
 		NetworkInterfaces: []MVENetworkInterface{{Description: "Data Plane", VLAN: 0}},
 	}}
-	want := &BuyMVEResponse{
-		MVEOrderConfirmations: []*MVEOrderConfirmation{
-			{TechnicalServiceUID: productUid},
-		},
-	}
+	want := &BuyMVEResponse{TechnicalServiceUID: productUid}
+	
 	suite.mux.HandleFunc("/v3/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
 		v := new([]MVEOrderConfig)
 		err := json.NewDecoder(r.Body).Decode(v)

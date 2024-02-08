@@ -33,9 +33,9 @@ func NewProductServiceOp(c *Client) *ProductServiceOp {
 type ModifyProductRequest struct {
 	ProductID             string
 	ProductType           string
-	Name                  string `json:"name"`
-	CostCentre            string `json:"costCentre"`
-	MarketplaceVisibility bool   `json:"marketplaceVisibility"`
+	Name                  string `json:"name,omitempty"`
+	CostCentre            string `json:"costCentre,omitempty"`
+	MarketplaceVisibility bool   `json:"marketplaceVisibility,omitempty"`
 }
 
 type ModifyProductResponse struct {

@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
+	"slices"
 	"time"
 )
 
@@ -25,7 +25,6 @@ type PortService interface {
 	RestorePort(ctx context.Context, portId string) (*RestorePortResponse, error)
 	LockPort(ctx context.Context, portId string) (*LockPortResponse, error)
 	UnlockPort(ctx context.Context, portId string) (*UnlockPortResponse, error)
-	WaitForPortProvisioning(ctx context.Context, portId string) (bool, error)
 }
 
 func NewPortServiceOp(c *Client) *PortServiceOp {
@@ -48,6 +47,9 @@ type BuyPortRequest struct {
 	IsLag      bool   `json:"isLag"`
 	LagCount   int    `json:"lagCount"`
 	IsPrivate  bool   `json:"isPrivate"`
+
+	WaitForProvision bool          // Wait until the VXC provisions before returning
+	WaitForTime      time.Duration // How long to wait for the VXC to provision if WaitForProvision is true (default is 5 minutes)
 }
 
 type BuySinglePortRequest struct {
@@ -57,6 +59,9 @@ type BuySinglePortRequest struct {
 	LocationId int
 	Market     string
 	IsPrivate  bool
+
+	WaitForProvision bool          // Wait until the VXC provisions before returning
+	WaitForTime      time.Duration // How long to wait for the VXC to provision if WaitForProvision is true (default is 5 minutes)
 }
 
 type BuyLAGPortRequest struct {
@@ -67,10 +72,13 @@ type BuyLAGPortRequest struct {
 	Market     string
 	LagCount   int
 	IsPrivate  bool
+
+	WaitForProvision bool          // Wait until the VXC provisions before returning
+	WaitForTime      time.Duration // How long to wait for the VXC to provision if WaitForProvision is true (default is 5 minutes)
 }
 
 type BuyPortResponse struct {
-	PortOrderConfirmations []*PortOrderConfirmation
+	TechnicalServiceUID string
 }
 
 type GetPortRequest struct {
@@ -82,6 +90,9 @@ type ModifyPortRequest struct {
 	Name                  string
 	MarketplaceVisibility bool
 	CostCentre            string
+
+	WaitForUpdate bool          // Wait until the Port updates before returning
+	WaitForTime   time.Duration // How long to wait for the Port to update if WaitForUpdate is true (default is 5 minutes)
 }
 
 type ModifyPortResponse struct {
@@ -167,15 +178,44 @@ func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*Bu
 		return nil, unmarshalErr
 	}
 
-	toReturn := &BuyPortResponse{}
-
-	for _, order := range orderInfo.Data {
-		toReturn.PortOrderConfirmations = append(toReturn.PortOrderConfirmations, &PortOrderConfirmation{
-			TechnicalServiceUID: order.TechnicalServiceUID,
-		})
+	toReturn := &BuyPortResponse{
+		TechnicalServiceUID: orderInfo.Data[0].TechnicalServiceUID,	
 	}
 
-	return toReturn, nil
+	// wait until the Port is provisioned before returning if requested by the user
+	if req.WaitForProvision {
+		toWait := req.WaitForTime
+		if toWait == 0 {
+			toWait = 5 * time.Minute
+		}
+
+		ticker := time.NewTicker(30 * time.Second) // check on the provision status every 30 seconds
+		timer := time.NewTimer(toWait)
+		defer ticker.Stop()
+		defer timer.Stop()
+
+		for {
+			select {
+			case <-timer.C:
+				return nil, fmt.Errorf("time expired waiting for Port %s to provision", toReturn.TechnicalServiceUID)
+			case <-ctx.Done():
+				return nil, fmt.Errorf("context expired waiting for Port %s to provision", toReturn.TechnicalServiceUID)
+			case <-ticker.C:
+				portDetails, err := svc.GetPort(ctx, toReturn.TechnicalServiceUID)
+				if err != nil {
+					return nil, err
+				}
+
+				if slices.Contains(SERVICE_STATE_READY, portDetails.ProvisioningStatus) {
+					return toReturn, nil
+				}
+
+			}
+		}
+	} else {
+		// return the service UID right away if the user doesn't want to wait for provision
+		return toReturn, nil
+	}
 }
 
 func (svc *PortServiceOp) BuySinglePort(ctx context.Context, req *BuySinglePortRequest) (*BuyPortResponse, error) {
@@ -298,9 +338,42 @@ func (svc *PortServiceOp) ModifyPort(ctx context.Context, req *ModifyPortRequest
 	if err != nil {
 		return nil, err
 	}
-	return &ModifyPortResponse{
+	toReturn := &ModifyPortResponse{
 		IsUpdated: modifyRes.IsUpdated,
-	}, nil
+	}
+
+	// wait until the Port is provisioned before returning if requested by the user
+	if req.WaitForUpdate {
+		toWait := req.WaitForTime
+		if toWait == 0 {
+			toWait = 5 * time.Minute
+		}
+
+		ticker := time.NewTicker(30 * time.Second) // check on the provision status every 30 seconds
+		timer := time.NewTimer(toWait)
+		defer ticker.Stop()
+		defer timer.Stop()
+
+		for {
+			select {
+			case <-timer.C:
+				return nil, fmt.Errorf("time expired waiting for Port %s to provision", req.PortID)
+			case <-ctx.Done():
+				return nil, fmt.Errorf("context expired waiting for Port %s to provision",req.PortID)
+			case <-ticker.C:
+				portDetails, err := svc.GetPort(ctx, req.PortID)
+				if err != nil {
+					return nil, err
+				}
+				if portDetails.Name == req.Name && portDetails.CostCentre == req.CostCentre && portDetails.MarketplaceVisibility == req.MarketplaceVisibility {
+					return toReturn, nil
+				}
+			}
+		}
+	} else {
+		// return the service UID right away if the user doesn't want to wait for provision
+		return toReturn, nil
+	}
 }
 
 func (svc *PortServiceOp) DeletePort(ctx context.Context, req *DeletePortRequest) (*DeletePortResponse, error) {
@@ -362,24 +435,4 @@ func (svc *PortServiceOp) UnlockPort(ctx context.Context, portId string) (*Unloc
 	} else {
 		return nil, errors.New(ERR_PORT_NOT_LOCKED)
 	}
-}
-
-func (svc *PortServiceOp) WaitForPortProvisioning(ctx context.Context, portId string) (bool, error) {
-	// Try for ~5mins.
-	for i := 0; i < 30; i++ {
-		details, err := svc.GetPort(ctx, portId)
-		if err != nil {
-			return false, err
-		}
-
-		if details.ProvisioningStatus == SERVICE_LIVE {
-			return true, nil
-		}
-
-		// Port is not in ready status - keep waiting
-		svc.Client.Logger.DebugContext(ctx, "Waiting for port", slog.String("status", details.ProvisioningStatus), slog.String("port_id", portId))
-		time.Sleep(10 * time.Second)
-	}
-
-	return false, errors.New(ERR_PORT_PROVISION_TIMEOUT_EXCEED)
 }

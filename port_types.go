@@ -40,6 +40,7 @@ type Port struct {
 	AggregationID         int                    `json:"aggregationId"`
 	CompanyUID            string                 `json:"companyUid"`
 	CompanyName           string                 `json:"companyName"`
+	CostCentre 			  string	             `json:"costCentre"`
 	ContractStartDate     int                    `json:"contractStartDate"`
 	ContractEndDate       int                    `json:"contractEndDate"`
 	ContractTermMonths    int                    `json:"contractTermMonths"`

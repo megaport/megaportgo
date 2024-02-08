@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -88,18 +89,11 @@ func (suite *PortIntegrationTestSuite) TestSinglePort() {
 
 	createRes, portErr := suite.testCreatePort(suite.client, ctx, SINGLE_PORT, *testLocation)
 	suite.NoError(portErr)
-	suite.Greater(len(createRes.PortOrderConfirmations), 0)
 
-	portId := createRes.PortOrderConfirmations[0].TechnicalServiceUID
+	portId := createRes.TechnicalServiceUID
 
 	if !suite.NoError(portErr) && !suite.True(IsGuid(portId)) {
 		suite.FailNow("")
-	}
-
-	portCreated, err := suite.client.PortService.WaitForPortProvisioning(ctx, portId)
-
-	if !suite.NoError(err) || !portCreated {
-		suite.FailNow("could not create port")
 	}
 
 	portsListPostCreate, err := suite.client.PortService.ListPorts(ctx)
@@ -147,17 +141,10 @@ func (suite *PortIntegrationTestSuite) TestLAGPort() {
 
 	orderRes, portErr := suite.testCreatePort(suite.client, ctx, LAG_PORT, *testLocation)
 	suite.NoError(portErr)
-	suite.Greater(len(orderRes.PortOrderConfirmations), 1)
 
-	mainPortId := orderRes.PortOrderConfirmations[0].TechnicalServiceUID
+	mainPortId := orderRes.TechnicalServiceUID
 
 	if !suite.NoError(portErr) && !suite.True(IsGuid(mainPortId)) {
-		suite.FailNow("")
-	}
-
-	portCreated, err := suite.client.PortService.WaitForPortProvisioning(ctx, mainPortId)
-
-	if !suite.NoError(err) || !portCreated {
 		suite.FailNow("")
 	}
 
@@ -206,6 +193,8 @@ func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Con
 			Market:     location.Market,
 			LagCount:   2,
 			IsPrivate:  true,
+			WaitForProvision: true,
+			WaitForTime: 5 * time.Minute,
 		})
 	} else {
 		orderRes, portErr = c.PortService.BuySinglePort(ctx, &BuySinglePortRequest{
@@ -215,6 +204,8 @@ func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Con
 			LocationId: location.ID,
 			Market:     location.Market,
 			IsPrivate:  true,
+			WaitForProvision: true,
+			WaitForTime: 5 * time.Minute,
 		})
 	}
 	if portErr != nil {
@@ -237,6 +228,8 @@ func (suite *PortIntegrationTestSuite) testModifyPort(c *Client, ctx context.Con
 		Name:                  newPortName,
 		CostCentre:            "",
 		MarketplaceVisibility: portInfo.MarketplaceVisibility,
+		WaitForUpdate: true,
+		WaitForTime: 5 * time.Minute,
 	})
 	if err != nil {
 		suite.FailNowf("could not modify port", "could not modify port %v", modifyErr)

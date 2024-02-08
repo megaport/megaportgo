@@ -39,11 +39,8 @@ func (suite *PortClientTestSuite) TestBuyPort() {
 
 	portSvc := suite.client.PortService
 
-	want := &BuyPortResponse{
-		PortOrderConfirmations: []*PortOrderConfirmation{
-			{TechnicalServiceUID: "36b3f68e-2f54-4331-bf94-f8984449365f"},
-		},
-	}
+	want := &BuyPortResponse{TechnicalServiceUID: "36b3f68e-2f54-4331-bf94-f8984449365f"}
+	
 	req := &BuyPortRequest{
 		Name:       "test-port",
 		Term:       12,
@@ -101,11 +98,8 @@ func (suite *PortClientTestSuite) TestBuySinglePort() {
 
 	portSvc := suite.client.PortService
 
-	want := &BuyPortResponse{
-		PortOrderConfirmations: []*PortOrderConfirmation{
-			{TechnicalServiceUID: "36b3f68e-2f54-4331-bf94-f8984449365f"},
-		},
-	}
+	want := &BuyPortResponse{TechnicalServiceUID: "36b3f68e-2f54-4331-bf94-f8984449365f"}
+
 	req := &BuySinglePortRequest{
 		Name:       "test-port",
 		Term:       12,
@@ -161,12 +155,7 @@ func (suite *PortClientTestSuite) TestBuyLAGPort() {
 
 	portSvc := suite.client.PortService
 
-	want := &BuyPortResponse{
-		PortOrderConfirmations: []*PortOrderConfirmation{
-			{TechnicalServiceUID: "36b3f68e-2f54-4331-bf94-f8984449365f"},
-			{TechnicalServiceUID: "251238f5-89de-4a06-8ccd-76846453a33f"},
-		},
-	}
+	want := &BuyPortResponse{TechnicalServiceUID:  "36b3f68e-2f54-4331-bf94-f8984449365f"}
 
 	req := &BuyLAGPortRequest{
 		Name:       "test-port",
@@ -177,6 +166,7 @@ func (suite *PortClientTestSuite) TestBuyLAGPort() {
 		IsPrivate:  true,
 		LagCount:   2,
 	}
+
 	jblob := `{
 			"message": "test-message",
 			"terms": "test-terms",

@@ -97,7 +97,7 @@ func (suite *MCRIntegrationTestSuite) TestMCRLifecycle() {
 	if portErr != nil {
 		suite.FailNowf("error buying mcr", "error buying mcr %v", portErr)
 	}
-	mcrId := mcrRes.MCROrderConfirmations[0].TechnicalServiceUID
+	mcrId := mcrRes.TechnicalServiceUID
 	if !IsGuid(mcrId) {
 		suite.FailNowf("invalid mcr id", "invalid mcr id %s", mcrId)
 	}
@@ -226,7 +226,7 @@ func (suite *MCRIntegrationTestSuite) TestCreatePrefixFilterList() {
 	if portErr != nil {
 		suite.FailNowf("could not buy mcr", "could not buy mcr %v", portErr)
 	}
-	mcrId := mcrRes.MCROrderConfirmations[0].TechnicalServiceUID
+	mcrId := mcrRes.TechnicalServiceUID
 
 	if !IsGuid(mcrId) {
 		suite.FailNowf("invalid mcr id", "invalid mcr id %s", mcrId)
