@@ -96,16 +96,10 @@ type PartnerLookupItem struct {
 }
 
 type VXCUpdate struct {
-	Name      string `json:"name"`
-	RateLimit int    `json:"rateLimit"`
-	AEndVLAN  int    `json:"aEndVlan"`
-	BEndVLAN  *int   `json:"bEndVlan,omitempty"`
-}
-
-type PartnerVXCUpdate struct {
-	Name      string `json:"name"`
-	RateLimit int    `json:"rateLimit"`
-	AEndVLAN  int    `json:"aEndVlan"`
+	Name      *string `json:"name,omitempty"`
+	RateLimit *int    `json:"rateLimit,omitempty"`
+	AEndVLAN  *int    `json:"aEndVlan,omitempty"`
+	BEndVLAN  *int    `json:"bEndVlan,omitempty"`
 }
 
 type VXCOrderResponse struct {
