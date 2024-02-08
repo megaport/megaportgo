@@ -25,6 +25,7 @@ type MCR struct {
 	ProvisioningStatus    string            `json:"provisioningStatus"`
 	CreateDate            int               `json:"createDate"`
 	CreatedBy             string            `json:"createdBy"`
+	CostCentre 	          string            `json:"costCentre"`
 	PortSpeed             int               `json:"portSpeed"`
 	TerminateDate         int               `json:"terminateDate"`
 	LiveDate              int               `json:"liveDate"`

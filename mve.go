@@ -4,22 +4,21 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"slices"
 	"strings"
 	"time"
 )
 
-// MVE is an interface for interfacing with the MVE endpoints
+// MVEService is an interface for interfacing with the MVE endpoints
 // of the Megaport API.
 type MVEService interface {
 	BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMVEResponse, error)
 	GetMVE(ctx context.Context, mveId string) (*MVE, error)
 	ModifyMVE(ctx context.Context, req *ModifyMVERequest) (*ModifyMVEResponse, error)
 	DeleteMVE(ctx context.Context, req *DeleteMVERequest) (*DeleteMVEResponse, error)
-	WaitForMVEProvisioning(ctx context.Context, mveId string) (bool, error)
 }
 
 func NewMVEServiceOp(c *Client) *MVEServiceOp {
@@ -39,6 +38,9 @@ type BuyMVERequest struct {
 	Term         int
 	VendorConfig vendorConfig
 	Vnics        []MVENetworkInterface
+
+	WaitForProvision bool          // Wait until the MVE provisions before returning
+	WaitForTime      time.Duration // How long to wait for the MVE to provision if WaitForProvision is true (default is 5 minutes)
 }
 
 type BuyMVEResponse struct {
@@ -48,6 +50,9 @@ type BuyMVEResponse struct {
 type ModifyMVERequest struct {
 	MVEID string
 	Name  string
+
+	WaitForUpdate bool          // Wait until the MCVEupdates before returning
+	WaitForTime   time.Duration // How long to wait for the MVE to update if WaitForUpdate is true (default is 5 minutes)
 }
 
 type ModifyMVEResponse struct {
@@ -156,8 +161,40 @@ func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMV
 		TechnicalServiceUID: orderInfo.Data[0].TechnicalServiceUID,
 	}
 
+	// wait until the MCR is provisioned before returning if requested by the user
+	if req.WaitForProvision {
+		toWait := req.WaitForTime
+		if toWait == 0 {
+			toWait = 5 * time.Minute
+		}
 
-	return toReturn, nil
+		ticker := time.NewTicker(30 * time.Second) // check on the provision status every 30 seconds
+		timer := time.NewTimer(toWait)
+		defer ticker.Stop()
+		defer timer.Stop()
+
+		for {
+			select {
+			case <-timer.C:
+				return nil, fmt.Errorf("time expired waiting for MVE %s to provision", toReturn.TechnicalServiceUID)
+			case <-ctx.Done():
+				return nil, fmt.Errorf("context expired waiting for MVE %s to provision", toReturn.TechnicalServiceUID)
+			case <-ticker.C:
+				mveDetails, err := svc.GetMVE(ctx, toReturn.TechnicalServiceUID)
+				if err != nil {
+					return nil, err
+				}
+
+				if slices.Contains(SERVICE_STATE_READY, mveDetails.ProvisioningStatus) {
+					return toReturn, nil
+				}
+
+			}
+		}
+	} else {
+		// return the service UID right away if the user doesn't want to wait for provision
+		return toReturn, nil
+	}
 }
 
 func (svc *MVEServiceOp) GetMVE(ctx context.Context, mveId string) (*MVE, error) {
@@ -195,9 +232,42 @@ func (svc *MVEServiceOp) ModifyMVE(ctx context.Context, req *ModifyMVERequest) (
 	if err != nil {
 		return nil, err
 	}
-	return &ModifyMVEResponse{
+	toReturn := &ModifyMVEResponse{
 		MVEUpdated: true,
-	}, nil
+	}
+
+	// wait until the MCR is updated before returning if requested by the user
+	if req.WaitForUpdate {
+		toWait := req.WaitForTime
+		if toWait == 0 {
+			toWait = 5 * time.Minute
+		}
+
+		ticker := time.NewTicker(30 * time.Second) // check on the update status every 30 seconds
+		timer := time.NewTimer(toWait)
+		defer ticker.Stop()
+		defer timer.Stop()
+
+		for {
+			select {
+			case <-timer.C:
+				return nil, fmt.Errorf("time expired waiting for MVE %s to update", req.MVEID)
+			case <-ctx.Done():
+				return nil, fmt.Errorf("context expired waiting for MVE %s to update", req.MVEID)
+			case <-ticker.C:
+				mveDetails, err := svc.GetMVE(ctx, req.MVEID)
+				if err != nil {
+					return nil, err
+				}
+				if mveDetails.Name == req.Name && mveDetails.ProvisioningStatus == "LIVE" {
+					return toReturn, nil
+				}
+			}
+		}
+	} else {
+		// return the response right away if the user doesn't want to wait for update
+		return toReturn, nil
+	}
 }
 
 func (svc *MVEServiceOp) DeleteMVE(ctx context.Context, req *DeleteMVERequest) (*DeleteMVEResponse, error) {
@@ -209,27 +279,6 @@ func (svc *MVEServiceOp) DeleteMVE(ctx context.Context, req *DeleteMVERequest) (
 		return nil, err
 	}
 	return &DeleteMVEResponse{IsDeleted: true}, nil
-}
-
-func (svc *MVEServiceOp) WaitForMVEProvisioning(ctx context.Context, mveId string) (bool, error) {
-	// Try for ~5mins.
-	for i := 0; i < 30; i++ {
-		mve, err := svc.GetMVE(ctx, mveId)
-		if err != nil {
-			return false, err
-		}
-
-		if slices.Contains(SERVICE_STATE_READY, mve.ProvisioningStatus) {
-			return true, nil
-		}
-
-		// Wrong status, wait a bit and try again.
-		svc.Client.Logger.DebugContext(ctx, "Waiting for MVE", slog.String("provisioning_status", mve.ProvisioningStatus))
-		time.Sleep(10 * time.Second)
-	}
-
-	return false, errors.New(ERR_MVE_PROVISION_TIMEOUT_EXCEED)
-
 }
 
 func validateBuyMVERequest(req *BuyMVERequest) error {

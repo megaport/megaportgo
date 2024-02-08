@@ -73,8 +73,8 @@ type BuyLAGPortRequest struct {
 	LagCount   int
 	IsPrivate  bool
 
-	WaitForProvision bool          // Wait until the VXC provisions before returning
-	WaitForTime      time.Duration // How long to wait for the VXC to provision if WaitForProvision is true (default is 5 minutes)
+	WaitForProvision bool          // Wait until the Port provisions before returning
+	WaitForTime      time.Duration // How long to wait for the Port to provision if WaitForProvision is true (default is 5 minutes)
 }
 
 type BuyPortResponse struct {
@@ -342,14 +342,14 @@ func (svc *PortServiceOp) ModifyPort(ctx context.Context, req *ModifyPortRequest
 		IsUpdated: modifyRes.IsUpdated,
 	}
 
-	// wait until the Port is provisioned before returning if requested by the user
+	// wait until the Port is updated before returning if requested by the user
 	if req.WaitForUpdate {
 		toWait := req.WaitForTime
 		if toWait == 0 {
 			toWait = 5 * time.Minute
 		}
 
-		ticker := time.NewTicker(30 * time.Second) // check on the provision status every 30 seconds
+		ticker := time.NewTicker(30 * time.Second) // check on the update status every 30 seconds
 		timer := time.NewTimer(toWait)
 		defer ticker.Stop()
 		defer timer.Stop()
@@ -357,21 +357,21 @@ func (svc *PortServiceOp) ModifyPort(ctx context.Context, req *ModifyPortRequest
 		for {
 			select {
 			case <-timer.C:
-				return nil, fmt.Errorf("time expired waiting for Port %s to provision", req.PortID)
+				return nil, fmt.Errorf("time expired waiting for Port %s to update", req.PortID)
 			case <-ctx.Done():
-				return nil, fmt.Errorf("context expired waiting for Port %s to provision",req.PortID)
+				return nil, fmt.Errorf("context expired waiting for Port %s to update",req.PortID)
 			case <-ticker.C:
 				portDetails, err := svc.GetPort(ctx, req.PortID)
 				if err != nil {
 					return nil, err
 				}
-				if portDetails.Name == req.Name && portDetails.CostCentre == req.CostCentre && portDetails.MarketplaceVisibility == req.MarketplaceVisibility {
+				if portDetails.Name == req.Name && portDetails.CostCentre == req.CostCentre && portDetails.MarketplaceVisibility == req.MarketplaceVisibility && portDetails.ProvisioningStatus == "LIVE" {
 					return toReturn, nil
 				}
 			}
 		}
 	} else {
-		// return the service UID right away if the user doesn't want to wait for provision
+		// return the response right away if the user doesn't want to wait for update
 		return toReturn, nil
 	}
 }

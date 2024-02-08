@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
-	"log/slog"
 	"slices"
 	"time"
 )
@@ -20,7 +20,6 @@ type MCRService interface {
 	ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (*ModifyMCRResponse, error)
 	DeleteMCR(ctx context.Context, req *DeleteMCRRequest) (*DeleteMCRResponse, error)
 	RestoreMCR(ctx context.Context, mcrId string) (*RestoreMCRResponse, error)
-	WaitForMcrProvisioning(ctx context.Context, mcrId string) (bool, error)
 }
 
 // ProductServiceOp handles communication with Product methods of the Megaport API.
@@ -40,6 +39,9 @@ type BuyMCRRequest struct {
 	Term       int
 	PortSpeed  int
 	MCRAsn     int
+
+	WaitForProvision bool          // Wait until the MCR provisions before returning
+	WaitForTime      time.Duration // How long to wait for the MCR to provision if WaitForProvision is true (default is 5 minutes)
 }
 
 type BuyMCRResponse struct {
@@ -60,6 +62,9 @@ type ModifyMCRRequest struct {
 	Name                  string
 	CostCentre            string
 	MarketplaceVisibility bool
+
+	WaitForUpdate bool          // Wait until the MCR updates before returning
+	WaitForTime   time.Duration // How long to wait for the MCR to update if WaitForUpdate is true (default is 5 minutes)
 }
 
 type ModifyMCRResponse struct {
@@ -118,7 +123,40 @@ func (svc *MCRServiceOp) BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMC
 		TechnicalServiceUID: orderInfo.Data[0].TechnicalServiceUID,
 	}
 
-	return toReturn, nil
+	// wait until the MCR is provisioned before returning if requested by the user
+	if req.WaitForProvision {
+		toWait := req.WaitForTime
+		if toWait == 0 {
+			toWait = 5 * time.Minute
+		}
+
+		ticker := time.NewTicker(30 * time.Second) // check on the provision status every 30 seconds
+		timer := time.NewTimer(toWait)
+		defer ticker.Stop()
+		defer timer.Stop()
+
+		for {
+			select {
+			case <-timer.C:
+				return nil, fmt.Errorf("time expired waiting for MCR %s to provision", toReturn.TechnicalServiceUID)
+			case <-ctx.Done():
+				return nil, fmt.Errorf("context expired waiting for MCR %s to provision", toReturn.TechnicalServiceUID)
+			case <-ticker.C:
+				mcrDetails, err := svc.GetMCR(ctx, toReturn.TechnicalServiceUID)
+				if err != nil {
+					return nil, err
+				}
+
+				if slices.Contains(SERVICE_STATE_READY, mcrDetails.ProvisioningStatus) {
+					return toReturn, nil
+				}
+
+			}
+		}
+	} else {
+		// return the service UID right away if the user doesn't want to wait for provision
+		return toReturn, nil
+	}
 }
 
 func validateBuyMCRRequest(order *BuyMCRRequest) error {
@@ -179,9 +217,42 @@ func (svc *MCRServiceOp) ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (
 	if err != nil {
 		return nil, err
 	}
-	return &ModifyMCRResponse{
+	toReturn := &ModifyMCRResponse{
 		IsUpdated: true,
-	}, nil
+	}
+
+	// wait until the MCR is updated before returning if requested by the user
+	if req.WaitForUpdate {
+		toWait := req.WaitForTime
+		if toWait == 0 {
+			toWait = 5 * time.Minute
+		}
+
+		ticker := time.NewTicker(30 * time.Second) // check on the update status every 30 seconds
+		timer := time.NewTimer(toWait)
+		defer ticker.Stop()
+		defer timer.Stop()
+
+		for {
+			select {
+			case <-timer.C:
+				return nil, fmt.Errorf("time expired waiting for MCR %s to update", req.MCRID)
+			case <-ctx.Done():
+				return nil, fmt.Errorf("context expired waiting for MCR %s to update",req.MCRID)
+			case <-ticker.C:
+				mcrDetails, err := svc.GetMCR(ctx, req.MCRID)
+				if err != nil {
+					return nil, err
+				}
+				if mcrDetails.Name == req.Name && mcrDetails.CostCentre == req.CostCentre && mcrDetails.MarketplaceVisibility == req.MarketplaceVisibility && mcrDetails.ProvisioningStatus == "LIVE" {
+					return toReturn, nil
+				}
+			}
+		}
+	} else {
+		// return the response right away if the user doesn't want to wait for update
+		return toReturn, nil
+	}
 }
 
 func (svc *MCRServiceOp) DeleteMCR(ctx context.Context, req *DeleteMCRRequest) (*DeleteMCRResponse, error) {
@@ -205,25 +276,4 @@ func (svc *MCRServiceOp) RestoreMCR(ctx context.Context, mcrId string) (*Restore
 	return &RestoreMCRResponse{
 		IsRestored: true,
 	}, nil
-}
-
-// DebugWaitMCRLive should be used for testing only.
-func (svc *MCRServiceOp) WaitForMcrProvisioning(ctx context.Context, mcrId string) (bool, error) {
-	// Try for ~5mins.
-	for i := 0; i < 30; i++ {
-		mcr, err := svc.GetMCR(ctx, mcrId)
-		if err != nil {
-			return false, err
-		}
-
-		if slices.Contains(SERVICE_STATE_READY, mcr.ProvisioningStatus) {
-			return true, nil
-		}
-
-		// Wrong status, wait a bit and try again.
-		svc.Client.Logger.DebugContext(ctx, "Waiting for MCR", slog.String("provisioning_status", mcr.ProvisioningStatus))
-		time.Sleep(10 * time.Second)
-	}
-
-	return false, errors.New(ERR_MCR_PROVISION_TIMEOUT_EXCEED)
 }

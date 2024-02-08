@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -93,6 +94,8 @@ func (suite *MCRIntegrationTestSuite) TestMCRLifecycle() {
 		Term:       1,
 		PortSpeed:  1000,
 		MCRAsn:     0,
+		WaitForProvision: true,
+		WaitForTime: 5 * time.Minute,
 	})
 	if portErr != nil {
 		suite.FailNowf("error buying mcr", "error buying mcr %v", portErr)
@@ -103,12 +106,6 @@ func (suite *MCRIntegrationTestSuite) TestMCRLifecycle() {
 	}
 
 	logger.DebugContext(ctx, "MCR Purchased", slog.String("mcr_id", mcrId))
-	logger.DebugContext(ctx, "Waiting for MCR to be provisioned", slog.String("mcr_id", mcrId))
-	logger.Debug("Wating for MCR to be provisioned")
-	_, provisionErr := mcrSvc.WaitForMcrProvisioning(ctx, mcrId)
-	if provisionErr != nil {
-		suite.FailNowf("could not provision mcr", "could not provision mcr %v", provisionErr)
-	}
 
 	// Testing MCR Modify
 	mcr, getErr := mcrSvc.GetMCR(ctx, mcrId)
@@ -124,6 +121,8 @@ func (suite *MCRIntegrationTestSuite) TestMCRLifecycle() {
 		Name:                  newMCRName,
 		CostCentre:            "",
 		MarketplaceVisibility: mcr.MarketplaceVisibility,
+		WaitForUpdate: true,
+		WaitForTime: 5 * time.Minute,
 	})
 	if modifyErr != nil {
 		suite.FailNowf("could not modify mcr", "could not modify mcr %v", modifyErr)
@@ -222,6 +221,8 @@ func (suite *MCRIntegrationTestSuite) TestCreatePrefixFilterList() {
 		Term:       1,
 		PortSpeed:  1000,
 		MCRAsn:     0,
+		WaitForProvision: true,
+		WaitForTime: 5 * time.Minute,
 	})
 	if portErr != nil {
 		suite.FailNowf("could not buy mcr", "could not buy mcr %v", portErr)
@@ -233,12 +234,6 @@ func (suite *MCRIntegrationTestSuite) TestCreatePrefixFilterList() {
 	}
 
 	logger.InfoContext(ctx, "MCR Purchased", slog.String("mcr_id", mcrId))
-	logger.InfoContext(ctx, "Waiting for MCR to be provisioned", slog.String("mcr_id", mcrId))
-
-	_, provisionErr := mcrSvc.WaitForMcrProvisioning(ctx, mcrId)
-	if provisionErr != nil {
-		suite.FailNowf("could not provision mcr", "could not provision mcr %v", provisionErr)
-	}
 
 	logger.InfoContext(ctx, "Creating prefix filter list")
 
