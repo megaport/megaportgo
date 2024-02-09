@@ -123,6 +123,7 @@ func NewClient(httpClient *http.Client, base *url.URL) *Client {
 	c.LocationService = NewLocationServiceOp(c)
 	c.MCRService = NewMCRServiceOp(c)
 	c.MVEService = NewMVEServiceOp(c)
+	c.VXCService = NewVXCService(c)
 
 	c.headers = make(map[string]string)
 
