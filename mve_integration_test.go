@@ -6,6 +6,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/suite"
 )
 
 const (
@@ -15,9 +17,9 @@ const (
 type MVEIntegrationTestSuite IntegrationTestSuite
 
 func TestMVEIntegrationTestSuite(t *testing.T) {
-	// if *runIntegrationTests {
-	// 	suite.Run(t, new(MVEIntegrationTestSuite))
-	// }
+	if *runIntegrationTests {
+		suite.Run(t, new(MVEIntegrationTestSuite))
+	}
 }
 
 func (suite *MVEIntegrationTestSuite) SetupSuite() {
@@ -93,20 +95,20 @@ func (suite *MVEIntegrationTestSuite) TestC8KVAutoLifecycle() {
 	}
 	logger.DebugContext(ctx, "test location determined", slog.String("location", testLocation.Name))
 	mveConfig := &CiscoConfig{
-		Vendor: "cisco",
-		ProductSize: "SMALL",
-		ImageID: 42,
+		Vendor:            "cisco",
+		ProductSize:       "SMALL",
+		ImageID:           42,
 		AdminSSHPublicKey: readSSHPubKey(),
 	}
 
 	buyMVERes, err := mveSvc.BuyMVE(ctx, &BuyMVERequest{
-		LocationID:   testLocation.ID,
-		Name:         "MVE Test",
-		Term:         12,
-		VendorConfig: mveConfig,
-		Vnics:        nil,
+		LocationID:       testLocation.ID,
+		Name:             "MVE Test",
+		Term:             12,
+		VendorConfig:     mveConfig,
+		Vnics:            nil,
 		WaitForProvision: true,
-		WaitForTime: 5 * time.Minute,
+		WaitForTime:      5 * time.Minute,
 	})
 	if err != nil {
 		suite.FailNowf("error buying mve", "error buying mve %v", err)
