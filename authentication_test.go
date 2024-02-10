@@ -2,25 +2,11 @@ package megaport
 
 import (
 	"context"
-	"flag"
 	"log/slog"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
-)
-
-var runIntegrationTests = flag.Bool("integration", false, "perform integration tests")
-
-var accessKey string
-var secretKey string
-
-var megaportClient *Client
-
-var programLevel = new(slog.LevelVar)
-
-const (
-	MEGAPORTURL = "https://api-staging.megaport.com/"
 )
 
 type IntegrationTestSuite struct {
