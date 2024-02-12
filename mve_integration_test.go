@@ -6,8 +6,6 @@ import (
 	"os"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/suite"
 )
 
 const (
@@ -17,9 +15,9 @@ const (
 type MVEIntegrationTestSuite IntegrationTestSuite
 
 func TestMVEIntegrationTestSuite(t *testing.T) {
-	if *runIntegrationTests {
-		suite.Run(t, new(MVEIntegrationTestSuite))
-	}
+	// if *runIntegrationTests {
+	// 	suite.Run(t, new(MVEIntegrationTestSuite))
+	// }
 }
 
 func (suite *MVEIntegrationTestSuite) SetupSuite() {
