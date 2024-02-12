@@ -19,7 +19,7 @@ type AuthenticationServiceOp struct {
 	*Client
 }
 
-func NewAuthenticationServiceOp(c *Client) *AuthenticationServiceOp {
+func NewAuthenticationService(c *Client) *AuthenticationServiceOp {
 	return &AuthenticationServiceOp{
 		Client: c,
 	}

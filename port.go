@@ -27,7 +27,7 @@ type PortService interface {
 	UnlockPort(ctx context.Context, portId string) (*UnlockPortResponse, error)
 }
 
-func NewPortServiceOp(c *Client) *PortServiceOp {
+func NewPortService(c *Client) *PortServiceOp {
 	return &PortServiceOp{
 		Client: c,
 	}

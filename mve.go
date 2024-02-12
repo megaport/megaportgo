@@ -21,7 +21,7 @@ type MVEService interface {
 	DeleteMVE(ctx context.Context, req *DeleteMVERequest) (*DeleteMVEResponse, error)
 }
 
-func NewMVEServiceOp(c *Client) *MVEServiceOp {
+func NewMVEService(c *Client) *MVEServiceOp {
 	return &MVEServiceOp{
 		Client: c,
 	}

@@ -49,6 +49,7 @@ type Client struct {
 	// Services used for communicating with the Megaport API
 	AuthenticationService AuthenticationService
 	PortService           PortService
+	PartnerService        PartnerService
 	ProductService        ProductService
 	LocationService       LocationService
 	VXCService            VXCService
@@ -117,13 +118,14 @@ func NewClient(httpClient *http.Client, base *url.URL) *Client {
 		Logger:     logger,
 	}
 
-	c.AuthenticationService = NewAuthenticationServiceOp(c)
-	c.ProductService = NewProductServiceOp(c)
-	c.PortService = NewPortServiceOp(c)
-	c.LocationService = NewLocationServiceOp(c)
-	c.MCRService = NewMCRServiceOp(c)
-	c.MVEService = NewMVEServiceOp(c)
+	c.AuthenticationService = NewAuthenticationService(c)
+	c.ProductService = NewProductService(c)
+	c.PortService = NewPortService(c)
+	c.LocationService = NewLocationService(c)
+	c.MCRService = NewMCRService(c)
+	c.MVEService = NewMVEService(c)
 	c.VXCService = NewVXCService(c)
+	c.PartnerService = NewPartnerService(c)
 
 	c.headers = make(map[string]string)
 

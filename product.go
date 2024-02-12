@@ -24,7 +24,7 @@ type ProductServiceOp struct {
 	Client *Client
 }
 
-func NewProductServiceOp(c *Client) *ProductServiceOp {
+func NewProductService(c *Client) *ProductServiceOp {
 	return &ProductServiceOp{
 		Client: c,
 	}

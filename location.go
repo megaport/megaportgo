@@ -27,7 +27,7 @@ type LocationServiceOp struct {
 	Client *Client
 }
 
-func NewLocationServiceOp(c *Client) *LocationServiceOp {
+func NewLocationService(c *Client) *LocationServiceOp {
 	return &LocationServiceOp{
 		Client: c,
 	}

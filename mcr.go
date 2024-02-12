@@ -27,7 +27,7 @@ type MCRServiceOp struct {
 	Client *Client
 }
 
-func NewMCRServiceOp(c *Client) *MCRServiceOp {
+func NewMCRService(c *Client) *MCRServiceOp {
 	return &MCRServiceOp{
 		Client: c,
 	}
