@@ -60,21 +60,6 @@ type Client struct {
 	headers map[string]string
 }
 
-// Wrap http.RoundTripper to append the user-agent header.
-type roundTripper struct {
-	T http.RoundTripper
-}
-
-func (t *roundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.Header.Add("User-Agent", "Go-Megaport-Library/0.2.2")
-
-	return t.T.RoundTrip(req)
-}
-
-func NewHttpClient() *http.Client {
-	return &http.Client{Transport: &roundTripper{http.DefaultTransport}}
-}
-
 // RequestCompletionCallback defines the type of the request callback function
 type RequestCompletionCallback func(*http.Request, *http.Response)
 

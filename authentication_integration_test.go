@@ -3,6 +3,7 @@ package megaport
 import (
 	"context"
 	"log/slog"
+	"net/http"
 	"os"
 	"testing"
 
@@ -26,7 +27,7 @@ func (suite *AuthIntegrationTestSuite) SetupSuite() {
 	accessKey = os.Getenv("MEGAPORT_ACCESS_KEY")
 	secretKey = os.Getenv("MEGAPORT_SECRET_KEY")
 
-	httpClient := NewHttpClient()
+	httpClient := &http.Client{}
 
 	handler := slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: programLevel})
 	programLevel.Set(slog.LevelDebug)

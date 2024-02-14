@@ -28,14 +28,12 @@ func (suite *PortIntegrationTestSuite) SetupSuite() {
 	accessKey = os.Getenv("MEGAPORT_ACCESS_KEY")
 	secretKey = os.Getenv("MEGAPORT_SECRET_KEY")
 
-	httpClient := NewHttpClient()
-
 	handler := slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: programLevel})
 	programLevel.Set(slog.LevelDebug)
 
 	var err error
 
-	megaportClient, err = New(httpClient, SetBaseURL(MEGAPORTURL), SetLogHandler(handler))
+	megaportClient, err = New(nil, SetBaseURL(MEGAPORTURL), SetLogHandler(handler))
 	if err != nil {
 		suite.FailNowf("", "could not initialize megaport test client: %s", err.Error())
 	}
