@@ -44,6 +44,7 @@ func (suite *MCRClientTestSuite) TestBuyMCR() {
 		Term:       1,
 		PortSpeed:  1000,
 		MCRAsn:     0,
+		DiversityZone: "red",
 	}
 	jblob := `{
 			"message": "test-message",
@@ -58,6 +59,7 @@ func (suite *MCRClientTestSuite) TestBuyMCR() {
 			LocationID: req.LocationID,
 			Name:       req.Name,
 			Term:       1,
+			DiversityZone: "red",
 			Type:       "MCR2",
 			PortSpeed:  1000,
 			Config: MCROrderConfig{

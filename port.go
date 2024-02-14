@@ -39,39 +39,42 @@ type PortServiceOp struct {
 }
 
 type BuyPortRequest struct {
-	Name       string `json:"name"`
-	Term       int    `json:"term"`
-	PortSpeed  int    `json:"portSpeed"`
-	LocationId int    `json:"locationId"`
-	Market     string `json:"market"`
-	IsLag      bool   `json:"isLag"`
-	LagCount   int    `json:"lagCount"`
-	IsPrivate  bool   `json:"isPrivate"`
+	Name          string `json:"name"`
+	Term          int    `json:"term"`
+	PortSpeed     int    `json:"portSpeed"`
+	LocationId    int    `json:"locationId"`
+	Market        string `json:"market"`
+	IsLag         bool   `json:"isLag"`
+	LagCount      int    `json:"lagCount"`
+	IsPrivate     bool   `json:"isPrivate"`
+	DiversityZone string `json:"diversityZone"`
 
 	WaitForProvision bool          // Wait until the VXC provisions before returning
 	WaitForTime      time.Duration // How long to wait for the VXC to provision if WaitForProvision is true (default is 5 minutes)
 }
 
 type BuySinglePortRequest struct {
-	Name       string
-	Term       int
-	PortSpeed  int
-	LocationId int
-	Market     string
-	IsPrivate  bool
+	Name          string
+	Term          int
+	PortSpeed     int
+	LocationId    int
+	Market        string
+	IsPrivate     bool
+	DiversityZone string
 
 	WaitForProvision bool          // Wait until the VXC provisions before returning
 	WaitForTime      time.Duration // How long to wait for the VXC to provision if WaitForProvision is true (default is 5 minutes)
 }
 
 type BuyLAGPortRequest struct {
-	Name       string
-	Term       int
-	PortSpeed  int
-	LocationId int
-	Market     string
-	LagCount   int
-	IsPrivate  bool
+	Name          string
+	Term          int
+	PortSpeed     int
+	LocationId    int
+	Market        string
+	LagCount      int
+	IsPrivate     bool
+	DiversityZone string
 
 	WaitForProvision bool          // Wait until the Port provisions before returning
 	WaitForTime      time.Duration // How long to wait for the Port to provision if WaitForProvision is true (default is 5 minutes)
@@ -145,6 +148,7 @@ func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*Bu
 				ProductType:           "MEGAPORT",
 				PortSpeed:             req.PortSpeed,
 				LocationID:            req.LocationId,
+				DiversityZone: 	       req.DiversityZone,
 				CreateDate:            GetCurrentTimestamp(),
 				Virtual:               false,
 				Market:                req.Market,
@@ -160,6 +164,7 @@ func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*Bu
 				ProductType:           "MEGAPORT",
 				PortSpeed:             req.PortSpeed,
 				LocationID:            req.LocationId,
+				DiversityZone:         req.DiversityZone,
 				CreateDate:            GetCurrentTimestamp(),
 				Virtual:               false,
 				Market:                req.Market,
@@ -220,27 +225,33 @@ func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*Bu
 
 func (svc *PortServiceOp) BuySinglePort(ctx context.Context, req *BuySinglePortRequest) (*BuyPortResponse, error) {
 	return svc.BuyPort(ctx, &BuyPortRequest{
-		Name:       req.Name,
-		Term:       req.Term,
-		PortSpeed:  req.PortSpeed,
-		LocationId: req.LocationId,
-		Market:     req.Market,
-		IsLag:      false,
-		LagCount:   0,
-		IsPrivate:  req.IsPrivate,
+		Name:             req.Name,
+		Term:             req.Term,
+		PortSpeed:        req.PortSpeed,
+		LocationId:       req.LocationId,
+		Market:           req.Market,
+		IsLag:            false,
+		LagCount:         0,
+		IsPrivate:        req.IsPrivate,
+		DiversityZone:    req.DiversityZone,
+		WaitForProvision: req.WaitForProvision,
+		WaitForTime:      req.WaitForTime,
 	})
 }
 
 func (svc *PortServiceOp) BuyLAGPort(ctx context.Context, req *BuyLAGPortRequest) (*BuyPortResponse, error) {
 	return svc.BuyPort(ctx, &BuyPortRequest{
-		Name:       req.Name,
-		Term:       req.Term,
-		PortSpeed:  req.PortSpeed,
-		LocationId: req.LocationId,
-		Market:     req.Market,
-		IsLag:      true,
-		LagCount:   req.LagCount,
-		IsPrivate:  req.IsPrivate,
+		Name:             req.Name,
+		Term:             req.Term,
+		PortSpeed:        req.PortSpeed,
+		LocationId:       req.LocationId,
+		Market:           req.Market,
+		IsLag:            true,
+		LagCount:         req.LagCount,
+		IsPrivate:        req.IsPrivate,
+		DiversityZone:    req.DiversityZone,
+		WaitForProvision: req.WaitForProvision,
+		WaitForTime:      req.WaitForTime,
 	})
 }
 

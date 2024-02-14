@@ -35,11 +35,12 @@ func NewMCRService(c *Client) *MCRServiceOp {
 }
 
 type BuyMCRRequest struct {
-	LocationID int
-	Name       string
-	Term       int
-	PortSpeed  int
-	MCRAsn     int
+	LocationID    int
+	Name          string
+	DiversityZone string
+	Term          int
+	PortSpeed     int
+	MCRAsn        int
 
 	WaitForProvision bool          // Wait until the MCR provisions before returning
 	WaitForTime      time.Duration // How long to wait for the MCR to provision if WaitForProvision is true (default is 5 minutes)
@@ -93,12 +94,13 @@ func (svc *MCRServiceOp) BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMC
 	}
 
 	order := MCROrder{
-		LocationID: req.LocationID,
-		Name:       req.Name,
-		Term:       req.Term,
-		Type:       "MCR2",
-		PortSpeed:  req.PortSpeed,
-		Config:     MCROrderConfig{},
+		LocationID:    req.LocationID,
+		Name:          req.Name,
+		Term:          req.Term,
+		DiversityZone: req.DiversityZone,
+		Type:          "MCR2",
+		PortSpeed:     req.PortSpeed,
+		Config:        MCROrderConfig{},
 	}
 
 	order.Config.ASN = req.MCRAsn

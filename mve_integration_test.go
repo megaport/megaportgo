@@ -105,6 +105,7 @@ func (suite *MVEIntegrationTestSuite) TestC8KVAutoLifecycle() {
 		Vnics:            nil,
 		WaitForProvision: true,
 		WaitForTime:      5 * time.Minute,
+		DiversityZone: "red",
 	})
 	if err != nil {
 		suite.FailNowf("error buying mve", "error buying mve %v", err)

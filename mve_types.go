@@ -5,6 +5,7 @@ type MVEOrderConfig struct {
 	Name              string                 `json:"productName"`
 	Term              int                    `json:"term"`
 	ProductType       string                 `json:"productType"`
+	DiversityZone     string                 `json:"diversityZone"`
 	NetworkInterfaces []MVENetworkInterface  `json:"vnics"`
 	VendorConfig     vendorConfig `json:"vendorConfig"`
 }

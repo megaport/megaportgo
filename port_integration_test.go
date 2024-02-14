@@ -191,6 +191,7 @@ func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Con
 			Market:     location.Market,
 			LagCount:   2,
 			IsPrivate:  true,
+			DiversityZone: "red",
 			WaitForProvision: true,
 			WaitForTime: 5 * time.Minute,
 		})
@@ -201,6 +202,7 @@ func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Con
 			PortSpeed:  10000,
 			LocationId: location.ID,
 			Market:     location.Market,
+			DiversityZone: "red",
 			IsPrivate:  true,
 			WaitForProvision: true,
 			WaitForTime: 5 * time.Minute,

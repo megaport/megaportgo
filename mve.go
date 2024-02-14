@@ -33,11 +33,12 @@ type MVEServiceOp struct {
 }
 
 type BuyMVERequest struct {
-	LocationID   int
-	Name         string
-	Term         int
-	VendorConfig vendorConfig
-	Vnics        []MVENetworkInterface
+	LocationID    int
+	Name          string
+	Term          int
+	VendorConfig  vendorConfig
+	Vnics         []MVENetworkInterface
+	DiversityZone string
 
 	WaitForProvision bool          // Wait until the MVE provisions before returning
 	WaitForTime      time.Duration // How long to wait for the MVE to provision if WaitForProvision is true (default is 5 minutes)
@@ -73,10 +74,11 @@ func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMV
 		return nil, err
 	}
 	order := &MVEOrderConfig{
-		LocationID:   req.LocationID,
-		Name:         req.Name,
-		Term:         req.Term,
-		ProductType:  strings.ToUpper(PRODUCT_MVE),
+		LocationID:    req.LocationID,
+		Name:          req.Name,
+		Term:          req.Term,
+		ProductType:   strings.ToUpper(PRODUCT_MVE),
+		DiversityZone: req.DiversityZone,
 	}
 	switch req.VendorConfig.(type) {
 	case *ArubaConfig:

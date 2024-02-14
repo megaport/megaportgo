@@ -50,6 +50,7 @@ func (suite *PortClientTestSuite) TestBuyPort() {
 		IsLag:      false,
 		LagCount:   0,
 		IsPrivate:  true,
+		DiversityZone: "red",
 	}
 
 	jblob := `{
@@ -67,6 +68,7 @@ func (suite *PortClientTestSuite) TestBuyPort() {
 			LocationID:            req.LocationId,
 			Virtual:               false,
 			Market:                req.Market,
+			DiversityZone: 		   "red",
 			MarketplaceVisibility: !req.IsPrivate,
 		},
 	}

@@ -1,12 +1,13 @@
 package megaport
 
 type MCROrder struct {
-	LocationID int            `json:"locationId"`
-	Name       string         `json:"productName"`
-	Term       int            `json:"term"`
-	Type       string         `json:"productType"`
-	PortSpeed  int            `json:"portSpeed"`
-	Config     MCROrderConfig `json:"config"`
+	LocationID    int            `json:"locationId"`
+	Name          string         `json:"productName"`
+	DiversityZone string         `json:"diversityZone"`
+	Term          int            `json:"term"`
+	Type          string         `json:"productType"`
+	PortSpeed     int            `json:"portSpeed"`
+	Config        MCROrderConfig `json:"config"`
 }
 
 type MCROrderConfig struct {

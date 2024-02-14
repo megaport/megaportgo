@@ -11,6 +11,7 @@ type PortOrder struct {
 	Market                string `json:"market"`
 	LagPortCount          int    `json:"lagPortCount,omitempty"`
 	MarketplaceVisibility bool   `json:"marketplaceVisibility"`
+	DiversityZone         string `json:"diversityZone"`
 }
 
 type PortOrderConfirmation struct {

@@ -92,6 +92,7 @@ func (suite *MCRIntegrationTestSuite) TestMCRLifecycle() {
 		Term:       1,
 		PortSpeed:  1000,
 		MCRAsn:     0,
+		DiversityZone: "red",
 		WaitForProvision: true,
 		WaitForTime: 5 * time.Minute,
 	})
