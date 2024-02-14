@@ -17,12 +17,13 @@ type MCRService interface {
 	BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMCRResponse, error)
 	GetMCR(ctx context.Context, mcrId string) (*MCR, error)
 	CreatePrefixFilterList(ctx context.Context, req *CreateMCRPrefixFilterListRequest) (*CreateMCRPrefixFilterListResponse, error)
+	GetMCRPrefixFilterLists(ctx context.Context, mcrId string) ([]*PrefixFilterList, error)
 	ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (*ModifyMCRResponse, error)
 	DeleteMCR(ctx context.Context, req *DeleteMCRRequest) (*DeleteMCRResponse, error)
 	RestoreMCR(ctx context.Context, mcrId string) (*RestoreMCRResponse, error)
 }
 
-// ProductServiceOp handles communication with Product methods of the Megaport API.
+// MCRServiceOp handles communication with MCR methods of the Megaport API.
 type MCRServiceOp struct {
 	Client *Client
 }
@@ -198,11 +199,53 @@ func (svc *MCRServiceOp) GetMCR(ctx context.Context, mcrId string) (*MCR, error)
 
 // CreatePrefixFilterList creates a Prefix Filter List on an MCR.
 func (svc *MCRServiceOp) CreatePrefixFilterList(ctx context.Context, req *CreateMCRPrefixFilterListRequest) (*CreateMCRPrefixFilterListResponse, error) {
-	res, err := svc.Client.ProductService.CreateMCRPrefixFilterList(ctx, req)
+	url := "/v2/product/mcr2/" + req.MCRID + "/prefixList"
+
+	clientReq, err := svc.Client.NewRequest(ctx, "POST", url, req.PrefixFilterList)
+
 	if err != nil {
 		return nil, err
 	}
-	return res, nil
+
+	_, err = svc.Client.Do(ctx, clientReq, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return &CreateMCRPrefixFilterListResponse{
+		IsCreated: true,
+	}, nil
+}
+
+
+// GetMCRPrefixFilterLists returns prefix filter lists for the specified MCR2.
+func (svc *MCRServiceOp) GetMCRPrefixFilterLists(ctx context.Context, mcrId string) ([]*PrefixFilterList, error) {
+	url := "/v2/product/mcr2/" + mcrId + "/prefixLists?"
+
+	req, err := svc.Client.NewRequest(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := svc.Client.Do(ctx, req, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	body, fileErr := io.ReadAll(response.Body)
+	if fileErr != nil {
+		return nil, fileErr
+	}
+
+	prefixFilterList := &MCRPrefixFilterListResponse{}
+	unmarshalErr := json.Unmarshal(body, prefixFilterList)
+
+	if unmarshalErr != nil {
+		return nil, unmarshalErr
+	}
+
+	return prefixFilterList.Data, nil
 }
 
 func (svc *MCRServiceOp) ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (*ModifyMCRResponse, error) {
