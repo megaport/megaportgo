@@ -36,7 +36,7 @@ func (suite *LocationIntegrationTestSuite) SetupSuite() {
 }
 
 func (suite *LocationIntegrationTestSuite) SetupTest() {
-	suite.client.Logger.Debug("logging in oauth")
+	suite.client.Logger.Debug("logging in")
 	if accessKey == "" {
 		suite.client.Logger.Error("MEGAPORT_ACCESS_KEY environment variable not set.")
 		os.Exit(1)
@@ -48,7 +48,7 @@ func (suite *LocationIntegrationTestSuite) SetupTest() {
 	}
 
 	ctx := context.Background()
-	loginResp, loginErr := suite.client.AuthenticationService.LoginOauth(ctx, &LoginOauthRequest{
+	loginResp, loginErr := suite.client.AuthenticationService.Login(ctx, &LoginRequest{
 		AccessKey: accessKey,
 		SecretKey: secretKey,
 	})

@@ -42,8 +42,8 @@ func (suite *AuthIntegrationTestSuite) SetupSuite() {
 	suite.client = megaportClient
 }
 
-func (suite *AuthIntegrationTestSuite) TestLoginOauth() {
-	megaportClient.Logger.Debug("logging in oauth")
+func (suite *AuthIntegrationTestSuite) TestLogin() {
+	megaportClient.Logger.Debug("logging in")
 	if accessKey == "" {
 		megaportClient.Logger.Error("MEGAPORT_ACCESS_KEY environment variable not set.")
 		os.Exit(1)
@@ -55,7 +55,7 @@ func (suite *AuthIntegrationTestSuite) TestLoginOauth() {
 	}
 
 	ctx := context.Background()
-	loginResp, loginErr := megaportClient.AuthenticationService.LoginOauth(ctx, &LoginOauthRequest{
+	loginResp, loginErr := megaportClient.AuthenticationService.Login(ctx, &LoginRequest{
 		AccessKey: accessKey,
 		SecretKey: secretKey,
 	})

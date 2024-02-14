@@ -40,7 +40,7 @@ func (suite *MCRIntegrationTestSuite) SetupSuite() {
 }
 
 func (suite *MCRIntegrationTestSuite) SetupTest() {
-	suite.client.Logger.Debug("logging in oauth")
+	suite.client.Logger.Debug("logging in")
 	if accessKey == "" {
 		suite.FailNow("MEGAPORT_ACCESS_KEY environment variable not set.")
 	}
@@ -50,7 +50,7 @@ func (suite *MCRIntegrationTestSuite) SetupTest() {
 	}
 
 	ctx := context.Background()
-	loginResp, loginErr := suite.client.AuthenticationService.LoginOauth(ctx, &LoginOauthRequest{
+	loginResp, loginErr := suite.client.AuthenticationService.Login(ctx, &LoginRequest{
 		AccessKey: accessKey,
 		SecretKey: secretKey,
 	})

@@ -12,7 +12,7 @@ import (
 )
 
 type AuthenticationService interface {
-	LoginOauth(ctx context.Context, req *LoginOauthRequest) (*LoginOauthResponse, error)
+	Login(ctx context.Context, req *LoginRequest) (*LoginOauthResponse, error)
 }
 
 type AuthenticationServiceOp struct {
@@ -25,7 +25,7 @@ func NewAuthenticationService(c *Client) *AuthenticationServiceOp {
 	}
 }
 
-type LoginOauthRequest struct {
+type LoginRequest struct {
 	AccessKey string
 	SecretKey string
 }
@@ -54,10 +54,10 @@ type LoginResponse struct {
 	}
 }
 
-// LoginOauth performs an OAuth-style login using an API key and API
+// Login performs an OAuth-style login using an API key and API
 // secret key. It returns the bearer token or an error if the login
 // was unsuccessful.
-func (svc *AuthenticationServiceOp) LoginOauth(ctx context.Context, req *LoginOauthRequest) (*LoginOauthResponse, error) {
+func (svc *AuthenticationServiceOp) Login(ctx context.Context, req *LoginRequest) (*LoginOauthResponse, error) {
 	svc.Logger.DebugContext(ctx, "creating session", slog.String("access_key", req.AccessKey))
 
 	// Shortcut if we've already authenticated.
