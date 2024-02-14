@@ -737,10 +737,10 @@ func (suite *ClientTestSuite) TestIsValidMarketCode() {
 	})
 	got1, err := locSvc.IsValidMarketCode(ctx, "US")
 	suite.NoError(err)
-	suite.Equal(&want1, got1)
+	suite.Equal(want1, got1)
 	got2, err := locSvc.IsValidMarketCode(ctx, "BADCODE")
 	suite.NoError(err)
-	suite.Equal(&want2, got2)
+	suite.Equal(want2, got2)
 }
 
 func (suite *LocationClientTestSuite) TestFilterLocationsByMcrAvailability() {

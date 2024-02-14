@@ -17,7 +17,7 @@ type LocationService interface {
 	GetLocationByNameFuzzy(ctx context.Context, search string) ([]*Location, error)
 	ListCountries(ctx context.Context) ([]*Country, error)
 	ListMarketCodes(ctx context.Context) ([]string, error)
-	IsValidMarketCode(ctx context.Context, marketCode string) (*bool, error)
+	IsValidMarketCode(ctx context.Context, marketCode string) (bool, error)
 	FilterLocationsByMarketCode(ctx context.Context, marketCode string, locations []*Location) ([]*Location, error)
 	FilterLocationsByMcrAvailability(ctx context.Context, mcrAvailable bool, locations []*Location) []*Location
 	GetRandom(ctx context.Context, marketCode string) (*Location, error)
@@ -199,20 +199,21 @@ func (svc *LocationServiceOp) ListMarketCodes(ctx context.Context) ([]string, er
 	return marketCodes, nil
 }
 
-func (svc *LocationServiceOp) IsValidMarketCode(ctx context.Context, marketCode string) (*bool, error) {
-	marketCodes, err := svc.ListMarketCodes(ctx)
-	if err != nil {
-		return nil, err
-	}
+func (svc *LocationServiceOp) IsValidMarketCode(ctx context.Context, marketCode string) (bool, error) {
 	found := false
 
+	marketCodes, err := svc.ListMarketCodes(ctx)
+	if err != nil {
+		return found, err
+	}
+	
 	for i := 0; i < len(marketCodes); i++ {
 		if marketCodes[i] == marketCode {
 			found = true
 		}
 	}
 
-	return PtrTo(found), nil
+	return found, nil
 }
 
 func (svc *LocationServiceOp) FilterLocationsByMarketCode(ctx context.Context, marketCode string, locations []*Location) ([]*Location, error) {
@@ -222,7 +223,7 @@ func (svc *LocationServiceOp) FilterLocationsByMarketCode(ctx context.Context, m
 	if err != nil {
 		return nil, err
 	}
-	if *isValid {
+	if isValid {
 		for _, loc := range existingLocations {
 			if loc.Market == marketCode {
 				toReturn = append(toReturn, loc)
