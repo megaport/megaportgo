@@ -87,14 +87,14 @@ func (suite *MCRIntegrationTestSuite) TestMCRLifecycle() {
 
 	logger.DebugContext(ctx, "Test location determined", slog.String("location", testLocation.Name))
 	mcrRes, portErr := suite.client.MCRService.BuyMCR(ctx, &BuyMCRRequest{
-		LocationID: testLocation.ID,
-		Name:       "Buy MCR",
-		Term:       1,
-		PortSpeed:  1000,
-		MCRAsn:     0,
-		DiversityZone: "red",
+		LocationID:       testLocation.ID,
+		Name:             "Buy MCR",
+		Term:             1,
+		PortSpeed:        1000,
+		MCRAsn:           0,
+		DiversityZone:    "red",
 		WaitForProvision: true,
-		WaitForTime: 5 * time.Minute,
+		WaitForTime:      5 * time.Minute,
 	})
 	if portErr != nil {
 		suite.FailNowf("error buying mcr", "error buying mcr %v", portErr)
@@ -120,8 +120,8 @@ func (suite *MCRIntegrationTestSuite) TestMCRLifecycle() {
 		Name:                  newMCRName,
 		CostCentre:            "",
 		MarketplaceVisibility: mcr.MarketplaceVisibility,
-		WaitForUpdate: true,
-		WaitForTime: 5 * time.Minute,
+		WaitForUpdate:         true,
+		WaitForTime:           5 * time.Minute,
 	})
 	if modifyErr != nil {
 		suite.FailNowf("could not modify mcr", "could not modify mcr %v", modifyErr)
@@ -198,7 +198,7 @@ func (suite *MCRIntegrationTestSuite) TestPortSpeedValidation() {
 		PortSpeed:  500,
 		MCRAsn:     0,
 	})
-	suite.EqualError(buyErr, ERR_MCR_INVALID_PORT_SPEED)
+	suite.Equal(buyErr, ErrMCRInvalidPortSpeed)
 }
 
 func (suite *MCRIntegrationTestSuite) TestCreatePrefixFilterList() {
@@ -215,13 +215,13 @@ func (suite *MCRIntegrationTestSuite) TestCreatePrefixFilterList() {
 
 	logger.InfoContext(ctx, "Test location determined", slog.String("location", testLocation.Name))
 	mcrRes, portErr := mcrSvc.BuyMCR(ctx, &BuyMCRRequest{
-		LocationID: testLocation.ID,
-		Name:       "Buy MCR",
-		Term:       1,
-		PortSpeed:  1000,
-		MCRAsn:     0,
+		LocationID:       testLocation.ID,
+		Name:             "Buy MCR",
+		Term:             1,
+		PortSpeed:        1000,
+		MCRAsn:           0,
 		WaitForProvision: true,
-		WaitForTime: 5 * time.Minute,
+		WaitForTime:      5 * time.Minute,
 	})
 	if portErr != nil {
 		suite.FailNowf("could not buy mcr", "could not buy mcr %v", portErr)

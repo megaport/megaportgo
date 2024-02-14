@@ -3,7 +3,6 @@ package megaport
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -84,62 +83,62 @@ func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMV
 	case *ArubaConfig:
 		c := req.VendorConfig.(ArubaConfig)
 		order.VendorConfig = &ArubaConfig{
-			Vendor: c.Vendor,
-			ImageID: c.ImageID,
+			Vendor:      c.Vendor,
+			ImageID:     c.ImageID,
 			ProductSize: c.ProductSize,
 			AccountName: c.AccountName,
-			AccountKey: c.AccountKey,
+			AccountKey:  c.AccountKey,
 		}
 	case *CiscoConfig:
 		c := req.VendorConfig.(CiscoConfig)
 		order.VendorConfig = &CiscoConfig{
-			Vendor: c.Vendor,
-			ImageID: c.ImageID,
-			ProductSize: c.ProductSize,
+			Vendor:            c.Vendor,
+			ImageID:           c.ImageID,
+			ProductSize:       c.ProductSize,
 			AdminSSHPublicKey: c.AdminSSHPublicKey,
-			CloudInit: c.CloudInit,
+			CloudInit:         c.CloudInit,
 		}
 	case *FortinetConfig:
 		c := req.VendorConfig.(FortinetConfig)
 		order.VendorConfig = &FortinetConfig{
-			Vendor: c.Vendor,
-			ImageID: c.ImageID,
-			ProductSize: c.ProductSize,
+			Vendor:            c.Vendor,
+			ImageID:           c.ImageID,
+			ProductSize:       c.ProductSize,
 			AdminSSHPublicKey: c.AdminSSHPublicKey,
-			LicenseData: c.LicenseData,
+			LicenseData:       c.LicenseData,
 		}
 	case *PaloAltoConfig:
 		c := req.VendorConfig.(PaloAltoConfig)
 		order.VendorConfig = &PaloAltoConfig{
-			Vendor: c.Vendor,
-			ImageID: c.ImageID,
-			ProductSize: c.ProductSize,
+			Vendor:            c.Vendor,
+			ImageID:           c.ImageID,
+			ProductSize:       c.ProductSize,
 			AdminSSHPublicKey: c.AdminSSHPublicKey,
 			AdminPasswordHash: c.AdminPasswordHash,
-			LicenseData: c.LicenseData,
+			LicenseData:       c.LicenseData,
 		}
 	case *VersaConfig:
 		c := req.VendorConfig.(VersaConfig)
 		order.VendorConfig = &VersaConfig{
-			Vendor: c.Vendor,
-			ImageID: c.ImageID,
-			ProductSize: c.ProductSize,
-			DirectorAddress: c.DirectorAddress,
+			Vendor:            c.Vendor,
+			ImageID:           c.ImageID,
+			ProductSize:       c.ProductSize,
+			DirectorAddress:   c.DirectorAddress,
 			ControllerAddress: c.ControllerAddress,
-			LocalAuth: c.LocalAuth,
-			RemoteAuth: c.RemoteAuth,
-			SerialNumber: c.SerialNumber,
-			}
+			LocalAuth:         c.LocalAuth,
+			RemoteAuth:        c.RemoteAuth,
+			SerialNumber:      c.SerialNumber,
+		}
 	case *VmwareConfig:
 		c := req.VendorConfig.(VmwareConfig)
 		order.VendorConfig = &VmwareConfig{
-			Vendor: c.Vendor,
-			ImageID: c.ImageID,
-			ProductSize: c.ProductSize,
+			Vendor:            c.Vendor,
+			ImageID:           c.ImageID,
+			ProductSize:       c.ProductSize,
 			AdminSSHPublicKey: c.AdminSSHPublicKey,
-			VcoAddress: c.VcoAddress,
+			VcoAddress:        c.VcoAddress,
 			VcoActivationCode: c.VcoActivationCode,
-		}	
+		}
 	}
 
 	if len(req.Vnics) == 0 {
@@ -285,7 +284,7 @@ func (svc *MVEServiceOp) DeleteMVE(ctx context.Context, req *DeleteMVERequest) (
 
 func validateBuyMVERequest(req *BuyMVERequest) error {
 	if req.Term != 1 && req.Term != 12 && req.Term != 24 && req.Term != 36 {
-		return errors.New(ERR_TERM_NOT_VALID)
+		return ErrInvalidTerm
 	}
 	return nil
 }

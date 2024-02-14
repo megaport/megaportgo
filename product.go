@@ -2,7 +2,6 @@ package megaport
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -94,7 +93,6 @@ func (svc *ProductServiceOp) ExecuteOrder(ctx context.Context, requestBody inter
 
 // ModifyProduct modifies a product. The available fields to modify are Name, Cost Centre, and Marketplace Visibility.
 func (svc *ProductServiceOp) ModifyProduct(ctx context.Context, req *ModifyProductRequest) (*ModifyProductResponse, error) {
-
 	if req.ProductType == PRODUCT_MEGAPORT || req.ProductType == PRODUCT_MCR || req.ProductType == PRODUCT_MVE {
 		path := fmt.Sprintf("/v2/product/%s/%s", req.ProductType, req.ProductID)
 		url := svc.Client.BaseURL.JoinPath(path).String()
@@ -111,7 +109,7 @@ func (svc *ProductServiceOp) ModifyProduct(ctx context.Context, req *ModifyProdu
 		}
 		return &ModifyProductResponse{IsUpdated: true}, nil
 	} else {
-		return nil, errors.New(ERR_WRONG_PRODUCT_MODIFY)
+		return nil, ErrWrongProductModify
 	}
 }
 

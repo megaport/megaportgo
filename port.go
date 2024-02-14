@@ -3,7 +3,6 @@ package megaport
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -138,7 +137,7 @@ type UnlockPortResponse struct {
 func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*BuyPortResponse, error) {
 	var buyOrder []PortOrder
 	if req.Term != 1 && req.Term != 12 && req.Term != 24 && req.Term != 36 {
-		return nil, errors.New(ERR_TERM_NOT_VALID)
+		return nil, ErrInvalidTerm
 	}
 	if req.IsLag {
 		buyOrder = []PortOrder{
@@ -148,7 +147,7 @@ func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*Bu
 				ProductType:           "MEGAPORT",
 				PortSpeed:             req.PortSpeed,
 				LocationID:            req.LocationId,
-				DiversityZone: 	       req.DiversityZone,
+				DiversityZone:         req.DiversityZone,
 				CreateDate:            GetCurrentTimestamp(),
 				Virtual:               false,
 				Market:                req.Market,
@@ -184,7 +183,7 @@ func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*Bu
 	}
 
 	toReturn := &BuyPortResponse{
-		TechnicalServiceUID: orderInfo.Data[0].TechnicalServiceUID,	
+		TechnicalServiceUID: orderInfo.Data[0].TechnicalServiceUID,
 	}
 
 	// wait until the Port is provisioned before returning if requested by the user
@@ -370,7 +369,7 @@ func (svc *PortServiceOp) ModifyPort(ctx context.Context, req *ModifyPortRequest
 			case <-timer.C:
 				return nil, fmt.Errorf("time expired waiting for Port %s to update", req.PortID)
 			case <-ctx.Done():
-				return nil, fmt.Errorf("context expired waiting for Port %s to update",req.PortID)
+				return nil, fmt.Errorf("context expired waiting for Port %s to update", req.PortID)
 			case <-ticker.C:
 				portDetails, err := svc.GetPort(ctx, req.PortID)
 				if err != nil {
@@ -425,7 +424,7 @@ func (svc *PortServiceOp) LockPort(ctx context.Context, portId string) (*LockPor
 		}
 		return &LockPortResponse{IsLocking: true}, nil
 	} else {
-		return nil, errors.New(ERR_PORT_ALREADY_LOCKED)
+		return nil, ErrPortAlreadyLocked
 	}
 }
 
@@ -444,6 +443,6 @@ func (svc *PortServiceOp) UnlockPort(ctx context.Context, portId string) (*Unloc
 		}
 		return &UnlockPortResponse{IsUnlocking: true}, nil
 	} else {
-		return nil, errors.New(ERR_PORT_NOT_LOCKED)
+		return nil, ErrPortNotLocked
 	}
 }

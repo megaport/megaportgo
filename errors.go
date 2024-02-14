@@ -1,6 +1,7 @@
 package megaport
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 )
@@ -29,27 +30,26 @@ func (r *ErrorResponse) Error() string {
 		r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, r.Message, r.Data)
 }
 
-const ERR_PORT_PROVISION_TIMEOUT_EXCEED = "the port took too long to provision"
-const ERR_MCR_PROVISION_TIMEOUT_EXCEED = "the MCR took too long to provision"
-const ERR_MVE_PROVISION_TIMEOUT_EXCEED = "the MVE took too long to provision"
-const ERR_VXC_PROVISION_TIMEOUT_EXCEED = "the VXC took too long to provision"
+// ErrWrongProductModify is returned when a user attempts to modify a product that can't be modified
+var ErrWrongProductModify = errors.New("you can only update Ports, MCR, and MVE using this method")
 
-const ERR_VXC_NOT_LIVE = "the VXC is not in the expected LIVE state"
-const ERR_VXC_UPDATE_TIMEOUT_EXCEED = "the VXC took longer than 15 minutes to update, and has failed"
-const ERR_WRONG_PRODUCT_MODIFY = "sorry you can only update Ports and MCR2 using this method"
-const ERR_NO_AVAILABLE_VXC_PORTS = "there are no available ports for you to connect to"
-const ERR_INVALID_PARTNER = "the partner type you have passed is not valid"
-const ERR_TERM_NOT_VALID = "invalid term, valid values are 1, 12, 24, and 36"
-const ERR_PORT_ALREADY_LOCKED = "that port is already locked, cannot lock"
-const ERR_PORT_NOT_LOCKED = "that port not locked, cannot unlock"
-const ERR_PORT_NOT_LIVE = "the port is not in the expected LIVE state"
-const ERR_MCR_INVALID_PORT_SPEED = "invalid port speed, valid speeds are 1000, 2500, 5000, and 10000"
-const ERR_MCR_NOT_LIVE = "the MCR is not in the expected LIVE state"
-const ERR_LOCATION_NOT_FOUND = "unable to find location"
-const ERR_NO_MATCHING_LOCATIONS = "unable to find location based on search criteria"
-const ERR_NO_OTP_KEY_DEFINED string = "a one time password key is not defined and we cannot generate a OTP due to this"
-const ERR_PARSING_ERR_RESPONSE = "status code '%v' received from api and there has been an error parsing an error: %s. " +
-	"The error body was:\nBEGIN\n%v\nEND\n"
-const ERR_PARTNER_PORT_NO_RESULTS = "sorry there were no results returned based on the given filters"
-const ERR_SESSION_TOKEN_STILL_EXIST = "it looks like the session was not removed and still exists, logout did not work"
-const ERR_MEGAPORT_URL_NOT_SET = "The variable megaport_url has not been set correctly"
+// ErrInvalidTerm is returned for an invalid product term
+var ErrInvalidTerm = errors.New("invalid term, valid values are 1, 12, 24, and 36")
+
+// ErrPortAlreadyLocked is returned when a port is already locked
+var ErrPortAlreadyLocked = errors.New("that port is already locked, cannot lock")
+
+// ErrPortNotLocked is returned when a port is not locked
+var ErrPortNotLocked = errors.New("that port not locked, cannot unlock")
+
+// ErrMCRInvalidPortSpeed is returned for an invalid MCR port speed
+var ErrMCRInvalidPortSpeed = errors.New("invalid port speed, valid speeds are 1000, 2500, 5000, and 10000")
+
+// ErrLocationNotFound is returned when a location can't be found
+var ErrLocationNotFound = errors.New("unable to find location")
+
+// ErrNoMatchingLocations is returned when a fuzzy search for a location doesn't return any results
+var ErrNoMatchingLocations = errors.New("could not find any matching locations from search")
+
+// ErrNoPartnerPortsFound is returned when no partner ports could be found matching the filters provided
+var ErrNoPartnerPortsFound = errors.New("sorry there were no results returned based on the given filters")
