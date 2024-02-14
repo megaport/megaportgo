@@ -36,7 +36,7 @@ type BuyMVERequest struct {
 	LocationID    int
 	Name          string
 	Term          int
-	VendorConfig  vendorConfig
+	VendorConfig  VendorConfig
 	Vnics         []MVENetworkInterface
 	DiversityZone string
 

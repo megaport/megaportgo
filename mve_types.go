@@ -7,15 +7,15 @@ type MVEOrderConfig struct {
 	ProductType       string                 `json:"productType"`
 	DiversityZone     string                 `json:"diversityZone"`
 	NetworkInterfaces []MVENetworkInterface  `json:"vnics"`
-	VendorConfig     vendorConfig `json:"vendorConfig"`
+	VendorConfig     VendorConfig `json:"VendorConfig"`
 }
 
-type vendorConfig interface {
-	isVendorConfig()
+type VendorConfig interface {
+	IsVendorConfig()
 }
 
 type ArubaConfig struct {
-	vendorConfig
+	VendorConfig
 	Vendor string `json:"vendor"`
 	ImageID int `json:"imageId"`
 	ProductSize string `json:"productSize"`
@@ -24,7 +24,7 @@ type ArubaConfig struct {
 }
 
 type CiscoConfig struct {
-	vendorConfig
+	VendorConfig
 	Vendor string `json:"vendor"`
 	ImageID int `json:"imageId"`
 	ProductSize string `json:"productSize"`
@@ -33,7 +33,7 @@ type CiscoConfig struct {
 }
 
 type FortinetConfig struct {
-	vendorConfig
+	VendorConfig
 	Vendor string `json:"vendor"`
 	ImageID int `json:"imageId"`
 	ProductSize string `json:"productSize"`
@@ -42,7 +42,7 @@ type FortinetConfig struct {
 }
 
 type PaloAltoConfig struct {
-	vendorConfig
+	VendorConfig
 	Vendor string `json:"vendor"`
 	ImageID int `json:"imageId"`
 	ProductSize string `json:"productSize"`
@@ -52,7 +52,7 @@ type PaloAltoConfig struct {
 }
 
 type VersaConfig struct {
-	vendorConfig
+	VendorConfig
 	Vendor string `json:"vendor"`
 	ImageID int `json:"imageId"`
 	ProductSize string `json:"productSize"`
@@ -64,7 +64,7 @@ type VersaConfig struct {
 }
 
 type VmwareConfig struct {
-	vendorConfig
+	VendorConfig
 	Vendor string `json:"vendor"`
 	ImageID int `json:"imageId"`
 	ProductSize string `json:"productSize"`
