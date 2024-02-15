@@ -81,7 +81,6 @@ func NewFromToken(token string) *Client {
 
 // NewClient returns a new Megaport API client, using the given
 // http.Client to perform all requests.
-
 func NewClient(httpClient *http.Client, base *url.URL) *Client {
 	if httpClient == nil {
 		httpClient = http.DefaultClient
