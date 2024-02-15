@@ -33,13 +33,14 @@ func (suite *LocationClientTestSuite) TearDownTest() {
 }
 
 func (suite *LocationClientTestSuite) TestListLocations() {
+	liveDate := &Time{GetTime(1595340000000)}
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
 	want := []*Location{
 		{
 			Name:          "Test Data Center",
 			Country:       "USA",
-			LiveDate:      1595340000000,
+			LiveDate:      liveDate,
 			SiteCode:      "denverTest",
 			NetworkRegion: "MP1",
 			Address: map[string]string{
@@ -81,7 +82,7 @@ func (suite *LocationClientTestSuite) TestListLocations() {
 			},
 			Market:           "US",
 			VRouterAvailable: false,
-			LiveDate:         1483711200000,
+			LiveDate:         liveDate,
 			Status:           "Active",
 			Longitude:        -77.487442,
 			Latitude:         39.043757,
@@ -153,7 +154,7 @@ func (suite *LocationClientTestSuite) TestListLocations() {
 			},
 			"market": "US",
 			"vRouterAvailable": false,
-			"liveDate": 1483711200000,
+			"liveDate": 1595340000000,
 			"status": "Active",
 			"longitude": -77.487442,
 			"latitude": 39.043757,
@@ -179,10 +180,11 @@ func (suite *LocationClientTestSuite) TestListLocations() {
 func (suite *LocationClientTestSuite) TestGetLocationByID() {
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
+	liveDate := &Time{GetTime(1595340000000)}
 	want := &Location{
 		Name:          "Test Data Center",
 		Country:       "USA",
-		LiveDate:      1595340000000,
+		LiveDate:      liveDate,
 		SiteCode:      "denverTest",
 		NetworkRegion: "MP1",
 		Address: map[string]string{
@@ -268,7 +270,7 @@ func (suite *LocationClientTestSuite) TestGetLocationByID() {
 			},
 			"market": "US",
 			"vRouterAvailable": false,
-			"liveDate": 1483711200000,
+			"liveDate": 1595340000000,
 			"status": "Active",
 			"longitude": -77.487442,
 			"latitude": 39.043757,
@@ -292,6 +294,7 @@ func (suite *LocationClientTestSuite) TestGetLocationByID() {
 }
 
 func (suite *LocationClientTestSuite) TestGetLocationByName() {
+	liveDate := &Time{GetTime(1595340000000)}
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
 	want := &Location{
@@ -313,7 +316,7 @@ func (suite *LocationClientTestSuite) TestGetLocationByName() {
 		},
 		Market:           "US",
 		VRouterAvailable: false,
-		LiveDate:         1483711200000,
+		LiveDate:         liveDate,
 		Status:           "Active",
 		Longitude:        -77.487442,
 		Latitude:         39.043757,
@@ -384,7 +387,7 @@ func (suite *LocationClientTestSuite) TestGetLocationByName() {
 			},
 			"market": "US",
 			"vRouterAvailable": false,
-			"liveDate": 1483711200000,
+			"liveDate": 1595340000000,
 			"status": "Active",
 			"longitude": -77.487442,
 			"latitude": 39.043757,
@@ -410,11 +413,12 @@ func (suite *LocationClientTestSuite) TestGetLocationByName() {
 func (suite *LocationClientTestSuite) TestGetLocationByNameFuzzy() {
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
+	liveDate := &Time{GetTime(1595340000000)}
 	want := []*Location{
 		{
 			Name:          "Test Data Center",
 			Country:       "USA",
-			LiveDate:      1595340000000,
+			LiveDate:      liveDate,
 			SiteCode:      "denverTest",
 			NetworkRegion: "MP1",
 			Address: map[string]string{
@@ -456,7 +460,7 @@ func (suite *LocationClientTestSuite) TestGetLocationByNameFuzzy() {
 			},
 			Market:           "US",
 			VRouterAvailable: false,
-			LiveDate:         1483711200000,
+			LiveDate:         liveDate,
 			Status:           "Active",
 			Longitude:        -77.487442,
 			Latitude:         39.043757,
@@ -529,7 +533,7 @@ func (suite *LocationClientTestSuite) TestGetLocationByNameFuzzy() {
 			},
 			"market": "US",
 			"vRouterAvailable": false,
-			"liveDate": 1483711200000,
+			"liveDate": 1595340000000,
 			"status": "Active",
 			"longitude": -77.487442,
 			"latitude": 39.043757,
@@ -564,7 +568,7 @@ func (suite *LocationClientTestSuite) TestGetLocationByNameFuzzy() {
 			},
 			"market": "US",
 			"vRouterAvailable": false,
-			"liveDate": 1483711200000,
+			"liveDate": 1595340000000,
 			"status": "Active",
 			"longitude": -73.971321,
 			"latitude": 40.776676,
@@ -746,11 +750,12 @@ func (suite *ClientTestSuite) TestIsValidMarketCode() {
 func (suite *LocationClientTestSuite) TestFilterLocationsByMcrAvailability() {
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
+	liveDate := &Time{GetTime(1595340000000)}
 	in := []*Location{
 		{
 			Name:          "Test Data Center",
 			Country:       "USA",
-			LiveDate:      1595340000000,
+			LiveDate:      liveDate,
 			SiteCode:      "denverTest",
 			NetworkRegion: "MP1",
 			Address: map[string]string{
@@ -792,7 +797,7 @@ func (suite *LocationClientTestSuite) TestFilterLocationsByMcrAvailability() {
 			},
 			Market:           "US",
 			VRouterAvailable: false,
-			LiveDate:         1483711200000,
+			LiveDate:         liveDate,
 			Status:           "Active",
 			Longitude:        -73.971321,
 			Latitude:         39.043757,
@@ -819,7 +824,7 @@ func (suite *LocationClientTestSuite) TestFilterLocationsByMcrAvailability() {
 			},
 			Market:           "US",
 			VRouterAvailable: false,
-			LiveDate:         1483711200000,
+			LiveDate:         liveDate,
 			Status:           "Active",
 			Longitude:        -73.971321,
 			Latitude:         40.776676,
@@ -833,7 +838,7 @@ func (suite *LocationClientTestSuite) TestFilterLocationsByMcrAvailability() {
 		{
 			Name:          "Test Data Center",
 			Country:       "USA",
-			LiveDate:      1595340000000,
+			LiveDate:      liveDate,
 			SiteCode:      "denverTest",
 			NetworkRegion: "MP1",
 			Address: map[string]string{
@@ -875,7 +880,7 @@ func (suite *LocationClientTestSuite) TestFilterLocationsByMcrAvailability() {
 			},
 			Market:           "US",
 			VRouterAvailable: false,
-			LiveDate:         1483711200000,
+			LiveDate:         liveDate,
 			Status:           "Active",
 			Longitude:        -73.971321,
 			Latitude:         39.043757,
@@ -892,11 +897,12 @@ func (suite *LocationClientTestSuite) TestFilterLocationsByMcrAvailability() {
 func (suite *LocationClientTestSuite) TestGetRandom() {
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
+	liveDate := &Time{GetTime(1595340000000)}
 	want := []*Location{
 		{
 			Name:          "Test Data Center",
 			Country:       "USA",
-			LiveDate:      1595340000000,
+			LiveDate:      liveDate,
 			SiteCode:      "denverTest",
 			NetworkRegion: "MP1",
 			Address: map[string]string{
@@ -943,7 +949,7 @@ func (suite *LocationClientTestSuite) TestGetRandom() {
 			},
 			Market:           "US",
 			VRouterAvailable: false,
-			LiveDate:         1483711200000,
+			LiveDate:         liveDate,
 			Status:           "Active",
 			Longitude:        -77.487442,
 			Latitude:         39.043757,
@@ -1026,7 +1032,7 @@ func (suite *LocationClientTestSuite) TestGetRandom() {
 			},
 			"market": "US",
 			"vRouterAvailable": false,
-			"liveDate": 1483711200000,
+			"liveDate": 1595340000000,
 			"status": "Active",
 			"longitude": -77.487442,
 			"latitude": 39.043757,
@@ -1066,7 +1072,7 @@ func (suite *LocationClientTestSuite) TestGetRandom() {
 			},
 			"market": "US",
 			"vRouterAvailable": false,
-			"liveDate": 1483711200000,
+			"liveDate": 1595340000000,
 			"status": "Active",
 			"longitude": -73.971321,
 			"latitude": 40.776676,
@@ -1098,7 +1104,7 @@ func (suite *LocationClientTestSuite) TestGetRandom() {
 			},
 			"market": "UK",
 			"vRouterAvailable": false,
-			"liveDate": 1483711200000,
+			"liveDate": 1595340000000,
 			"status": "Active",
 			"longitude": -0.628975,
 			"latitude": 51.522484,

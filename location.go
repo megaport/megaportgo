@@ -35,7 +35,7 @@ func NewLocationService(c *Client) *LocationServiceOp {
 type Location struct {
 	Name             string                 `json:"name"`
 	Country          string                 `json:"country"`
-	LiveDate         int                    `json:"liveDate"`
+	LiveDate         *Time                  `json:"liveDate"`
 	SiteCode         string                 `json:"siteCode"`
 	NetworkRegion    string                 `json:"networkRegion"`
 	Address          map[string]string      `json:"address"`
