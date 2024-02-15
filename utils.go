@@ -30,6 +30,11 @@ func GetCurrentTimestamp() int64 {
 	return time.Now().UnixNano() / int64(time.Millisecond)
 }
 
+func GetTime(timestamp int64) time.Time {
+	return time.Unix(timestamp/1000, 0)
+}
+
+
 func GenerateRandomVLAN() int {
 	// exclude reserved values 0 and 4095 as per 802.1q
 	return GenerateRandomNumber(1, 4094)

@@ -99,9 +99,9 @@ type MVE struct {
 	Name                  string                 `json:"productName"`
 	Type                  string                 `json:"productType"`
 	ProvisioningStatus    string                 `json:"provisioningStatus"`
-	CreateDate            int                    `json:"createDate"`
+	CreateDate            *Time                  `json:"createDate"`
 	CreatedBy             string                 `json:"createdBy"`
-	TerminateDate         int                    `json:"terminateDate"`
+	TerminateDate         *Time                  `json:"terminateDate"`
 	LiveDate              int                    `json:"liveDate"`
 	Market                string                 `json:"market"`
 	LocationID            int                    `json:"locationId"`
@@ -112,8 +112,8 @@ type MVE struct {
 	SecondaryName         string                 `json:"secondaryName"`
 	CompanyUID            string                 `json:"companyUid"`
 	CompanyName           string                 `json:"companyName"`
-	ContractStartDate     int                    `json:"contractStartDate"`
-	ContractEndDate       int                    `json:"contractEndDate"`
+	ContractStartDate     *Time                  `json:"contractStartDate"`
+	ContractEndDate       *Time                  `json:"contractEndDate"`
 	ContractTermMonths    int                    `json:"contractTermMonths"`
 	AttributeTags         map[string]string      `json:"attributeTags"`
 	Virtual               bool                   `json:"virtual"`

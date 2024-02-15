@@ -15,12 +15,12 @@ type VXC struct {
 	SecondaryName      string              `json:"secondaryName"`
 	UsageAlgorithm     string              `json:"usageAlgorithm"`
 	CreatedBy          string              `json:"createdBy"`
-	LiveDate           int                 `json:"liveDate"`
-	CreateDate         int                 `json:"createDate"`
+	LiveDate           *Time               `json:"liveDate"`
+	CreateDate         *Time               `json:"createDate"`
 	Resources          VXCResources        `json:"resources"`
 	VXCApproval        VXCApproval         `json:"vxcApproval"`
-	ContractStartDate  int                 `json:"contractStartDate"`
-	ContractEndDate    int                 `json:"contractEndDate"`
+	ContractStartDate  *Time               `json:"contractStartDate"`
+	ContractEndDate    *Time               `json:"contractEndDate"`
 	ContractTermMonths int                 `json:"contractTermMonths"`
 	CompanyUID         string              `json:"companyUid"`
 	CompanyName        string              `json:"companyName"`

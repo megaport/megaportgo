@@ -24,10 +24,10 @@ type Port struct {
 	Name                  string                 `json:"productName"`
 	Type                  string                 `json:"productType"`
 	ProvisioningStatus    string                 `json:"provisioningStatus"`
-	CreateDate            int                    `json:"createDate"`
+	CreateDate            *Time                  `json:"createDate"`
 	CreatedBy             string                 `json:"createdBy"`
 	PortSpeed             int                    `json:"portSpeed"`
-	TerminateDate         int                    `json:"terminateDate"`
+	TerminateDate         *Time                  `json:"terminateDate"`
 	LiveDate              int                    `json:"liveDate"`
 	Market                string                 `json:"market"`
 	LocationID            int                    `json:"locationId"`
@@ -42,8 +42,8 @@ type Port struct {
 	CompanyUID            string                 `json:"companyUid"`
 	CompanyName           string                 `json:"companyName"`
 	CostCentre 			  string	             `json:"costCentre"`
-	ContractStartDate     int                    `json:"contractStartDate"`
-	ContractEndDate       int                    `json:"contractEndDate"`
+	ContractStartDate     *Time                  `json:"contractStartDate"`
+	ContractEndDate       *Time                  `json:"contractEndDate"`
 	ContractTermMonths    int                    `json:"contractTermMonths"`
 	AttributeTags         map[string]interface{} `json:"attributeTags"`
 	Virtual               bool                   `json:"virtual"`

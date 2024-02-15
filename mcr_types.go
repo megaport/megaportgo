@@ -24,12 +24,12 @@ type MCR struct {
 	Name                  string            `json:"productName"`
 	Type                  string            `json:"productType"`
 	ProvisioningStatus    string            `json:"provisioningStatus"`
-	CreateDate            int               `json:"createDate"`
+	CreateDate            *Time             `json:"createDate"`
 	CreatedBy             string            `json:"createdBy"`
 	CostCentre 	          string            `json:"costCentre"`
 	PortSpeed             int               `json:"portSpeed"`
-	TerminateDate         int               `json:"terminateDate"`
-	LiveDate              int               `json:"liveDate"`
+	TerminateDate         *Time             `json:"terminateDate"`
+	LiveDate              *Time             `json:"liveDate"`
 	Market                string            `json:"market"`
 	LocationID            int               `json:"locationId"`
 	UsageAlgorithm        string            `json:"usageAlgorithm"`
@@ -42,8 +42,8 @@ type MCR struct {
 	AggregationID         int               `json:"aggregationId"`
 	CompanyUID            string            `json:"companyUid"`
 	CompanyName           string            `json:"companyName"`
-	ContractStartDate     int               `json:"contractStartDate"`
-	ContractEndDate       int               `json:"contractEndDate"`
+	ContractStartDate     *Time             `json:"contractStartDate"`
+	ContractEndDate       *Time             `json:"contractEndDate"`
 	ContractTermMonths    int               `json:"contractTermMonths"`
 	AttributeTags         map[string]string `json:"attributeTags"`
 	Virtual               bool              `json:"virtual"`

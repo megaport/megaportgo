@@ -1,5 +1,10 @@
 package megaport
 
+import (
+	"encoding/json"
+	"time"
+)
+
 const (
 	// The CONFIGURED service state.
 	SERVICE_CONFIGURED = "CONFIGURED"
@@ -39,3 +44,17 @@ const MODIFY_MARKETPLACE_VISIBILITY string = "MARKETPLACE_VISIBILITY"
 const MODIFY_RATE_LIMIT = "RATE_LIMIT"
 const MODIFY_A_END_VLAN = "A_VLAN"
 const MODIFY_B_END_VLAN = "B_VLAN"
+
+type Time struct {
+ 	time.Time
+}
+
+func (t *Time) UnmarshalJSON(b []byte) error {
+	var timestamp int64
+	err := json.Unmarshal(b, &timestamp)
+	if err != nil {
+		return err
+	}
+	t.Time = GetTime(timestamp) // Divide by 1000 to convert from milliseconds to seconds
+	return nil
+}

@@ -66,7 +66,7 @@ func (suite *VXCClientTestSuite) TestBuyVXC() {
 		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
 		"data": [
 			{
-				"createDate": 1,
+				"createDate": 1706104800000,
 				"vxcOrderId": 1,
 				"payerMegaPortId": 1,
 				"nonPayerMegaPortId": 1,
@@ -154,9 +154,10 @@ func (suite *VXCClientTestSuite) TestBuyVXC() {
 					"marketplaceVisibility": true,
 					"vxcPermitted": true,
 					"vxcAutoApproval": false,
-					"createDate": 1,
+					"createDate": 1706104800000,
 					"terminationDate": null,
-					"contractStartDate": null,
+					"contractStartDate": 1706104800000,
+					"contractEndDate": 1737727200000,
 					"contractTermMonths": 1,
 					"rateType": "MONTHLY",
 					"trialAgreement": false,
@@ -233,6 +234,9 @@ func (suite *VXCClientTestSuite) TestGetVXC() {
 	portUid := "9b1c46c7-1e8d-4035-bf38-1bc60d346d57"
 	bEndUid := "91ededc2-473f-4a30-ad24-0703c7f35e50"
 
+	startDate := &Time{GetTime(1706104800000)}
+	endDate := &Time{GetTime(1737727200000)}
+
 	wantVxc := &VXC{
 		ID: 1,
 		UID: vxcUid,
@@ -243,7 +247,9 @@ func (suite *VXCClientTestSuite) TestGetVXC() {
 		ProvisioningStatus: "LIVE",
 		UsageAlgorithm: "POST_PAID_HOURLY_SPEED_LONG_HAUL_VXC",
 		CreatedBy: companyUid,
-		CreateDate: 1,
+		CreateDate: startDate,
+		ContractStartDate: startDate,
+		ContractEndDate: endDate,
 		Resources: VXCResources{
 		CspConnection: map[string]interface{}{
 			"bandwidth": float64(50),
@@ -306,7 +312,7 @@ func (suite *VXCClientTestSuite) TestGetVXC() {
 			"provisioningStatus": "LIVE",
 			"usageAlgorithm": "POST_PAID_HOURLY_SPEED_LONG_HAUL_VXC",
 			"createdBy": "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
-			"createDate": 1,
+			"createDate": 1706104800000,
 			"resources": {
 				"csp_connection": {
 					"bandwidth": 50,
@@ -337,8 +343,8 @@ func (suite *VXCClientTestSuite) TestGetVXC() {
 				"type": null,
 				"newSpeed": null
 			},
-			"contractStartDate": null,
-			"contractEndDate": null,
+			"contractStartDate": 1706104800000,
+			"contractEndDate": 1737727200000,
 			"contractTermMonths": 1,
 			"companyUid": "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
 			"companyName": "Test Company",
@@ -407,6 +413,9 @@ func (suite *VXCClientTestSuite) TestUpdateVXC() {
 	bEndVlan := 1
 	rateLimit := 100
 
+	startDate := &Time{GetTime(1706104800000)}
+	endDate := &Time{GetTime(1737727200000)}
+
 	updateReq := &UpdateVXCRequest{
 		Name: &updateName,
 		AEndVLAN: &aEndVlan,
@@ -427,7 +436,7 @@ func (suite *VXCClientTestSuite) TestUpdateVXC() {
 			"provisioningStatus": "LIVE",
 			"usageAlgorithm": "POST_PAID_HOURLY_SPEED_LONG_HAUL_VXC",
 			"createdBy": "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
-			"createDate": 1,
+			"createDate": 1706104800000,
 			"resources": {
 				"csp_connection": {
 					"bandwidth": 100,
@@ -458,8 +467,8 @@ func (suite *VXCClientTestSuite) TestUpdateVXC() {
 				"type": null,
 				"newSpeed": null
 			},
-			"contractStartDate": null,
-			"contractEndDate": null,
+			"contractStartDate": 1706104800000,
+			"contractEndDate": 1737727200000,
 			"contractTermMonths": 1,
 			"companyUid": "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
 			"companyName": "Test Company",
@@ -514,7 +523,9 @@ func (suite *VXCClientTestSuite) TestUpdateVXC() {
 		ProvisioningStatus: "LIVE",
 		UsageAlgorithm: "POST_PAID_HOURLY_SPEED_LONG_HAUL_VXC",
 		CreatedBy: companyUid,
-		CreateDate: 1,
+		CreateDate: startDate,
+		ContractStartDate: startDate,
+		ContractEndDate: endDate,
 		Resources: VXCResources{
 		CspConnection: map[string]interface{}{
 			"bandwidth": float64(100),
