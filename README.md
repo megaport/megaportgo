@@ -1,6 +1,6 @@
-[![Go Reference](https://pkg.go.dev/badge/github.com/megaport/megaportgo.svg)](https://pkg.go.dev/github.com/megaport/megaportgo)
-
 # Megaport Go
+
+[![Go Reference](https://pkg.go.dev/badge/github.com/megaport/megaportgo.svg)](https://pkg.go.dev/github.com/megaport/megaportgo)
 
 ## Overview
 
@@ -44,7 +44,7 @@ When you open a Pull Request, all authors of the contributions are required to c
 acceptance of the CLA terms. Pull Requests can not be mMegaport_Contributor_Licence_Agreementerged until this is complete.
 
 The [Megaport Contributor Licence Agreement](CLA.md) applies to contributions. 
-All users are free to use the MegaportGo project under the [MPL-2.0 Open Source Licence](LICENSE).
+All users are free to use the `megaportgo` project under the [MPL-2.0 Open Source Licence](LICENSE).
 
 Megaport users are also bound by the [Acceptable Use Policy](https://www.megaport.com/legal/acceptable-use-policy).	
 
@@ -58,7 +58,22 @@ Megaport is under no obligation to accept any pull requests or to accept them in
 
 ## Notes
 
-The MegaportGo project is not part of the official Megaport product and is not supported through the usual product support channels. Megaport will work on the repository as it fits within other internal activities.
+### What's new in V1
+
+The new V1 release of the `megaportgo` project has several changes users should be aware of:
+
+- All API methods now take `context`
+- Much more configurable 
+    - Custom HTTP client support
+    - Structured logging is much more configurable and is handled using the `slog` package
+- Documentation is improved
+- Errors are easier to work with and are defined at the package level
+- All APIs are now available in the `megaport` package rather than multiple packages in the `service` directory
+- General code cleanup
+
+### Support 
+
+The `megaportgo` project is not part of the official Megaport product and is not supported through the usual product support channels. Megaport will work on the repository as it fits within other internal activities.
 
 Issues will be tracked for their source and type.
 
