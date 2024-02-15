@@ -3,7 +3,6 @@ package megaport
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"io"
 	"net/http"
 
@@ -48,7 +47,6 @@ func (svc *PartnerServiceOp) ListPartnerMegaports(ctx context.Context) ([]*Partn
 		return nil, fileErr
 	}
 
-
 	partnerMegaportResponse := PartnerMegaportResponse{}
 	unmarshalErr := json.Unmarshal(body, &partnerMegaportResponse)
 	if unmarshalErr != nil {
@@ -81,7 +79,7 @@ func (svc *PartnerServiceOp) FilterPartnerMegaportByProductName(ctx context.Cont
 		}
 	}
 	if len(toReturn) == 0 {
-		return nil, errors.New(ERR_PARTNER_PORT_NO_RESULTS)
+		return nil, ErrNoPartnerPortsFound
 	}
 	return toReturn, nil
 }
@@ -109,7 +107,7 @@ func (svc *PartnerServiceOp) FilterPartnerMegaportByConnectType(ctx context.Cont
 		}
 	}
 	if len(toReturn) == 0 {
-		return nil, errors.New(ERR_PARTNER_PORT_NO_RESULTS)
+		return nil, ErrNoPartnerPortsFound
 	}
 	return toReturn, nil
 }
@@ -137,7 +135,7 @@ func (svc *PartnerServiceOp) FilterPartnerMegaportByCompanyName(ctx context.Cont
 		}
 	}
 	if len(toReturn) == 0 {
-		return nil, errors.New(ERR_PARTNER_PORT_NO_RESULTS)
+		return nil, ErrNoPartnerPortsFound
 	}
 	return toReturn, nil
 }
@@ -154,7 +152,7 @@ func (svc *PartnerServiceOp) FilterPartnerMegaportByLocationId(ctx context.Conte
 		}
 	}
 	if len(toReturn) == 0 {
-		return nil, errors.New(ERR_PARTNER_PORT_NO_RESULTS)
+		return nil, ErrNoPartnerPortsFound
 	}
 	return toReturn, nil
 }
@@ -182,7 +180,7 @@ func (svc *PartnerServiceOp) FilterPartnerMegaportByDiversityZone(ctx context.Co
 		}
 	}
 	if len(toReturn) == 0 {
-		return nil, errors.New(ERR_PARTNER_PORT_NO_RESULTS)
+		return nil, ErrNoPartnerPortsFound
 	}
 	return toReturn, nil
 }

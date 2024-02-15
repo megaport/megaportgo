@@ -3,7 +3,6 @@ package megaport
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -40,16 +39,16 @@ func (suite *PortClientTestSuite) TestBuyPort() {
 	portSvc := suite.client.PortService
 
 	want := &BuyPortResponse{TechnicalServiceUID: "36b3f68e-2f54-4331-bf94-f8984449365f"}
-	
+
 	req := &BuyPortRequest{
-		Name:       "test-port",
-		Term:       12,
-		PortSpeed:  10000,
-		LocationId: 226,
-		Market:     "US",
-		IsLag:      false,
-		LagCount:   0,
-		IsPrivate:  true,
+		Name:          "test-port",
+		Term:          12,
+		PortSpeed:     10000,
+		LocationId:    226,
+		Market:        "US",
+		IsLag:         false,
+		LagCount:      0,
+		IsPrivate:     true,
 		DiversityZone: "red",
 	}
 
@@ -68,7 +67,7 @@ func (suite *PortClientTestSuite) TestBuyPort() {
 			LocationID:            req.LocationId,
 			Virtual:               false,
 			Market:                req.Market,
-			DiversityZone: 		   "red",
+			DiversityZone:         "red",
 			MarketplaceVisibility: !req.IsPrivate,
 		},
 	}
@@ -157,7 +156,7 @@ func (suite *PortClientTestSuite) TestBuyLAGPort() {
 
 	portSvc := suite.client.PortService
 
-	want := &BuyPortResponse{TechnicalServiceUID:  "36b3f68e-2f54-4331-bf94-f8984449365f"}
+	want := &BuyPortResponse{TechnicalServiceUID: "36b3f68e-2f54-4331-bf94-f8984449365f"}
 
 	req := &BuyLAGPortRequest{
 		Name:       "test-port",
@@ -230,7 +229,7 @@ func (suite *PortClientTestSuite) TestBuyPortInvalidTerm() {
 		IsPrivate:  true,
 	}
 	_, err := portSvc.BuyPort(ctx, req)
-	suite.Equal(errors.New(ERR_TERM_NOT_VALID), err)
+	suite.Equal(ErrInvalidTerm, err)
 }
 
 func (suite *PortClientTestSuite) TestListPorts() {

@@ -6,11 +6,22 @@ import (
 )
 
 const (
-	// The CONFIGURED service state.
-	SERVICE_CONFIGURED = "CONFIGURED"
+	SERVICE_CONFIGURED = "CONFIGURED" // The CONFIGURED service state.
+	SERVICE_LIVE       = "LIVE"       // The LIVE service state.
 
-	// The LIVE service state.
-	SERVICE_LIVE = "LIVE"
+	PRODUCT_MEGAPORT = "megaport"
+	PRODUCT_VXC      = "vxc"
+	PRODUCT_MCR      = "mcr2"
+	PRODUCT_MVE      = "mve"
+	PRODUCT_IX       = "ix"
+
+	STATUS_DECOMMISSIONED = "DECOMMISSIONED"
+	STATUS_CANCELLED      = "CANCELLED"
+
+	SINGLE_PORT                        = "Single"
+	LAG_PORT                           = "LAG"
+	CONNECT_TYPE_AWS_VIF               = "AWS"
+	CONNECT_TYPE_AWS_HOSTED_CONNECTION = "AWSHC"
 )
 
 var (
@@ -24,20 +35,6 @@ type GenericResponse struct {
 }
 
 const APPLICATION_SHORT_NAME = "mpt"
-
-const PRODUCT_MEGAPORT = "megaport"
-const PRODUCT_VXC = "vxc"
-const PRODUCT_MCR = "mcr2"
-const PRODUCT_MVE = "mve"
-const PRODUCT_IX = "ix"
-
-const STATUS_DECOMMISSIONED string = "DECOMMISSIONED"
-const STATUS_CANCELLED string = "CANCELLED"
-const SINGLE_PORT string = "Single"
-const LAG_PORT string = "LAG"
-const CONNECT_TYPE_AWS_VIF string = "AWS"
-const CONNECT_TYPE_AWS_HOSTED_CONNECTION string = "AWSHC"
-
 const MODIFY_NAME string = "NAME"
 const MODIFY_COST_CENTRE = "COST_CENTRE"
 const MODIFY_MARKETPLACE_VISIBILITY string = "MARKETPLACE_VISIBILITY"

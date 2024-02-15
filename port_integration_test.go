@@ -2,7 +2,6 @@ package megaport
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -184,28 +183,28 @@ func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Con
 	suite.client.Logger.Debug("Buying Port", slog.String("port_type", portType))
 	if portType == LAG_PORT {
 		orderRes, portErr = c.PortService.BuyLAGPort(ctx, &BuyLAGPortRequest{
-			Name:       "Buy Port (LAG) Test",
-			Term:       1,
-			PortSpeed:  10000,
-			LocationId: location.ID,
-			Market:     location.Market,
-			LagCount:   2,
-			IsPrivate:  true,
-			DiversityZone: "red",
+			Name:             "Buy Port (LAG) Test",
+			Term:             1,
+			PortSpeed:        10000,
+			LocationId:       location.ID,
+			Market:           location.Market,
+			LagCount:         2,
+			IsPrivate:        true,
+			DiversityZone:    "red",
 			WaitForProvision: true,
-			WaitForTime: 5 * time.Minute,
+			WaitForTime:      5 * time.Minute,
 		})
 	} else {
 		orderRes, portErr = c.PortService.BuySinglePort(ctx, &BuySinglePortRequest{
-			Name:       "Buy Port (Single) Test",
-			Term:       1,
-			PortSpeed:  10000,
-			LocationId: location.ID,
-			Market:     location.Market,
-			DiversityZone: "red",
-			IsPrivate:  true,
+			Name:             "Buy Port (Single) Test",
+			Term:             1,
+			PortSpeed:        10000,
+			LocationId:       location.ID,
+			Market:           location.Market,
+			DiversityZone:    "red",
+			IsPrivate:        true,
 			WaitForProvision: true,
-			WaitForTime: 5 * time.Minute,
+			WaitForTime:      5 * time.Minute,
 		})
 	}
 	if portErr != nil {
@@ -228,8 +227,8 @@ func (suite *PortIntegrationTestSuite) testModifyPort(c *Client, ctx context.Con
 		Name:                  newPortName,
 		CostCentre:            "",
 		MarketplaceVisibility: portInfo.MarketplaceVisibility,
-		WaitForUpdate: true,
-		WaitForTime: 5 * time.Minute,
+		WaitForUpdate:         true,
+		WaitForTime:           5 * time.Minute,
 	})
 	if err != nil {
 		suite.FailNowf("could not modify port", "could not modify port %v", modifyErr)
@@ -308,7 +307,7 @@ func (suite *PortIntegrationTestSuite) testLockPort(c *Client, ctx context.Conte
 	suite.client.Logger.Debug("Test lock of an already locked port.", slog.String("port_id", portId))
 	lockRes, lockErr := c.PortService.LockPort(ctx, portId)
 	suite.Nil(lockRes)
-	suite.Error(errors.New(ERR_PORT_ALREADY_LOCKED), lockErr)
+	suite.Error(ErrPortAlreadyLocked, lockErr)
 
 	suite.client.Logger.Debug("Unlocking Port now.", slog.String("port_id", portId))
 	unlockResp, unlockErr := c.PortService.UnlockPort(ctx, portId)
@@ -320,5 +319,5 @@ func (suite *PortIntegrationTestSuite) testLockPort(c *Client, ctx context.Conte
 	suite.client.Logger.Debug("Test unlocking of a port that doesn't have a lock.", slog.String("port_id", portId))
 	unlockResp, unlockErr = c.PortService.UnlockPort(ctx, portId)
 	suite.Nil(unlockResp)
-	suite.Error(errors.New(ERR_PORT_NOT_LOCKED), unlockErr)
+	suite.Error(ErrPortNotLocked, unlockErr)
 }

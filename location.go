@@ -3,7 +3,6 @@ package megaport
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"io"
 	"net/http"
 
@@ -113,7 +112,7 @@ func (svc *LocationServiceOp) GetLocationByID(ctx context.Context, locationID in
 			return location, nil
 		}
 	}
-	return nil, errors.New(ERR_LOCATION_NOT_FOUND)
+	return nil, ErrLocationNotFound
 }
 
 func (svc *LocationServiceOp) GetLocationByName(ctx context.Context, locationName string) (*Location, error) {
@@ -126,7 +125,7 @@ func (svc *LocationServiceOp) GetLocationByName(ctx context.Context, locationNam
 			return location, nil
 		}
 	}
-	return nil, errors.New(ERR_LOCATION_NOT_FOUND)
+	return nil, ErrLocationNotFound
 }
 
 func (svc *LocationServiceOp) GetLocationByNameFuzzy(ctx context.Context, search string) ([]*Location, error) {
@@ -145,7 +144,7 @@ func (svc *LocationServiceOp) GetLocationByNameFuzzy(ctx context.Context, search
 	if len(matchedLocations) > 0 {
 		return matchedLocations, nil
 	} else {
-		return matchedLocations, errors.New(ERR_NO_MATCHING_LOCATIONS)
+		return matchedLocations, ErrNoMatchingLocations
 	}
 }
 
@@ -206,7 +205,7 @@ func (svc *LocationServiceOp) IsValidMarketCode(ctx context.Context, marketCode 
 	if err != nil {
 		return found, err
 	}
-	
+
 	for i := 0; i < len(marketCodes); i++ {
 		if marketCodes[i] == marketCode {
 			found = true

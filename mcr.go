@@ -3,7 +3,6 @@ package megaport
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"slices"
@@ -164,10 +163,10 @@ func (svc *MCRServiceOp) BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMC
 
 func validateBuyMCRRequest(order *BuyMCRRequest) error {
 	if order.Term != 1 && order.Term != 12 && order.Term != 24 && order.Term != 36 {
-		return errors.New(ERR_TERM_NOT_VALID)
+		return ErrInvalidTerm
 	}
 	if order.PortSpeed != 1000 && order.PortSpeed != 2500 && order.PortSpeed != 5000 && order.PortSpeed != 10000 {
-		return errors.New(ERR_MCR_INVALID_PORT_SPEED)
+		return ErrMCRInvalidPortSpeed
 	}
 	return nil
 }
@@ -218,7 +217,6 @@ func (svc *MCRServiceOp) CreatePrefixFilterList(ctx context.Context, req *Create
 		IsCreated: true,
 	}, nil
 }
-
 
 // GetMCRPrefixFilterLists returns prefix filter lists for the specified MCR2.
 func (svc *MCRServiceOp) GetMCRPrefixFilterLists(ctx context.Context, mcrId string) ([]*PrefixFilterList, error) {
@@ -283,7 +281,7 @@ func (svc *MCRServiceOp) ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (
 			case <-timer.C:
 				return nil, fmt.Errorf("time expired waiting for MCR %s to update", req.MCRID)
 			case <-ctx.Done():
-				return nil, fmt.Errorf("context expired waiting for MCR %s to update",req.MCRID)
+				return nil, fmt.Errorf("context expired waiting for MCR %s to update", req.MCRID)
 			case <-ticker.C:
 				mcrDetails, err := svc.GetMCR(ctx, req.MCRID)
 				if err != nil {

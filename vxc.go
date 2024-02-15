@@ -10,15 +10,10 @@ import (
 	"time"
 )
 
-const PARTNER_AZURE string = "AZURE"
-const PARTNER_GOOGLE string = "GOOGLE"
-const PARTNER_AWS string = "AWS"
-const PARTNER_OCI string = "ORACLE"
-
 type VXCService interface {
 	BuyVXC(ctx context.Context, req *BuyVXCRequest) (*BuyVXCResponse, error)
 	GetVXC(ctx context.Context, id string) (*VXC, error)
-	DeleteVXC(ctx context.Context, id string, req *DeleteVXCRequest) (error)
+	DeleteVXC(ctx context.Context, id string, req *DeleteVXCRequest) error
 	UpdateVXC(ctx context.Context, id string, req *UpdateVXCRequest) (*VXC, error)
 }
 
