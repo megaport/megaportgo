@@ -54,9 +54,9 @@ func (suite *LocationClientTestSuite) TestListLocations() {
 			Campus:    "campus_deprecated",
 			Latitude:  39.762714,
 			Longitude: -104.761925,
-			Products: map[string]interface{}{
-				"mcr":      false,
-				"megaport": []interface{}{float64(1), float64(10)},
+			Products: &LocationProducts{
+				MCR:      false,
+				Megaport: []int{1, 10},
 			},
 			Market:           "US",
 			Metro:            "Denver",
@@ -86,9 +86,9 @@ func (suite *LocationClientTestSuite) TestListLocations() {
 			Status:           "Active",
 			Longitude:        -77.487442,
 			Latitude:         39.043757,
-			Products: map[string]interface{}{
-				"mcr":      false,
-				"megaport": []interface{}{float64(10)},
+			Products: &LocationProducts{
+				MCR:      false,
+				Megaport: []int{10},
 			},
 		},
 	}
@@ -198,9 +198,9 @@ func (suite *LocationClientTestSuite) TestGetLocationByID() {
 		Campus:    "campus_deprecated",
 		Latitude:  39.762714,
 		Longitude: -104.761925,
-		Products: map[string]interface{}{
-			"mcr":      false,
-			"megaport": []interface{}{float64(1), float64(10)},
+		Products: &LocationProducts{
+			MCR:      false,
+			Megaport: []int{1, 10},
 		},
 		Market:           "US",
 		Metro:            "Denver",
@@ -320,9 +320,9 @@ func (suite *LocationClientTestSuite) TestGetLocationByName() {
 		Status:           "Active",
 		Longitude:        -77.487442,
 		Latitude:         39.043757,
-		Products: map[string]interface{}{
-			"mcr":      false,
-			"megaport": []interface{}{float64(10)},
+		Products: &LocationProducts{
+			MCR:      false,
+			Megaport: []int{10},
 		},
 	}
 	path := "/v2/locations"
@@ -432,9 +432,9 @@ func (suite *LocationClientTestSuite) TestGetLocationByNameFuzzy() {
 			Campus:    "campus_deprecated",
 			Latitude:  39.762714,
 			Longitude: -104.761925,
-			Products: map[string]interface{}{
-				"mcr":      true,
-				"megaport": []interface{}{float64(1), float64(10)},
+			Products: &LocationProducts{
+				MCR:      true,
+				Megaport: []int{1, 10},
 			},
 			Market:           "US",
 			Metro:            "Denver",
@@ -464,9 +464,9 @@ func (suite *LocationClientTestSuite) TestGetLocationByNameFuzzy() {
 			Status:           "Active",
 			Longitude:        -77.487442,
 			Latitude:         39.043757,
-			Products: map[string]interface{}{
-				"mcr":      true,
-				"megaport": []interface{}{float64(10)},
+			Products:&LocationProducts{
+				MCR:      true,
+				Megaport: []int{10},
 			},
 		},
 	}
@@ -769,9 +769,11 @@ func (suite *LocationClientTestSuite) TestFilterLocationsByMcrAvailability() {
 			Campus:    "campus_deprecated",
 			Latitude:  39.762714,
 			Longitude: -104.761925,
-			Products: map[string]interface{}{
-				"mcr2":     true,
-				"megaport": []interface{}{float64(1), float64(10)},
+			Products: &LocationProducts{
+				MCR:      	true,
+				MCRVersion: 2,
+				MCR2:      	[]int{1000, 2500, 5000, 10000},
+				Megaport: 	[]int{1, 10},
 			},
 			Market:           "US",
 			Metro:            "Denver",
@@ -801,9 +803,11 @@ func (suite *LocationClientTestSuite) TestFilterLocationsByMcrAvailability() {
 			Status:           "Active",
 			Longitude:        -73.971321,
 			Latitude:         39.043757,
-			Products: map[string]interface{}{
-				"mcr2":     true,
-				"megaport": []interface{}{float64(10)},
+			Products: &LocationProducts{
+				MCR: 		true,
+				MCRVersion: 2,
+				MCR2:      	[]int{1000, 2500, 5000, 10000},
+				Megaport: 	[]int{1, 10},
 			},
 		},
 		{
@@ -828,9 +832,9 @@ func (suite *LocationClientTestSuite) TestFilterLocationsByMcrAvailability() {
 			Status:           "Active",
 			Longitude:        -73.971321,
 			Latitude:         40.776676,
-			Products: map[string]interface{}{
-				"mcr":      false,
-				"megaport": []interface{}{float64(10)},
+			Products: &LocationProducts{
+				MCR:      false,
+				Megaport: []int{10},
 			},
 		},
 	}
@@ -852,9 +856,11 @@ func (suite *LocationClientTestSuite) TestFilterLocationsByMcrAvailability() {
 			Campus:    "campus_deprecated",
 			Latitude:  39.762714,
 			Longitude: -104.761925,
-			Products: map[string]interface{}{
-				"mcr2":     true,
-				"megaport": []interface{}{float64(1), float64(10)},
+			Products: &LocationProducts{
+				MCR:      	true,
+				MCRVersion: 2,
+				MCR2:      	[]int{1000, 2500, 5000, 10000},
+				Megaport: 	[]int{1, 10},
 			},
 			Market:           "US",
 			Metro:            "Denver",
@@ -884,9 +890,11 @@ func (suite *LocationClientTestSuite) TestFilterLocationsByMcrAvailability() {
 			Status:           "Active",
 			Longitude:        -73.971321,
 			Latitude:         39.043757,
-			Products: map[string]interface{}{
-				"mcr2":     true,
-				"megaport": []interface{}{float64(10)},
+			Products: &LocationProducts{
+				MCR: 		true,
+				MCRVersion: 2,
+				MCR2:      	[]int{1000, 2500, 5000, 10000},
+				Megaport: 	[]int{1, 10},
 			},
 		},
 	}
@@ -916,14 +924,11 @@ func (suite *LocationClientTestSuite) TestGetRandom() {
 			Campus:    "campus_deprecated",
 			Latitude:  39.762714,
 			Longitude: -104.761925,
-			Products: map[string]interface{}{
-				"mcr2": []interface{}{
-					float64(1000),
-					float64(2500),
-					float64(5000),
-					float64(10000),
-				},
-				"megaport": []interface{}{float64(1), float64(10)},
+			Products: &LocationProducts{
+				MCR: 		true,
+				MCRVersion: 2,
+				MCR2:      	[]int{1000, 2500, 5000, 10000},
+				Megaport: 	[]int{1, 10},
 			},
 			Market:           "US",
 			Metro:            "Denver",
@@ -953,14 +958,11 @@ func (suite *LocationClientTestSuite) TestGetRandom() {
 			Status:           "Active",
 			Longitude:        -77.487442,
 			Latitude:         39.043757,
-			Products: map[string]interface{}{
-				"mcr2": []interface{}{
-					float64(1000),
-					float64(2500),
-					float64(5000),
-					float64(10000),
-				},
-				"megaport": []interface{}{float64(10)},
+			Products: &LocationProducts{
+				MCR: 		true,
+				MCRVersion: 2,
+				MCR2:      	[]int{1000, 2500, 5000, 10000},
+				Megaport: 	[]int{1, 10},
 			},
 		},
 	}
@@ -996,6 +998,8 @@ func (suite *LocationClientTestSuite) TestGetRandom() {
 			"longitude": -104.761925,
 			"latitude": 39.762714,
 			"products": {
+				"mcrVersion": 2,
+				"mcr": true,
 				"mcr2": [
 					1000,
 					2500,
@@ -1003,8 +1007,7 @@ func (suite *LocationClientTestSuite) TestGetRandom() {
 					10000
 				],
 				"megaport": [
-					1,
-					10
+					1, 10
 				]
 			},
 			"ordering_message": null,
@@ -1037,6 +1040,8 @@ func (suite *LocationClientTestSuite) TestGetRandom() {
 			"longitude": -77.487442,
 			"latitude": 39.043757,
 			"products": {
+				"mcrVersion": 2,
+				"mcr": true,
 				"mcr2": [
 					1000,
 					2500,
@@ -1044,7 +1049,7 @@ func (suite *LocationClientTestSuite) TestGetRandom() {
 					10000
 				],
 				"megaport": [
-					10
+					1, 10
 				]
 			},
 			"ordering_message": null,
@@ -1077,6 +1082,7 @@ func (suite *LocationClientTestSuite) TestGetRandom() {
 			"longitude": -73.971321,
 			"latitude": 40.776676,
 			"products": {
+				"mcr": false,
 				"megaport": [
 					10
 				]
@@ -1109,6 +1115,7 @@ func (suite *LocationClientTestSuite) TestGetRandom() {
 			"longitude": -0.628975,
 			"latitude": 51.522484,
 			"products": {
+				"mcr": false,
 				"megaport": [
 					10
 				]
