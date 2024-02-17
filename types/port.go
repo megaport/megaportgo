@@ -15,16 +15,21 @@
 package types
 
 type PortOrder struct {
-	Name                  string `json:"productName"`
-	Term                  int    `json:"term"`
-	ProductType           string `json:"productType"`
-	PortSpeed             int    `json:"portSpeed"`
-	LocationID            int    `json:"locationId"`
-	CreateDate            int64  `json:"createDate"`
-	Virtual               bool   `json:"virtual"`
-	Market                string `json:"market"`
-	LagPortCount          int    `json:"lagPortCount,omitempty"`
-	MarketplaceVisibility bool   `json:"marketplaceVisibility"`
+	Name                  string          `json:"productName"`
+	Term                  int             `json:"term"`
+	ProductType           string          `json:"productType"`
+	PortSpeed             int             `json:"portSpeed"`
+	LocationID            int             `json:"locationId"`
+	CreateDate            int64           `json:"createDate"`
+	Virtual               bool            `json:"virtual"`
+	Market                string          `json:"market"`
+	LagPortCount          int             `json:"lagPortCount,omitempty"`
+	MarketplaceVisibility bool            `json:"marketplaceVisibility"`
+	Config                PortOrderConfig `json:"config,omitempty"`
+}
+
+type PortOrderConfig struct {
+	DiversityZone string `json:"diversityZone,omitempty"`
 }
 
 type PortOrderConfirmation struct {
@@ -64,6 +69,7 @@ type Port struct {
 	AdminLocked           bool                   `json:"adminLocked"`
 	Cancelable            bool                   `json:"cancelable"`
 	VXCResources          PortResources          `json:"resources"`
+	DiversityZone         string                 `json:"diversityZone"`
 }
 
 type PortResources struct {
