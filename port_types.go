@@ -45,7 +45,7 @@ type Port struct {
 	ContractStartDate     *Time                  `json:"contractStartDate"`
 	ContractEndDate       *Time                  `json:"contractEndDate"`
 	ContractTermMonths    int                    `json:"contractTermMonths"`
-	AttributeTags         map[string]interface{} `json:"attributeTags"`
+	AttributeTags         PortAttributeTags 	 `json:"attributeTags"`
 	Virtual               bool                   `json:"virtual"`
 	BuyoutPort            bool                   `json:"buyoutPort"`
 	Locked                bool                   `json:"locked"`
@@ -94,4 +94,31 @@ type PortResponse struct {
 	Message string `json:"message"`
 	Terms   string `json:"terms"`
 	Data    Port   `json:"data"`
+}
+
+type PortAttributeTags struct {
+	TerminatedServiceDetails PortTerminatedServiceDetails `json:"terminatedServiceDetails"`
+}
+
+type PortTerminatedServiceDetails struct {
+	Location PortTerminatedServiceDetailsLocation `json:"location"`
+	Interface PortTerminatedServiceDetailsInterface `json:"interface"`
+	Device string `json:"device"`
+}
+
+type PortTerminatedServiceDetailsLocation struct {
+	ID int	`json:"id"`
+	Name string `json:"name"`
+	SiteCode string `json:"site_code"`
+}
+
+type PortTerminatedServiceDetailsInterface struct {
+	ResourceType string `json:"resource_type"`
+	Demarcation string `json:"demarcation"`
+	LOATemplate string `json:"loa_template"`
+	Media string `json:"media"`
+	PortSpeed int `json:"port_speed"`
+	ResourceName string `json:"resource_name"`
+	Up int `json:"up"`
+	Shutdown bool `json:"shutdown"`
 }
