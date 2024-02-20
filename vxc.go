@@ -33,8 +33,8 @@ type BuyVXCRequest struct {
 	PortUID           string
 	VXCName           string
 	RateLimit         int
-	AEndConfiguration VXCOrderAEndConfiguration
-	BEndConfiguration VXCOrderBEndConfiguration
+	AEndConfiguration VXCOrderEndpointConfiguration
+	BEndConfiguration VXCOrderEndpointConfiguration
 
 	WaitForProvision bool          // Wait until the VXC provisions before returning
 	WaitForTime      time.Duration // How long to wait for the VXC to provision if WaitForProvision is true (default is 5 minutes)

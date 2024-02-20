@@ -40,10 +40,10 @@ func (suite *VXCClientTestSuite) TestBuyVXC() {
 		PortUID: portProductUid,
 		VXCName: "test-vxc",
 		RateLimit: 50,
-		AEndConfiguration: VXCOrderAEndConfiguration{
+		AEndConfiguration: VXCOrderEndpointConfiguration{
 			VLAN: 0,
 		},
-		BEndConfiguration: VXCOrderBEndConfiguration{
+		BEndConfiguration: VXCOrderEndpointConfiguration{
 			ProductUID: vxcProductUid,
 			VLAN: 0,
 		},
@@ -251,15 +251,19 @@ func (suite *VXCClientTestSuite) TestGetVXC() {
 		ContractStartDate: startDate,
 		ContractEndDate: endDate,
 		Resources: VXCResources{
-		CspConnection: map[string]interface{}{
-			"bandwidth": float64(50),
-			"connectType": "",
-			"resource_name": "b_csp_connection",
-			"resource_type": "csp_connection",
-			"name": "test-vxc",
-			"ownerAccount": "test-owner-account-id",
-			"bandwidths": []interface{}{float64(50)},
-			"connectionId": "test-connection-id",
+		CSPConnection: CSPConnection{
+			CSPConnection: []CSPConnectionConfig{
+					CSPConnectionAWSHC{
+						Bandwidth: 50,
+					ConnectType: "AWSHC",
+					ResourceName: "b_csp_connection",
+					ResourceType: "csp_connection",
+					Name: "test-vxc",
+					OwnerAccount: "test-owner-account-id",
+					Bandwidths: []int{50},
+					ConnectionID: "test-connection-id",
+				},
+			},
 		},
 		VLL: VLLConfig{
 			AEndVLAN: 0,
@@ -268,7 +272,7 @@ func (suite *VXCClientTestSuite) TestGetVXC() {
 			ResourceName: "vll",
 			ResourceType: "vll",
 		},
-	},
+		},	
 	VXCApproval: VXCApproval{
 		Status: "",
 		Message: "",
@@ -296,8 +300,8 @@ func (suite *VXCClientTestSuite) TestGetVXC() {
 		LocationID: 1,
 		Location: "Test Location",
 		VLAN: 0,
-	},
-	}
+	}}
+	
 
 	jblob := `{
 		"message": "Found Product 6b3f68e-2f54-4331-bf94-f8984449365f",
@@ -314,9 +318,9 @@ func (suite *VXCClientTestSuite) TestGetVXC() {
 			"createdBy": "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
 			"createDate": 1706104800000,
 			"resources": {
-				"csp_connection": {
+				"csp_connection": [{
 					"bandwidth": 50,
-					"connectType": "",
+					"connectType": "AWSHC",
 					"resource_name": "b_csp_connection",
 					"resource_type": "csp_connection",
 					"name": "test-vxc",
@@ -325,7 +329,7 @@ func (suite *VXCClientTestSuite) TestGetVXC() {
 						50
 					],
 					"connectionId": "test-connection-id"
-				},
+				}],
 				"vll": {
 					"a_vlan": 0,
 					"b_vlan": 0,
@@ -439,14 +443,14 @@ func (suite *VXCClientTestSuite) TestUpdateVXC() {
 			"createDate": 1706104800000,
 			"resources": {
 				"csp_connection": {
-					"bandwidth": 100,
-					"connectType": "",
+					"bandwidth": 50,
+					"connectType": "AWSHC",
 					"resource_name": "b_csp_connection",
 					"resource_type": "csp_connection",
 					"name": "test-vxc",
 					"ownerAccount": "test-owner-account-id",
 					"bandwidths": [
-						100
+						50
 					],
 					"connectionId": "test-connection-id"
 				},
@@ -527,16 +531,20 @@ func (suite *VXCClientTestSuite) TestUpdateVXC() {
 		ContractStartDate: startDate,
 		ContractEndDate: endDate,
 		Resources: VXCResources{
-		CspConnection: map[string]interface{}{
-			"bandwidth": float64(100),
-			"connectType": "",
-			"resource_name": "b_csp_connection",
-			"resource_type": "csp_connection",
-			"name": "test-vxc",
-			"ownerAccount": "test-owner-account-id",
-			"bandwidths": []interface{}{float64(100)},
-			"connectionId": "test-connection-id",
-		},
+			CSPConnection: CSPConnection{
+				CSPConnection: []CSPConnectionConfig{
+						CSPConnectionAWSHC{
+							Bandwidth: 50,
+						ConnectType: "AWSHC",
+						ResourceName: "b_csp_connection",
+						ResourceType: "csp_connection",
+						Name: "test-vxc",
+						OwnerAccount: "test-owner-account-id",
+						Bandwidths: []int{50},
+						ConnectionID: "test-connection-id",
+					},
+				},
+			},
 		VLL: VLLConfig{
 			AEndVLAN: 0,
 			BEndVLAN: 0,
