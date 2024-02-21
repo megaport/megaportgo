@@ -4,6 +4,11 @@ import (
 	"encoding/json"
 )
 
+const PARTNER_AZURE string = "AZURE"
+const PARTNER_GOOGLE string = "GOOGLE"
+const PARTNER_AWS string = "AWS"
+const PARTNER_OCI string = "ORACLE"
+
 // ---- VXC Detail Types //
 type VXC struct {
 	ID                 int                 `json:"productId"`
@@ -198,6 +203,7 @@ type VXCOrderMVEConfig struct {
 }
 
 type VXCOrderAEndPartnerConfig struct {
+	VXCPartnerConfiguration
 	Interfaces []PartnerConfigInterface `json:"interfaces,omitempty"`
 }
 
@@ -350,6 +356,7 @@ type CSPConnectionAzurePort struct {
 
 type CSPConnectionGoogle struct {
 	CSPConnectionConfig
+	Bandwidth int `json:"bandwidth"`
 	ConnectType string `json:"connectType"`
 	ResourceName string `json:"resource_name"`
 	ResourceType string `json:"resource_type"`
@@ -366,7 +373,7 @@ type CSPConnectionGoogleMegaport struct {
 }
 
 type CSPConnectionGooglePort struct {
-	ServiceID string `json:"service_id"`
+	ServiceID int `json:"service_id"`
 	VXCServiceIDs []int `json:"vxc_service_ids"`
 }
 
@@ -394,6 +401,11 @@ type CSPConnectionTransit struct {
 	CustomerIP6Network string `json:"customer_ip6_network"`
 	IPv4GatewayAddress string `json:"ipv4_gateway_address"`
 	IPv6GatewayAddress string `json:"ipv6_gateway_address"`
+}
+
+type CSPConnectionOther struct {
+	CSPConnectionConfig
+	CSPConnection map[string]interface{}
 }
 
 
@@ -467,6 +479,18 @@ func (c *CSPConnection) UnmarshalJSON(data []byte) error {
 						return err
 					}
 					c.CSPConnection = append(c.CSPConnection, transit)
+				default: // Any other cases will be marshaled into a map[string]interface{}
+					marshaled, err := json.Marshal(cn)
+					if err != nil {
+						return err
+					}
+					other := CSPConnectionOther{}
+					cspMap := map[string]interface{}{}
+					if err := json.Unmarshal(marshaled, &cspMap); err != nil {
+						return err
+					}
+					other.CSPConnection = cspMap
+					c.CSPConnection = append(c.CSPConnection, other)
 		}
 	 	case[]interface{}:
 			for _, m := range v {
@@ -532,6 +556,18 @@ func (c *CSPConnection) UnmarshalJSON(data []byte) error {
 						return err
 					}
 					c.CSPConnection = append(c.CSPConnection, transit)
+				default: // Any other cases will be marshaled into a map[string]interface{}
+					marshaled, err := json.Marshal(cn)
+					if err != nil {
+						return err
+					}
+					other := CSPConnectionOther{}
+					cspMap := map[string]interface{}{}
+					if err := json.Unmarshal(marshaled, &cspMap); err != nil {
+						return err
+					}
+					other.CSPConnection = cspMap
+					c.CSPConnection = append(c.CSPConnection, other)
 			}
 		}
 	}

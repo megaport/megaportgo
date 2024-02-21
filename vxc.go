@@ -7,14 +7,18 @@ import (
 	"io"
 	"net/http"
 	"slices"
+	"strings"
 	"time"
 )
+
+
 
 type VXCService interface {
 	BuyVXC(ctx context.Context, req *BuyVXCRequest) (*BuyVXCResponse, error)
 	GetVXC(ctx context.Context, id string) (*VXC, error)
 	DeleteVXC(ctx context.Context, id string, req *DeleteVXCRequest) error
 	UpdateVXC(ctx context.Context, id string, req *UpdateVXCRequest) (*VXC, error)
+	LookupPartnerPorts(ctx context.Context, req *LookupPartnerPortsRequest) (*LookupPartnerPortsResponse, error) 
 }
 
 func NewVXCService(c *Client) *VXCServiceOp {
@@ -64,6 +68,18 @@ type UpdateVXCRequest struct {
 
 type UpdateVXCResponse struct {
 }
+
+type LookupPartnerPortsRequest struct {
+	Key 				string
+	PortSpeed 			int
+	Partner 			string
+	ProductID 	string
+}
+
+type LookupPartnerPortsResponse struct {
+	ProductUID string
+}
+
 
 func (svc *VXCServiceOp) BuyVXC(ctx context.Context, req *BuyVXCRequest) (*BuyVXCResponse, error) {
 	buyOrder := []VXCOrder{{
@@ -190,8 +206,6 @@ func (svc *VXCServiceOp) UpdateVXC(ctx context.Context, id string, req *UpdateVX
 	}
 	defer response.Body.Close()
 
-	// TODO: add waiting mechanics here
-
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		return nil, err
@@ -202,5 +216,84 @@ func (svc *VXCServiceOp) UpdateVXC(ctx context.Context, id string, req *UpdateVX
 		return nil, err
 	}
 
-	return &vxcDetails.Data, nil
+	// wait until the VXC is updated before returning if requested by the user
+	if req.WaitForUpdate {
+		toWait := req.WaitForTime
+		if toWait == 0 {
+			toWait = 5 * time.Minute
+		}
+
+		ticker := time.NewTicker(30 * time.Second) // check on the update status every 30 seconds
+		timer := time.NewTimer(toWait)
+		defer ticker.Stop()
+		defer timer.Stop()
+
+		for {
+			select {
+			case <-timer.C:
+				return nil, fmt.Errorf("time expired waiting for VXC %s to update", id)
+			case <-ctx.Done():
+				return nil, fmt.Errorf("context expired waiting for VXC %s to update", id)
+			case <-ticker.C:
+				vxc, err := svc.GetVXC(ctx, id)
+				if err != nil {
+					return nil, err
+				}
+
+				var isUpdated bool
+				if vxc.ProvisioningStatus == "LIVE" {
+					isUpdated = true
+				}
+				if isUpdated {
+					return vxc, nil
+				}
+			}
+		}
+	} else {
+		// return the response right away if the user doesn't want to wait for update
+		return &vxcDetails.Data, nil
+	}
+}
+
+func (svc *VXCServiceOp) LookupPartnerPorts(ctx context.Context, req *LookupPartnerPortsRequest) (*LookupPartnerPortsResponse, error) {
+	lookupUrl := "/v2/secure/" + strings.ToLower(req.Partner) + "/" + req.Key
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, lookupUrl, nil)
+	if err != nil {
+		return nil, err
+	}
+	response, err := svc.Client.Do(ctx, clientReq, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	defer response.Body.Close()
+
+	body, fileErr := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, fileErr
+	}
+
+	lookupResponse := PartnerLookupResponse{}
+	parseErr := json.Unmarshal([]byte(body), &lookupResponse)
+
+	if parseErr != nil {
+		return nil, parseErr
+	}
+
+	toReturn := &LookupPartnerPortsResponse{}
+
+	for i := 0; i < len(lookupResponse.Data.Megaports); i++ {
+		if lookupResponse.Data.Megaports[i].VXC == 0 && lookupResponse.Data.Megaports[i].PortSpeed >= req.PortSpeed { // nil is 0
+			// We only need the first available one that has enough speed capacity.
+			if req.ProductID == "" {
+				toReturn.ProductUID = lookupResponse.Data.Megaports[i].ProductUID
+				return toReturn, nil
+				// Try to match Product ID if provided
+			} else if lookupResponse.Data.Megaports[i].ProductUID == req.ProductID {
+				toReturn.ProductUID = lookupResponse.Data.Megaports[i].ProductUID
+				return toReturn, nil
+			}
+		}
+	}
+	return nil, ErrNoAvailableVxcPorts
 }

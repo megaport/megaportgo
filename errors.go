@@ -53,3 +53,6 @@ var ErrNoMatchingLocations = errors.New("could not find any matching locations f
 
 // ErrNoPartnerPortsFound is returned when no partner ports could be found matching the filters provided
 var ErrNoPartnerPortsFound = errors.New("sorry there were no results returned based on the given filters")
+
+// ErrNoAvailableVxcPorts is returned when there are no available ports for a user to connect to
+var ErrNoAvailableVxcPorts = errors.New("there are no available ports for you to connect to")
