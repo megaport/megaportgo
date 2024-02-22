@@ -349,9 +349,9 @@ type CSPConnectionAzureMegaport struct {
 }
 
 type CSPConnectionAzurePort struct {
-	ServiceId int `json:"service_id"`
+	ServiceID int `json:"service_id"`
 	Type string `json:"type"`
-	VXCServiceIds []int `json:"vxc_service_ids"`
+	VXCServiceIDs []int `json:"vxc_service_ids"`
 }
 
 type CSPConnectionGoogle struct {

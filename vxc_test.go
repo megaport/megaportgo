@@ -403,6 +403,396 @@ func (suite *VXCClientTestSuite) TestGetVXC() {
 	suite.Equal(wantVxc, gotVxc)
 }
 
+func (suite *VXCClientTestSuite) TestGetAzureVXC() {
+	ctx := context.Background()
+	vxcSvc := suite.client.VXCService
+
+	companyUid := "32df7107-fdca-4c2a-8ccb-c6867813b3f2"
+	vxcUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	portUid := "9b1c46c7-1e8d-4035-bf38-1bc60d346d57"
+	bEndUid := "91ededc2-473f-4a30-ad24-0703c7f35e50"
+
+	startDate := &Time{GetTime(1706104800000)}
+	endDate := &Time{GetTime(1737727200000)}
+
+	wantVxc := &VXC{
+		ID: 1,
+		UID: vxcUid,
+		Name: "test-vxc",
+		Type: "VXC",
+		RateLimit: 50,
+		DistanceBand: "ZONE",
+		ProvisioningStatus: "LIVE",
+		UsageAlgorithm: "POST_PAID_HOURLY_SPEED_LONG_HAUL_VXC",
+		CreatedBy: companyUid,
+		CreateDate: startDate,
+		ContractStartDate: startDate,
+		ContractEndDate: endDate,
+		Resources: VXCResources{
+		CSPConnection: CSPConnection{
+			CSPConnection: []CSPConnectionConfig{
+					CSPConnectionAzure{
+						Bandwidth: 50,
+					ConnectType: "AZURE",
+					ResourceName: "b_csp_connection",
+					ResourceType: "csp_connection",
+					Managed: true,
+					VLAN: 0,
+					Megaports: []CSPConnectionAzureMegaport{
+						{
+							Port: 0,
+							Type: "MEGAPORT",
+							VXC: 1,
+						},
+					},
+					Ports: []CSPConnectionAzurePort{{
+						ServiceID: 1,
+						Type: "PORT",
+						VXCServiceIDs: []int{1},
+					},
+					},
+					ServiceKey: "test-service-key",
+					},
+			},
+		},
+		VLL: VLLConfig{
+			AEndVLAN: 0,
+			BEndVLAN: 0,
+			RateLimitMBPS: 50,
+			ResourceName: "vll",
+			ResourceType: "vll",
+		},
+		},	
+	VXCApproval: VXCApproval{
+		Status: "",
+		Message: "",
+		UID: "",
+		Type: "",
+		NewSpeed: 0,
+	},
+	ContractTermMonths: 1,
+	CompanyUID: companyUid,
+	CompanyName: "Test Company",
+	AttributeTags: map[string]string{},
+	Cancelable: true,
+	AEndConfiguration: VXCEndConfiguration{
+		OwnerUID: companyUid,
+		UID: portUid,
+		Name: "test-port",
+		LocationID: 1,
+		Location: "Test Location",
+		VLAN: 0,
+	},
+	BEndConfiguration: VXCEndConfiguration{
+		OwnerUID: companyUid,
+		UID: bEndUid,
+		Name: "Test Product",
+		LocationID: 1,
+		Location: "Test Location",
+		VLAN: 0,
+	}}
+	
+
+	jblob := `{
+		"message": "Found Product 6b3f68e-2f54-4331-bf94-f8984449365f",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": {
+			"productId": 1,
+			"productUid": "36b3f68e-2f54-4331-bf94-f8984449365f",
+			"productName": "test-vxc",
+			"productType": "VXC",
+			"rateLimit": 50,
+			"distanceBand": "ZONE",
+			"provisioningStatus": "LIVE",
+			"usageAlgorithm": "POST_PAID_HOURLY_SPEED_LONG_HAUL_VXC",
+			"createdBy": "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
+			"createDate": 1706104800000,
+			"resources": {
+				"csp_connection": [{
+					"bandwidth": 50,
+					"connectType": "AZURE",
+					"resource_name": "b_csp_connection",
+					"resource_type": "csp_connection",
+					"vlan": 0,
+					"managed": true,
+					"megaports": [{
+						"port": 0,
+						"type": "MEGAPORT",
+						"vxc": 1
+					}],
+					"ports": [{
+						"service_id": 1,
+						"type": "PORT",
+						"vxc_service_ids": [1]
+					}],
+					"service_key": "test-service-key"
+				}],
+				"vll": {
+					"a_vlan": 0,
+					"b_vlan": 0,
+					"rate_limit_mbps": 50,
+					"resource_name": "vll",
+					"resource_type": "vll",
+					"up": 0,
+					"shutdown": false
+				}
+			},
+			"vxcApproval": {
+				"status": null,
+				"message": null,
+				"uid": null,
+				"type": null,
+				"newSpeed": null
+			},
+			"contractStartDate": 1706104800000,
+			"contractEndDate": 1737727200000,
+			"contractTermMonths": 1,
+			"companyUid": "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
+			"companyName": "Test Company",
+			"locked": false,
+			"adminLocked": false,
+			"attributeTags": {},
+			"up": false,
+			"shutdown": false,
+			"cancelable": true,
+			"aEnd": {
+				"ownerUid": "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
+				"productUid": "9b1c46c7-1e8d-4035-bf38-1bc60d346d57",
+				"productName": "test-port",
+				"locationId": 1,
+				"location": "Test Location",
+				"locationDetail": {
+					"name": "Test Location",
+					"city": "Atlanta",
+					"metro": "Atlanta",
+					"country": "USA"
+				},
+				"vlan": 0,
+				"innerVlan": null,
+				"secondaryName": null
+			},
+			"bEnd": {
+				"ownerUid": "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
+				"productUid": "91ededc2-473f-4a30-ad24-0703c7f35e50",
+				"productName": "Test Product",
+				"locationId": 1,
+				"location": "Test Location",
+				"locationDetail": {
+					"name": "Test Location",
+					"city": "New York",
+					"metro": "New York",
+					"country": "USA"
+				},
+				"vlan": 0,
+				"innerVlan": null,
+				"secondaryName": null
+			}
+		}
+	}`
+	path := "/v2/product/" + vxcUid
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, jblob)
+	})
+
+	gotVxc, err := vxcSvc.GetVXC(ctx, vxcUid)
+	suite.NoError(err)
+	suite.Equal(wantVxc, gotVxc)
+}
+
+func (suite *VXCClientTestSuite) TestGetGoogleVXC() {
+	ctx := context.Background()
+	vxcSvc := suite.client.VXCService
+
+	companyUid := "32df7107-fdca-4c2a-8ccb-c6867813b3f2"
+	vxcUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	portUid := "9b1c46c7-1e8d-4035-bf38-1bc60d346d57"
+	bEndUid := "91ededc2-473f-4a30-ad24-0703c7f35e50"
+
+	startDate := &Time{GetTime(1706104800000)}
+	endDate := &Time{GetTime(1737727200000)}
+
+	wantVxc := &VXC{
+		ID: 1,
+		UID: vxcUid,
+		Name: "test-vxc",
+		Type: "VXC",
+		RateLimit: 50,
+		DistanceBand: "ZONE",
+		ProvisioningStatus: "LIVE",
+		UsageAlgorithm: "POST_PAID_HOURLY_SPEED_LONG_HAUL_VXC",
+		CreatedBy: companyUid,
+		CreateDate: startDate,
+		ContractStartDate: startDate,
+		ContractEndDate: endDate,
+		Resources: VXCResources{
+		CSPConnection: CSPConnection{
+			CSPConnection: []CSPConnectionConfig{
+					CSPConnectionGoogle{
+						Bandwidth: 50,
+						Bandwidths: []int{50},
+					ConnectType: "GOOGLE",
+					ResourceName: "b_csp_connection",
+					ResourceType: "csp_connection",
+					CSPName: "GOOGLE",
+					Megaports: []CSPConnectionGoogleMegaport{
+						{
+							Port: 0,
+							VXC: 1,
+						},
+					},
+					Ports: []CSPConnectionGooglePort{{
+						ServiceID: 1,
+						VXCServiceIDs: []int{1},
+					},
+					},
+					PairingKey: "test-pairing-key",
+					},
+			},
+		},
+		VLL: VLLConfig{
+			AEndVLAN: 0,
+			BEndVLAN: 0,
+			RateLimitMBPS: 50,
+			ResourceName: "vll",
+			ResourceType: "vll",
+		},
+		},	
+	VXCApproval: VXCApproval{
+		Status: "",
+		Message: "",
+		UID: "",
+		Type: "",
+		NewSpeed: 0,
+	},
+	ContractTermMonths: 1,
+	CompanyUID: companyUid,
+	CompanyName: "Test Company",
+	AttributeTags: map[string]string{},
+	Cancelable: true,
+	AEndConfiguration: VXCEndConfiguration{
+		OwnerUID: companyUid,
+		UID: portUid,
+		Name: "test-port",
+		LocationID: 1,
+		Location: "Test Location",
+		VLAN: 0,
+	},
+	BEndConfiguration: VXCEndConfiguration{
+		OwnerUID: companyUid,
+		UID: bEndUid,
+		Name: "Test Product",
+		LocationID: 1,
+		Location: "Test Location",
+		VLAN: 0,
+	}}
+	
+
+	jblob := `{
+		"message": "Found Product 6b3f68e-2f54-4331-bf94-f8984449365f",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": {
+			"productId": 1,
+			"productUid": "36b3f68e-2f54-4331-bf94-f8984449365f",
+			"productName": "test-vxc",
+			"productType": "VXC",
+			"rateLimit": 50,
+			"distanceBand": "ZONE",
+			"provisioningStatus": "LIVE",
+			"usageAlgorithm": "POST_PAID_HOURLY_SPEED_LONG_HAUL_VXC",
+			"createdBy": "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
+			"createDate": 1706104800000,
+			"resources": {
+				"csp_connection": [{
+					"bandwidth": 50,
+					"bandwidths": [50],
+					"connectType": "GOOGLE",
+					"csp_name": "GOOGLE",
+					"resource_name": "b_csp_connection",
+					"resource_type": "csp_connection",
+					"megaports": [{
+						"port": 0,
+						"vxc": 1
+					}],
+					"ports": [{
+						"service_id": 1,
+						"vxc_service_ids": [1]
+					}],
+					"pairingKey": "test-pairing-key"
+				}],
+				"vll": {
+					"a_vlan": 0,
+					"b_vlan": 0,
+					"rate_limit_mbps": 50,
+					"resource_name": "vll",
+					"resource_type": "vll",
+					"up": 0,
+					"shutdown": false
+				}
+			},
+			"vxcApproval": {
+				"status": null,
+				"message": null,
+				"uid": null,
+				"type": null,
+				"newSpeed": null
+			},
+			"contractStartDate": 1706104800000,
+			"contractEndDate": 1737727200000,
+			"contractTermMonths": 1,
+			"companyUid": "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
+			"companyName": "Test Company",
+			"locked": false,
+			"adminLocked": false,
+			"attributeTags": {},
+			"up": false,
+			"shutdown": false,
+			"cancelable": true,
+			"aEnd": {
+				"ownerUid": "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
+				"productUid": "9b1c46c7-1e8d-4035-bf38-1bc60d346d57",
+				"productName": "test-port",
+				"locationId": 1,
+				"location": "Test Location",
+				"locationDetail": {
+					"name": "Test Location",
+					"city": "Atlanta",
+					"metro": "Atlanta",
+					"country": "USA"
+				},
+				"vlan": 0,
+				"innerVlan": null,
+				"secondaryName": null
+			},
+			"bEnd": {
+				"ownerUid": "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
+				"productUid": "91ededc2-473f-4a30-ad24-0703c7f35e50",
+				"productName": "Test Product",
+				"locationId": 1,
+				"location": "Test Location",
+				"locationDetail": {
+					"name": "Test Location",
+					"city": "New York",
+					"metro": "New York",
+					"country": "USA"
+				},
+				"vlan": 0,
+				"innerVlan": null,
+				"secondaryName": null
+			}
+		}
+	}`
+	path := "/v2/product/" + vxcUid
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, jblob)
+	})
+
+	gotVxc, err := vxcSvc.GetVXC(ctx, vxcUid)
+	suite.NoError(err)
+	suite.Equal(wantVxc, gotVxc)
+}
+
 func (suite *VXCClientTestSuite) TestUpdateVXC() {
 	ctx := context.Background()
 	vxcSvc := suite.client.VXCService
