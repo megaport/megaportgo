@@ -18,6 +18,7 @@ var (
 	ctx = context.TODO()
 )
 
+// ClientTestSuite tests the Megaport SDK Client.
 type ClientTestSuite struct {
 	suite.Suite
 	client *Client
@@ -60,6 +61,7 @@ func (suite *ClientTestSuite) TearDownTest() {
 // 	}
 // }
 
+// testURLParseError tests if the error is a URL parse error.
 func (suite *ClientTestSuite) testURLParseError(err error) {
 	if err == nil {
 		suite.FailNow("Expected error to be returned")
@@ -69,33 +71,39 @@ func (suite *ClientTestSuite) testURLParseError(err error) {
 	}
 }
 
+// testClientDefaultBaseURL tests if the client's default base URL is set to the defaultBaseURL.
 func (suite *ClientTestSuite) testClientDefaultBaseURL(c *Client) {
 	if c.BaseURL == nil || c.BaseURL.String() != defaultBaseURL {
 		suite.FailNowf("NewClient BaseURL = %v, expected %v", c.BaseURL.String(), defaultBaseURL)
 	}
 }
 
+// testClientDefaultUserAgent tests if the client's default user agent is set to the userAgent.
 func (suite *ClientTestSuite) testClientDefaultUserAgent(c *Client) {
 	if c.UserAgent != userAgent {
 		suite.FailNowf("NewClient UserAgent = %v, expected %v", c.UserAgent, userAgent)
 	}
 }
 
+// testClientDefaults tests if the client's default base URL and user agent are set to the defaultBaseURL and userAgent.
 func (suite *ClientTestSuite) testClientDefaults(c *Client) {
 	suite.testClientDefaultBaseURL(c)
 	suite.testClientDefaultUserAgent(c)
 }
 
+// TestNewClient tests if the NewClient function returns a client with the default base URL and user agent.
 func (suite *ClientTestSuite) TestNewClient() {
 	c := NewClient(nil, nil)
 	suite.testClientDefaults(c)
 }
 
+// TestNewFromToken tests if the NewFromToken function returns a client with the default base URL and user agent with a token.
 func (suite *ClientTestSuite) TestNewFromToken() {
 	c := NewFromToken("myToken")
 	suite.testClientDefaults(c)
 }
 
+// TestNewFromToken_cleaned tests if the NewFromToken function returns a client with the default base URL and user agent with a valid token.
 func (suite *ClientTestSuite) TestNewFromToken_cleaned() {
 	testTokens := []string{"myToken ", " myToken", " myToken ", "'myToken'", " 'myToken' "}
 	expected := "Bearer myToken"
@@ -119,6 +127,7 @@ func (suite *ClientTestSuite) TestNewFromToken_cleaned() {
 	}
 }
 
+// TestNew tests if the New function returns a client with the default base URL and user agent.
 func (suite *ClientTestSuite) TestNew() {
 	c, err := New(nil)
 
@@ -128,6 +137,7 @@ func (suite *ClientTestSuite) TestNew() {
 	suite.testClientDefaults(c)
 }
 
+// TestNewRequest_get tests if the NewRequest function returns a GET request with the default base URL and user agent.
 func (suite *ClientTestSuite) TestNewRequest_get() {
 	c := NewClient(nil, nil)
 
@@ -151,12 +161,14 @@ func (suite *ClientTestSuite) TestNewRequest_get() {
 	}
 }
 
+// TestNewRequest_badURL tests if the NewRequest function returns a URL parse error.
 func (suite *ClientTestSuite) TestNewRequest_badURL() {
 	c := NewClient(nil, nil)
 	_, err := c.NewRequest(ctx, http.MethodGet, ":", nil)
 	suite.testURLParseError(err)
 }
 
+// TestNewRequest_withCustomUserAgent tests if the NewRequest function returns a request with a custom user agent.
 func (suite *ClientTestSuite) TestNewRequest_withCustomUserAgent() {
 	ua := "testing/0.0.1"
 	c, err := New(nil, SetUserAgent(ua))
@@ -173,6 +185,7 @@ func (suite *ClientTestSuite) TestNewRequest_withCustomUserAgent() {
 	}
 }
 
+// TestNewRequest_withCustomHeaders tests if the NewRequest function returns a request with custom headers.
 func (suite *ClientTestSuite) TestNewRequest_withCustomHeaders() {
 	expectedIdentity := "identity"
 	expectedCustom := "x_test_header"
@@ -195,6 +208,7 @@ func (suite *ClientTestSuite) TestNewRequest_withCustomHeaders() {
 	}
 }
 
+// TestDo_get tests if the Do function returns a GET request with the default base URL and user agent.
 func (suite *ClientTestSuite) TestDo() {
 
 	type foo struct {
@@ -221,6 +235,7 @@ func (suite *ClientTestSuite) TestDo() {
 	}
 }
 
+// TestDo_httpError tests if the Do function returns an HTTP 400 error.
 func (suite *ClientTestSuite) TestDo_httpError() {
 	suite.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad Request", 400)
@@ -234,6 +249,7 @@ func (suite *ClientTestSuite) TestDo_httpError() {
 	}
 }
 
+// TestErrorResponse_Error tests if the ErrorResponse function returns a non-empty error message.
 func (suite *ClientTestSuite) TestErrorResponse_Error() {
 	res := &http.Response{Request: &http.Request{}}
 	err := ErrorResponse{Message: "m", Response: res}
@@ -242,6 +258,7 @@ func (suite *ClientTestSuite) TestErrorResponse_Error() {
 	}
 }
 
+// TestDo_completion_callback tests if the Do function calls the completion callback.
 func (suite *ClientTestSuite) TestDo_completion_callback() {
 
 	type foo struct {
@@ -280,6 +297,7 @@ func (suite *ClientTestSuite) TestDo_completion_callback() {
 	}
 }
 
+// TestCustomUserAgent tests if the New function returns a client with a custom user agent.
 func (suite *ClientTestSuite) TestCustomUserAgent() {
 	ua := "testing/0.0.1"
 	c, err := New(nil, SetUserAgent(ua))
@@ -294,6 +312,7 @@ func (suite *ClientTestSuite) TestCustomUserAgent() {
 	}
 }
 
+// TestCustomBaseURL tests if the New function returns a client with a custom base URL.
 func (suite *ClientTestSuite) TestCustomBaseURL() {
 	baseURL := "http://localhost/foo"
 	c, err := New(nil, SetBaseURL(baseURL))
@@ -308,6 +327,7 @@ func (suite *ClientTestSuite) TestCustomBaseURL() {
 	}
 }
 
+// TestCustomBaseURL_badURL tests if the New function returns a URL parse error.
 func (suite *ClientTestSuite) TestCustomBaseURL_badURL() {
 	baseURL := ":"
 	_, err := New(nil, SetBaseURL(baseURL))
@@ -315,6 +335,7 @@ func (suite *ClientTestSuite) TestCustomBaseURL_badURL() {
 	suite.testURLParseError(err)
 }
 
+// testMethod tests if the request method is the expected method.
 func (suite *ClientTestSuite) testMethod(r *http.Request, expected string) {
 	if expected != r.Method {
 		suite.FailNowf("Request method = %v, expected %v", r.Method, expected)
