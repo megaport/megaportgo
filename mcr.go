@@ -11,7 +11,6 @@ import (
 
 // MCRService is an interface for interfacing with the MCR endpoints
 // of the Megaport API.
-
 type MCRService interface {
 	BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMCRResponse, error)
 	GetMCR(ctx context.Context, mcrId string) (*MCR, error)
@@ -33,6 +32,7 @@ func NewMCRService(c *Client) *MCRServiceOp {
 	}
 }
 
+// BuyMCRRequest represents a request to buy an MCR
 type BuyMCRRequest struct {
 	LocationID    int
 	Name          string
@@ -45,19 +45,23 @@ type BuyMCRRequest struct {
 	WaitForTime      time.Duration // How long to wait for the MCR to provision if WaitForProvision is true (default is 5 minutes)
 }
 
+// BuyMCRResponse represents a response from buying an MCR
 type BuyMCRResponse struct {
 	TechnicalServiceUID string
 }
 
+// CreateMCRPrefixFilterListRequest represents a request to create a prefix filter list on an MCR
 type CreateMCRPrefixFilterListRequest struct {
 	MCRID            string
 	PrefixFilterList MCRPrefixFilterList
 }
 
+// CreateMCRPrefixFilterListResponse represents a response from creating a prefix filter list on an MCR
 type CreateMCRPrefixFilterListResponse struct {
 	IsCreated bool
 }
 
+// ModifyMCRRequest represents a request to modify an MCR
 type ModifyMCRRequest struct {
 	MCRID                 string
 	Name                  string
@@ -68,24 +72,28 @@ type ModifyMCRRequest struct {
 	WaitForTime   time.Duration // How long to wait for the MCR to update if WaitForUpdate is true (default is 5 minutes)
 }
 
+// ModifyMCRResponse represents a response from modifying an MCR
 type ModifyMCRResponse struct {
 	IsUpdated bool
 }
 
+// DeleteMCRRequest represents a request to delete an MCR
 type DeleteMCRRequest struct {
 	MCRID     string
 	DeleteNow bool
 }
 
+// DeleteMCRResponse represents a response from deleting an MCR
 type DeleteMCRResponse struct {
 	IsDeleting bool
 }
 
+// RestoreMCRequest represents a request to restore a deleted MCR
 type RestoreMCRResponse struct {
 	IsRestored bool
 }
 
-// BuyMCR purchases an MCR.
+// BuyMCR purchases an MCR from the Megaport MCR API.
 func (svc *MCRServiceOp) BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMCRResponse, error) {
 	err := validateBuyMCRRequest(req)
 	if err != nil {
@@ -161,6 +169,7 @@ func (svc *MCRServiceOp) BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMC
 	}
 }
 
+// validateBuyMCRRequest validates the BuyMCRRequest for a valid term and port speed.
 func validateBuyMCRRequest(order *BuyMCRRequest) error {
 	if order.Term != 1 && order.Term != 12 && order.Term != 24 && order.Term != 36 {
 		return ErrInvalidTerm
@@ -171,6 +180,7 @@ func validateBuyMCRRequest(order *BuyMCRRequest) error {
 	return nil
 }
 
+// GetMCR returns the details of a single MCR in the Megaport MCR API.
 func (svc *MCRServiceOp) GetMCR(ctx context.Context, mcrId string) (*MCR, error) {
 	url := "/v2/product/" + mcrId
 	clientReq, err := svc.Client.NewRequest(ctx, "GET", url, nil)
@@ -198,7 +208,7 @@ func (svc *MCRServiceOp) GetMCR(ctx context.Context, mcrId string) (*MCR, error)
 	return mcrRes.Data, nil
 }
 
-// CreatePrefixFilterList creates a Prefix Filter List on an MCR.
+// CreatePrefixFilterList creates a Prefix Filter List on an MCR from the Megaport MCR API.
 func (svc *MCRServiceOp) CreatePrefixFilterList(ctx context.Context, req *CreateMCRPrefixFilterListRequest) (*CreateMCRPrefixFilterListResponse, error) {
 	url := "/v2/product/mcr2/" + req.MCRID + "/prefixList"
 
@@ -218,7 +228,7 @@ func (svc *MCRServiceOp) CreatePrefixFilterList(ctx context.Context, req *Create
 	}, nil
 }
 
-// GetMCRPrefixFilterLists returns prefix filter lists for the specified MCR2.
+// GetMCRPrefixFilterLists returns prefix filter lists for the specified MCR2 from the Megaport MCR API.
 func (svc *MCRServiceOp) GetMCRPrefixFilterLists(ctx context.Context, mcrId string) ([]*PrefixFilterList, error) {
 	url := "/v2/product/mcr2/" + mcrId + "/prefixLists?"
 
@@ -248,6 +258,7 @@ func (svc *MCRServiceOp) GetMCRPrefixFilterLists(ctx context.Context, mcrId stri
 	return prefixFilterList.Data, nil
 }
 
+// ModifyMCR modifies an MCR in the Megaport MCR API.
 func (svc *MCRServiceOp) ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (*ModifyMCRResponse, error) {
 	modifyReq := &ModifyProductRequest{
 		ProductID:             req.MCRID,
@@ -298,6 +309,7 @@ func (svc *MCRServiceOp) ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (
 	}
 }
 
+// DeleteMCR deletes an MCR in the Megaport MCR API.
 func (svc *MCRServiceOp) DeleteMCR(ctx context.Context, req *DeleteMCRRequest) (*DeleteMCRResponse, error) {
 	_, err := svc.Client.ProductService.DeleteProduct(ctx, &DeleteProductRequest{
 		ProductID: req.MCRID,
@@ -311,6 +323,7 @@ func (svc *MCRServiceOp) DeleteMCR(ctx context.Context, req *DeleteMCRRequest) (
 	}, nil
 }
 
+// Restore restores a deleted MCR in the Megaport MCR API.
 func (svc *MCRServiceOp) RestoreMCR(ctx context.Context, mcrId string) (*RestoreMCRResponse, error) {
 	_, err := svc.Client.ProductService.RestoreProduct(ctx, mcrId)
 	if err != nil {
