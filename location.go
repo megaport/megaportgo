@@ -9,6 +9,7 @@ import (
 	"github.com/lithammer/fuzzysearch/fuzzy"
 )
 
+// LocationService is an interface for interfacing with the Location endpoints of the Megaport API.
 type LocationService interface {
 	ListLocations(ctx context.Context) ([]*Location, error)
 	GetLocationByID(ctx context.Context, locationID int) (*Location, error)
@@ -22,6 +23,7 @@ type LocationService interface {
 	GetRandom(ctx context.Context, marketCode string) (*Location, error)
 }
 
+// LocationServiceOp handles communication with Location methods of the Megaport API.
 type LocationServiceOp struct {
 	Client *Client
 }
@@ -32,6 +34,7 @@ func NewLocationService(c *Client) *LocationServiceOp {
 	}
 }
 
+// Location represents a location in the Megaport API.
 type Location struct {
 	Name             string                 `json:"name"`
 	Country          string                 `json:"country"`
@@ -50,6 +53,7 @@ type Location struct {
 	Status           string                 `json:"status"`
 }
 
+// LocationProducts represent the products available at a location in the Megaport API.
 type LocationProducts struct {
 	MCR 		bool 			`json:"mcr"`
 	MCRVersion 	int 			`json:"mcrVersion"`
@@ -59,6 +63,7 @@ type LocationProducts struct {
 	MCR2		[]int			`json:"mcr2"`
 }
 
+// LocationMVE represents the MVE product available at a location in the Megaport API.
 type LocationMVE struct {
 	Sizes 				[]string 			 	`json:"sizes"`
 	Details 			[]LocationMVEDetails 	`json:"details"`
@@ -71,6 +76,7 @@ type LocationMVE struct {
 	ReleaseImage 		bool					`json:"releaseImage"`
 }
 
+// LocationMVEDetails represents the details of the MVE product available at a location in the Megaport API.
 type LocationMVEDetails struct {
 	Size 			string 		`json:"size"`
 	Label 			string 		`json:"label"`
@@ -79,6 +85,7 @@ type LocationMVEDetails struct {
 	BandwidthMbps	int 		`json:"bandwidthMbps"`
 }
 
+// Country represents a country in the Megaport Locations API.
 type Country struct {
 	Code      string `json:"code"`
 	Name      string `json:"name"`
@@ -86,23 +93,27 @@ type Country struct {
 	SiteCount int    `json:"siteCount"`
 }
 
+// LocationsResponse represents the response from the Megaport Locations API.
 type LocationResponse struct {
 	Message string      `json:"message"`
 	Terms   string      `json:"terms"`
 	Data    []*Location `json:"data"`
 }
 
+// CountryResponse represents the response from the Megaport Network Regions API.
 type CountryResponse struct {
 	Message string                  `json:"message"`
 	Terms   string                  `json:"terms"`
 	Data    []*CountryInnerResponse `json:"data"`
 }
 
+// CountriesInnerResponse represents the inner response from the Megaport Network Regions API.
 type CountryInnerResponse struct {
 	Countries     []*Country `json:"countries"`
 	NetworkRegion string     `json:"networkRegion"`
 }
 
+// ListLocations returns a list of all locations in the Megaport Locations API.
 func (svc *LocationServiceOp) ListLocations(ctx context.Context) ([]*Location, error) {
 	path := "/v2/locations"
 	url := svc.Client.BaseURL.JoinPath(path).String()
@@ -131,6 +142,7 @@ func (svc *LocationServiceOp) ListLocations(ctx context.Context) ([]*Location, e
 	return locationResponse.Data, nil
 }
 
+// GetLocationByID returns a location by its ID in the Megaport Locations API.
 func (svc *LocationServiceOp) GetLocationByID(ctx context.Context, locationID int) (*Location, error) {
 	allLocations, locErr := svc.ListLocations(ctx)
 	if locErr != nil {
@@ -144,6 +156,7 @@ func (svc *LocationServiceOp) GetLocationByID(ctx context.Context, locationID in
 	return nil, ErrLocationNotFound
 }
 
+// GetLocationByName returns a location by its name in the Megaport Locations API.
 func (svc *LocationServiceOp) GetLocationByName(ctx context.Context, locationName string) (*Location, error) {
 	allLocations, locErr := svc.ListLocations(ctx)
 	if locErr != nil {
@@ -157,6 +170,7 @@ func (svc *LocationServiceOp) GetLocationByName(ctx context.Context, locationNam
 	return nil, ErrLocationNotFound
 }
 
+// GetLocationByNameFuzzy returns a location by its name in the Megaport Locations API using fuzzy search.
 func (svc *LocationServiceOp) GetLocationByNameFuzzy(ctx context.Context, search string) ([]*Location, error) {
 	locations, err := svc.ListLocations(ctx)
 	if err != nil {
@@ -177,6 +191,7 @@ func (svc *LocationServiceOp) GetLocationByNameFuzzy(ctx context.Context, search
 	}
 }
 
+// ListCountries returns a list of all countries in the Megaport Network Regions API.
 func (svc *LocationServiceOp) ListCountries(ctx context.Context) ([]*Country, error) {
 	path := "/v2/networkRegions"
 	url := svc.Client.BaseURL.JoinPath(path).String()
@@ -214,6 +229,7 @@ func (svc *LocationServiceOp) ListCountries(ctx context.Context) ([]*Country, er
 	return allCountries, nil
 }
 
+// ListMarketCodes returns a list of all market codes in the Megaport Network Regions API.
 func (svc *LocationServiceOp) ListMarketCodes(ctx context.Context) ([]string, error) {
 	countries, countriesErr := svc.ListCountries(ctx)
 	if countriesErr != nil {
@@ -227,6 +243,7 @@ func (svc *LocationServiceOp) ListMarketCodes(ctx context.Context) ([]string, er
 	return marketCodes, nil
 }
 
+// IsValidMarketCode checks if a market code is valid in the Megaport Network Regions API.
 func (svc *LocationServiceOp) IsValidMarketCode(ctx context.Context, marketCode string) (bool, error) {
 	found := false
 
@@ -244,6 +261,7 @@ func (svc *LocationServiceOp) IsValidMarketCode(ctx context.Context, marketCode 
 	return found, nil
 }
 
+// FilterLocationsByMarketCode filters locations by market code in the Megaport Locations API.
 func (svc *LocationServiceOp) FilterLocationsByMarketCode(ctx context.Context, marketCode string, locations []*Location) ([]*Location, error) {
 	existingLocations := locations
 	toReturn := []*Location{}
@@ -261,6 +279,7 @@ func (svc *LocationServiceOp) FilterLocationsByMarketCode(ctx context.Context, m
 	return toReturn, nil
 }
 
+// FilterLocationsByMcrAvailability filters locations by MCR availability in the Megaport Locations API.
 func (svc *LocationServiceOp) FilterLocationsByMcrAvailability(ctx context.Context, mcrAvailable bool, locations []*Location) []*Location {
 	existingLocations := locations
 	toReturn := []*Location{}
@@ -272,6 +291,7 @@ func (svc *LocationServiceOp) FilterLocationsByMcrAvailability(ctx context.Conte
 	return toReturn
 }
 
+// GetRandom returns a random location in the Megaport Locations API with MCR Availability. Used for integration testing.
 func (svc *LocationServiceOp) GetRandom(ctx context.Context, marketCode string) (*Location, error) {
 	testLocations, err := svc.ListLocations(ctx)
 	if err != nil {
