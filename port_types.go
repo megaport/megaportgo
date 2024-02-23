@@ -1,5 +1,6 @@
 package megaport
 
+// PortOrder represents a Megaport Port Order from the Megaport Products API.
 type PortOrder struct {
 	Name                  string `json:"productName"`
 	Term                  int    `json:"term"`
@@ -14,11 +15,12 @@ type PortOrder struct {
 	DiversityZone         string `json:"diversityZone"`
 }
 
+// PortOrderConfirmation represents a response from the Megaport Products API after ordering a port.
 type PortOrderConfirmation struct {
 	TechnicalServiceUID string `json:"technicalServiceUid"`
 }
 
-// Port represents a Megaport Port
+// Port represents a Megaport Port in the Megaport Port API.
 type Port struct {
 	ID                    int                    `json:"productId"`
 	UID                   string                 `json:"productUid"`
@@ -55,10 +57,12 @@ type Port struct {
 	VXCResources          PortResources          `json:"resources"`
 }
 
+// PortResources represents the resources associated with a Megaport Port.
 type PortResources struct {
 	Interface PortInterface `json:"interface"`
 }
 
+// PortResourcesInterface represents the resources interface associated with a Megaport Port.
 type PortResourcesInterface struct {
 	Demarcation  string `json:"demarcation"`
 	Description  string `json:"description"`
@@ -72,6 +76,7 @@ type PortResourcesInterface struct {
 	Up           int    `json:"up"`
 }
 
+// PortInterface represents the interface associated with a Megaport Port.
 type PortInterface struct {
 	Demarcation  string `json:"demarcation"`
 	Description  string `json:"description"`
@@ -85,34 +90,40 @@ type PortInterface struct {
 	Up           int    `json:"up"`
 }
 
+// PortOrderResponse represents a response from the Megaport Products API after ordering a port.
 type PortOrderResponse struct {
 	Message string                  `json:"message"`
 	Terms   string                  `json:"terms"`
 	Data    []PortOrderConfirmation `json:"data"`
 }
 
+// PortResponse represents a response from the Megaport Port API after querying a port.
 type PortResponse struct {
 	Message string `json:"message"`
 	Terms   string `json:"terms"`
 	Data    Port   `json:"data"`
 }
 
+// PortAttributes represents attributes associated with a Megaport Port.
 type PortAttributeTags struct {
 	TerminatedServiceDetails PortTerminatedServiceDetails `json:"terminatedServiceDetails"`
 }
 
+// PortTerminatedServiceDetails represents terminated service details associated with a Megaport Port.
 type PortTerminatedServiceDetails struct {
 	Location PortTerminatedServiceDetailsLocation `json:"location"`
 	Interface PortTerminatedServiceDetailsInterface `json:"interface"`
 	Device string `json:"device"`
 }
 
+// PortTerminatedServiceDetailsLocation represents the location of a terminated service associated with a Megaport Port.
 type PortTerminatedServiceDetailsLocation struct {
 	ID int	`json:"id"`
 	Name string `json:"name"`
 	SiteCode string `json:"site_code"`
 }
 
+// PortTerminatedServiceDetailsInterface represents the interface of a terminated service associated with a Megaport Port.
 type PortTerminatedServiceDetailsInterface struct {
 	ResourceType string `json:"resource_type"`
 	Demarcation string `json:"demarcation"`
