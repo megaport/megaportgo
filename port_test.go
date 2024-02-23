@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+// PortClientTestSuite tests the port service client
 type PortClientTestSuite struct {
 	ClientTestSuite
 }
@@ -33,6 +34,7 @@ func (suite *PortClientTestSuite) TearDownTest() {
 	suite.server.Close()
 }
 
+// TestBuyPort tests the BuyPort method
 func (suite *PortClientTestSuite) TestBuyPort() {
 	ctx := context.Background()
 
@@ -94,6 +96,7 @@ func (suite *PortClientTestSuite) TestBuyPort() {
 	suite.Equal(want, got)
 }
 
+// TestBuySinglePort tests the BuySinglePort method
 func (suite *PortClientTestSuite) TestBuySinglePort() {
 	ctx := context.Background()
 
@@ -151,6 +154,7 @@ func (suite *PortClientTestSuite) TestBuySinglePort() {
 	suite.Equal(want, got)
 }
 
+// TestBuyLAGPort tests the BuyLAGPort method
 func (suite *PortClientTestSuite) TestBuyLAGPort() {
 	ctx := context.Background()
 
@@ -213,6 +217,7 @@ func (suite *PortClientTestSuite) TestBuyLAGPort() {
 	suite.Equal(want, got)
 }
 
+// TestBuyPortInvalidTerm tests the BuyPort method with an invalid term
 func (suite *PortClientTestSuite) TestBuyPortInvalidTerm() {
 	ctx := context.Background()
 
@@ -232,6 +237,7 @@ func (suite *PortClientTestSuite) TestBuyPortInvalidTerm() {
 	suite.Equal(ErrInvalidTerm, err)
 }
 
+// TestListPorts tests the ListPorts method
 func (suite *PortClientTestSuite) TestListPorts() {
 	ctx := context.Background()
 
@@ -342,6 +348,7 @@ func (suite *PortClientTestSuite) TestListPorts() {
 	suite.Equal(wantPorts, got)
 }
 
+// TestGetPort tests the GetPort method
 func (suite *PortClientTestSuite) TestGetPort() {
 	ctx := context.Background()
 
@@ -507,6 +514,7 @@ func (suite *PortClientTestSuite) TestModifyPort() {
 	suite.Equal(want, got)
 }
 
+// TestDeletePort tests the DeletePort method
 func (suite *PortClientTestSuite) TestDeletePort() {
 	ctx := context.Background()
 
@@ -540,6 +548,7 @@ func (suite *PortClientTestSuite) TestDeletePort() {
 	suite.Equal(want, got)
 }
 
+// TestRestorePort tests the RestorePort method
 func (suite *PortClientTestSuite) TestRestorePort() {
 	ctx := context.Background()
 
@@ -568,6 +577,7 @@ func (suite *PortClientTestSuite) TestRestorePort() {
 	suite.Equal(want, got)
 }
 
+// TestLockPort tests the LockPort method
 func (suite *PortClientTestSuite) TestLockPort() {
 	ctx := context.Background()
 
@@ -613,6 +623,7 @@ func (suite *PortClientTestSuite) TestLockPort() {
 	suite.Equal(want, got)
 }
 
+// TestUnlockPort tests the UnlockPort method
 func (suite *PortClientTestSuite) TestUnlockPort() {
 	ctx := context.Background()
 
