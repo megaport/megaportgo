@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+// uid and names for testing
 var (
 	companyUid = "32df7107-fdca-4c2a-8ccb-c6867813b3f2"
 	companyName = "Test Company"
@@ -23,6 +24,7 @@ var (
 	partnerMegaportUrl = "/v2/dropdowns/partner/megaports"
 )
 
+// PartnerClientTestSuite tests the Partner Service.
 type PartnerClientTestSuite struct {
 	ClientTestSuite
 }
@@ -44,6 +46,7 @@ func (suite *PartnerClientTestSuite) TearDownTest() {
 	suite.server.Close()
 }
 
+// AWS Partner
 var awsPartner = &PartnerMegaport{
 	ProductUID: productUid,
 	CompanyUID: companyUid,
@@ -56,6 +59,7 @@ var awsPartner = &PartnerMegaport{
 	VXCPermitted: true,
 }
 
+// Azure Partner
 var azurePartner = &PartnerMegaport{
 	ProductUID: productUid2,
 	CompanyUID: companyUid,
@@ -67,6 +71,7 @@ var azurePartner = &PartnerMegaport{
 	VXCPermitted: true,
 }
 
+// Default Partner
 var defaultPartner = &PartnerMegaport{
 	ProductUID: productUid3,
 	CompanyUID: companyUid2,
@@ -79,6 +84,7 @@ var defaultPartner = &PartnerMegaport{
 	VXCPermitted: true,
 }
 
+// AWS Hosted Connection Partner
 var awsHcPartner = &PartnerMegaport{
 	ProductUID: productUid4,
 	CompanyUID: companyUid2,
@@ -90,6 +96,7 @@ var awsHcPartner = &PartnerMegaport{
 	VXCPermitted: true,
 }
 
+// JSON blob for testing
 var jblob = `{
 	"message": "All Partner Megaports",
 	"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
@@ -145,6 +152,7 @@ var jblob = `{
     ]
 }`
 
+// TestListPartnerMegaports tests the ListPartnerMegaports method.
 func (suite *PartnerClientTestSuite) TestListPartnerMegaports() {
 	partnerSvc := suite.client.PartnerService
 	ctx := context.Background()
@@ -161,11 +169,7 @@ func (suite *PartnerClientTestSuite) TestListPartnerMegaports() {
 	suite.Equal(want, partners)
 }
 
-// 	FilterPartnerMegaportByLocationId(ctx context.Context, partners []*PartnerMegaport, locationId int) ([]*PartnerMegaport, error)
-// 	FilterPartnerMegaportByDiversityZone(ctx context.Context, partners []*PartnerMegaport, diversityZone string, exactMatch bool) ([]*PartnerMegaport, error)
-
-
-
+// TestFilterPartnerMegaportByProductName tests the FilterPartnerMegaportByProductName method.
 func (suite *PartnerClientTestSuite) TestFilterPartnerMegaportByProductName() {
 	partnerSvc := suite.client.PartnerService
 	ctx := context.Background()
@@ -188,6 +192,7 @@ func (suite *PartnerClientTestSuite) TestFilterPartnerMegaportByProductName() {
 	suite.Equal(wantFiltered, gotFiltered)
 }
 
+// TestFilterPartnerMegaportByProductNameExact tests the FilterPartnerMegaportByProductName method with exact match.
 func (suite *PartnerClientTestSuite) TestFilterPartnerMegaportByProductNameExact() {
 	partnerSvc := suite.client.PartnerService
 	ctx := context.Background()
@@ -210,6 +215,7 @@ func (suite *PartnerClientTestSuite) TestFilterPartnerMegaportByProductNameExact
 	suite.Equal(wantFiltered, gotFiltered)
 }
 
+// TestFilterPartnerMegaportByConnectType tests the FilterPartnerMegaportByConnectType method.
 func (suite *PartnerClientTestSuite) TestFilterPartnerMegaportByConnectType() {
 	partnerSvc := suite.client.PartnerService
 	ctx := context.Background()
@@ -254,7 +260,7 @@ func (suite *PartnerClientTestSuite) TestFilterPartnerMegaportByConnectTypeExact
 	suite.Equal(wantFiltered, gotFiltered)
 }
 
-
+// Test FilterPartnerMegaportByCompanyName tests the FilterPartnerMegaportByCompanyName method.
 func (suite *PartnerClientTestSuite) TestFilterPartnerMegaportByCompanyName() {
 	partnerSvc := suite.client.PartnerService
 	ctx := context.Background()
@@ -277,6 +283,7 @@ func (suite *PartnerClientTestSuite) TestFilterPartnerMegaportByCompanyName() {
 	suite.Equal(wantFiltered, gotFiltered)
 }
 
+// TestFilterPartnerMegaportByLocationId tests the FilterPartnerMegaportByLocationId method.
 func (suite *PartnerClientTestSuite) TestFilterPartnerMegaportByLocationId() {
 	partnerSvc := suite.client.PartnerService
 	ctx := context.Background()
@@ -299,6 +306,7 @@ func (suite *PartnerClientTestSuite) TestFilterPartnerMegaportByLocationId() {
 	suite.Equal(wantFiltered, gotFiltered)
 }
 
+// TestFilterPartnerMegaportByDiversityZone tests the FilterPartnerMegaportByDiversityZone method.
 func (suite *PartnerClientTestSuite) TestFilterPartnerMegaportByDiversityZone() {
 	partnerSvc := suite.client.PartnerService
 	ctx := context.Background()
