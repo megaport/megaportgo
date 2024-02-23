@@ -33,6 +33,7 @@ type MCRServiceOp struct {
 	Client *Client
 }
 
+// NewMCRService creates a new instance of the MCR Service.
 func NewMCRService(c *Client) *MCRServiceOp {
 	return &MCRServiceOp{
 		Client: c,

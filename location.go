@@ -38,6 +38,7 @@ type LocationServiceOp struct {
 	Client *Client
 }
 
+// NewLocationService creates a new instance of the Location Service.
 func NewLocationService(c *Client) *LocationServiceOp {
 	return &LocationServiceOp{
 		Client: c,

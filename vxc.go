@@ -25,6 +25,7 @@ type VXCService interface {
 	LookupPartnerPorts(ctx context.Context, req *LookupPartnerPortsRequest) (*LookupPartnerPortsResponse, error) 
 }
 
+// NewVXCService creates a new instance of the VXC Service.
 func NewVXCService(c *Client) *VXCServiceOp {
 	return &VXCServiceOp{
 		Client: c,

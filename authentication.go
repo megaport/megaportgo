@@ -22,6 +22,7 @@ type AuthenticationServiceOp struct {
 	*Client
 }
 
+// NewAuthenticationService creates a new instance of the Authentication Service.
 func NewAuthenticationService(c *Client) *AuthenticationServiceOp {
 	return &AuthenticationServiceOp{
 		Client: c,

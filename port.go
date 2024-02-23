@@ -34,6 +34,7 @@ type PortService interface {
 	UnlockPort(ctx context.Context, portId string) (*UnlockPortResponse, error)
 }
 
+// NewPortService creates a new instance of the Port Service.
 func NewPortService(c *Client) *PortServiceOp {
 	return &PortServiceOp{
 		Client: c,

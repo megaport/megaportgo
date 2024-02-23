@@ -26,6 +26,7 @@ type ProductServiceOp struct {
 	Client *Client
 }
 
+// NewProductService creates a new instance of the Product Service.
 func NewProductService(c *Client) *ProductServiceOp {
 	return &ProductServiceOp{
 		Client: c,

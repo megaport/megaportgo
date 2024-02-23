@@ -24,6 +24,7 @@ type MVEService interface {
 	DeleteMVE(ctx context.Context, req *DeleteMVERequest) (*DeleteMVEResponse, error)
 }
 
+// NewMVEService creates a new instance of the MVE Service.
 func NewMVEService(c *Client) *MVEServiceOp {
 	return &MVEServiceOp{
 		Client: c,

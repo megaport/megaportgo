@@ -25,6 +25,7 @@ type PartnerService interface {
 	FilterPartnerMegaportByDiversityZone(ctx context.Context, partners []*PartnerMegaport, diversityZone string, exactMatch bool) ([]*PartnerMegaport, error)
 }
 
+// NewPartnerService creates a new instance of the PartnerService.
 func NewPartnerService(c *Client) *PartnerServiceOp {
 	return &PartnerServiceOp{
 		Client: c,
