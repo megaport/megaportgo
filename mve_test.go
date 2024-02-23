@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+// MVEClientTestSuite tests the MVE Service Client.
 type MVEClientTestSuite struct {
 	ClientTestSuite
 }
@@ -34,6 +35,7 @@ func (suite *MVEClientTestSuite) TearDownTest() {
 	suite.server.Close()
 }
 
+// TestBuyMVE tests the BuyMVE method
 func (suite *MVEClientTestSuite) TestBuyMVE() {
 	ctx := context.Background()
 	mveSvc := suite.client.MVEService
@@ -166,6 +168,7 @@ func (suite *MVEClientTestSuite) TestBuyMVE() {
 	suite.Equal(want, got)
 }
 
+// TestGetMVE tests the GetMVE method
 func (suite *MVEClientTestSuite) TestGetMVE() {
 	mveSvc := suite.client.MVEService
 	ctx := context.Background()
@@ -341,6 +344,7 @@ func (suite *MVEClientTestSuite) TestGetMVE() {
 	suite.Equal(wantMVE, got)
 }
 
+// TestModifyMVE tests the ModifyMVE method
 func (suite *MVEClientTestSuite) TestModifyMVE() {
 	mveSvc := suite.client.MVEService
 	ctx := context.Background()
@@ -431,6 +435,7 @@ func (suite *MVEClientTestSuite) TestModifyMVE() {
 	suite.Equal(wantRes, gotRes)
 }
 
+// TestDeleteMVE tests the DeleteMVE method.
 func (suite *MVEClientTestSuite) TestDeleteMVE() {
 	ctx := context.Background()
 
