@@ -31,6 +31,7 @@ type MVEServiceOp struct {
 	Client *Client
 }
 
+// BuyMVERequest represents a request to buy an MVE
 type BuyMVERequest struct {
 	LocationID    int
 	Name          string
@@ -43,10 +44,12 @@ type BuyMVERequest struct {
 	WaitForTime      time.Duration // How long to wait for the MVE to provision if WaitForProvision is true (default is 5 minutes)
 }
 
+// BuyMVEResponse represents a response from buying an MVE
 type BuyMVEResponse struct {
 	TechnicalServiceUID string
 }
 
+// ModifyMVERequest represents a request to modify an MVE
 type ModifyMVERequest struct {
 	MVEID string
 	Name  string
@@ -55,18 +58,22 @@ type ModifyMVERequest struct {
 	WaitForTime   time.Duration // How long to wait for the MVE to update if WaitForUpdate is true (default is 5 minutes)
 }
 
+// ModifyMVEResponse represents a response from modifying an MVE
 type ModifyMVEResponse struct {
 	MVEUpdated bool
 }
 
+// DeleteMVERequest represents a request to delete an MVE
 type DeleteMVERequest struct {
 	MVEID string
 }
 
+// DeleteMVEResponse represents a response from deleting an MVE
 type DeleteMVEResponse struct {
 	IsDeleted bool
 }
 
+// BuyMVE buys an MVE from the Megaport MVE API.
 func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMVEResponse, error) {
 	err := validateBuyMVERequest(req)
 	if err != nil {
@@ -198,6 +205,7 @@ func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMV
 	}
 }
 
+// GetMVE retrieves a single MVE from the Megaport MVE API.
 func (svc *MVEServiceOp) GetMVE(ctx context.Context, mveId string) (*MVE, error) {
 	path := "/v2/product" + mveId
 	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, path, nil)
@@ -221,6 +229,7 @@ func (svc *MVEServiceOp) GetMVE(ctx context.Context, mveId string) (*MVE, error)
 	return mveResp.Data, nil
 }
 
+// ModifyMVE modifies an MVE in the Megaport MVE API.
 func (svc *MVEServiceOp) ModifyMVE(ctx context.Context, req *ModifyMVERequest) (*ModifyMVEResponse, error) {
 	modifyProductReq := &ModifyProductRequest{
 		ProductID:             req.MVEID,
@@ -271,6 +280,7 @@ func (svc *MVEServiceOp) ModifyMVE(ctx context.Context, req *ModifyMVERequest) (
 	}
 }
 
+// DeleteMVE deletes an MVE in the Megaport MVE API.
 func (svc *MVEServiceOp) DeleteMVE(ctx context.Context, req *DeleteMVERequest) (*DeleteMVEResponse, error) {
 	_, err := svc.Client.ProductService.DeleteProduct(ctx, &DeleteProductRequest{
 		ProductID: req.MVEID,
@@ -282,6 +292,7 @@ func (svc *MVEServiceOp) DeleteMVE(ctx context.Context, req *DeleteMVERequest) (
 	return &DeleteMVEResponse{IsDeleted: true}, nil
 }
 
+// validateBuyMVERequest validates a BuyMVERequest for proper term length.
 func validateBuyMVERequest(req *BuyMVERequest) error {
 	if req.Term != 1 && req.Term != 12 && req.Term != 24 && req.Term != 36 {
 		return ErrInvalidTerm

@@ -268,7 +268,7 @@ func (svc *PortServiceOp) BuyLAGPort(ctx context.Context, req *BuyLAGPortRequest
 	})
 }
 
-// ListPorts lists all ports from the Megaport Port API.
+// ListPorts lists all ports in the Megaport Port API.
 func (svc *PortServiceOp) ListPorts(ctx context.Context) ([]*Port, error) {
 	path := "/v2/products"
 	url := svc.Client.BaseURL.JoinPath(path).String()
@@ -323,7 +323,7 @@ func (svc *PortServiceOp) ListPorts(ctx context.Context) ([]*Port, error) {
 	return ports, nil
 }
 
-// GetPort gets a single port from the Megaport Port API.
+// GetPort gets a single port in the Megaport Port API.
 func (svc *PortServiceOp) GetPort(ctx context.Context, portId string) (*Port, error) {
 	path := "/v2/product/" + portId
 	url := svc.Client.BaseURL.JoinPath(path).String()
@@ -353,7 +353,7 @@ func (svc *PortServiceOp) GetPort(ctx context.Context, portId string) (*Port, er
 	return &portDetails.Data, nil
 }
 
-// ModifyPort modifies a port from the Megaport Port API.
+// ModifyPort modifies a port in the Megaport Port API.
 func (svc *PortServiceOp) ModifyPort(ctx context.Context, req *ModifyPortRequest) (*ModifyPortResponse, error) {
 	modifyRes, err := svc.Client.ProductService.ModifyProduct(ctx, &ModifyProductRequest{
 		ProductID:             req.PortID,
@@ -403,7 +403,7 @@ func (svc *PortServiceOp) ModifyPort(ctx context.Context, req *ModifyPortRequest
 	}
 }
 
-// DeletePort deletes a port from the Megaport Port API.
+// DeletePort deletes a port in the Megaport Port API.
 func (svc *PortServiceOp) DeletePort(ctx context.Context, req *DeletePortRequest) (*DeletePortResponse, error) {
 	_, err := svc.Client.ProductService.DeleteProduct(ctx, &DeleteProductRequest{
 		ProductID: req.PortID,
@@ -417,7 +417,7 @@ func (svc *PortServiceOp) DeletePort(ctx context.Context, req *DeletePortRequest
 	}, nil
 }
 
-// RestorePort restores a port from the Megaport Port API.
+// RestorePort restores a port in the Megaport Port API.
 func (svc *PortServiceOp) RestorePort(ctx context.Context, portId string) (*RestorePortResponse, error) {
 	_, err := svc.Client.ProductService.RestoreProduct(ctx, portId)
 	if err != nil {
@@ -428,7 +428,7 @@ func (svc *PortServiceOp) RestorePort(ctx context.Context, portId string) (*Rest
 	}, nil
 }
 
-// LockPort locks a port from the Megaport Port API.
+// LockPort locks a port in the Megaport Port API.
 func (svc *PortServiceOp) LockPort(ctx context.Context, portId string) (*LockPortResponse, error) {
 	port, err := svc.GetPort(ctx, portId)
 	if err != nil {
@@ -448,7 +448,7 @@ func (svc *PortServiceOp) LockPort(ctx context.Context, portId string) (*LockPor
 	}
 }
 
-// UnlockPort unlocks a port from the Megaport Port API.
+// UnlockPort unlocks a port in the Megaport Port API.
 func (svc *PortServiceOp) UnlockPort(ctx context.Context, portId string) (*UnlockPortResponse, error) {
 	port, err := svc.GetPort(ctx, portId)
 	if err != nil {
