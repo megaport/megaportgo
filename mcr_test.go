@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+// MCRClientTestSuite tests the MCR Service.
 type MCRClientTestSuite struct {
 	ClientTestSuite
 }
@@ -33,6 +34,7 @@ func (suite *MCRClientTestSuite) TearDownTest() {
 	suite.server.Close()
 }
 
+// TestBuyMCR tests the BuyMCR method
 func (suite *MCRClientTestSuite) TestBuyMCR() {
 	ctx := context.Background()
 	mcrSvc := suite.client.MCRService
@@ -90,6 +92,7 @@ func (suite *MCRClientTestSuite) TestBuyMCR() {
 	suite.Equal(want, got)
 }
 
+// TestGetMCR tests the GetMCR method.
 func (suite *MCRClientTestSuite) TestGetMCR() {
 	ctx := context.Background()
 	mcrSvc := suite.client.MCRService
@@ -172,6 +175,7 @@ func (suite *MCRClientTestSuite) TestGetMCR() {
 	suite.Equal(want, got)
 }
 
+// TestCreatePrefixFilterList tests the CreatePrefixFilterList method.
 func (suite *MCRClientTestSuite) TestCreatePrefixFilterList() {
 	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
 	mcrSvc := suite.client.MCRService
@@ -226,6 +230,7 @@ func (suite *MCRClientTestSuite) TestCreatePrefixFilterList() {
 	suite.NoError(prefixErr)
 }
 
+// TestModifyMCR tests the ModifyMCR method.
 func (suite *MCRClientTestSuite) TestModifyMCR() {
 	ctx := context.Background()
 
@@ -383,6 +388,7 @@ func (suite *MCRClientTestSuite) TestModifyMCR() {
 	suite.Equal(wantModify, gotModify)
 }
 
+// TestDeleteMCR tests the DeleteMCR method.
 func (suite *MCRClientTestSuite) TestDeleteMCR() {
 	ctx := context.Background()
 
@@ -413,6 +419,7 @@ func (suite *MCRClientTestSuite) TestDeleteMCR() {
 	suite.Equal(want, got)
 }
 
+// TestRestoreMCR tests the RestoreMCR method.
 func (suite *MCRClientTestSuite) TestRestoreMCR() {
 	ctx := context.Background()
 
