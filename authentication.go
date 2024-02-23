@@ -11,10 +11,12 @@ import (
 	"time"
 )
 
+// AuthenticationService is an interface for interfacing with the Authentication endpoints of the Megaport API.
 type AuthenticationService interface {
 	Login(ctx context.Context, req *LoginRequest) (*LoginOauthResponse, error)
 }
 
+// AuthenticationServiceOp handles communication with Authentication methods of the Megaport API.
 type AuthenticationServiceOp struct {
 	*Client
 }
@@ -25,15 +27,18 @@ func NewAuthenticationService(c *Client) *AuthenticationServiceOp {
 	}
 }
 
+// LoginRequest is the request structure for the Login method containing the API Access Key and API Secret Key.
 type LoginRequest struct {
 	AccessKey string
 	SecretKey string
 }
 
+// LoginOauthResponse is the response structure for the Login method containing the bearer token.
 type LoginOauthResponse struct {
 	Token string
 }
 
+// AccessTokenResponse is the response structure for the Login method containing the access token and expiration time.
 type AccessTokenResponse struct {
 	AccessToken  string `json:"access_token"`
 	TokenType    string `json:"token_type"`
@@ -42,6 +47,7 @@ type AccessTokenResponse struct {
 	Error        string `json:"error"`
 }
 
+// LoginResponse is the response structure for the Login method containing the access token and expiration time, as well as the available permissions.
 type LoginResponse struct {
 	Message string `json:"message"`
 	Terms   string `json:"terms"`
@@ -54,9 +60,7 @@ type LoginResponse struct {
 	}
 }
 
-// Login performs an OAuth-style login using an API key and API
-// secret key. It returns the bearer token or an error if the login
-// was unsuccessful.
+// Login performs an OAuth-style login using an API key and API secret key. It returns the bearer token or an error if the login was unsuccessful.
 func (svc *AuthenticationServiceOp) Login(ctx context.Context, req *LoginRequest) (*LoginOauthResponse, error) {
 	svc.Logger.DebugContext(ctx, "creating session", slog.String("access_key", req.AccessKey))
 
