@@ -12,6 +12,7 @@ const (
 	TEST_MVE_TEST_LOCATION_MARKET = "AU"
 )
 
+// MVEIntegrationTestSuite is the integration test suite for the MVE service
 type MVEIntegrationTestSuite IntegrationTestSuite
 
 func TestMVEIntegrationTestSuite(t *testing.T) {
@@ -70,6 +71,7 @@ func (suite *MVEIntegrationTestSuite) SetupTest() {
 	suite.client.SessionToken = loginResp.Token
 }
 
+// readSSHPubKey reads the ssh public key from the default location
 func readSSHPubKey() string {
 	key, err := os.ReadFile(os.Getenv("HOME") + "/.ssh/id_rsa.pub")
 	if err != nil {
@@ -78,6 +80,7 @@ func readSSHPubKey() string {
 	return string(key)
 }
 
+// TestC8KVAutoLifecycle tests the lifecycle of a C8KV MVE
 func (suite *MVEIntegrationTestSuite) TestC8KVAutoLifecycle() {
 	mveSvc := suite.client.MVEService
 	ctx := context.Background()
