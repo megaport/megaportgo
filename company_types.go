@@ -1,5 +1,6 @@
 package megaport
 
+// Market represents a market in the Megaport API.
 type Market struct {
 	Currency               string `json:"currencyEnum"`
 	Language               string `json:"language"`
@@ -19,6 +20,7 @@ type Market struct {
 	FirstPartyID           int    `json:"firstPartyId"`
 }
 
+// CompanyEnablement represents a company enablement in the Megaport API.
 type CompanyEnablement struct {
 	TradingName string `json:"tradingName"`
 }
