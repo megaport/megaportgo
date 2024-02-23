@@ -12,12 +12,19 @@ import (
 // MCRService is an interface for interfacing with the MCR endpoints
 // of the Megaport API.
 type MCRService interface {
+	// BuyMCR buys an MCR from the Megaport MCR API.
 	BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMCRResponse, error)
+	// GetMCR gets details about a single MCR from the Megaport MCR API.
 	GetMCR(ctx context.Context, mcrId string) (*MCR, error)
+	// CreatePrefixFilterList creates a Prefix Filter List on an MCR from the Megaport MCR API.
 	CreatePrefixFilterList(ctx context.Context, req *CreateMCRPrefixFilterListRequest) (*CreateMCRPrefixFilterListResponse, error)
+	// GetMCRPrefixFilterLists returns prefix filter lists for the specified MCR2 from the Megaport MCR API.
 	GetMCRPrefixFilterLists(ctx context.Context, mcrId string) ([]*PrefixFilterList, error)
+	// ModifyMCR modifies an MCR in the Megaport MCR API.
 	ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (*ModifyMCRResponse, error)
+	// DeleteMCR deletes an MCR in the Megaport MCR API.
 	DeleteMCR(ctx context.Context, req *DeleteMCRRequest) (*DeleteMCRResponse, error)
+	// RestoreMCR restores a deleted MCR in the Megaport MCR API.
 	RestoreMCR(ctx context.Context, mcrId string) (*RestoreMCRResponse, error)
 }
 

@@ -13,10 +13,15 @@ import (
 
 // VXCService is an interface for interfacing with the VXC endpoints in the Megaport VXC API.
 type VXCService interface {
+	// BuyVXC buys a VXC from the Megaport VXC API.
 	BuyVXC(ctx context.Context, req *BuyVXCRequest) (*BuyVXCResponse, error)
+	// GetVXC gets details about a single VXC from the Megaport VXC API.
 	GetVXC(ctx context.Context, id string) (*VXC, error)
+	// DeleteVXC deletes a VXC in the Megaport VXC API.
 	DeleteVXC(ctx context.Context, id string, req *DeleteVXCRequest) error
+	// UpdateVXC updates a VXC in the Megaport VXC API.
 	UpdateVXC(ctx context.Context, id string, req *UpdateVXCRequest) (*VXC, error)
+	// LookupPartnerPorts looks up available partner ports in the Megaport VXC API.
 	LookupPartnerPorts(ctx context.Context, req *LookupPartnerPortsRequest) (*LookupPartnerPortsResponse, error) 
 }
 

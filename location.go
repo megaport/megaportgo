@@ -11,15 +11,25 @@ import (
 
 // LocationService is an interface for interfacing with the Location endpoints of the Megaport API.
 type LocationService interface {
+	// ListLocations returns a list of all locations in the Megaport Locations API.
 	ListLocations(ctx context.Context) ([]*Location, error)
+	// GetLocationByID returns a location by its ID in the Megaport Locations API.
 	GetLocationByID(ctx context.Context, locationID int) (*Location, error)
+	// GetLocationByName returns a location by its name in the Megaport Locations API.
 	GetLocationByName(ctx context.Context, locationName string) (*Location, error)
+	// GetLocationByNameFuzzy returns a location by its name in the Megaport Locations API using fuzzy search.
 	GetLocationByNameFuzzy(ctx context.Context, search string) ([]*Location, error)
+	// ListCountries returns a list of all countries in the Megaport Network Regions API.
 	ListCountries(ctx context.Context) ([]*Country, error)
+	// ListMarketCodes returns a list of all market codes in the Megaport Network Regions API.
 	ListMarketCodes(ctx context.Context) ([]string, error)
+	// IsValidMarketCode checks if a market code is valid in the Megaport Network Regions API.
 	IsValidMarketCode(ctx context.Context, marketCode string) (bool, error)
+	// FilterLocationsByMarketCode filters locations by market code in the Megaport Locations API.
 	FilterLocationsByMarketCode(ctx context.Context, marketCode string, locations []*Location) ([]*Location, error)
+	// FilterLocationsByMcrAvailability filters locations by MCR availability in the Megaport Locations API.
 	FilterLocationsByMcrAvailability(ctx context.Context, mcrAvailable bool, locations []*Location) []*Location
+	// GetRandom returns a random location in the Megaport Locations API with MCR Availability. Used for integration testing.
 	GetRandom(ctx context.Context, marketCode string) (*Location, error)
 }
 

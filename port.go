@@ -12,15 +12,25 @@ import (
 
 // PortService is an interface for interfacing with the Port endpoints of the Megaport API.
 type PortService interface {
+	// BuyPort buys a port from the Megaport Port API.
 	BuyPort(ctx context.Context, req *BuyPortRequest) (*BuyPortResponse, error)
+	// BuySinglePort buys a single port from the Megaport Port API.
 	BuySinglePort(ctx context.Context, req *BuySinglePortRequest) (*BuyPortResponse, error)
+	// BuyLAGPort buys a LAG port from the Megaport Port API.
 	BuyLAGPort(ctx context.Context, req *BuyLAGPortRequest) (*BuyPortResponse, error)
+	// ListPorts lists all ports in the Megaport Port API.
 	ListPorts(ctx context.Context) ([]*Port, error)
+	// GetPort gets a single port in the Megaport Port API.
 	GetPort(ctx context.Context, portId string) (*Port, error)
+	// ModifyPort modifies a port in the Megaport Port API.
 	ModifyPort(ctx context.Context, req *ModifyPortRequest) (*ModifyPortResponse, error)
+	// DeletePort deletes a port in the Megaport Port API.
 	DeletePort(ctx context.Context, req *DeletePortRequest) (*DeletePortResponse, error)
+	// RestorePort restores a port in the Megaport Port API.
 	RestorePort(ctx context.Context, portId string) (*RestorePortResponse, error)
+	// LockPort locks a port in the Megaport Port API.
 	LockPort(ctx context.Context, portId string) (*LockPortResponse, error)
+	// UnlockPort unlocks a port in the Megaport Port API.
 	UnlockPort(ctx context.Context, portId string) (*UnlockPortResponse, error)
 }
 

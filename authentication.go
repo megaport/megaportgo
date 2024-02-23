@@ -13,6 +13,7 @@ import (
 
 // AuthenticationService is an interface for interfacing with the Authentication endpoints of the Megaport API.
 type AuthenticationService interface {
+	// Login performs an OAuth-style login using an API key and API secret key. It returns the bearer token or an error if the login was unsuccessful.
 	Login(ctx context.Context, req *LoginRequest) (*LoginOauthResponse, error)
 }
 

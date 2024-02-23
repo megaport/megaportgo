@@ -9,10 +9,15 @@ import (
 
 // ProductService is an interface for interfacing with the Product endpoints of the Megaport API.
 type ProductService interface {
+	// ExecuteOrder is responsible for executing an order for a product in the Megaport Products API.
 	ExecuteOrder(ctx context.Context, requestBody interface{}) (*[]byte, error)
+	// ModifyProduct modifies a product in the Megaport Products API. The available fields to modify are Name, Cost Centre, and Marketplace Visibility.
 	ModifyProduct(ctx context.Context, req *ModifyProductRequest) (*ModifyProductResponse, error)
+	// DeleteProduct is responsible for either scheduling a product for deletion "CANCEL" or deleting a product immediately "CANCEL_NOW" in the Megaport Products API.
 	DeleteProduct(ctx context.Context, req *DeleteProductRequest) (*DeleteProductResponse, error)
+	// RestoreProduct is responsible for restoring a product in the Megaport Products API. The product must be in a "CANCELLED" state to be restored.
 	RestoreProduct(ctx context.Context, productId string) (*RestoreProductResponse, error)
+	// ManageProductLock is responsible for locking or unlocking a product in the Megaport Products API.
 	ManageProductLock(ctx context.Context, req *ManageProductLockRequest) (*ManageProductLockResponse, error)
 }
 

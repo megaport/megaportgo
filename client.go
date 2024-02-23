@@ -47,13 +47,21 @@ type Client struct {
 	onRequestCompleted RequestCompletionCallback
 
 	// Services used for communicating with the Megaport API
+	// AuthenticationService provides methods for authenticating with the API
 	AuthenticationService AuthenticationService
+	// PortService provides methods for interacting with the Ports API
 	PortService           PortService
+	// PartnerService provides methods for interacting with the Partners API
 	PartnerService        PartnerService
+	// ProductService provides methods for interacting with the Products API
 	ProductService        ProductService
+	// LocationService provides methods for interacting with the Locations API
 	LocationService       LocationService
+	// VXCService provides methods for interacting with the VXCs API
 	VXCService            VXCService
+	// MCRService provides methods for interacting with the MCRs API
 	MCRService            MCRService
+	// MVEService provides methods for interacting with the MVEs API
 	MVEService            MVEService
 
 	// Optional extra HTTP headers to set on every request to the API.

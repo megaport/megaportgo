@@ -14,9 +14,13 @@ import (
 // MVEService is an interface for interfacing with the MVE endpoints
 // of the Megaport API.
 type MVEService interface {
+	// BuyMVE buys an MVE from the Megaport MVE API.
 	BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMVEResponse, error)
+	// GetMVE gets details about a single MVE from the Megaport MVE API.
 	GetMVE(ctx context.Context, mveId string) (*MVE, error)
+	// ModifyMVE modifies an MVE in the Megaport MVE API.
 	ModifyMVE(ctx context.Context, req *ModifyMVERequest) (*ModifyMVEResponse, error)
+	// DeleteMVE deletes an MVE in the Megaport MVE API.
 	DeleteMVE(ctx context.Context, req *DeleteMVERequest) (*DeleteMVEResponse, error)
 }
 

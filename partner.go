@@ -11,11 +11,17 @@ import (
 
 // PartnerService is an interface for interfacing with the Partner Port endpoints of the Megaport API.
 type PartnerService interface {
+	// ListPartnerMegaports gets a list of all partner megaports in the Megaport Marketplace via the Megaport API.
 	ListPartnerMegaports(ctx context.Context) ([]*PartnerMegaport, error)
+	// FilterPartnerMegaportByProductName filters a list of partner megaports by product name in the Megaport API.
 	FilterPartnerMegaportByProductName(ctx context.Context, partners []*PartnerMegaport, productName string, exactMatch bool) ([]*PartnerMegaport, error)
+	// FilterPartnerMegaportByConnectType filters a list of partner megaports by connect type in the Megaport API.
 	FilterPartnerMegaportByConnectType(ctx context.Context, partners []*PartnerMegaport, connectType string, exactMatch bool) ([]*PartnerMegaport, error)
+	// FilterPartnerMegaportByCompanyName filters a list of partner megaports by company name in the Megaport API.
 	FilterPartnerMegaportByCompanyName(ctx context.Context, partners []*PartnerMegaport, companyName string, exactMatch bool) ([]*PartnerMegaport, error)
+	// FilterPartnerMegaportByLocationId filters a list of partner megaports by location ID in the Megaport API.
 	FilterPartnerMegaportByLocationId(ctx context.Context, partners []*PartnerMegaport, locationId int) ([]*PartnerMegaport, error)
+	// FilterPartnerMegaportByDiversityZone filters a list of partner megaports by diversity zone in the Megaport API.
 	FilterPartnerMegaportByDiversityZone(ctx context.Context, partners []*PartnerMegaport, diversityZone string, exactMatch bool) ([]*PartnerMegaport, error)
 }
 
