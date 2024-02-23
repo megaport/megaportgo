@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+// ProductClientTestSuite tests the product client
 type ProductClientTestSuite struct {
 	ClientTestSuite
 }
@@ -33,6 +34,7 @@ func (suite *ProductClientTestSuite) TearDownTest() {
 	suite.server.Close()
 }
 
+// TestExecuteOrder tests the ExecuteOrder method
 func (suite *ProductClientTestSuite) TestExecuteOrder() {
 	ctx := context.Background()
 	productSvc := suite.client.ProductService
@@ -81,6 +83,7 @@ func (suite *ProductClientTestSuite) TestExecuteOrder() {
 	suite.Equal(wantRes, gotRes)
 }
 
+// TestModifyProduct tests the ModifyProduct method
 func (suite *ProductClientTestSuite) TestModifyProduct() {
 	ctx := context.Background()
 	productSvc := suite.client.ProductService
@@ -185,6 +188,7 @@ func (suite *ProductClientTestSuite) TestModifyProduct() {
 	suite.Equal(wantRes, gotRes)
 }
 
+// TestDeleteProduct tests the DeleteProduct method
 func (suite *ProductClientTestSuite) TestDeleteProduct() {
 	ctx := context.Background()
 
@@ -216,6 +220,7 @@ func (suite *ProductClientTestSuite) TestDeleteProduct() {
 	suite.Equal(wantRes, gotRes)
 }
 
+// TestRestoreProduct tests the RestoreProduct method
 func (suite *ProductClientTestSuite) TestRestoreProduct() {
 	ctx := context.Background()
 
@@ -241,6 +246,7 @@ func (suite *ProductClientTestSuite) TestRestoreProduct() {
 	suite.Equal(wantRes, gotRes)
 }
 
+// TestManageProductLuck tests the ManageProductLock method
 func (suite *ProductClientTestSuite) TestManageProductLuck() {
 	ctx := context.Background()
 
