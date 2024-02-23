@@ -11,8 +11,7 @@ import (
 	"time"
 )
 
-
-
+// VXCService is an interface for interfacing with the VXC endpoints in the Megaport VXC API.
 type VXCService interface {
 	BuyVXC(ctx context.Context, req *BuyVXCRequest) (*BuyVXCResponse, error)
 	GetVXC(ctx context.Context, id string) (*VXC, error)
@@ -29,10 +28,12 @@ func NewVXCService(c *Client) *VXCServiceOp {
 
 var _ VXCService = &VXCServiceOp{}
 
+// VXCServiceOp handles communication with the VXC related methods of the Megaport API.
 type VXCServiceOp struct {
 	Client *Client
 }
 
+// BuyVXCRequest represents a request to buy a VXC from the Megaport VXC API.
 type BuyVXCRequest struct {
 	PortUID           string
 	VXCName           string
@@ -44,18 +45,22 @@ type BuyVXCRequest struct {
 	WaitForTime      time.Duration // How long to wait for the VXC to provision if WaitForProvision is true (default is 5 minutes)
 }
 
+// BuyVXCResponse represents a response from buying a VXC from the Megaport VXC API.
 type BuyVXCResponse struct {
 	TechnicalServiceUID string
 }
 
+// DeleteVXCRequest represents a request to delete a VXC in the Megaport VXC API.
 type DeleteVXCRequest struct {
 	DeleteNow bool
 }
 
+// DeleteVXCResponse represents a response from deleting a VXC in the Megaport VXC API.
 type DeleteVXCResponse struct {
 	IsDeleting bool
 }
 
+// UpdateVXCRequest represents a request to update a VXC in the Megaport VXC API. 
 type UpdateVXCRequest struct {
 	AEndVLAN  *int
 	BEndVlan  *int
@@ -66,9 +71,11 @@ type UpdateVXCRequest struct {
 	WaitForTime   time.Duration // How long to wait for the VXC to update if WaitForUpdate is true (default is 5 minutes)
 }
 
+// UpdateVXCResponse represents a response from updating a VXC in the Megaport VXC API.
 type UpdateVXCResponse struct {
 }
 
+// LookupPartnerPortsRequest represents a request to lookup available partner ports in the Megaport VXC API.
 type LookupPartnerPortsRequest struct {
 	Key 				string
 	PortSpeed 			int
@@ -76,11 +83,12 @@ type LookupPartnerPortsRequest struct {
 	ProductID 	string
 }
 
+// LookupPartnerPortsResponse represents a response from looking up available partner ports in the Megaport VXC API.
 type LookupPartnerPortsResponse struct {
 	ProductUID string
 }
 
-
+// BuyVXC buys a VXC from the Megaport VXC API.
 func (svc *VXCServiceOp) BuyVXC(ctx context.Context, req *BuyVXCRequest) (*BuyVXCResponse, error) {
 	buyOrder := []VXCOrder{{
 		PortID: req.PortUID,
@@ -145,6 +153,7 @@ func (svc *VXCServiceOp) BuyVXC(ctx context.Context, req *BuyVXCRequest) (*BuyVX
 	}
 }
 
+// GetVXC gets details about a single VXC from the Megaport VXC API.
 func (svc *VXCServiceOp) GetVXC(ctx context.Context, id string) (*VXC, error) {
 	path := "/v2/product/" + id
 	url := svc.Client.BaseURL.JoinPath(path).String()
@@ -173,6 +182,7 @@ func (svc *VXCServiceOp) GetVXC(ctx context.Context, id string) (*VXC, error) {
 	return &vxcDetails.Data, nil
 }
 
+// DeleteVXC deletes a VXC in the Megaport VXC API.
 func (svc *VXCServiceOp) DeleteVXC(ctx context.Context, id string, req *DeleteVXCRequest) error {
 	_, err := svc.Client.ProductService.DeleteProduct(ctx, &DeleteProductRequest{
 		ProductID: id,
@@ -184,6 +194,7 @@ func (svc *VXCServiceOp) DeleteVXC(ctx context.Context, id string, req *DeleteVX
 	return nil
 }
 
+// UpdateVXC updates a VXC in the Megaport VXC API.
 func (svc *VXCServiceOp) UpdateVXC(ctx context.Context, id string, req *UpdateVXCRequest) (*VXC, error) {
 	path := fmt.Sprintf("/v2/product/%s/%s", PRODUCT_VXC, id)
 	url := svc.Client.BaseURL.JoinPath(path).String()
@@ -255,6 +266,7 @@ func (svc *VXCServiceOp) UpdateVXC(ctx context.Context, id string, req *UpdateVX
 	}
 }
 
+// LookupPartnerPorts looks up available partner ports in the Megaport VXC API.
 func (svc *VXCServiceOp) LookupPartnerPorts(ctx context.Context, req *LookupPartnerPortsRequest) (*LookupPartnerPortsResponse, error) {
 	lookupUrl := "/v2/secure/" + strings.ToLower(req.Partner) + "/" + req.Key
 	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, lookupUrl, nil)
