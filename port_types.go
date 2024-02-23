@@ -18,6 +18,7 @@ type PortOrderConfirmation struct {
 	TechnicalServiceUID string `json:"technicalServiceUid"`
 }
 
+// Port represents a Megaport Port
 type Port struct {
 	ID                    int                    `json:"productId"`
 	UID                   string                 `json:"productUid"`

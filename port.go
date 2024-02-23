@@ -10,9 +10,7 @@ import (
 	"time"
 )
 
-// PortService is an interface for interfacing with the Port endpoints
-// of the Megaport API.
-
+// PortService is an interface for interfacing with the Port endpoints of the Megaport API.
 type PortService interface {
 	BuyPort(ctx context.Context, req *BuyPortRequest) (*BuyPortResponse, error)
 	BuySinglePort(ctx context.Context, req *BuySinglePortRequest) (*BuyPortResponse, error)
@@ -37,6 +35,7 @@ type PortServiceOp struct {
 	Client *Client
 }
 
+// BuyPortRequest represents a request to buy a port.
 type BuyPortRequest struct {
 	Name          string `json:"name"`
 	Term          int    `json:"term"`
@@ -52,6 +51,7 @@ type BuyPortRequest struct {
 	WaitForTime      time.Duration // How long to wait for the VXC to provision if WaitForProvision is true (default is 5 minutes)
 }
 
+// BuySinglePortRequest represents a request to buy a single port.
 type BuySinglePortRequest struct {
 	Name          string
 	Term          int
@@ -65,6 +65,7 @@ type BuySinglePortRequest struct {
 	WaitForTime      time.Duration // How long to wait for the VXC to provision if WaitForProvision is true (default is 5 minutes)
 }
 
+// BuyLAGPortRequest represents a request to buy a LAG port.
 type BuyLAGPortRequest struct {
 	Name          string
 	Term          int
@@ -79,14 +80,17 @@ type BuyLAGPortRequest struct {
 	WaitForTime      time.Duration // How long to wait for the Port to provision if WaitForProvision is true (default is 5 minutes)
 }
 
+// BuyPortResponse represents a response from buying a port.
 type BuyPortResponse struct {
 	TechnicalServiceUID string
 }
 
+// GetPortRequest represents a request to get a port.
 type GetPortRequest struct {
 	PortID string
 }
 
+// ModifyPortRequest represents a request to modify a port.
 type ModifyPortRequest struct {
 	PortID                string
 	Name                  string
@@ -97,43 +101,53 @@ type ModifyPortRequest struct {
 	WaitForTime   time.Duration // How long to wait for the Port to update if WaitForUpdate is true (default is 5 minutes)
 }
 
+// ModifyPortResponse represents a response from modifying a port.
 type ModifyPortResponse struct {
 	IsUpdated bool
 }
 
+// DeletePortRequest represents a request to delete a port.
 type DeletePortRequest struct {
 	PortID    string
 	DeleteNow bool
 }
 
+// DeletePortResponse represents a response from deleting a port.
 type DeletePortResponse struct {
 	IsDeleting bool
 }
 
+// RestorePortRequest represents a request to restore a port.
 type RestorePortRequest struct {
 	PortID string
 }
 
+// RestorePortResponse represents a response from restoring a port.
 type RestorePortResponse struct {
 	IsRestored bool
 }
 
+// LockPortRequest represents a request to lock a port.
 type LockPortRequest struct {
 	PortID string
 }
 
+// LockPortResponse represents a response from locking a port.
 type LockPortResponse struct {
 	IsLocking bool
 }
 
+// UnlockPortRequest represents a request to unlock a port.
 type UnlockPortRequest struct {
 	PortID string
 }
 
+// UnlockPortResponse represents a response from unlocking a port.
 type UnlockPortResponse struct {
 	IsUnlocking bool
 }
 
+// BuyPort buys a port from the Megaport Port API.
 func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*BuyPortResponse, error) {
 	var buyOrder []PortOrder
 	if req.Term != 1 && req.Term != 12 && req.Term != 24 && req.Term != 36 {
@@ -148,7 +162,6 @@ func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*Bu
 				PortSpeed:             req.PortSpeed,
 				LocationID:            req.LocationId,
 				DiversityZone:         req.DiversityZone,
-				// CreateDate:            GetCurrentTimestamp(),
 				Virtual:               false,
 				Market:                req.Market,
 				LagPortCount:          req.LagCount,
@@ -164,7 +177,6 @@ func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*Bu
 				PortSpeed:             req.PortSpeed,
 				LocationID:            req.LocationId,
 				DiversityZone:         req.DiversityZone,
-				// CreateDate:            GetCurrentTimestamp(),
 				Virtual:               false,
 				Market:                req.Market,
 				MarketplaceVisibility: !req.IsPrivate,
@@ -222,6 +234,7 @@ func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*Bu
 	}
 }
 
+// BuySinglePort buys a single port from the Megaport Port API.
 func (svc *PortServiceOp) BuySinglePort(ctx context.Context, req *BuySinglePortRequest) (*BuyPortResponse, error) {
 	return svc.BuyPort(ctx, &BuyPortRequest{
 		Name:             req.Name,
@@ -238,6 +251,7 @@ func (svc *PortServiceOp) BuySinglePort(ctx context.Context, req *BuySinglePortR
 	})
 }
 
+// BuyLAGPort buys a LAG port from the Megaport Port API.
 func (svc *PortServiceOp) BuyLAGPort(ctx context.Context, req *BuyLAGPortRequest) (*BuyPortResponse, error) {
 	return svc.BuyPort(ctx, &BuyPortRequest{
 		Name:             req.Name,
@@ -254,6 +268,7 @@ func (svc *PortServiceOp) BuyLAGPort(ctx context.Context, req *BuyLAGPortRequest
 	})
 }
 
+// ListPorts lists all ports from the Megaport Port API.
 func (svc *PortServiceOp) ListPorts(ctx context.Context) ([]*Port, error) {
 	path := "/v2/products"
 	url := svc.Client.BaseURL.JoinPath(path).String()
@@ -308,6 +323,7 @@ func (svc *PortServiceOp) ListPorts(ctx context.Context) ([]*Port, error) {
 	return ports, nil
 }
 
+// GetPort gets a single port from the Megaport Port API.
 func (svc *PortServiceOp) GetPort(ctx context.Context, portId string) (*Port, error) {
 	path := "/v2/product/" + portId
 	url := svc.Client.BaseURL.JoinPath(path).String()
@@ -337,6 +353,7 @@ func (svc *PortServiceOp) GetPort(ctx context.Context, portId string) (*Port, er
 	return &portDetails.Data, nil
 }
 
+// ModifyPort modifies a port from the Megaport Port API.
 func (svc *PortServiceOp) ModifyPort(ctx context.Context, req *ModifyPortRequest) (*ModifyPortResponse, error) {
 	modifyRes, err := svc.Client.ProductService.ModifyProduct(ctx, &ModifyProductRequest{
 		ProductID:             req.PortID,
@@ -386,6 +403,7 @@ func (svc *PortServiceOp) ModifyPort(ctx context.Context, req *ModifyPortRequest
 	}
 }
 
+// DeletePort deletes a port from the Megaport Port API.
 func (svc *PortServiceOp) DeletePort(ctx context.Context, req *DeletePortRequest) (*DeletePortResponse, error) {
 	_, err := svc.Client.ProductService.DeleteProduct(ctx, &DeleteProductRequest{
 		ProductID: req.PortID,
@@ -399,6 +417,7 @@ func (svc *PortServiceOp) DeletePort(ctx context.Context, req *DeletePortRequest
 	}, nil
 }
 
+// RestorePort restores a port from the Megaport Port API.
 func (svc *PortServiceOp) RestorePort(ctx context.Context, portId string) (*RestorePortResponse, error) {
 	_, err := svc.Client.ProductService.RestoreProduct(ctx, portId)
 	if err != nil {
@@ -409,6 +428,7 @@ func (svc *PortServiceOp) RestorePort(ctx context.Context, portId string) (*Rest
 	}, nil
 }
 
+// LockPort locks a port from the Megaport Port API.
 func (svc *PortServiceOp) LockPort(ctx context.Context, portId string) (*LockPortResponse, error) {
 	port, err := svc.GetPort(ctx, portId)
 	if err != nil {
@@ -428,6 +448,7 @@ func (svc *PortServiceOp) LockPort(ctx context.Context, portId string) (*LockPor
 	}
 }
 
+// UnlockPort unlocks a port from the Megaport Port API.
 func (svc *PortServiceOp) UnlockPort(ctx context.Context, portId string) (*UnlockPortResponse, error) {
 	port, err := svc.GetPort(ctx, portId)
 	if err != nil {
