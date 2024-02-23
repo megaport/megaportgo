@@ -1,5 +1,6 @@
 package megaport
 
+// MVEOrderConfig represents a request to buy an MVE from the Megaport Products API.
 type MVEOrderConfig struct {
 	LocationID        int                    `json:"locationId"`
 	Name              string                 `json:"productName"`
@@ -10,10 +11,12 @@ type MVEOrderConfig struct {
 	VendorConfig     VendorConfig `json:"VendorConfig"`
 }
 
+// VendorConfig is an interface for MVE vendor configuration.
 type VendorConfig interface {
 	IsVendorConfig()
 }
 
+// ArubaConfig represents the configuration for an Aruba MVE.
 type ArubaConfig struct {
 	VendorConfig
 	Vendor string `json:"vendor"`
@@ -23,6 +26,7 @@ type ArubaConfig struct {
 	AccountKey string `json:"accountKey"`
 }
 
+// CiscoConfig represents the configuration for a Cisco MVE.
 type CiscoConfig struct {
 	VendorConfig
 	Vendor string `json:"vendor"`
@@ -32,6 +36,7 @@ type CiscoConfig struct {
 	CloudInit string `json:"cloudInit"`
 }
 
+// FortinetConfig represents the configuration for a Fortinet MVE.
 type FortinetConfig struct {
 	VendorConfig
 	Vendor string `json:"vendor"`
@@ -41,6 +46,7 @@ type FortinetConfig struct {
 	LicenseData string `json:"licenseData"`
 }
 
+// PaloAltoConfig represents the configuration for a Palo Alto MVE.
 type PaloAltoConfig struct {
 	VendorConfig
 	Vendor string `json:"vendor"`
@@ -51,6 +57,7 @@ type PaloAltoConfig struct {
 	LicenseData string `json:"licenseData"`
 }
 
+// VersaConfig represents the configuration for a Versa MVE.
 type VersaConfig struct {
 	VendorConfig
 	Vendor string `json:"vendor"`
@@ -63,6 +70,7 @@ type VersaConfig struct {
 	SerialNumber string `json:"serialNumber"`
 }
 
+// VmwareConfig represents the configuration for a VMware MVE.
 type VmwareConfig struct {
 	VendorConfig
 	Vendor string `json:"vendor"`
@@ -73,7 +81,7 @@ type VmwareConfig struct {
 	VcoActivationCode string `json:"vcoActivationCode"`
 }
 
-// NetworkInterface represents a vNIC.
+// MVENetworkInterface represents a vNIC.
 type MVENetworkInterface struct {
 	Description string `json:"description"`
 	VLAN        int    `json:"vlan"`
@@ -82,6 +90,7 @@ type MVENetworkInterface struct {
 // InstanceSize encodes the available MVE instance sizes.
 type MVEInstanceSize string
 
+// MVE instance sizes.
 const (
 	MVE_SMALL  MVEInstanceSize = "SMALL"
 	MVE_MEDIUM MVEInstanceSize = "MEDIUM"
@@ -89,10 +98,12 @@ const (
 	MVE_XLARGE MVEInstanceSize = "X_LARGE_12"
 )
 
+// MVEOrderConfirmation represents the response to an MVE order request.
 type MVEOrderConfirmation struct {
 	TechnicalServiceUID string `json:"technicalServiceUid"`
 }
 
+// MVE represents a Megaport Virtual Edge from the Megaport MVE API.
 type MVE struct {
 	ID                    int                    `json:"productId"`
 	UID                   string                 `json:"productUid"`
@@ -127,11 +138,13 @@ type MVE struct {
 	NetworkInterfaces     []*MVENetworkInterface `json:"vnics"`
 }
 
+// MVEResources represents the resources associated with an MVE.
 type MVEResources struct {
 	Interface *PortInterface `json:"interface"`
 	VirtualMachines []*MVEVirtualMachine `json:"virtual_machine"`
 }
 
+// MVEVirtualMachine represents a virtual machine associated with an MVE.
 type MVEVirtualMachine struct {
 	ID int `json:"id"`
 	CpuCount int `json:"cpu_count"`
@@ -141,6 +154,7 @@ type MVEVirtualMachine struct {
 	Vnics []*MVENetworkInterface `json:"vnics"`
 }
 
+// MVVEVirtualMachineImage represents the image associated with an MVE virtual machine.
 type MVEVirtualMachineImage struct {
 	ID int `json:"id"`
 	Vendor string `json:"vendor"`
@@ -148,12 +162,14 @@ type MVEVirtualMachineImage struct {
 	Version string `json:"version"`
 }
 
+// MVEOrderResponse represents the response to an MVE order request.
 type MVEOrderResponse struct {
 	Message string                  `json:"message"`
 	Terms   string                  `json:"terms"`
 	Data    []*MVEOrderConfirmation `json:"data"`
 }
 
+// MVEResponse represents the response to an MVE request.
 type MVEResponse struct {
 	Message string `json:"message"`
 	Terms   string `json:"terms"`
