@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+// PartnerIntegrationTestSuite is the integration test suite for the Partner service
 type PartnerIntegrationTestSuite IntegrationTestSuite
 
 func TestPartnerIntegrationTestSuite(t *testing.T) {
@@ -67,6 +68,7 @@ func (suite *PartnerIntegrationTestSuite) SetupTest() {
 	suite.client.SessionToken = loginResp.Token
 }
 
+// TestListPartnerMegaports tests the ListPartnerMegaports method.
 func (suite *PartnerIntegrationTestSuite) TestListPartnerMegaports() {
 	partnerSvc := suite.client.PartnerService
 	ctx := context.Background()
@@ -77,6 +79,7 @@ func (suite *PartnerIntegrationTestSuite) TestListPartnerMegaports() {
 	}
 }
 
+// TestFilterPartnerMegaportByCompanyName tests the FilterPartnerMegaportByCompanyName method.
 func (suite *PartnerIntegrationTestSuite) TestFilterPartnerMegaportByCompanyName() {
 	partnerSvc := suite.client.PartnerService
 	ctx := context.Background()
@@ -94,6 +97,7 @@ func (suite *PartnerIntegrationTestSuite) TestFilterPartnerMegaportByCompanyName
 	}
 }
 
+// TestFilterPartnerMegaportByLocationId tests the FilterPartnerMegaportByLocationId method.
 func (suite *PartnerIntegrationTestSuite) TestFilterPartnerMegaportByLocationId() {
 	partnerSvc := suite.client.PartnerService
 	locSvc := suite.client.LocationService
@@ -116,6 +120,7 @@ func (suite *PartnerIntegrationTestSuite) TestFilterPartnerMegaportByLocationId(
 	}
 }
 
+// TestFilterPartnerMegaportByConnectType tests the FilterPartnerMegaportByConnectType method.
 func (suite *PartnerIntegrationTestSuite) TestFilterPartnerMegaportByConnectType() {
 	partnerSvc := suite.client.PartnerService
 	ctx := context.Background()
@@ -140,6 +145,7 @@ func (suite *PartnerIntegrationTestSuite) TestFilterPartnerMegaportByConnectType
 	}
 }
 
+// TestFilterPartnerMegaportByProductName tests the FilterPartnerMegaportByProductName method.
 func (suite *PartnerIntegrationTestSuite) TestFilterPartnerMegaportByProductName() {
 	partnerSvc := suite.client.PartnerService
 	ctx := context.Background()
@@ -158,6 +164,7 @@ func (suite *PartnerIntegrationTestSuite) TestFilterPartnerMegaportByProductName
 	}
 }
 
+// TestFilterPartnerMegaportByDiversityZone tests the FilterPartnerMegaportByDiversityZone method.
 func (suite *PartnerIntegrationTestSuite) TestFilterPartnerMegaportByDiversityZone() {
 	partnerSvc := suite.client.PartnerService
 	ctx := context.Background()
