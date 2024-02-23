@@ -9,6 +9,7 @@ import (
 	"github.com/lithammer/fuzzysearch/fuzzy"
 )
 
+// PartnerService is an interface for interfacing with the Partner Port endpoints of the Megaport API.
 type PartnerService interface {
 	ListPartnerMegaports(ctx context.Context) ([]*PartnerMegaport, error)
 	FilterPartnerMegaportByProductName(ctx context.Context, partners []*PartnerMegaport, productName string, exactMatch bool) ([]*PartnerMegaport, error)
@@ -24,12 +25,12 @@ func NewPartnerService(c *Client) *PartnerServiceOp {
 	}
 }
 
-// PartnerServiceOp handles communication with Partner methods of the Megaport API.
+// PartnerServiceOp handles communication with Partner Port methods of the Megaport API.
 type PartnerServiceOp struct {
 	Client *Client
 }
 
-// ListPartnerMegaports gets a list of all partner megaports in the Megaport Marketplace.
+// ListPartnerMegaports gets a list of all partner megaports in the Megaport Marketplace via the Megaport API.
 func (svc *PartnerServiceOp) ListPartnerMegaports(ctx context.Context) ([]*PartnerMegaport, error) {
 	partnerMegaportUrl := "/v2/dropdowns/partner/megaports"
 	req, err := svc.Client.NewRequest(ctx, http.MethodGet, partnerMegaportUrl, nil)
@@ -56,6 +57,7 @@ func (svc *PartnerServiceOp) ListPartnerMegaports(ctx context.Context) ([]*Partn
 	return partnerMegaportResponse.Data, nil
 }
 
+// FilterPartnerMegaportByProductName filters a list of partner megaports by product name in the Megaport API.
 func (svc *PartnerServiceOp) FilterPartnerMegaportByProductName(ctx context.Context, partners []*PartnerMegaport, productName string, exactMatch bool) ([]*PartnerMegaport, error) {
 	toReturn := []*PartnerMegaport{}
 	for _, partner := range partners {
@@ -84,6 +86,7 @@ func (svc *PartnerServiceOp) FilterPartnerMegaportByProductName(ctx context.Cont
 	return toReturn, nil
 }
 
+// FilterPartnerMegaportByConnectType filters a list of partner megaports by connect type in the Megaport API.
 func (svc *PartnerServiceOp) FilterPartnerMegaportByConnectType(ctx context.Context, partners []*PartnerMegaport, connectType string, exactMatch bool) ([]*PartnerMegaport, error) {
 	toReturn := []*PartnerMegaport{}
 	for _, partner := range partners {
@@ -112,6 +115,7 @@ func (svc *PartnerServiceOp) FilterPartnerMegaportByConnectType(ctx context.Cont
 	return toReturn, nil
 }
 
+// FilterPartnerMegaportByCompanyName filters a list of partner megaports by company name in the Megaport API.
 func (svc *PartnerServiceOp) FilterPartnerMegaportByCompanyName(ctx context.Context, partners []*PartnerMegaport, companyName string, exactMatch bool) ([]*PartnerMegaport, error) {
 	toReturn := []*PartnerMegaport{}
 	for _, partner := range partners {
@@ -140,6 +144,7 @@ func (svc *PartnerServiceOp) FilterPartnerMegaportByCompanyName(ctx context.Cont
 	return toReturn, nil
 }
 
+// FilterPartnerMegaportByLocationId filters a list of partner megaports by location ID in the Megaport API.
 func (svc *PartnerServiceOp) FilterPartnerMegaportByLocationId(ctx context.Context, partners []*PartnerMegaport, locationId int) ([]*PartnerMegaport, error) {
 	toReturn := []*PartnerMegaport{}
 	for _, partner := range partners {
@@ -157,6 +162,7 @@ func (svc *PartnerServiceOp) FilterPartnerMegaportByLocationId(ctx context.Conte
 	return toReturn, nil
 }
 
+// FilterPartnerMegaportByDiversityZone filters a list of partner megaports by diversity zone in the Megaport API.
 func (svc *PartnerServiceOp) FilterPartnerMegaportByDiversityZone(ctx context.Context, partners []*PartnerMegaport, diversityZone string, exactMatch bool) ([]*PartnerMegaport, error) {
 	toReturn := []*PartnerMegaport{}
 	for _, partner := range partners {
