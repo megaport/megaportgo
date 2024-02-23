@@ -15,6 +15,7 @@ const (
 	TEST_LOCATION_ID_A = 19 // 	Interactive 437 Williamstown
 )
 
+// PortIntegrationTestSuite tests the Port Service.
 type PortIntegrationTestSuite IntegrationTestSuite
 
 func TestPortIntegrationTestSuite(t *testing.T) {
@@ -270,6 +271,7 @@ func (suite *PortIntegrationTestSuite) testCancelPort(c *Client, ctx context.Con
 
 }
 
+// testDeletePort tests the deletion of a port, both hard and soft.
 func (suite *PortIntegrationTestSuite) testDeletePort(c *Client, ctx context.Context, portId string, portType string) {
 	// Hard Delete
 	suite.client.Logger.Debug("Deleting Port now.", slog.String("port_type", portType), slog.String("port_id", portId))
@@ -290,6 +292,7 @@ func (suite *PortIntegrationTestSuite) testDeletePort(c *Client, ctx context.Con
 	suite.client.Logger.Debug("port deleted", slog.String("status", portInfo.ProvisioningStatus), slog.String("port_id", portId))
 }
 
+// testLockPort tests the locking and unlocking of a port.
 func (suite *PortIntegrationTestSuite) testLockPort(c *Client, ctx context.Context, portId string) {
 	suite.client.Logger.Debug("Locking Port now.", slog.String("port_id", portId))
 	lockResp, lockErr := c.PortService.LockPort(ctx, portId)
