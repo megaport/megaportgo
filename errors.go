@@ -21,6 +21,7 @@ type ErrorResponse struct {
 	TraceID string `json:"trace_id"`
 }
 
+// Error returns the string representation of the error
 func (r *ErrorResponse) Error() string {
 	if r.TraceID != "" {
 		return fmt.Sprintf("%v %v: %d (trace_id %q) %s %s",
