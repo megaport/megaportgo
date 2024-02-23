@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+// VXCClientTestSuite tests the VXC service.
 type VXCClientTestSuite struct {
 	ClientTestSuite
 }
@@ -33,6 +34,7 @@ func (suite *VXCClientTestSuite) TearDownTest() {
 	suite.server.Close()
 }
 
+// TestBuyVXC tests the BuyVXC method.
 func (suite *VXCClientTestSuite) TestBuyVXC() {
 	portProductUid := "9b1c46c7-1e8d-4035-bf38-1bc60d346d57"
 	vxcProductUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
@@ -225,6 +227,7 @@ func (suite *VXCClientTestSuite) TestBuyVXC() {
 	suite.Equal(want, got)
 }
 
+// TestGetVXCs tests the GetVXC method.
 func (suite *VXCClientTestSuite) TestGetVXC() {
 	ctx := context.Background()
 	vxcSvc := suite.client.VXCService
@@ -403,6 +406,7 @@ func (suite *VXCClientTestSuite) TestGetVXC() {
 	suite.Equal(wantVxc, gotVxc)
 }
 
+// TestGetAzureVXC tests the GetVXC method for an Azure VXC.
 func (suite *VXCClientTestSuite) TestGetAzureVXC() {
 	ctx := context.Background()
 	vxcSvc := suite.client.VXCService
@@ -600,6 +604,7 @@ func (suite *VXCClientTestSuite) TestGetAzureVXC() {
 	suite.Equal(wantVxc, gotVxc)
 }
 
+// TestGetGoogleVXC tests the GetVXC method for a Google VXC.
 func (suite *VXCClientTestSuite) TestGetGoogleVXC() {
 	ctx := context.Background()
 	vxcSvc := suite.client.VXCService
@@ -793,6 +798,7 @@ func (suite *VXCClientTestSuite) TestGetGoogleVXC() {
 	suite.Equal(wantVxc, gotVxc)
 }
 
+// TestUpdateVXC tests the UpdateVXC method.
 func (suite *VXCClientTestSuite) TestUpdateVXC() {
 	ctx := context.Background()
 	vxcSvc := suite.client.VXCService
@@ -994,6 +1000,7 @@ func (suite *VXCClientTestSuite) TestUpdateVXC() {
 	suite.Equal(wantVxc, gotVxc)
 }
 
+// TestDeleteVXC tests the DeleteVXC method.
 func (suite *VXCClientTestSuite) TestDeleteVXC() {
 	ctx := context.Background()
 
