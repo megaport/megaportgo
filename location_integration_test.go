@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+// LocationIntegrationTestSuite is the integration test suite for the Location service
 type LocationIntegrationTestSuite IntegrationTestSuite
 
 func TestLocationIntegrationTestSuite(t *testing.T) {
@@ -69,6 +70,7 @@ func (suite *LocationIntegrationTestSuite) SetupTest() {
 	suite.client.SessionToken = loginResp.Token
 }
 
+// TestBadID tests the GetLocationByID method with an invalid ID.
 func (suite *LocationIntegrationTestSuite) TestBadID() {
 	ctx := context.Background()
 	// Make sure that an id with no record returns an error as expected.
@@ -76,6 +78,7 @@ func (suite *LocationIntegrationTestSuite) TestBadID() {
 	suite.Equal(ErrLocationNotFound, idErr)
 }
 
+// TestBadName tests the GetLocationByName method with an invalid name.
 func (suite *LocationIntegrationTestSuite) TestBadName() {
 	ctx := context.Background()
 
@@ -84,6 +87,7 @@ func (suite *LocationIntegrationTestSuite) TestBadName() {
 	suite.Equal(ErrLocationNotFound, nameErr)
 }
 
+// TestGetLocationByID tests the GetLocationByID method.
 func (suite *LocationIntegrationTestSuite) TestGetLocationByID() {
 	ctx := context.Background()
 
@@ -97,6 +101,7 @@ func (suite *LocationIntegrationTestSuite) TestGetLocationByID() {
 	suite.Equal("NextDC B2", byId.Name)
 }
 
+// TestGetLocationByName tests the GetLocationByName method.
 func (suite *LocationIntegrationTestSuite) TestGetLocationByName() {
 	ctx := context.Background()
 
@@ -114,6 +119,7 @@ func (suite *LocationIntegrationTestSuite) TestGetLocationByName() {
 	suite.Equal(6, byName.ID)
 }
 
+// TestGetLocationByNameFuzzy tests the GetLocationByNameFuzzy method.
 func (suite *LocationIntegrationTestSuite) TestGetLocationByNameFuzzy() {
 	ctx := context.Background()
 
@@ -126,6 +132,7 @@ func (suite *LocationIntegrationTestSuite) TestGetLocationByNameFuzzy() {
 	suite.Error(ErrNoMatchingLocations, failFuzzyErr)
 }
 
+// TestListCountries tests the ListCountries method
 // first one should always be Australia
 func (suite *LocationIntegrationTestSuite) TestListCountries() {
 	ctx := context.Background()
@@ -138,6 +145,7 @@ func (suite *LocationIntegrationTestSuite) TestListCountries() {
 	suite.Greater(countries[0].SiteCount, 0)
 }
 
+// TestListMarketCodes tests the ListMarketCodes method
 func (suite *LocationIntegrationTestSuite) TestMarketCodes() {
 	ctx := context.Background()
 
@@ -153,6 +161,7 @@ func (suite *LocationIntegrationTestSuite) TestMarketCodes() {
 	suite.True(found)
 }
 
+// TestFilterLocationsByMarketCode tests the FilterLocationsByMarketCode method
 func (suite *IntegrationTestSuite) TestFilterLocationsByMarketCode() {
 	ctx := context.Background()
 
