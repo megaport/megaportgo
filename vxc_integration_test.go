@@ -17,7 +17,7 @@ const (
 	MCR_LOCATION    = "AU"
 )
 
-
+// VXCIntegrationTestSuite tests the VXC Service.
 type VXCIntegrationTestSuite IntegrationTestSuite
 
 func TestVXCIntegrationTestSuite(t *testing.T) {
@@ -76,6 +76,7 @@ func (suite *VXCIntegrationTestSuite) SetupTest() {
 	suite.client.SessionToken = loginResp.Token
 }
 
+// TestVXCBuy tests the VXC buy process.
 func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 	vxcSvc := suite.client.VXCService
 	ctx := context.Background()
@@ -203,6 +204,8 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 	}
 }
 
+
+// TestAWSVIFConnectionBuy tests the AWS VIF connection buy process.
 func (suite *VXCIntegrationTestSuite) TestAWSVIFConnectionBuy() {
 	vxcSvc := suite.client.VXCService
 	ctx := context.Background()
@@ -281,6 +284,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSVIFConnectionBuy() {
 	}
 }
 
+// TestAWSHostedConnectionBuy tests the AWS hosted connection buy process.
 func (suite *VXCIntegrationTestSuite) TestAWSHostedConnectionBuy() {
 	vxcSvc := suite.client.VXCService
 	ctx := context.Background()
@@ -381,6 +385,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSHostedConnectionBuy() {
 	}
 }
 
+// TestAWSConnectionBuyDefaults tests the AWS connection buy process with default values.
 func (suite *VXCIntegrationTestSuite) TestAWSConnectionBuyDefaults() {
 	vxcSvc := suite.client.VXCService
 	ctx := context.Background()
@@ -460,6 +465,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSConnectionBuyDefaults() {
 	}
 }
 
+// TestBuyAzureExpressRoute tests the Azure ExpressRoute buy process.
 func (suite *VXCIntegrationTestSuite) TestBuyAzureExpressRoute() {
 	vxcSvc := suite.client.VXCService
 	ctx := context.Background()
@@ -572,6 +578,7 @@ func (suite *VXCIntegrationTestSuite) TestBuyAzureExpressRoute() {
 	}
 }
 
+// TestBuyGoogleInterconnect tests the Google Interconnect buy process.
 func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnect() { 
 	vxcSvc := suite.client.VXCService
 	ctx := context.Background()
@@ -664,6 +671,7 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnect() {
 	}
 }
 
+// TestBuyGoogleInterconnectLocation tests the Google Interconnect location buy process.
 func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnectLocation() {
 	vxcSvc := suite.client.VXCService
 	ctx := context.Background()
