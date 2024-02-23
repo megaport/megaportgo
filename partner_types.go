@@ -1,17 +1,20 @@
 package megaport
 
+// PartnerLookupResponse represents a response from the Megaport API after looking up a Partner Megaport.
 type PartnerLookupResponse struct {
 	Message string        `json:"message"`
 	Data    PartnerLookup `json:"data"`
 	Terms   string        `json:"terms"`
 }
 
+// PartnerMegaportResponse represents a response from the Megaport API after querying a Partner Megaport.
 type PartnerMegaportResponse struct {
 	Message string            `json:"message"`
 	Terms   string            `json:"terms"`
 	Data    []*PartnerMegaport `json:"data"`
 }
 
+// PartnerMegaport represents a Partner Megaport in the Megaport API.
 type PartnerMegaport struct {
 	ConnectType   string `json:"connectType"`
 	ProductUID    string `json:"productUid"`
