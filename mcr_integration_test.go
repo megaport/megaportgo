@@ -14,6 +14,7 @@ const (
 	TEST_MCR_TEST_LOCATION_MARKET = "AU"
 )
 
+// MCRIntegrationTestSuite is the integration test suite for the MCR service
 type MCRIntegrationTestSuite IntegrationTestSuite
 
 func TestMCRIntegrationTestSuite(t *testing.T) {
@@ -72,6 +73,7 @@ func (suite *MCRIntegrationTestSuite) SetupTest() {
 	suite.client.SessionToken = loginResp.Token
 }
 
+// TestMCRLifecycle tests the full lifecycle of an MCR
 func (suite *MCRIntegrationTestSuite) TestMCRLifecycle() {
 	ctx := context.Background()
 	logger := suite.client.Logger
@@ -179,6 +181,7 @@ func (suite *MCRIntegrationTestSuite) TestMCRLifecycle() {
 	logger.DebugContext(ctx, "mcr deleted", slog.String("provisioning_status", mcrDeleteInfo.ProvisioningStatus), slog.String("mcr_id", mcrId))
 }
 
+// TestPortSpeedValidation tests the port speed validation
 func (suite *MCRIntegrationTestSuite) TestPortSpeedValidation() {
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
@@ -201,6 +204,7 @@ func (suite *MCRIntegrationTestSuite) TestPortSpeedValidation() {
 	suite.Equal(buyErr, ErrMCRInvalidPortSpeed)
 }
 
+// TestCreatePrefixFilterList tests the creation of a prefix filter list for an MCR.
 func (suite *MCRIntegrationTestSuite) TestCreatePrefixFilterList() {
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
