@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+// LocationClientTestSuite tests the Location Service.
 type LocationClientTestSuite struct {
 	ClientTestSuite
 }
@@ -32,6 +33,7 @@ func (suite *LocationClientTestSuite) TearDownTest() {
 	suite.server.Close()
 }
 
+// TestListLocations tests the ListLocations method
 func (suite *LocationClientTestSuite) TestListLocations() {
 	liveDate := &Time{GetTime(1595340000000)}
 	ctx := context.Background()
@@ -177,6 +179,7 @@ func (suite *LocationClientTestSuite) TestListLocations() {
 	suite.Equal(want, got)
 }
 
+// TestGetLocationByID tests the GetLocationByID method
 func (suite *LocationClientTestSuite) TestGetLocationByID() {
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
@@ -293,6 +296,7 @@ func (suite *LocationClientTestSuite) TestGetLocationByID() {
 	suite.Equal(want, got)
 }
 
+// TestGetLocationByName tests the GetLocationByName method.
 func (suite *LocationClientTestSuite) TestGetLocationByName() {
 	liveDate := &Time{GetTime(1595340000000)}
 	ctx := context.Background()
@@ -410,6 +414,7 @@ func (suite *LocationClientTestSuite) TestGetLocationByName() {
 	suite.Equal(want, got)
 }
 
+// TestGetLocationByNameFuzzy tests the GetLocationByNameFuzzy method.
 func (suite *LocationClientTestSuite) TestGetLocationByNameFuzzy() {
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
@@ -592,6 +597,7 @@ func (suite *LocationClientTestSuite) TestGetLocationByNameFuzzy() {
 	suite.Equal(want, got)
 }
 
+// TestListCountries tests the ListCountries method.
 func (suite *LocationClientTestSuite) TestListCountries() {
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
@@ -655,6 +661,7 @@ func (suite *LocationClientTestSuite) TestListCountries() {
 	suite.Equal(want, got)
 }
 
+// TestListMarketCodes tests the ListMarketCodes method.
 func (suite *LocationClientTestSuite) TestListMarketCodes() {
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
@@ -699,6 +706,7 @@ func (suite *LocationClientTestSuite) TestListMarketCodes() {
 	suite.Equal(want, got)
 }
 
+// TestIsValidMarketCode tests the IsValidMarketCode method.
 func (suite *ClientTestSuite) TestIsValidMarketCode() {
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
@@ -747,6 +755,7 @@ func (suite *ClientTestSuite) TestIsValidMarketCode() {
 	suite.Equal(want2, got2)
 }
 
+// TestFilterLocationsByMcrAvailability tests the FilterLocationsByMcrAvailability method.
 func (suite *LocationClientTestSuite) TestFilterLocationsByMcrAvailability() {
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
@@ -902,6 +911,7 @@ func (suite *LocationClientTestSuite) TestFilterLocationsByMcrAvailability() {
 	suite.Equal(want, got)
 }
 
+// TestGetRandom tests the GetRandom method.
 func (suite *LocationClientTestSuite) TestGetRandom() {
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
