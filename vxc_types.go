@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 )
 
+// Partner Providers
 const PARTNER_AZURE string = "AZURE"
 const PARTNER_GOOGLE string = "GOOGLE"
 const PARTNER_AWS string = "AWS"
 const PARTNER_OCI string = "ORACLE"
 
-// ---- VXC Detail Types //
+// VXC represents a Virtual Cross Connect in the Megaport VXC API.
 type VXC struct {
 	ID                 int                 `json:"productId"`
 	UID                string              `json:"productUid"`
@@ -39,6 +40,7 @@ type VXC struct {
 	Cancelable         bool                `json:"cancelable"`
 }
 
+// VXCEndConfiguration represents the configuration of an endpoint of a VXC.
 type VXCEndConfiguration struct {
 	OwnerUID              string `json:"ownerUid"`
 	UID                   string `json:"productUid"`
@@ -51,6 +53,7 @@ type VXCEndConfiguration struct {
 	SecondaryName         string `json:"secondaryName"`
 }
 
+// VXCResources represents the resources associated with a VXC.
 type VXCResources struct {
 	Interface     []PortInterface 		  `json:"interface"`
 	VirtualRouter VirtualRouter   		  `json:"virtual_router"`
@@ -58,6 +61,7 @@ type VXCResources struct {
 	VLL           VLLConfig       		  `json:"vll"`
 }
 
+// VirtualRouter represents the configuration of a virtual router.
 type VirtualRouter struct {
 	MCRAsn				int		`json:"mcrAsn"`
 	ResourceName 		string	`json:"resource_name"`
@@ -66,6 +70,7 @@ type VirtualRouter struct {
 	BGPShutdownDefault	bool 	`json:"bgpShutdownDefault"`
 }
 
+// VLLConfig represents the configuration of a VLL.
 type VLLConfig struct {
 	AEndVLAN      int    `json:"a_vlan"`
 	BEndVLAN      int    `json:"b_vlan"`
@@ -77,6 +82,7 @@ type VLLConfig struct {
 	ResourceType  string `json:"resource_type"`
 }
 
+// VXCApproval represents the approval status of a VXC.
 type VXCApproval struct {
 	Status   string `json:"status"`
 	Message  string `json:"message"`
@@ -85,6 +91,7 @@ type VXCApproval struct {
 	NewSpeed int    `json:"newSpeed"`
 }
 
+// PartnerLookup represents the response from the Partner Lookup API.
 type PartnerLookup struct {
 	Bandwidth    int                 `json:"bandwidth"`
 	Bandwidths   []int               `json:"bandwidths"`
@@ -95,6 +102,7 @@ type PartnerLookup struct {
 	VLAN         int                 `json:"vlan"`
 }
 
+// PartnerLookupItem represents an item in the Partner Lookup response.
 type PartnerLookupItem struct {
 	ID          int    `json:"port"`
 	Type        string `json:"type"`
@@ -112,6 +120,7 @@ type PartnerLookupItem struct {
 	Country     string `json:"country"`
 }
 
+// Peer represents a VXC Peer.
 type Peer struct {
 	PeerASN string `json:"peer_asn"`
 	Prefixes string `json:"prefixes"`
@@ -122,6 +131,7 @@ type Peer struct {
 	SharedKey string `json:"shared_key"`
 }
 
+// VXCUpdate represents the fields that can be updated on a VXC.
 type VXCUpdate struct {
 	Name      *string `json:"name,omitempty"`
 	RateLimit *int    `json:"rateLimit,omitempty"`
@@ -129,23 +139,27 @@ type VXCUpdate struct {
 	BEndVLAN  *int    `json:"bEndVlan,omitempty"`
 }
 
+// VXCOrderResponse represents the response from the VXC Order API.
 type VXCOrderResponse struct {
 	Message string                 `json:"message"`
 	Terms   string                 `json:"terms"`
 	Data    []VXCOrderConfirmation `json:"data"`
 }
 
+// VXCResponse represents the response from the VXC API.
 type VXCResponse struct {
 	Message string `json:"message"`
 	Terms   string `json:"terms"`
 	Data    VXC    `json:"data"`
 }
 
+// VXCOrder represents the request to order a VXC from the Megaport Products API.
 type VXCOrder struct {
 	AssociatedVXCs []VXCOrderConfiguration `json:"associatedVxcs"`
 	PortID         string                  `json:"productUid"`
 }
 
+// VXCOrderConfiguration represents the configuration of a VXC to be ordered from the Megaport Products API.
 type VXCOrderConfiguration struct {
 	Name		string 							`json:"productName"`
 	RateLimit 	int 							`json:"rateLimit"`
@@ -153,6 +167,7 @@ type VXCOrderConfiguration struct {
 	BEnd 		VXCOrderEndpointConfiguration 	`json:"bEnd"`
 }
 
+// VXCOrderEndpointConfiguration represents the configuration of an endpoint of a VXC to be ordered from the Megaport Products API.
 type VXCOrderEndpointConfiguration struct {
 	ProductUID 		string 					`json:"productUid,omitempty"`
 	VLAN 			int 					`json:"vlan,omitempty"`
@@ -160,10 +175,12 @@ type VXCOrderEndpointConfiguration struct {
 	*VXCOrderMVEConfig
 }
 
+// VXCPartnerConfiguration represents the configuration of a VXC partner.
 type VXCPartnerConfiguration interface {
 	IsParnerConfiguration()
 }
 
+// VXCPartnerConfigAWS represents the configuration of a VXC partner for AWS Virtual Interface.
 type VXCPartnerConfigAWS struct {
 	VXCPartnerConfiguration
 	ConnectType 	  string `json:"connectType"`
@@ -178,6 +195,7 @@ type VXCPartnerConfigAWS struct {
 	ConnectionName    string `json:"name,omitempty"`
 }
 
+// VXCPartnerConfigAzure represents the configuration of a VXC partner for Azure ExpressRoute.
 type VXCPartnerConfigAzure struct {
 	VXCPartnerConfiguration
 	ConnectType 	  	string 							 `json:"connectType"`
@@ -185,34 +203,40 @@ type VXCPartnerConfigAzure struct {
 	Peers       		[]PartnerOrderAzurePeeringConfig `json:"peers"`
 }
 
+// VXCPartnerConfigGoogle represents the configuration of a VXC partner for Google Cloud Interconnect.
 type VXCPartnerConfigGoogle struct {
 	VXCPartnerConfiguration
 	ConnectType 	string `json:"connectType"`
 	PairingKey  	string `json:"pairingKey"`
 }
 
+// VXCPartnerConfigOracle represents the configuration of a VXC partner for Oracle Cloud Infrastructure FastConnect.
 type VXCPartnerConfigOracle struct {
 	VXCPartnerConfiguration
 	ConnectType 	  string `json:"connectType"`
 	VirtualCircutId   string `json:"virtualCircuitId"`
 }
 
+// VXCOrderMVEConfig represents the configuration of a VXC endpoint for MVE.
 type VXCOrderMVEConfig struct {
 	InnerVLAN             int `json:"innerVlan,omitempty"`
 	NetworkInterfaceIndex int `json:"vNicIndex"`
 }
 
+// VXCOrderAEndPartnerConfig represents the configuration of a VXC A-End partner.
 type VXCOrderAEndPartnerConfig struct {
 	VXCPartnerConfiguration
 	Interfaces []PartnerConfigInterface `json:"interfaces,omitempty"`
 }
 
+// VXCOrderConfirmation represents the confirmation of a VXC order from the Megaport Products API.
 type VXCOrderConfirmation struct {
 	TechnicalServiceUID string `json:"vxcJTechnicalServiceUid"`
 }
 
 // BGP CONFIG STUFF
 
+// PartnerConfigInterface represents the configuration of a partner interface.
 type PartnerConfigInterface struct {
 	IpAddresses    []string              `json:"ipAddresses,omitempty"`
 	IpRoutes       []IpRoute             `json:"ipRoutes,omitempty"`
@@ -221,18 +245,21 @@ type PartnerConfigInterface struct {
 	BgpConnections []BgpConnectionConfig `json:"bgpConnections,omitempty"`
 }
 
+// IpRoute represents an IP route.
 type IpRoute struct {
 	Prefix      string `json:"prefix"`
 	Description string `json:"description,omitempty"`
 	NextHop     string `json:"nextHop"`
 }
 
+// BfdConfig represents the configuration of BFD.
 type BfdConfig struct {
 	TxInterval int `json:"txInterval,omitempty"`
 	RxInterval int `json:"rxInterval,omitempty"`
 	Multiplier int `json:"multiplier,omitempty"`
 }
 
+// BgpConnectionConfig represents the configuration of a BGP connection.
 type BgpConnectionConfig struct {
 	PeerAsn         int      `json:"peerAsn"`
 	LocalIpAddress  string   `json:"localIpAddress"`
@@ -254,11 +281,13 @@ type BgpConnectionConfig struct {
 
 // AWS STUFF
 
+// AWSVXCOrder represents the request to order an AWS VXC from the Megaport Products API.
 type AWSVXCOrder struct {
 	AssociatedVXCs []AWSVXCOrderConfiguration `json:"associatedVxcs"`
 	PortID         string                     `json:"productUid"`
 }
 
+// AWSVXCOrderConfiguration represents the configuration of an AWS VXC to be ordered from the Megaport Products API.
 type AWSVXCOrderConfiguration struct {
 	Name      string                       		`json:"productName"`
 	RateLimit int                          		`json:"rateLimit"`
@@ -268,11 +297,13 @@ type AWSVXCOrderConfiguration struct {
 
 // Partner
 
+// PartnerOrder represents the request to order a partner VXC from the Megaport Products API.
 type PartnerOrder struct {
 	PortID         string                 `json:"productUid"`
 	AssociatedVXCs []PartnerOrderContents `json:"associatedVxcs"`
 }
 
+// PartnerOrderContents represents the configuration of a partner VXC to be ordered from the Megaport Products API.
 type PartnerOrderContents struct {
 	Name      string                        	`json:"productName"`
 	RateLimit int                           	`json:"rateLimit"`
@@ -280,6 +311,7 @@ type PartnerOrderContents struct {
 	BEnd      VXCOrderEndpointConfiguration 	`json:"bEnd"`
 }
 
+// PartnerOrderAzurePeeringConfig represents the configuration of an Azure peering partner.
 type PartnerOrderAzurePeeringConfig struct {
 	Type            string `json:"type"`
 	PeerASN         string `json:"peer_asn"`
@@ -290,14 +322,17 @@ type PartnerOrderAzurePeeringConfig struct {
 	VLAN            int    `json:"vlan"`
 }
 
+// CSPConnection represents the configuration of a CSP connection.
 type CSPConnection struct {
 	CSPConnection []CSPConnectionConfig
 }
 
+// CSPConnectionConfig represents the configuration of a CSP connection.
 type CSPConnectionConfig interface {
 	IsCSPConnectionConfig()
 }
 
+// CSPConnectionAWS represents the configuration of a CSP connection for AWS Virtual Interface.
 type CSPConnectionAWS struct {
 	CSPConnectionConfig
 	ConnectType string `json:"connectType"`
@@ -318,6 +353,7 @@ type CSPConnectionAWS struct {
 	VIFID string `json:"vif_id"`
 }
 
+// CSPConnectionAWSHC represents the configuration of a CSP connection for AWS Hosted Connection.
 type CSPConnectionAWSHC struct {
 	CSPConnectionConfig
 	ConnectType string `json:"connectType"`
@@ -330,6 +366,7 @@ type CSPConnectionAWSHC struct {
 	ConnectionID string `json:"connectionId"`
 }
 
+// CSPConnectionAzure represents the configuration of a CSP connection for Azure ExpressRoute.
 type CSPConnectionAzure struct {
 	CSPConnectionConfig
 	ConnectType string `json:"connectType"`
@@ -342,18 +379,22 @@ type CSPConnectionAzure struct {
 	ServiceKey string `json:"service_key"`
 	VLAN int `json:"vlan"`
 }
+
+// CSPConnectionAzureMegaport represents the configuration of a CSP connection for Azure ExpressRoute megaport.
 type CSPConnectionAzureMegaport struct {
 	Port int `json:"port"`
 	Type string `json:"type"`
 	VXC int `json:"vxc,omitempty"`
 }
 
+// CSPConnectionAzurePort represents the configuration of a CSP connection for Azure ExpressRoute port.
 type CSPConnectionAzurePort struct {
 	ServiceID int `json:"service_id"`
 	Type string `json:"type"`
 	VXCServiceIDs []int `json:"vxc_service_ids"`
 }
 
+// CSPConnectionGoogle represents the configuration of a CSP connection for Google Cloud Interconnect.
 type CSPConnectionGoogle struct {
 	CSPConnectionConfig
 	Bandwidth int `json:"bandwidth"`
@@ -367,16 +408,19 @@ type CSPConnectionGoogle struct {
 	PairingKey string `json:"pairingKey"`
 }
 
+// CSPConnectionGoogleMegaport represents the configuration of a CSP connection for Google Cloud Interconnect megaport.
 type CSPConnectionGoogleMegaport struct {
 	Port int `json:"port"`
 	VXC int `json:"vxc"`
 }
 
+// CSPConnectionGooglePort represents the configuration of a CSP connection for Google Cloud Interconnect port.
 type CSPConnectionGooglePort struct {
 	ServiceID int `json:"service_id"`
 	VXCServiceIDs []int `json:"vxc_service_ids"`
 }
 
+// CSPConnectionVirtualRouter represents the configuration of a CSP connection for Virtual Router.
 type CSPConnectionVirtualRouter struct {
 	CSPConnectionConfig
 	ConnectType string `json:"connectType"`
@@ -388,10 +432,12 @@ type CSPConnectionVirtualRouter struct {
 	VirtualRouterName string `json:"virtualRouterName"`
 }
 
+// CSPConnectionVirtualRouterInterface represents the configuration of a CSP connection for Virtual Router interface.
 type CSPConnectionVirtualRouterInterface struct {
 	IPAddresses []string `json:"ipAddresses"`
 }
 
+// CSPConnectionTransit represents the configuration of a CSP connection for a Transit VXC.
 type CSPConnectionTransit struct {
 	CSPConnectionConfig
 	ConnectType string `json:"connectType"`
@@ -403,12 +449,14 @@ type CSPConnectionTransit struct {
 	IPv6GatewayAddress string `json:"ipv6_gateway_address"`
 }
 
+// CSPConnectionOther represents the configuration of a CSP connection for any other CSP that is not presently defined.
 type CSPConnectionOther struct {
 	CSPConnectionConfig
 	CSPConnection map[string]interface{}
 }
 
 
+// UnmarshalJSON is a custom unmarshaler for the CSPConnection type.
 func (c *CSPConnection) UnmarshalJSON(data []byte) error {
 	c.CSPConnection = []CSPConnectionConfig{}
 	var i interface{}
