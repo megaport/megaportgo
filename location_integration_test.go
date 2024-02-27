@@ -19,8 +19,8 @@ func TestLocationIntegrationTestSuite(t *testing.T) {
 }
 
 func (suite *LocationIntegrationTestSuite) SetupSuite() {
-	accessKey = os.Getenv("MEGAPORT_ACCESS_KEY")
-	secretKey = os.Getenv("MEGAPORT_SECRET_KEY")
+	accessKey := os.Getenv("MEGAPORT_ACCESS_KEY")
+	secretKey := os.Getenv("MEGAPORT_SECRET_KEY")
 
 	handler := slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: programLevel})
 	programLevel.Set(slog.LevelDebug)

@@ -8,9 +8,6 @@ import (
 // runIntegrationTests is a flag to determine if integration tests should be run
 var runIntegrationTests = flag.Bool("integration", false, "perform integration tests")
 
-var accessKey string
-var secretKey string
-
 // programLevel is the log level for the test suite
 var programLevel = new(slog.LevelVar)
 
