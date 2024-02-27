@@ -47,53 +47,53 @@ func NewLocationService(c *Client) *LocationServiceOp {
 
 // Location represents a location in the Megaport API.
 type Location struct {
-	Name             string                 `json:"name"`
-	Country          string                 `json:"country"`
-	LiveDate         *Time                  `json:"liveDate"`
-	SiteCode         string                 `json:"siteCode"`
-	NetworkRegion    string                 `json:"networkRegion"`
-	Address          map[string]string      `json:"address"`
-	Campus           string                 `json:"campus"`
-	Latitude         float64                `json:"latitude"`
-	Longitude        float64                `json:"longitude"`
-	Products         *LocationProducts 		`json:"products"`
-	Market           string                 `json:"market"`
-	Metro            string                 `json:"metro"`
-	VRouterAvailable bool                   `json:"vRouterAvailable"`
-	ID               int                    `json:"id"`
-	Status           string                 `json:"status"`
+	Name             string            `json:"name"`
+	Country          string            `json:"country"`
+	LiveDate         *Time             `json:"liveDate"`
+	SiteCode         string            `json:"siteCode"`
+	NetworkRegion    string            `json:"networkRegion"`
+	Address          map[string]string `json:"address"`
+	Campus           string            `json:"campus"`
+	Latitude         float64           `json:"latitude"`
+	Longitude        float64           `json:"longitude"`
+	Products         *LocationProducts `json:"products"`
+	Market           string            `json:"market"`
+	Metro            string            `json:"metro"`
+	VRouterAvailable bool              `json:"vRouterAvailable"`
+	ID               int               `json:"id"`
+	Status           string            `json:"status"`
 }
 
 // LocationProducts represent the products available at a location in the Megaport API.
 type LocationProducts struct {
-	MCR 		bool 			`json:"mcr"`
-	MCRVersion 	int 			`json:"mcrVersion"`
-	Megaport 	[]int  			`json:"megaport"`
-	MVE 		[]LocationMVE 	`json:"mve"`
-	MCR1 		[]int 			`json:"mcr1"`
-	MCR2		[]int			`json:"mcr2"`
+	MCR        bool          `json:"mcr"`
+	MCRVersion int           `json:"mcrVersion"`
+	Megaport   []int         `json:"megaport"`
+	MVE        []LocationMVE `json:"mve"`
+	MCR1       []int         `json:"mcr1"`
+	MCR2       []int         `json:"mcr2"`
 }
 
 // LocationMVE represents the MVE product available at a location in the Megaport API.
 type LocationMVE struct {
-	Sizes 				[]string 			 	`json:"sizes"`
-	Details 			[]LocationMVEDetails 	`json:"details"`
-	MaxCPUCount 		int 			 		`json:"maxCpuCount"`
-	Version 			string					`json:"version"`
-	Product 			string					`json:"product"`
-	Vendor 				string					`json:"vendor"`
-	VendorDescription 	string					`json:"vendorDescription"`
-	ID					int						`json:"id"`	
-	ReleaseImage 		bool					`json:"releaseImage"`
+	Sizes             []string             `json:"sizes"`
+	Details           []LocationMVEDetails `json:"details"`
+	MaxCPUCount       int                  `json:"maxCpuCount"`
+	Version           string               `json:"version"`
+	Product           string               `json:"product"`
+	Vendor            string               `json:"vendor"`
+	VendorDescription string               `json:"vendorDescription"`
+	ID                int                  `json:"id"`
+	ReleaseImage      bool                 `json:"releaseImage"`
 }
 
 // LocationMVEDetails represents the details of the MVE product available at a location in the Megaport API.
 type LocationMVEDetails struct {
-	Size 			string 		`json:"size"`
-	Label 			string 		`json:"label"`
-	CPUCoreCount 	int 		`json:"cpuCoreCount"`
-	RamGB 			int 		`json:"ramGB"`
-	BandwidthMbps	int 		`json:"bandwidthMbps"`
+	Size          string `json:"size"`
+	Label         string `json:"label"`
+	CPUCoreCount  int    `json:"cpuCoreCount"`
+	RamGB         int    `json:"ramGB"`
+	BandwidthMbps int    `json:"bandwidthMbps"`
 }
 
 // Country represents a country in the Megaport Locations API.

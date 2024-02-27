@@ -41,11 +41,11 @@ func (suite *MCRClientTestSuite) TestBuyMCR() {
 	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
 	want := &BuyMCRResponse{TechnicalServiceUID: productUid}
 	req := &BuyMCRRequest{
-		LocationID: 1,
-		Name:       "test-mcr",
-		Term:       1,
-		PortSpeed:  1000,
-		MCRAsn:     0,
+		LocationID:    1,
+		Name:          "test-mcr",
+		Term:          1,
+		PortSpeed:     1000,
+		MCRAsn:        0,
 		DiversityZone: "red",
 	}
 	jblob := `{
@@ -58,12 +58,12 @@ func (suite *MCRClientTestSuite) TestBuyMCR() {
 
 	mcrOrder := []MCROrder{
 		{
-			LocationID: req.LocationID,
-			Name:       req.Name,
-			Term:       1,
+			LocationID:    req.LocationID,
+			Name:          req.Name,
+			Term:          1,
 			DiversityZone: "red",
-			Type:       "MCR2",
-			PortSpeed:  1000,
+			Type:          "MCR2",
+			PortSpeed:     1000,
 			Config: MCROrderConfig{
 				ASN: 0,
 			},

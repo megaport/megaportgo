@@ -38,8 +38,8 @@ type Client struct {
 	// User agent for client
 	UserAgent string
 
-	// Session Token for client
-	SessionToken string
+	// Access Token for client
+	AccessToken string
 	// Token Expiration
 	TokenExpiry time.Time
 
@@ -50,19 +50,19 @@ type Client struct {
 	// AuthenticationService provides methods for authenticating with the API
 	AuthenticationService AuthenticationService
 	// PortService provides methods for interacting with the Ports API
-	PortService           PortService
+	PortService PortService
 	// PartnerService provides methods for interacting with the Partners API
-	PartnerService        PartnerService
+	PartnerService PartnerService
 	// ProductService provides methods for interacting with the Products API
-	ProductService        ProductService
+	ProductService ProductService
 	// LocationService provides methods for interacting with the Locations API
-	LocationService       LocationService
+	LocationService LocationService
 	// VXCService provides methods for interacting with the VXCs API
-	VXCService            VXCService
+	VXCService VXCService
 	// MCRService provides methods for interacting with the MCRs API
-	MCRService            MCRService
+	MCRService MCRService
 	// MVEService provides methods for interacting with the MVEs API
-	MVEService            MVEService
+	MVEService MVEService
 
 	// Optional extra HTTP headers to set on every request to the API.
 	headers map[string]string
@@ -219,8 +219,8 @@ func (c *Client) NewRequest(ctx context.Context, method, urlStr string, body int
 	req.Header.Set("Accept", mediaType)
 	req.Header.Set("User-Agent", c.UserAgent)
 
-	if c.SessionToken != "" {
-		req.Header.Set("Authorization", "Bearer "+c.SessionToken)
+	if c.AccessToken != "" {
+		req.Header.Set("Authorization", "Bearer "+c.AccessToken)
 	}
 
 	return req, nil

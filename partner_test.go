@@ -13,14 +13,14 @@ import (
 
 // uid and names for testing
 var (
-	companyUid = "32df7107-fdca-4c2a-8ccb-c6867813b3f2"
-	companyName = "Test Company"
-	companyUid2 = "2111de9a-6211-40e3-8e6a-65ab106d01f4"
-	companyName2 = "Other Company"
-	productUid = "36b3f68e-2f54-4331-bf94-f8984449365f"
-	productUid2 = "9b1c46c7-1e8d-4035-bf38-1bc60d346d57"
-	productUid3 = "91ededc2-473f-4a30-ad24-0703c7f35e50"
-	productUid4 = "9a05f787-8166-4470-94f1-4906db86f698"
+	companyUid         = "32df7107-fdca-4c2a-8ccb-c6867813b3f2"
+	companyName        = "Test Company"
+	companyUid2        = "2111de9a-6211-40e3-8e6a-65ab106d01f4"
+	companyName2       = "Other Company"
+	productUid         = "36b3f68e-2f54-4331-bf94-f8984449365f"
+	productUid2        = "9b1c46c7-1e8d-4035-bf38-1bc60d346d57"
+	productUid3        = "91ededc2-473f-4a30-ad24-0703c7f35e50"
+	productUid4        = "9a05f787-8166-4470-94f1-4906db86f698"
 	partnerMegaportUrl = "/v2/dropdowns/partner/megaports"
 )
 
@@ -48,51 +48,51 @@ func (suite *PartnerClientTestSuite) TearDownTest() {
 
 // AWS Partner
 var awsPartner = &PartnerMegaport{
-	ProductUID: productUid,
-	CompanyUID: companyUid,
-	CompanyName: companyName,
-	ProductName: "Test Partner AWS",
-	LocationId: 1,
-	Speed: 10000,
+	ProductUID:    productUid,
+	CompanyUID:    companyUid,
+	CompanyName:   companyName,
+	ProductName:   "Test Partner AWS",
+	LocationId:    1,
+	Speed:         10000,
 	DiversityZone: "red",
-	ConnectType: "AWS",
-	VXCPermitted: true,
+	ConnectType:   "AWS",
+	VXCPermitted:  true,
 }
 
 // Azure Partner
 var azurePartner = &PartnerMegaport{
-	ProductUID: productUid2,
-	CompanyUID: companyUid,
-	CompanyName: companyName,
-	ProductName: "Test Partner Azure",
-	LocationId: 2,
-	Speed: 10000,
-	ConnectType: "AZURE",
+	ProductUID:   productUid2,
+	CompanyUID:   companyUid,
+	CompanyName:  companyName,
+	ProductName:  "Test Partner Azure",
+	LocationId:   2,
+	Speed:        10000,
+	ConnectType:  "AZURE",
 	VXCPermitted: true,
 }
 
 // Default Partner
 var defaultPartner = &PartnerMegaport{
-	ProductUID: productUid3,
-	CompanyUID: companyUid2,
-	CompanyName: companyName2,
-	ProductName: "Partner Default",
-	LocationId: 3,
-	Speed: 10000,
+	ProductUID:    productUid3,
+	CompanyUID:    companyUid2,
+	CompanyName:   companyName2,
+	ProductName:   "Partner Default",
+	LocationId:    3,
+	Speed:         10000,
 	DiversityZone: "red",
-	ConnectType: "DEFAULT",
-	VXCPermitted: true,
+	ConnectType:   "DEFAULT",
+	VXCPermitted:  true,
 }
 
 // AWS Hosted Connection Partner
 var awsHcPartner = &PartnerMegaport{
-	ProductUID: productUid4,
-	CompanyUID: companyUid2,
-	CompanyName: companyName2,
-	ProductName: "Partner AWSHC",
-	LocationId: 3,
-	Speed: 10000,
-	ConnectType: "AWSHC",
+	ProductUID:   productUid4,
+	CompanyUID:   companyUid2,
+	CompanyName:  companyName2,
+	ProductName:  "Partner AWSHC",
+	LocationId:   3,
+	Speed:        10000,
+	ConnectType:  "AWSHC",
 	VXCPermitted: true,
 }
 

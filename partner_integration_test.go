@@ -21,7 +21,7 @@ func TestPartnerIntegrationTestSuite(t *testing.T) {
 func (suite *PartnerIntegrationTestSuite) SetupSuite() {
 	accessKey = os.Getenv("MEGAPORT_ACCESS_KEY")
 	secretKey = os.Getenv("MEGAPORT_SECRET_KEY")
-	
+
 	handler := slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: programLevel})
 	programLevel.Set(slog.LevelDebug)
 
@@ -65,7 +65,7 @@ func (suite *PartnerIntegrationTestSuite) SetupTest() {
 		suite.FailNowf("invalid guid for token", "invalid guid for token %v", loginResp.Token)
 	}
 
-	suite.client.SessionToken = loginResp.Token
+	suite.client.AccessToken = loginResp.Token
 }
 
 // TestListPartnerMegaports tests the ListPartnerMegaports method.

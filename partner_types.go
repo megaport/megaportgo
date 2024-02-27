@@ -9,8 +9,8 @@ type PartnerLookupResponse struct {
 
 // PartnerMegaportResponse represents a response from the Megaport API after querying a Partner Megaport.
 type PartnerMegaportResponse struct {
-	Message string            `json:"message"`
-	Terms   string            `json:"terms"`
+	Message string             `json:"message"`
+	Terms   string             `json:"terms"`
 	Data    []*PartnerMegaport `json:"data"`
 }
 

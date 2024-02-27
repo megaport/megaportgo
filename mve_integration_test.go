@@ -68,7 +68,7 @@ func (suite *MVEIntegrationTestSuite) SetupTest() {
 		suite.FailNowf("invalid guid for token", "invalid guid for token %v", loginResp.Token)
 	}
 
-	suite.client.SessionToken = loginResp.Token
+	suite.client.AccessToken = loginResp.Token
 }
 
 // readSSHPubKey reads the ssh public key from the default location
@@ -108,7 +108,7 @@ func (suite *MVEIntegrationTestSuite) TestC8KVAutoLifecycle() {
 		Vnics:            nil,
 		WaitForProvision: true,
 		WaitForTime:      5 * time.Minute,
-		DiversityZone: "red",
+		DiversityZone:    "red",
 	})
 	if err != nil {
 		suite.FailNowf("error buying mve", "error buying mve %v", err)

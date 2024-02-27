@@ -70,7 +70,7 @@ func (suite *MCRIntegrationTestSuite) SetupTest() {
 		suite.FailNowf("invalid guid for token", "invalid guid for token %v", loginResp.Token)
 	}
 
-	suite.client.SessionToken = loginResp.Token
+	suite.client.AccessToken = loginResp.Token
 }
 
 // TestMCRLifecycle tests the full lifecycle of an MCR

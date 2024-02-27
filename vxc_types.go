@@ -55,19 +55,19 @@ type VXCEndConfiguration struct {
 
 // VXCResources represents the resources associated with a VXC.
 type VXCResources struct {
-	Interface     []PortInterface 		  `json:"interface"`
-	VirtualRouter VirtualRouter   		  `json:"virtual_router"`
-	CSPConnection CSPConnection	 		  `json:"csp_connection"`
-	VLL           VLLConfig       		  `json:"vll"`
+	Interface     []PortInterface `json:"interface"`
+	VirtualRouter VirtualRouter   `json:"virtual_router"`
+	CSPConnection CSPConnection   `json:"csp_connection"`
+	VLL           VLLConfig       `json:"vll"`
 }
 
 // VirtualRouter represents the configuration of a virtual router.
 type VirtualRouter struct {
-	MCRAsn				int		`json:"mcrAsn"`
-	ResourceName 		string	`json:"resource_name"`
-	ResourceType 		string	`json:"resource_type"`
-	Speed				int		`json:"speed"`
-	BGPShutdownDefault	bool 	`json:"bgpShutdownDefault"`
+	MCRAsn             int    `json:"mcrAsn"`
+	ResourceName       string `json:"resource_name"`
+	ResourceType       string `json:"resource_type"`
+	Speed              int    `json:"speed"`
+	BGPShutdownDefault bool   `json:"bgpShutdownDefault"`
 }
 
 // VLLConfig represents the configuration of a VLL.
@@ -96,7 +96,7 @@ type PartnerLookup struct {
 	Bandwidth    int                 `json:"bandwidth"`
 	Bandwidths   []int               `json:"bandwidths"`
 	Megaports    []PartnerLookupItem `json:"megaports"`
-	Peers        []Peer       		 `json:"peers"`
+	Peers        []Peer              `json:"peers"`
 	ResourceType string              `json:"resource_type"`
 	ServiceKey   string              `json:"service_key"`
 	VLAN         int                 `json:"vlan"`
@@ -122,13 +122,13 @@ type PartnerLookupItem struct {
 
 // Peer represents a VXC Peer.
 type Peer struct {
-	PeerASN string `json:"peer_asn"`
-	Prefixes string `json:"prefixes"`
-	PrimarySubnet string `json:"primary_subnet"`
+	PeerASN         string `json:"peer_asn"`
+	Prefixes        string `json:"prefixes"`
+	PrimarySubnet   string `json:"primary_subnet"`
 	SecondarySubnet string `json:"secondary_subnet"`
-	Type string `json:"type"`
-	VLAN string `json:"vlan"`
-	SharedKey string `json:"shared_key"`
+	Type            string `json:"type"`
+	VLAN            string `json:"vlan"`
+	SharedKey       string `json:"shared_key"`
 }
 
 // VXCUpdate represents the fields that can be updated on a VXC.
@@ -161,17 +161,17 @@ type VXCOrder struct {
 
 // VXCOrderConfiguration represents the configuration of a VXC to be ordered from the Megaport Products API.
 type VXCOrderConfiguration struct {
-	Name		string 							`json:"productName"`
-	RateLimit 	int 							`json:"rateLimit"`
-	AEnd 		VXCOrderEndpointConfiguration 	`json:"aEnd"`
-	BEnd 		VXCOrderEndpointConfiguration 	`json:"bEnd"`
+	Name      string                        `json:"productName"`
+	RateLimit int                           `json:"rateLimit"`
+	AEnd      VXCOrderEndpointConfiguration `json:"aEnd"`
+	BEnd      VXCOrderEndpointConfiguration `json:"bEnd"`
 }
 
 // VXCOrderEndpointConfiguration represents the configuration of an endpoint of a VXC to be ordered from the Megaport Products API.
 type VXCOrderEndpointConfiguration struct {
-	ProductUID 		string 					`json:"productUid,omitempty"`
-	VLAN 			int 					`json:"vlan,omitempty"`
-	PartnerConfig 	VXCPartnerConfiguration `json:"partnerConfig,omitempty"`
+	ProductUID    string                  `json:"productUid,omitempty"`
+	VLAN          int                     `json:"vlan,omitempty"`
+	PartnerConfig VXCPartnerConfiguration `json:"partnerConfig,omitempty"`
 	*VXCOrderMVEConfig
 }
 
@@ -183,7 +183,7 @@ type VXCPartnerConfiguration interface {
 // VXCPartnerConfigAWS represents the configuration of a VXC partner for AWS Virtual Interface.
 type VXCPartnerConfigAWS struct {
 	VXCPartnerConfiguration
-	ConnectType 	  string `json:"connectType"`
+	ConnectType       string `json:"connectType"`
 	Type              string `json:"type"`
 	OwnerAccount      string `json:"ownerAccount"`
 	ASN               int    `json:"asn,omitempty"`
@@ -198,23 +198,23 @@ type VXCPartnerConfigAWS struct {
 // VXCPartnerConfigAzure represents the configuration of a VXC partner for Azure ExpressRoute.
 type VXCPartnerConfigAzure struct {
 	VXCPartnerConfiguration
-	ConnectType 	  	string 							 `json:"connectType"`
-	ServiceKey  		string                           `json:"serviceKey"`
-	Peers       		[]PartnerOrderAzurePeeringConfig `json:"peers"`
+	ConnectType string                           `json:"connectType"`
+	ServiceKey  string                           `json:"serviceKey"`
+	Peers       []PartnerOrderAzurePeeringConfig `json:"peers"`
 }
 
 // VXCPartnerConfigGoogle represents the configuration of a VXC partner for Google Cloud Interconnect.
 type VXCPartnerConfigGoogle struct {
 	VXCPartnerConfiguration
-	ConnectType 	string `json:"connectType"`
-	PairingKey  	string `json:"pairingKey"`
+	ConnectType string `json:"connectType"`
+	PairingKey  string `json:"pairingKey"`
 }
 
 // VXCPartnerConfigOracle represents the configuration of a VXC partner for Oracle Cloud Infrastructure FastConnect.
 type VXCPartnerConfigOracle struct {
 	VXCPartnerConfiguration
-	ConnectType 	  string `json:"connectType"`
-	VirtualCircutId   string `json:"virtualCircuitId"`
+	ConnectType     string `json:"connectType"`
+	VirtualCircutId string `json:"virtualCircuitId"`
 }
 
 // VXCOrderMVEConfig represents the configuration of a VXC endpoint for MVE.
@@ -289,10 +289,10 @@ type AWSVXCOrder struct {
 
 // AWSVXCOrderConfiguration represents the configuration of an AWS VXC to be ordered from the Megaport Products API.
 type AWSVXCOrderConfiguration struct {
-	Name      string                       		`json:"productName"`
-	RateLimit int                          		`json:"rateLimit"`
-	AEnd      VXCOrderEndpointConfiguration    	`json:"aEnd"`
-	BEnd      VXCOrderEndpointConfiguration 	`json:"bEnd"`
+	Name      string                        `json:"productName"`
+	RateLimit int                           `json:"rateLimit"`
+	AEnd      VXCOrderEndpointConfiguration `json:"aEnd"`
+	BEnd      VXCOrderEndpointConfiguration `json:"bEnd"`
 }
 
 // Partner
@@ -305,10 +305,10 @@ type PartnerOrder struct {
 
 // PartnerOrderContents represents the configuration of a partner VXC to be ordered from the Megaport Products API.
 type PartnerOrderContents struct {
-	Name      string                        	`json:"productName"`
-	RateLimit int                           	`json:"rateLimit"`
-	AEnd      VXCOrderEndpointConfiguration     `json:"aEnd"`
-	BEnd      VXCOrderEndpointConfiguration 	`json:"bEnd"`
+	Name      string                        `json:"productName"`
+	RateLimit int                           `json:"rateLimit"`
+	AEnd      VXCOrderEndpointConfiguration `json:"aEnd"`
+	BEnd      VXCOrderEndpointConfiguration `json:"bEnd"`
 }
 
 // PartnerOrderAzurePeeringConfig represents the configuration of an Azure peering partner.
@@ -335,101 +335,101 @@ type CSPConnectionConfig interface {
 // CSPConnectionAWS represents the configuration of a CSP connection for AWS Virtual Interface.
 type CSPConnectionAWS struct {
 	CSPConnectionConfig
-	ConnectType string `json:"connectType"`
-	ResourceName string `json:"resource_name"`
-	ResourceType string `json:"resource_type"`
-	VLAN int `json:"vlan"`
-	Account string `json:"account"`
-	AmazonAddress string `json:"amazon_address"`
-	ASN int `json:"asn"`
-	AuthKey string `json:"authKey"`
-	CustomerAddress string `json:"customer_address"`
+	ConnectType       string `json:"connectType"`
+	ResourceName      string `json:"resource_name"`
+	ResourceType      string `json:"resource_type"`
+	VLAN              int    `json:"vlan"`
+	Account           string `json:"account"`
+	AmazonAddress     string `json:"amazon_address"`
+	ASN               int    `json:"asn"`
+	AuthKey           string `json:"authKey"`
+	CustomerAddress   string `json:"customer_address"`
 	CustomerIPAddress string `json:"customerIpAddress"`
-	ID int `json:"id"`
-	Name string `json:"name"`
-	OwnerAccount string `json:"ownerAccount"`
-	PeerASN int `json:"peerAsn"`
-	Type string `json:"type"`
-	VIFID string `json:"vif_id"`
+	ID                int    `json:"id"`
+	Name              string `json:"name"`
+	OwnerAccount      string `json:"ownerAccount"`
+	PeerASN           int    `json:"peerAsn"`
+	Type              string `json:"type"`
+	VIFID             string `json:"vif_id"`
 }
 
 // CSPConnectionAWSHC represents the configuration of a CSP connection for AWS Hosted Connection.
 type CSPConnectionAWSHC struct {
 	CSPConnectionConfig
-	ConnectType string `json:"connectType"`
+	ConnectType  string `json:"connectType"`
 	ResourceName string `json:"resource_name"`
 	ResourceType string `json:"resource_type"`
-	Bandwidth int `json:"bandwidth"`
-	Name string `json:"name"`
+	Bandwidth    int    `json:"bandwidth"`
+	Name         string `json:"name"`
 	OwnerAccount string `json:"ownerAccount"`
-	Bandwidths []int `json:"bandwidths"`
+	Bandwidths   []int  `json:"bandwidths"`
 	ConnectionID string `json:"connectionId"`
 }
 
 // CSPConnectionAzure represents the configuration of a CSP connection for Azure ExpressRoute.
 type CSPConnectionAzure struct {
 	CSPConnectionConfig
-	ConnectType string `json:"connectType"`
-	ResourceName string `json:"resource_name"`
-	ResourceType string `json:"resource_type"`
-	Bandwidth int `json:"bandwidth"`
-	Managed bool `json:"managed"`
-	Megaports []CSPConnectionAzureMegaport `json:"megaports"`
-	Ports []CSPConnectionAzurePort `json:"ports"`
-	ServiceKey string `json:"service_key"`
-	VLAN int `json:"vlan"`
+	ConnectType  string                       `json:"connectType"`
+	ResourceName string                       `json:"resource_name"`
+	ResourceType string                       `json:"resource_type"`
+	Bandwidth    int                          `json:"bandwidth"`
+	Managed      bool                         `json:"managed"`
+	Megaports    []CSPConnectionAzureMegaport `json:"megaports"`
+	Ports        []CSPConnectionAzurePort     `json:"ports"`
+	ServiceKey   string                       `json:"service_key"`
+	VLAN         int                          `json:"vlan"`
 }
 
 // CSPConnectionAzureMegaport represents the configuration of a CSP connection for Azure ExpressRoute megaport.
 type CSPConnectionAzureMegaport struct {
-	Port int `json:"port"`
+	Port int    `json:"port"`
 	Type string `json:"type"`
-	VXC int `json:"vxc,omitempty"`
+	VXC  int    `json:"vxc,omitempty"`
 }
 
 // CSPConnectionAzurePort represents the configuration of a CSP connection for Azure ExpressRoute port.
 type CSPConnectionAzurePort struct {
-	ServiceID int `json:"service_id"`
-	Type string `json:"type"`
-	VXCServiceIDs []int `json:"vxc_service_ids"`
+	ServiceID     int    `json:"service_id"`
+	Type          string `json:"type"`
+	VXCServiceIDs []int  `json:"vxc_service_ids"`
 }
 
 // CSPConnectionGoogle represents the configuration of a CSP connection for Google Cloud Interconnect.
 type CSPConnectionGoogle struct {
 	CSPConnectionConfig
-	Bandwidth int `json:"bandwidth"`
-	ConnectType string `json:"connectType"`
-	ResourceName string `json:"resource_name"`
-	ResourceType string `json:"resource_type"`
-	Bandwidths []int `json:"bandwidths"`
-	Megaports []CSPConnectionGoogleMegaport `json:"megaports"`
-	Ports []CSPConnectionGooglePort `json:"ports"`
-	CSPName string `json:"csp_name"`
-	PairingKey string `json:"pairingKey"`
+	Bandwidth    int                           `json:"bandwidth"`
+	ConnectType  string                        `json:"connectType"`
+	ResourceName string                        `json:"resource_name"`
+	ResourceType string                        `json:"resource_type"`
+	Bandwidths   []int                         `json:"bandwidths"`
+	Megaports    []CSPConnectionGoogleMegaport `json:"megaports"`
+	Ports        []CSPConnectionGooglePort     `json:"ports"`
+	CSPName      string                        `json:"csp_name"`
+	PairingKey   string                        `json:"pairingKey"`
 }
 
 // CSPConnectionGoogleMegaport represents the configuration of a CSP connection for Google Cloud Interconnect megaport.
 type CSPConnectionGoogleMegaport struct {
 	Port int `json:"port"`
-	VXC int `json:"vxc"`
+	VXC  int `json:"vxc"`
 }
 
 // CSPConnectionGooglePort represents the configuration of a CSP connection for Google Cloud Interconnect port.
 type CSPConnectionGooglePort struct {
-	ServiceID int `json:"service_id"`
+	ServiceID     int   `json:"service_id"`
 	VXCServiceIDs []int `json:"vxc_service_ids"`
 }
 
 // CSPConnectionVirtualRouter represents the configuration of a CSP connection for Virtual Router.
 type CSPConnectionVirtualRouter struct {
 	CSPConnectionConfig
-	ConnectType string `json:"connectType"`
-	ResourceName string `json:"resource_name"`
-	ResourceType string `json:"resource_type"`
-	VLAN int `json:"vlan"`
-	Interfaces []CSPConnectionVirtualRouterInterface `json:"interfaces"`
-	IPAddresses []string `json:"ip_addresses"`
-	VirtualRouterName string `json:"virtualRouterName"`
+	ConnectType       string                                `json:"connectType"`
+	ResourceName      string                                `json:"resource_name"`
+	ResourceType      string                                `json:"resource_type"`
+	VLAN              int                                   `json:"vlan"`
+	Interfaces        []CSPConnectionVirtualRouterInterface `json:"interfaces"`
+	IPAddresses       []string                              `json:"ip_addresses"`
+	VirtualRouterName string                                `json:"virtualRouterName"`
 }
 
 // CSPConnectionVirtualRouterInterface represents the configuration of a CSP connection for Virtual Router interface.
@@ -440,9 +440,9 @@ type CSPConnectionVirtualRouterInterface struct {
 // CSPConnectionTransit represents the configuration of a CSP connection for a Transit VXC.
 type CSPConnectionTransit struct {
 	CSPConnectionConfig
-	ConnectType string `json:"connectType"`
-	ResourceName string `json:"resource_name"`
-	ResourceType string `json:"resource_type"`
+	ConnectType        string `json:"connectType"`
+	ResourceName       string `json:"resource_name"`
+	ResourceType       string `json:"resource_type"`
 	CustomerIP4Address string `json:"customer_ip4_address"`
 	CustomerIP6Network string `json:"customer_ip6_network"`
 	IPv4GatewayAddress string `json:"ipv4_gateway_address"`
@@ -455,7 +455,6 @@ type CSPConnectionOther struct {
 	CSPConnection map[string]interface{}
 }
 
-
 // UnmarshalJSON is a custom unmarshaler for the CSPConnection type.
 func (c *CSPConnection) UnmarshalJSON(data []byte) error {
 	c.CSPConnection = []CSPConnectionConfig{}
@@ -464,158 +463,158 @@ func (c *CSPConnection) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	switch v := i.(type) {
-		case map[string]interface{}:
-			cn := v
-			switch v["connectType"] {
-				case "AWSHC":
-					marshaled, err := json.Marshal(cn)
-					if err != nil {
-						return err
-					}
-					awsHC := CSPConnectionAWSHC{}
-					if err := json.Unmarshal(marshaled, &awsHC); err != nil {
-						return err
-					}
-					c.CSPConnection = append(c.CSPConnection, awsHC)
-				case "AWS":
-					marshaled, err := json.Marshal(cn)
-					if err != nil {
-						return err
-					}
-					aws := CSPConnectionAWS{}
-					if err := json.Unmarshal(marshaled, &aws); err != nil {
-						return err
-					}
-					c.CSPConnection = append(c.CSPConnection, aws)
-				case "GOOGLE":
-					marshaled, err := json.Marshal(cn)
-					if err != nil {
-						return err
-					}
-					google := CSPConnectionGoogle{}
-					if err := json.Unmarshal(marshaled, &google); err != nil {
-						return err
-					}
-					c.CSPConnection = append(c.CSPConnection, google)
-				case "AZURE":
-					marshaled, err := json.Marshal(cn)
-					if err != nil {
-						return err
-					}
-					azure := CSPConnectionAzure{}
-					if err := json.Unmarshal(marshaled, &azure); err != nil {
-						return err
-					}
-					c.CSPConnection = append(c.CSPConnection, azure)
-				case "VIRTUAL_ROUTER":
-					marshaled, err := json.Marshal(cn)
-					if err != nil {
-						return err
-					}
-					vr := CSPConnectionVirtualRouter{}
-					if err := json.Unmarshal(marshaled, &vr); err != nil {
-						return err
-					}
-					c.CSPConnection = append(c.CSPConnection, vr)
-				case "TRANSIT":
-					marshaled, err := json.Marshal(cn)
-					if err != nil {
-						return err
-					}
-					transit := CSPConnectionTransit{}
-					if err := json.Unmarshal(marshaled, &transit); err != nil {
-						return err
-					}
-					c.CSPConnection = append(c.CSPConnection, transit)
-				default: // Any other cases will be marshaled into a map[string]interface{}
-					marshaled, err := json.Marshal(cn)
-					if err != nil {
-						return err
-					}
-					other := CSPConnectionOther{}
-					cspMap := map[string]interface{}{}
-					if err := json.Unmarshal(marshaled, &cspMap); err != nil {
-						return err
-					}
-					other.CSPConnection = cspMap
-					c.CSPConnection = append(c.CSPConnection, other)
+	case map[string]interface{}:
+		cn := v
+		switch v["connectType"] {
+		case "AWSHC":
+			marshaled, err := json.Marshal(cn)
+			if err != nil {
+				return err
+			}
+			awsHC := CSPConnectionAWSHC{}
+			if err := json.Unmarshal(marshaled, &awsHC); err != nil {
+				return err
+			}
+			c.CSPConnection = append(c.CSPConnection, awsHC)
+		case "AWS":
+			marshaled, err := json.Marshal(cn)
+			if err != nil {
+				return err
+			}
+			aws := CSPConnectionAWS{}
+			if err := json.Unmarshal(marshaled, &aws); err != nil {
+				return err
+			}
+			c.CSPConnection = append(c.CSPConnection, aws)
+		case "GOOGLE":
+			marshaled, err := json.Marshal(cn)
+			if err != nil {
+				return err
+			}
+			google := CSPConnectionGoogle{}
+			if err := json.Unmarshal(marshaled, &google); err != nil {
+				return err
+			}
+			c.CSPConnection = append(c.CSPConnection, google)
+		case "AZURE":
+			marshaled, err := json.Marshal(cn)
+			if err != nil {
+				return err
+			}
+			azure := CSPConnectionAzure{}
+			if err := json.Unmarshal(marshaled, &azure); err != nil {
+				return err
+			}
+			c.CSPConnection = append(c.CSPConnection, azure)
+		case "VIRTUAL_ROUTER":
+			marshaled, err := json.Marshal(cn)
+			if err != nil {
+				return err
+			}
+			vr := CSPConnectionVirtualRouter{}
+			if err := json.Unmarshal(marshaled, &vr); err != nil {
+				return err
+			}
+			c.CSPConnection = append(c.CSPConnection, vr)
+		case "TRANSIT":
+			marshaled, err := json.Marshal(cn)
+			if err != nil {
+				return err
+			}
+			transit := CSPConnectionTransit{}
+			if err := json.Unmarshal(marshaled, &transit); err != nil {
+				return err
+			}
+			c.CSPConnection = append(c.CSPConnection, transit)
+		default: // Any other cases will be marshaled into a map[string]interface{}
+			marshaled, err := json.Marshal(cn)
+			if err != nil {
+				return err
+			}
+			other := CSPConnectionOther{}
+			cspMap := map[string]interface{}{}
+			if err := json.Unmarshal(marshaled, &cspMap); err != nil {
+				return err
+			}
+			other.CSPConnection = cspMap
+			c.CSPConnection = append(c.CSPConnection, other)
 		}
-	 	case[]interface{}:
-			for _, m := range v {
-				cn := m.(map[string]interface{})
-				switch cn["connectType"] {
-				case "AWSHC":
-					marshaled, err := json.Marshal(cn)
-					if err != nil {
-						return err
-					}
-					awsHC := CSPConnectionAWSHC{}
-					if err := json.Unmarshal(marshaled, &awsHC); err != nil {
-						return err
-					}
-					c.CSPConnection = append(c.CSPConnection, awsHC)
-				case "AWS":
-					marshaled, err := json.Marshal(cn)
-					if err != nil {
-						return err
-					}
-					aws := CSPConnectionAWS{}
-					if err := json.Unmarshal(marshaled, &aws); err != nil {
-						return err
-					}
-					c.CSPConnection = append(c.CSPConnection, aws)
-				case "GOOGLE":
-					marshaled, err := json.Marshal(cn)
-					if err != nil {
-						return err
-					}
-					google := CSPConnectionGoogle{}
-					if err := json.Unmarshal(marshaled, &google); err != nil {
-						return err
-					}
-					c.CSPConnection = append(c.CSPConnection, google)
-				case "AZURE":
-					marshaled, err := json.Marshal(cn)
-					if err != nil {
-						return err
-					}
-					azure := CSPConnectionAzure{}
-					if err := json.Unmarshal(marshaled, &azure); err != nil {
-						return err
-					}
-					c.CSPConnection = append(c.CSPConnection, azure)
-				case "VIRTUAL_ROUTER":
-					marshaled, err := json.Marshal(cn)
-					if err != nil {
-						return err
-					}
-					vr := CSPConnectionVirtualRouter{}
-					if err := json.Unmarshal(marshaled, &vr); err != nil {
-						return err
-					}
-					c.CSPConnection = append(c.CSPConnection, vr)
-				case "TRANSIT":
-					marshaled, err := json.Marshal(cn)
-					if err != nil {
-						return err
-					}
-					transit := CSPConnectionTransit{}
-					if err := json.Unmarshal(marshaled, &transit); err != nil {
-						return err
-					}
-					c.CSPConnection = append(c.CSPConnection, transit)
-				default: // Any other cases will be marshaled into a map[string]interface{}
-					marshaled, err := json.Marshal(cn)
-					if err != nil {
-						return err
-					}
-					other := CSPConnectionOther{}
-					cspMap := map[string]interface{}{}
-					if err := json.Unmarshal(marshaled, &cspMap); err != nil {
-						return err
-					}
-					other.CSPConnection = cspMap
-					c.CSPConnection = append(c.CSPConnection, other)
+	case []interface{}:
+		for _, m := range v {
+			cn := m.(map[string]interface{})
+			switch cn["connectType"] {
+			case "AWSHC":
+				marshaled, err := json.Marshal(cn)
+				if err != nil {
+					return err
+				}
+				awsHC := CSPConnectionAWSHC{}
+				if err := json.Unmarshal(marshaled, &awsHC); err != nil {
+					return err
+				}
+				c.CSPConnection = append(c.CSPConnection, awsHC)
+			case "AWS":
+				marshaled, err := json.Marshal(cn)
+				if err != nil {
+					return err
+				}
+				aws := CSPConnectionAWS{}
+				if err := json.Unmarshal(marshaled, &aws); err != nil {
+					return err
+				}
+				c.CSPConnection = append(c.CSPConnection, aws)
+			case "GOOGLE":
+				marshaled, err := json.Marshal(cn)
+				if err != nil {
+					return err
+				}
+				google := CSPConnectionGoogle{}
+				if err := json.Unmarshal(marshaled, &google); err != nil {
+					return err
+				}
+				c.CSPConnection = append(c.CSPConnection, google)
+			case "AZURE":
+				marshaled, err := json.Marshal(cn)
+				if err != nil {
+					return err
+				}
+				azure := CSPConnectionAzure{}
+				if err := json.Unmarshal(marshaled, &azure); err != nil {
+					return err
+				}
+				c.CSPConnection = append(c.CSPConnection, azure)
+			case "VIRTUAL_ROUTER":
+				marshaled, err := json.Marshal(cn)
+				if err != nil {
+					return err
+				}
+				vr := CSPConnectionVirtualRouter{}
+				if err := json.Unmarshal(marshaled, &vr); err != nil {
+					return err
+				}
+				c.CSPConnection = append(c.CSPConnection, vr)
+			case "TRANSIT":
+				marshaled, err := json.Marshal(cn)
+				if err != nil {
+					return err
+				}
+				transit := CSPConnectionTransit{}
+				if err := json.Unmarshal(marshaled, &transit); err != nil {
+					return err
+				}
+				c.CSPConnection = append(c.CSPConnection, transit)
+			default: // Any other cases will be marshaled into a map[string]interface{}
+				marshaled, err := json.Marshal(cn)
+				if err != nil {
+					return err
+				}
+				other := CSPConnectionOther{}
+				cspMap := map[string]interface{}{}
+				if err := json.Unmarshal(marshaled, &cspMap); err != nil {
+					return err
+				}
+				other.CSPConnection = cspMap
+				c.CSPConnection = append(c.CSPConnection, other)
 			}
 		}
 	}

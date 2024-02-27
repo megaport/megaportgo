@@ -22,39 +22,39 @@ type PortOrderConfirmation struct {
 
 // Port represents a Megaport Port in the Megaport Port API.
 type Port struct {
-	ID                    int                    `json:"productId"`
-	UID                   string                 `json:"productUid"`
-	Name                  string                 `json:"productName"`
-	Type                  string                 `json:"productType"`
-	ProvisioningStatus    string                 `json:"provisioningStatus"`
-	CreateDate            *Time                  `json:"createDate"`
-	CreatedBy             string                 `json:"createdBy"`
-	PortSpeed             int                    `json:"portSpeed"`
-	TerminateDate         *Time                  `json:"terminateDate"`
-	LiveDate              int                    `json:"liveDate"`
-	Market                string                 `json:"market"`
-	LocationID            int                    `json:"locationId"`
-	UsageAlgorithm        string                 `json:"usageAlgorithm"`
-	MarketplaceVisibility bool                   `json:"marketplaceVisibility"`
-	VXCPermitted          bool                   `json:"vxcpermitted"`
-	VXCAutoApproval       bool                   `json:"vxcAutoApproval"`
-	SecondaryName         string                 `json:"secondaryName"`
-	LAGPrimary            bool                   `json:"lagPrimary"`
-	LAGID                 int                    `json:"lagId"`
-	AggregationID         int                    `json:"aggregationId"`
-	CompanyUID            string                 `json:"companyUid"`
-	CompanyName           string                 `json:"companyName"`
-	CostCentre 			  string	             `json:"costCentre"`
-	ContractStartDate     *Time                  `json:"contractStartDate"`
-	ContractEndDate       *Time                  `json:"contractEndDate"`
-	ContractTermMonths    int                    `json:"contractTermMonths"`
-	AttributeTags         PortAttributeTags 	 `json:"attributeTags"`
-	Virtual               bool                   `json:"virtual"`
-	BuyoutPort            bool                   `json:"buyoutPort"`
-	Locked                bool                   `json:"locked"`
-	AdminLocked           bool                   `json:"adminLocked"`
-	Cancelable            bool                   `json:"cancelable"`
-	VXCResources          PortResources          `json:"resources"`
+	ID                    int               `json:"productId"`
+	UID                   string            `json:"productUid"`
+	Name                  string            `json:"productName"`
+	Type                  string            `json:"productType"`
+	ProvisioningStatus    string            `json:"provisioningStatus"`
+	CreateDate            *Time             `json:"createDate"`
+	CreatedBy             string            `json:"createdBy"`
+	PortSpeed             int               `json:"portSpeed"`
+	TerminateDate         *Time             `json:"terminateDate"`
+	LiveDate              int               `json:"liveDate"`
+	Market                string            `json:"market"`
+	LocationID            int               `json:"locationId"`
+	UsageAlgorithm        string            `json:"usageAlgorithm"`
+	MarketplaceVisibility bool              `json:"marketplaceVisibility"`
+	VXCPermitted          bool              `json:"vxcpermitted"`
+	VXCAutoApproval       bool              `json:"vxcAutoApproval"`
+	SecondaryName         string            `json:"secondaryName"`
+	LAGPrimary            bool              `json:"lagPrimary"`
+	LAGID                 int               `json:"lagId"`
+	AggregationID         int               `json:"aggregationId"`
+	CompanyUID            string            `json:"companyUid"`
+	CompanyName           string            `json:"companyName"`
+	CostCentre            string            `json:"costCentre"`
+	ContractStartDate     *Time             `json:"contractStartDate"`
+	ContractEndDate       *Time             `json:"contractEndDate"`
+	ContractTermMonths    int               `json:"contractTermMonths"`
+	AttributeTags         PortAttributeTags `json:"attributeTags"`
+	Virtual               bool              `json:"virtual"`
+	BuyoutPort            bool              `json:"buyoutPort"`
+	Locked                bool              `json:"locked"`
+	AdminLocked           bool              `json:"adminLocked"`
+	Cancelable            bool              `json:"cancelable"`
+	VXCResources          PortResources     `json:"resources"`
 }
 
 // PortResources represents the resources associated with a Megaport Port.
@@ -111,26 +111,26 @@ type PortAttributeTags struct {
 
 // PortTerminatedServiceDetails represents terminated service details associated with a Megaport Port.
 type PortTerminatedServiceDetails struct {
-	Location PortTerminatedServiceDetailsLocation `json:"location"`
+	Location  PortTerminatedServiceDetailsLocation  `json:"location"`
 	Interface PortTerminatedServiceDetailsInterface `json:"interface"`
-	Device string `json:"device"`
+	Device    string                                `json:"device"`
 }
 
 // PortTerminatedServiceDetailsLocation represents the location of a terminated service associated with a Megaport Port.
 type PortTerminatedServiceDetailsLocation struct {
-	ID int	`json:"id"`
-	Name string `json:"name"`
+	ID       int    `json:"id"`
+	Name     string `json:"name"`
 	SiteCode string `json:"site_code"`
 }
 
 // PortTerminatedServiceDetailsInterface represents the interface of a terminated service associated with a Megaport Port.
 type PortTerminatedServiceDetailsInterface struct {
 	ResourceType string `json:"resource_type"`
-	Demarcation string `json:"demarcation"`
-	LOATemplate string `json:"loa_template"`
-	Media string `json:"media"`
-	PortSpeed int `json:"port_speed"`
+	Demarcation  string `json:"demarcation"`
+	LOATemplate  string `json:"loa_template"`
+	Media        string `json:"media"`
+	PortSpeed    int    `json:"port_speed"`
 	ResourceName string `json:"resource_name"`
-	Up int `json:"up"`
-	Shutdown bool `json:"shutdown"`
+	Up           int    `json:"up"`
+	Shutdown     bool   `json:"shutdown"`
 }

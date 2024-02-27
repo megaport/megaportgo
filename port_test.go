@@ -378,7 +378,7 @@ func (suite *PortClientTestSuite) TestGetPort() {
 		BuyoutPort:            false,
 		CompanyName:           "test-company",
 		CompanyUID:            companyUid,
-		CreateDate: 		   startDate,
+		CreateDate:            startDate,
 		ContractStartDate:     startDate,
 		ContractEndDate:       endDate,
 		TerminateDate:         endDate,

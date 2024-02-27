@@ -22,7 +22,7 @@ type VXCService interface {
 	// UpdateVXC updates a VXC in the Megaport VXC API.
 	UpdateVXC(ctx context.Context, id string, req *UpdateVXCRequest) (*VXC, error)
 	// LookupPartnerPorts looks up available partner ports in the Megaport VXC API.
-	LookupPartnerPorts(ctx context.Context, req *LookupPartnerPortsRequest) (*LookupPartnerPortsResponse, error) 
+	LookupPartnerPorts(ctx context.Context, req *LookupPartnerPortsRequest) (*LookupPartnerPortsResponse, error)
 }
 
 // NewVXCService creates a new instance of the VXC Service.
@@ -66,7 +66,7 @@ type DeleteVXCResponse struct {
 	IsDeleting bool
 }
 
-// UpdateVXCRequest represents a request to update a VXC in the Megaport VXC API. 
+// UpdateVXCRequest represents a request to update a VXC in the Megaport VXC API.
 type UpdateVXCRequest struct {
 	AEndVLAN  *int
 	BEndVlan  *int
@@ -83,10 +83,10 @@ type UpdateVXCResponse struct {
 
 // LookupPartnerPortsRequest represents a request to lookup available partner ports in the Megaport VXC API.
 type LookupPartnerPortsRequest struct {
-	Key 				string
-	PortSpeed 			int
-	Partner 			string
-	ProductID 	string
+	Key       string
+	PortSpeed int
+	Partner   string
+	ProductID string
 }
 
 // LookupPartnerPortsResponse represents a response from looking up available partner ports in the Megaport VXC API.

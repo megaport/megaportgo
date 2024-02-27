@@ -73,7 +73,7 @@ func (suite *VXCIntegrationTestSuite) SetupTest() {
 		suite.FailNowf("invalid guid for token", "invalid guid for token %v", loginResp.Token)
 	}
 
-	suite.client.SessionToken = loginResp.Token
+	suite.client.AccessToken = loginResp.Token
 }
 
 // TestVXCBuy tests the VXC buy process.
@@ -92,16 +92,15 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 
 	logger.InfoContext(ctx, "buying port a end")
 
-
 	aEndPortRes, portErr := portSvc.BuySinglePort(ctx, &BuySinglePortRequest{
-		Name: "VXC Port A",
-		LocationId: testLocation.ID,
-		PortSpeed: 1000,
-		Term: 1,
-		Market: "AU",
-		IsPrivate: true,
+		Name:             "VXC Port A",
+		LocationId:       testLocation.ID,
+		PortSpeed:        1000,
+		Term:             1,
+		Market:           "AU",
+		IsPrivate:        true,
 		WaitForProvision: true,
-		WaitForTime: 5 * time.Minute,
+		WaitForTime:      5 * time.Minute,
 	})
 	if portErr != nil {
 		suite.FailNowf("cannot buy port", "cannot buy port %v", portErr)
@@ -113,14 +112,14 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 
 	logger.InfoContext(ctx, "buying port b end")
 	bEndPortRes, portErr := portSvc.BuySinglePort(ctx, &BuySinglePortRequest{
-		Name: "VXC Port B",
-		LocationId: testLocation.ID,
-		PortSpeed: 1000,
-		Term: 1,
-		Market: "AU",
-		IsPrivate: true,
+		Name:             "VXC Port B",
+		LocationId:       testLocation.ID,
+		PortSpeed:        1000,
+		Term:             1,
+		Market:           "AU",
+		IsPrivate:        true,
 		WaitForProvision: true,
-		WaitForTime: 5 * time.Minute,
+		WaitForTime:      5 * time.Minute,
 	})
 	if portErr != nil {
 		suite.FailNowf("cannot buy port", "cannot buy port %v", portErr)
@@ -131,35 +130,35 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 	logger.InfoContext(ctx, "buying vxc")
 
 	buyVxcRes, vxcErr := vxcSvc.BuyVXC(ctx, &BuyVXCRequest{
-		PortUID: aEndUid,
-		VXCName: "Test VXC",
+		PortUID:   aEndUid,
+		VXCName:   "Test VXC",
 		RateLimit: 500,
 		AEndConfiguration: VXCOrderEndpointConfiguration{
 			VLAN: GenerateRandomVLAN(),
 		},
 		BEndConfiguration: VXCOrderEndpointConfiguration{
-			VLAN: GenerateRandomVLAN(),
+			VLAN:       GenerateRandomVLAN(),
 			ProductUID: bEndUid,
 		},
 		WaitForProvision: true,
-		WaitForTime: 8 * time.Minute,
+		WaitForTime:      8 * time.Minute,
 	})
 	if vxcErr != nil {
 		suite.FailNowf("cannot buy vxc", "cannot buy vxc %v", vxcErr)
 	}
 	vxcUid := buyVxcRes.TechnicalServiceUID
-	suite.True(IsGuid(vxcUid), "invalid guid for vxc uid")	
+	suite.True(IsGuid(vxcUid), "invalid guid for vxc uid")
 
 	newAVLAN := GenerateRandomVLAN()
 	newBVLAN := GenerateRandomVLAN()
 
 	updateRes, updateErr := vxcSvc.UpdateVXC(ctx, vxcUid, &UpdateVXCRequest{
-		AEndVLAN: &newAVLAN,
-		BEndVlan: &newBVLAN,
-		Name: PtrTo("Updated VXC"),
-		RateLimit: PtrTo(1000),
+		AEndVLAN:      &newAVLAN,
+		BEndVlan:      &newBVLAN,
+		Name:          PtrTo("Updated VXC"),
+		RateLimit:     PtrTo(1000),
 		WaitForUpdate: true,
-		WaitForTime: 8 * time.Minute,
+		WaitForTime:   8 * time.Minute,
 	})
 	if updateErr != nil {
 		suite.FailNowf("cannot update vxc", "cannot update vxc %v", updateErr)
@@ -188,7 +187,7 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 	logger.InfoContext(ctx, "deleting ports")
 
 	_, deleteErr = portSvc.DeletePort(ctx, &DeletePortRequest{
-		PortID: aEndUid,
+		PortID:    aEndUid,
 		DeleteNow: true,
 	})
 	if deleteErr != nil {
@@ -196,14 +195,13 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 	}
 
 	_, deleteErr = portSvc.DeletePort(ctx, &DeletePortRequest{
-		PortID: bEndUid,
+		PortID:    bEndUid,
 		DeleteNow: true,
 	})
 	if deleteErr != nil {
 		suite.FailNowf("cannot delete b-end port", "cannot delete b-end port %v", deleteErr)
 	}
 }
-
 
 // TestAWSVIFConnectionBuy tests the AWS VIF connection buy process.
 func (suite *VXCIntegrationTestSuite) TestAWSVIFConnectionBuy() {
@@ -221,14 +219,14 @@ func (suite *VXCIntegrationTestSuite) TestAWSVIFConnectionBuy() {
 	logger.InfoContext(ctx, "buying port a end")
 
 	portRes, portErr := portSvc.BuySinglePort(ctx, &BuySinglePortRequest{
-		Name: "AWS VIF Test Port",
-		Term: 1,
-		LocationId: testLocation.ID,
-		PortSpeed: 1000,
-		Market: "AU",
-		IsPrivate: true,
+		Name:             "AWS VIF Test Port",
+		Term:             1,
+		LocationId:       testLocation.ID,
+		PortSpeed:        1000,
+		Market:           "AU",
+		IsPrivate:        true,
 		WaitForProvision: true,
-		WaitForTime: 5 * time.Minute,
+		WaitForTime:      5 * time.Minute,
 	})
 	if portErr != nil {
 		suite.FailNowf("cannot buy port", "cannot buy port %v", portErr)
@@ -239,8 +237,8 @@ func (suite *VXCIntegrationTestSuite) TestAWSVIFConnectionBuy() {
 	logger.InfoContext(ctx, "buying aws vif connection (b-end)")
 
 	buyVxcRes, vxcErr := vxcSvc.BuyVXC(ctx, &BuyVXCRequest{
-		PortUID: portUid,
-		VXCName: "Hosted AWS VIF Test Connection",
+		PortUID:   portUid,
+		VXCName:   "Hosted AWS VIF Test Connection",
 		RateLimit: 500,
 		AEndConfiguration: VXCOrderEndpointConfiguration{
 			VLAN: GenerateRandomVLAN(),
@@ -248,17 +246,17 @@ func (suite *VXCIntegrationTestSuite) TestAWSVIFConnectionBuy() {
 		BEndConfiguration: VXCOrderEndpointConfiguration{
 			ProductUID: "87860c28-81ef-4e79-8cc7-cfc5a4c4bc86",
 			PartnerConfig: VXCPartnerConfigAWS{
-				ConnectType: "AWS",
-				Type: "private",
-				ASN: 65105,
-				AmazonASN: 65106,
+				ConnectType:  "AWS",
+				Type:         "private",
+				ASN:          65105,
+				AmazonASN:    65106,
 				OwnerAccount: "684021030471",
-				AuthKey: "notarealauthkey",
-				Prefixes: "10.0.1.0/24",
+				AuthKey:      "notarealauthkey",
+				Prefixes:     "10.0.1.0/24",
 			},
 		},
 		WaitForProvision: true,
-		WaitForTime: 8 * time.Minute,
+		WaitForTime:      8 * time.Minute,
 	})
 	if vxcErr != nil {
 		suite.FailNowf("cannot buy vxc", "cannot buy vxc %v", vxcErr)
@@ -276,7 +274,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSVIFConnectionBuy() {
 	logger.InfoContext(ctx, "deleting port", slog.String("port_uid", portUid))
 
 	_, deleteErr = portSvc.DeletePort(ctx, &DeletePortRequest{
-		PortID: portUid,
+		PortID:    portUid,
 		DeleteNow: true,
 	})
 	if deleteErr != nil {
@@ -291,7 +289,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSHostedConnectionBuy() {
 	logger := suite.client.Logger
 	locSvc := suite.client.LocationService
 	mcrSvc := suite.client.MCRService
-	
+
 	testLocation, locErr := locSvc.GetRandom(ctx, MCR_LOCATION)
 	if locErr != nil {
 		suite.FailNowf("cannot find location", "cannot find location %v", locErr)
@@ -299,13 +297,13 @@ func (suite *VXCIntegrationTestSuite) TestAWSHostedConnectionBuy() {
 
 	logger.InfoContext(ctx, "buying mcr (a-end)")
 	mcrRes, mcrErr := mcrSvc.BuyMCR(ctx, &BuyMCRRequest{
-		Name: "AWS Hosted Connection Test MCR",
-		LocationID: testLocation.ID,
-		Term: 1,
-		PortSpeed: 1000,
-		MCRAsn: 0,
+		Name:             "AWS Hosted Connection Test MCR",
+		LocationID:       testLocation.ID,
+		Term:             1,
+		PortSpeed:        1000,
+		MCRAsn:           0,
 		WaitForProvision: true,
-		WaitForTime: 5 * time.Minute,
+		WaitForTime:      5 * time.Minute,
 	})
 	if mcrErr != nil {
 		suite.FailNowf("cannot buy mcr", "cannot buy mcr %v", mcrErr)
@@ -316,8 +314,8 @@ func (suite *VXCIntegrationTestSuite) TestAWSHostedConnectionBuy() {
 	logger.InfoContext(ctx, "buying aws hosted connection (b-end)")
 
 	hcRes, hcErr := vxcSvc.BuyVXC(ctx, &BuyVXCRequest{
-		PortUID: mcrUid,
-		VXCName: "Hosted Connection AWS Test Connection",
+		PortUID:   mcrUid,
+		VXCName:   "Hosted Connection AWS Test Connection",
 		RateLimit: 500,
 		AEndConfiguration: VXCOrderEndpointConfiguration{
 			VLAN: GenerateRandomVLAN(),
@@ -364,9 +362,9 @@ func (suite *VXCIntegrationTestSuite) TestAWSHostedConnectionBuy() {
 			},
 		},
 		WaitForProvision: true,
-		WaitForTime: 8 * time.Minute,
+		WaitForTime:      8 * time.Minute,
 	})
-	
+
 	if hcErr != nil {
 		suite.FailNowf("cannot buy vxc", "cannot buy vxc %v", hcErr)
 	}
@@ -401,14 +399,14 @@ func (suite *VXCIntegrationTestSuite) TestAWSConnectionBuyDefaults() {
 	logger.InfoContext(ctx, "buying port a end")
 
 	portRes, portErr := portSvc.BuySinglePort(ctx, &BuySinglePortRequest{
-		Name: "AWS VIF Test Port",
-		Term: 1,
-		LocationId: testLocation.ID,
-		PortSpeed: 1000,
-		Market: "AU",
-		IsPrivate: true,
+		Name:             "AWS VIF Test Port",
+		Term:             1,
+		LocationId:       testLocation.ID,
+		PortSpeed:        1000,
+		Market:           "AU",
+		IsPrivate:        true,
 		WaitForProvision: true,
-		WaitForTime: 5 * time.Minute,
+		WaitForTime:      5 * time.Minute,
 	})
 	if portErr != nil {
 		suite.FailNowf("cannot buy port", "cannot buy port %v", portErr)
@@ -418,8 +416,8 @@ func (suite *VXCIntegrationTestSuite) TestAWSConnectionBuyDefaults() {
 	logger.InfoContext(ctx, "buying aws vif connection (b-end)")
 
 	vifRes, vifErr := vxcSvc.BuyVXC(ctx, &BuyVXCRequest{
-		PortUID: portUid,
-		VXCName: "Hosted AWS VIF Test Connection",
+		PortUID:   portUid,
+		VXCName:   "Hosted AWS VIF Test Connection",
 		RateLimit: 500,
 		AEndConfiguration: VXCOrderEndpointConfiguration{
 			VLAN: 0,
@@ -435,7 +433,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSConnectionBuyDefaults() {
 			},
 		},
 		WaitForProvision: true,
-		WaitForTime: 8 * time.Minute,
+		WaitForTime:      8 * time.Minute,
 	})
 
 	if vifErr != nil {
@@ -456,7 +454,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSConnectionBuyDefaults() {
 	logger.InfoContext(ctx, "deleting port", slog.String("port_uid", portUid))
 
 	_, deleteErr = portSvc.DeletePort(ctx, &DeletePortRequest{
-		PortID: portUid,
+		PortID:    portUid,
 		DeleteNow: true,
 	})
 
@@ -481,16 +479,15 @@ func (suite *VXCIntegrationTestSuite) TestBuyAzureExpressRoute() {
 
 	logger.InfoContext(ctx, "buying azure expressroute port a end")
 
-
 	aEndPortRes, portErr := portSvc.BuySinglePort(ctx, &BuySinglePortRequest{
-		Name: "Azure ExpressRoute Test Port",
-		LocationId: testLocation.ID,
-		PortSpeed: 1000,
-		Term: 1,
-		Market: "AU",
-		IsPrivate: true,
+		Name:             "Azure ExpressRoute Test Port",
+		LocationId:       testLocation.ID,
+		PortSpeed:        1000,
+		Term:             1,
+		Market:           "AU",
+		IsPrivate:        true,
 		WaitForProvision: true,
-		WaitForTime: 5 * time.Minute,
+		WaitForTime:      5 * time.Minute,
 	})
 	if portErr != nil {
 		suite.FailNowf("cannot buy port", "cannot buy port %v", portErr)
@@ -525,7 +522,7 @@ func (suite *VXCIntegrationTestSuite) TestBuyAzureExpressRoute() {
 	partnerPortRes, partnerPortErr := vxcSvc.LookupPartnerPorts(ctx, &LookupPartnerPortsRequest{
 		Key:       serviceKey,
 		PortSpeed: 1000,
-		Partner: PARTNER_AZURE,
+		Partner:   PARTNER_AZURE,
 		ProductID: "",
 	})
 
@@ -537,23 +534,23 @@ func (suite *VXCIntegrationTestSuite) TestBuyAzureExpressRoute() {
 
 	azurePartnerConfig := VXCPartnerConfigAzure{
 		ConnectType: "AzureExpressRoute",
-		ServiceKey: serviceKey,
-		Peers: peerings,
+		ServiceKey:  serviceKey,
+		Peers:       peerings,
 	}
 
 	vxcRes, vxcErr := vxcSvc.BuyVXC(ctx, &BuyVXCRequest{
-		PortUID: aEndUid,
-		VXCName: "Azure ExpressRoute Test VXC",
+		PortUID:   aEndUid,
+		VXCName:   "Azure ExpressRoute Test VXC",
 		RateLimit: 1000,
 		AEndConfiguration: VXCOrderEndpointConfiguration{
 			VLAN: 0,
 		},
 		BEndConfiguration: VXCOrderEndpointConfiguration{
-			ProductUID: partnerPortId,
+			ProductUID:    partnerPortId,
 			PartnerConfig: azurePartnerConfig,
 		},
 		WaitForProvision: true,
-		WaitForTime: 10 * time.Minute,
+		WaitForTime:      10 * time.Minute,
 	})
 	if vxcErr != nil {
 		suite.FailNowf("cannot buy vxc", "cannot buy vxc %v", vxcErr)
@@ -570,7 +567,7 @@ func (suite *VXCIntegrationTestSuite) TestBuyAzureExpressRoute() {
 
 	logger.InfoContext(ctx, "deleting port")
 	_, deleteErr = portSvc.DeletePort(ctx, &DeletePortRequest{
-		PortID: aEndUid,
+		PortID:    aEndUid,
 		DeleteNow: true,
 	})
 	if deleteErr != nil {
@@ -579,7 +576,7 @@ func (suite *VXCIntegrationTestSuite) TestBuyAzureExpressRoute() {
 }
 
 // TestBuyGoogleInterconnect tests the Google Interconnect buy process.
-func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnect() { 
+func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnect() {
 	vxcSvc := suite.client.VXCService
 	ctx := context.Background()
 	logger := suite.client.Logger
@@ -594,14 +591,14 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnect() {
 	logger.InfoContext(ctx, "buying google interconect port a end")
 
 	portRes, portErr := portSvc.BuySinglePort(ctx, &BuySinglePortRequest{
-		Name: "Google Interconnect Test Port",
-		Term: 1,
-		LocationId: testLocation.ID,
-		PortSpeed: 1000,
-		Market: "AU",
-		IsPrivate: true,
+		Name:             "Google Interconnect Test Port",
+		Term:             1,
+		LocationId:       testLocation.ID,
+		PortSpeed:        1000,
+		Market:           "AU",
+		IsPrivate:        true,
 		WaitForProvision: true,
-		WaitForTime: 5 * time.Minute,
+		WaitForTime:      5 * time.Minute,
 	})
 	if portErr != nil {
 		suite.FailNowf("cannot buy port", "cannot buy port %v", portErr)
@@ -613,9 +610,9 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnect() {
 	logger.InfoContext(ctx, "buying google interconnect vxc (b-end)")
 
 	partnerPortRes, partnerPortErr := vxcSvc.LookupPartnerPorts(ctx, &LookupPartnerPortsRequest{
-		Key: 	 pairingKey,
+		Key:       pairingKey,
 		PortSpeed: 1000,
-		Partner: PARTNER_GOOGLE,
+		Partner:   PARTNER_GOOGLE,
 		ProductID: "",
 	})
 
@@ -629,22 +626,22 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnect() {
 
 	partnerConfig := VXCPartnerConfigGoogle{
 		ConnectType: "GOOGLE",
-		PairingKey: pairingKey,
+		PairingKey:  pairingKey,
 	}
 
 	vxcRes, vxcErr := vxcSvc.BuyVXC(ctx, &BuyVXCRequest{
-		PortUID: portUid,
-		VXCName: "Test Google Interconnect VXC",
+		PortUID:   portUid,
+		VXCName:   "Test Google Interconnect VXC",
 		RateLimit: 1000,
 		AEndConfiguration: VXCOrderEndpointConfiguration{
 			VLAN: 0,
 		},
 		BEndConfiguration: VXCOrderEndpointConfiguration{
-			ProductUID: partnerPortId,
+			ProductUID:    partnerPortId,
 			PartnerConfig: partnerConfig,
 		},
 		WaitForProvision: true,
-		WaitForTime: 10 * time.Minute,
+		WaitForTime:      10 * time.Minute,
 	})
 
 	if vxcErr != nil {
@@ -662,7 +659,7 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnect() {
 	logger.InfoContext(ctx, "deleting port", slog.String("port_uid", portUid))
 
 	_, deleteErr = portSvc.DeletePort(ctx, &DeletePortRequest{
-		PortID: portUid,
+		PortID:    portUid,
 		DeleteNow: true,
 	})
 
@@ -687,14 +684,14 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnectLocation() {
 	logger.InfoContext(ctx, "buying google interconect port a end")
 
 	portRes, portErr := portSvc.BuySinglePort(ctx, &BuySinglePortRequest{
-		Name: "Google Interconnect Test Port",
-		Term: 1,
-		LocationId: testLocation.ID,
-		PortSpeed: 1000,
-		Market: "AU",
-		IsPrivate: true,
+		Name:             "Google Interconnect Test Port",
+		Term:             1,
+		LocationId:       testLocation.ID,
+		PortSpeed:        1000,
+		Market:           "AU",
+		IsPrivate:        true,
 		WaitForProvision: true,
-		WaitForTime: 5 * time.Minute,
+		WaitForTime:      5 * time.Minute,
 	})
 	if portErr != nil {
 		suite.FailNowf("cannot buy port", "cannot buy port %v", portErr)
@@ -707,9 +704,9 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnectLocation() {
 	logger.InfoContext(ctx, "buying google interconnect vxc (b-end)")
 
 	partnerPortRes, partnerPortErr := vxcSvc.LookupPartnerPorts(ctx, &LookupPartnerPortsRequest{
-		Key: 	 pairingKey,
+		Key:       pairingKey,
 		PortSpeed: 1000,
-		Partner: PARTNER_GOOGLE,
+		Partner:   PARTNER_GOOGLE,
 		ProductID: "",
 	})
 	if partnerPortErr != nil {
@@ -719,22 +716,22 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnectLocation() {
 
 	partnerConfig := VXCPartnerConfigGoogle{
 		ConnectType: "GOOGLE",
-		PairingKey: pairingKey,
+		PairingKey:  pairingKey,
 	}
 
 	vxcRes, vxcErr := vxcSvc.BuyVXC(ctx, &BuyVXCRequest{
-		PortUID: portUid,
-		VXCName: "Test Google Interconnect VXC",
+		PortUID:   portUid,
+		VXCName:   "Test Google Interconnect VXC",
 		RateLimit: 1000,
 		AEndConfiguration: VXCOrderEndpointConfiguration{
 			VLAN: 0,
 		},
 		BEndConfiguration: VXCOrderEndpointConfiguration{
-			ProductUID: partnerPortId,
+			ProductUID:    partnerPortId,
 			PartnerConfig: partnerConfig,
 		},
 		WaitForProvision: true,
-		WaitForTime: 10 * time.Minute,
+		WaitForTime:      10 * time.Minute,
 	})
 
 	if vxcErr != nil {
@@ -754,7 +751,7 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnectLocation() {
 	logger.InfoContext(ctx, "deleting port", slog.String("port_uid", portUid))
 
 	_, deleteErr = portSvc.DeletePort(ctx, &DeletePortRequest{
-		PortID: portUid,
+		PortID:    portUid,
 		DeleteNow: true,
 	})
 

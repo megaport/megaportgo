@@ -71,7 +71,7 @@ func (suite *PortIntegrationTestSuite) SetupTest() {
 		suite.FailNowf("invalid guid for token", "invalid guid for token %v", loginResp.Token)
 	}
 
-	suite.client.SessionToken = loginResp.Token
+	suite.client.AccessToken = loginResp.Token
 }
 
 // TestSinglePort tests the creation of a LAG Port, then passes the id to PortScript to finalise lifecycle testing.

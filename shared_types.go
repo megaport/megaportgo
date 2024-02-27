@@ -21,8 +21,8 @@ const (
 	STATUS_CANCELLED      = "CANCELLED"
 
 	// Port Types
-	SINGLE_PORT                        = "Single"
-	LAG_PORT                           = "LAG"
+	SINGLE_PORT = "Single"
+	LAG_PORT    = "LAG"
 
 	// AWS VXC Types
 	CONNECT_TYPE_AWS_VIF               = "AWS"
@@ -51,7 +51,7 @@ const MODIFY_B_END_VLAN = "B_VLAN"
 
 // Time is a custom time type that allows for unmarshalling of Unix timestamps.
 type Time struct {
- 	time.Time
+	time.Time
 }
 
 // UnmarshalJSON unmarshals a Unix timestamp into a Time type.

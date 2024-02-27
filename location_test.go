@@ -469,7 +469,7 @@ func (suite *LocationClientTestSuite) TestGetLocationByNameFuzzy() {
 			Status:           "Active",
 			Longitude:        -77.487442,
 			Latitude:         39.043757,
-			Products:&LocationProducts{
+			Products: &LocationProducts{
 				MCR:      true,
 				Megaport: []int{10},
 			},
@@ -779,10 +779,10 @@ func (suite *LocationClientTestSuite) TestFilterLocationsByMcrAvailability() {
 			Latitude:  39.762714,
 			Longitude: -104.761925,
 			Products: &LocationProducts{
-				MCR:      	true,
+				MCR:        true,
 				MCRVersion: 2,
-				MCR2:      	[]int{1000, 2500, 5000, 10000},
-				Megaport: 	[]int{1, 10},
+				MCR2:       []int{1000, 2500, 5000, 10000},
+				Megaport:   []int{1, 10},
 			},
 			Market:           "US",
 			Metro:            "Denver",
@@ -813,10 +813,10 @@ func (suite *LocationClientTestSuite) TestFilterLocationsByMcrAvailability() {
 			Longitude:        -73.971321,
 			Latitude:         39.043757,
 			Products: &LocationProducts{
-				MCR: 		true,
+				MCR:        true,
 				MCRVersion: 2,
-				MCR2:      	[]int{1000, 2500, 5000, 10000},
-				Megaport: 	[]int{1, 10},
+				MCR2:       []int{1000, 2500, 5000, 10000},
+				Megaport:   []int{1, 10},
 			},
 		},
 		{
@@ -866,10 +866,10 @@ func (suite *LocationClientTestSuite) TestFilterLocationsByMcrAvailability() {
 			Latitude:  39.762714,
 			Longitude: -104.761925,
 			Products: &LocationProducts{
-				MCR:      	true,
+				MCR:        true,
 				MCRVersion: 2,
-				MCR2:      	[]int{1000, 2500, 5000, 10000},
-				Megaport: 	[]int{1, 10},
+				MCR2:       []int{1000, 2500, 5000, 10000},
+				Megaport:   []int{1, 10},
 			},
 			Market:           "US",
 			Metro:            "Denver",
@@ -900,10 +900,10 @@ func (suite *LocationClientTestSuite) TestFilterLocationsByMcrAvailability() {
 			Longitude:        -73.971321,
 			Latitude:         39.043757,
 			Products: &LocationProducts{
-				MCR: 		true,
+				MCR:        true,
 				MCRVersion: 2,
-				MCR2:      	[]int{1000, 2500, 5000, 10000},
-				Megaport: 	[]int{1, 10},
+				MCR2:       []int{1000, 2500, 5000, 10000},
+				Megaport:   []int{1, 10},
 			},
 		},
 	}
@@ -935,10 +935,10 @@ func (suite *LocationClientTestSuite) TestGetRandom() {
 			Latitude:  39.762714,
 			Longitude: -104.761925,
 			Products: &LocationProducts{
-				MCR: 		true,
+				MCR:        true,
 				MCRVersion: 2,
-				MCR2:      	[]int{1000, 2500, 5000, 10000},
-				Megaport: 	[]int{1, 10},
+				MCR2:       []int{1000, 2500, 5000, 10000},
+				Megaport:   []int{1, 10},
 			},
 			Market:           "US",
 			Metro:            "Denver",
@@ -969,10 +969,10 @@ func (suite *LocationClientTestSuite) TestGetRandom() {
 			Longitude:        -77.487442,
 			Latitude:         39.043757,
 			Products: &LocationProducts{
-				MCR: 		true,
+				MCR:        true,
 				MCRVersion: 2,
-				MCR2:      	[]int{1000, 2500, 5000, 10000},
-				Megaport: 	[]int{1, 10},
+				MCR2:       []int{1000, 2500, 5000, 10000},
+				Megaport:   []int{1, 10},
 			},
 		},
 	}

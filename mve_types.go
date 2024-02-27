@@ -2,13 +2,13 @@ package megaport
 
 // MVEOrderConfig represents a request to buy an MVE from the Megaport Products API.
 type MVEOrderConfig struct {
-	LocationID        int                    `json:"locationId"`
-	Name              string                 `json:"productName"`
-	Term              int                    `json:"term"`
-	ProductType       string                 `json:"productType"`
-	DiversityZone     string                 `json:"diversityZone"`
-	NetworkInterfaces []MVENetworkInterface  `json:"vnics"`
-	VendorConfig     VendorConfig `json:"VendorConfig"`
+	LocationID        int                   `json:"locationId"`
+	Name              string                `json:"productName"`
+	Term              int                   `json:"term"`
+	ProductType       string                `json:"productType"`
+	DiversityZone     string                `json:"diversityZone"`
+	NetworkInterfaces []MVENetworkInterface `json:"vnics"`
+	VendorConfig      VendorConfig          `json:"VendorConfig"`
 }
 
 // VendorConfig is an interface for MVE vendor configuration.
@@ -19,65 +19,65 @@ type VendorConfig interface {
 // ArubaConfig represents the configuration for an Aruba MVE.
 type ArubaConfig struct {
 	VendorConfig
-	Vendor string `json:"vendor"`
-	ImageID int `json:"imageId"`
+	Vendor      string `json:"vendor"`
+	ImageID     int    `json:"imageId"`
 	ProductSize string `json:"productSize"`
 	AccountName string `json:"accountName"`
-	AccountKey string `json:"accountKey"`
+	AccountKey  string `json:"accountKey"`
 }
 
 // CiscoConfig represents the configuration for a Cisco MVE.
 type CiscoConfig struct {
 	VendorConfig
-	Vendor string `json:"vendor"`
-	ImageID int `json:"imageId"`
-	ProductSize string `json:"productSize"`
+	Vendor            string `json:"vendor"`
+	ImageID           int    `json:"imageId"`
+	ProductSize       string `json:"productSize"`
 	AdminSSHPublicKey string `json:"adminSshPublicKey"`
-	CloudInit string `json:"cloudInit"`
+	CloudInit         string `json:"cloudInit"`
 }
 
 // FortinetConfig represents the configuration for a Fortinet MVE.
 type FortinetConfig struct {
 	VendorConfig
-	Vendor string `json:"vendor"`
-	ImageID int `json:"imageId"`
-	ProductSize string `json:"productSize"`
+	Vendor            string `json:"vendor"`
+	ImageID           int    `json:"imageId"`
+	ProductSize       string `json:"productSize"`
 	AdminSSHPublicKey string `json:"adminSshPublicKey"`
-	LicenseData string `json:"licenseData"`
+	LicenseData       string `json:"licenseData"`
 }
 
 // PaloAltoConfig represents the configuration for a Palo Alto MVE.
 type PaloAltoConfig struct {
 	VendorConfig
-	Vendor string `json:"vendor"`
-	ImageID int `json:"imageId"`
-	ProductSize string `json:"productSize"`
+	Vendor            string `json:"vendor"`
+	ImageID           int    `json:"imageId"`
+	ProductSize       string `json:"productSize"`
 	AdminSSHPublicKey string `json:"adminSshPublicKey"`
 	AdminPasswordHash string `json:"adminPasswordHash"`
-	LicenseData string `json:"licenseData"`
+	LicenseData       string `json:"licenseData"`
 }
 
 // VersaConfig represents the configuration for a Versa MVE.
 type VersaConfig struct {
 	VendorConfig
-	Vendor string `json:"vendor"`
-	ImageID int `json:"imageId"`
-	ProductSize string `json:"productSize"`
-	DirectorAddress string `json:"directorAddress"`
+	Vendor            string `json:"vendor"`
+	ImageID           int    `json:"imageId"`
+	ProductSize       string `json:"productSize"`
+	DirectorAddress   string `json:"directorAddress"`
 	ControllerAddress string `json:"controllerAddress"`
-	LocalAuth string `json:"localAuth"`
-	RemoteAuth string `json:"remoteAuth"`
-	SerialNumber string `json:"serialNumber"`
+	LocalAuth         string `json:"localAuth"`
+	RemoteAuth        string `json:"remoteAuth"`
+	SerialNumber      string `json:"serialNumber"`
 }
 
 // VmwareConfig represents the configuration for a VMware MVE.
 type VmwareConfig struct {
 	VendorConfig
-	Vendor string `json:"vendor"`
-	ImageID int `json:"imageId"`
-	ProductSize string `json:"productSize"`
+	Vendor            string `json:"vendor"`
+	ImageID           int    `json:"imageId"`
+	ProductSize       string `json:"productSize"`
 	AdminSSHPublicKey string `json:"adminSshPublicKey"`
-	VcoAddress string `json:"vcoAddress"`
+	VcoAddress        string `json:"vcoAddress"`
 	VcoActivationCode string `json:"vcoActivationCode"`
 }
 
@@ -132,7 +132,7 @@ type MVE struct {
 	Locked                bool                   `json:"locked"`
 	AdminLocked           bool                   `json:"adminLocked"`
 	Cancelable            bool                   `json:"cancelable"`
-	Resources             *MVEResources `json:"resources"`
+	Resources             *MVEResources          `json:"resources"`
 	Vendor                string                 `json:"vendor"`
 	Size                  string                 `json:"mveSize"`
 	NetworkInterfaces     []*MVENetworkInterface `json:"vnics"`
@@ -140,24 +140,24 @@ type MVE struct {
 
 // MVEResources represents the resources associated with an MVE.
 type MVEResources struct {
-	Interface *PortInterface `json:"interface"`
+	Interface       *PortInterface       `json:"interface"`
 	VirtualMachines []*MVEVirtualMachine `json:"virtual_machine"`
 }
 
 // MVEVirtualMachine represents a virtual machine associated with an MVE.
 type MVEVirtualMachine struct {
-	ID int `json:"id"`
-	CpuCount int `json:"cpu_count"`
-	Image *MVEVirtualMachineImage `json:"image"`
-	ResourceType string `json:"resource_type"`
-	Up bool `json:"up"`
-	Vnics []*MVENetworkInterface `json:"vnics"`
+	ID           int                     `json:"id"`
+	CpuCount     int                     `json:"cpu_count"`
+	Image        *MVEVirtualMachineImage `json:"image"`
+	ResourceType string                  `json:"resource_type"`
+	Up           bool                    `json:"up"`
+	Vnics        []*MVENetworkInterface  `json:"vnics"`
 }
 
 // MVVEVirtualMachineImage represents the image associated with an MVE virtual machine.
 type MVEVirtualMachineImage struct {
-	ID int `json:"id"`
-	Vendor string `json:"vendor"`
+	ID      int    `json:"id"`
+	Vendor  string `json:"vendor"`
 	Product string `json:"product"`
 	Version string `json:"version"`
 }

@@ -45,9 +45,9 @@ func (suite *MVEClientTestSuite) TestBuyMVE() {
 		Term:       12,
 		LocationID: 1,
 		VendorConfig: PaloAltoConfig{
-			ImageID: 32,
-			ProductSize: "SMALL",
-			Vendor: "palo alto",
+			ImageID:           32,
+			ProductSize:       "SMALL",
+			Vendor:            "palo alto",
 			AdminSSHPublicKey: "test-key",
 			AdminPasswordHash: "test-hash",
 		},
@@ -130,21 +130,21 @@ func (suite *MVEClientTestSuite) TestBuyMVE() {
     ]
 }`
 	mveOrder := []MVEOrderConfig{{
-		LocationID:        req.LocationID,
-		Name:              req.Name,
-		Term:              req.Term,
-		ProductType:       strings.ToUpper(PRODUCT_MVE),
-		VendorConfig:      &PaloAltoConfig{
-			ImageID: 32,
-			ProductSize: "SMALL",
-			Vendor: "palo alto",
+		LocationID:  req.LocationID,
+		Name:        req.Name,
+		Term:        req.Term,
+		ProductType: strings.ToUpper(PRODUCT_MVE),
+		VendorConfig: &PaloAltoConfig{
+			ImageID:           32,
+			ProductSize:       "SMALL",
+			Vendor:            "palo alto",
 			AdminSSHPublicKey: "test-key",
 			AdminPasswordHash: "test-hash",
 		},
 		NetworkInterfaces: []MVENetworkInterface{{Description: "Data Plane", VLAN: 0}},
 	}}
 	want := &BuyMVEResponse{TechnicalServiceUID: productUid}
-	
+
 	suite.mux.HandleFunc("/v3/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
 		v := new([]MVEOrderConfig)
 		err := json.NewDecoder(r.Body).Decode(v)
@@ -293,28 +293,28 @@ func (suite *MVEClientTestSuite) TestGetMVE() {
 		AdminLocked:           false,
 		Cancelable:            true,
 		AttributeTags:         map[string]string{},
-		Resources:             &MVEResources{
+		Resources: &MVEResources{
 			Interface: &PortInterface{
-				Demarcation: "",
-				LOATemplate: "megaport",
-				Media: "LR4",
-				PortSpeed: 40000,
+				Demarcation:  "",
+				LOATemplate:  "megaport",
+				Media:        "LR4",
+				PortSpeed:    40000,
 				ResourceName: "interface",
 				ResourceType: "interface",
-				Up: 1,
+				Up:           1,
 			},
 			VirtualMachines: []*MVEVirtualMachine{
 				{
 					CpuCount: 2,
-					ID: 0,
+					ID:       0,
 					Image: &MVEVirtualMachineImage{
-						ID: 0,
-						Vendor: "palo alto",
+						ID:      0,
+						Vendor:  "palo alto",
 						Product: "test product",
 						Version: "1.0",
 					},
 					ResourceType: "virtual_machine",
-					Up: true,
+					Up:           true,
 					Vnics: []*MVENetworkInterface{
 						{VLAN: 0, Description: "Management"},
 						{VLAN: 1, Description: "Data Plane"},
@@ -322,8 +322,8 @@ func (suite *MVEClientTestSuite) TestGetMVE() {
 				},
 			},
 		},
-		Vendor:                "PALO_ALTO",
-		Size:                  "SMALL",
+		Vendor: "PALO_ALTO",
+		Size:   "SMALL",
 		NetworkInterfaces: []*MVENetworkInterface{
 			{
 				VLAN:        0,

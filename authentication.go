@@ -62,14 +62,15 @@ type LoginResponse struct {
 	}
 }
 
-// Login performs an OAuth-style login using an API key and API secret key. It returns the bearer token or an error if the login was unsuccessful.
+// Login performs an OAuth-style login using an API key and API secret key and updates the token and expiration in the client on a successful reponse.
+// It returns the bearer token or an error if the login was unsuccessful.
 func (svc *AuthenticationServiceOp) Login(ctx context.Context, req *LoginRequest) (*LoginOauthResponse, error) {
 	svc.Logger.DebugContext(ctx, "creating session", slog.String("access_key", req.AccessKey))
 
 	// Shortcut if we've already authenticated.
 	if time.Now().Before(svc.TokenExpiry) {
 		return &LoginOauthResponse{
-			Token: svc.SessionToken,
+			Token: svc.AccessToken,
 		}, nil
 	}
 
@@ -133,7 +134,7 @@ func (svc *AuthenticationServiceOp) Login(ctx context.Context, req *LoginRequest
 	// Store the access token
 	svc.TokenExpiry = time.Now().Add(time.Duration(authResponse.ExpiresIn) * time.Second)
 	// Calculate the token expiration time
-	svc.SessionToken = authResponse.AccessToken
+	svc.AccessToken = authResponse.AccessToken
 
 	svc.Logger.DebugContext(ctx, "session established")
 

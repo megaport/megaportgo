@@ -67,7 +67,7 @@ func (suite *LocationIntegrationTestSuite) SetupTest() {
 		suite.FailNowf("invalid guid for token", "invalid guid for token %v", loginResp.Token)
 	}
 
-	suite.client.SessionToken = loginResp.Token
+	suite.client.AccessToken = loginResp.Token
 }
 
 // TestBadID tests the GetLocationByID method with an invalid ID.
