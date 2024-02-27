@@ -2,6 +2,7 @@ package megaport
 
 import (
 	"encoding/json"
+	"fmt"
 )
 
 // Partner Providers
@@ -541,7 +542,11 @@ func (c *CSPConnection) UnmarshalJSON(data []byte) error {
 		}
 	case []interface{}:
 		for _, m := range v {
-			cn := m.(map[string]interface{})
+			cn, ok := m.(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("can't process CSP connections, expected map[string]interface{} but got %T", m)
+			}
+
 			switch cn["connectType"] {
 			case "AWSHC":
 				marshaled, err := json.Marshal(cn)

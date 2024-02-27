@@ -43,24 +43,6 @@ func (suite *ClientTestSuite) TearDownTest() {
 	suite.server.Close()
 }
 
-// type values map[string]string
-
-// func testFormValues(t *testing.T, r *http.Request, values values) {
-// 	expected := url.Values{}
-// 	for k, v := range values {
-// 		expected.Add(k, v)
-// 	}
-
-// 	err := r.ParseForm()
-// 	if err != nil {
-// 		t.Fatalf("parseForm(): %v", err)
-// 	}
-
-// 	if !reflect.DeepEqual(expected, r.Form) {
-// 		t.Errorf("Request parameters = %v, expected %v", r.Form, expected)
-// 	}
-// }
-
 // testURLParseError tests if the error is a URL parse error.
 func (suite *ClientTestSuite) testURLParseError(err error) {
 	if err == nil {
@@ -95,36 +77,6 @@ func (suite *ClientTestSuite) testClientDefaults(c *Client) {
 func (suite *ClientTestSuite) TestNewClient() {
 	c := NewClient(nil, nil)
 	suite.testClientDefaults(c)
-}
-
-// TestNewFromToken tests if the NewFromToken function returns a client with the default base URL and user agent with a token.
-func (suite *ClientTestSuite) TestNewFromToken() {
-	c := NewFromToken("myToken")
-	suite.testClientDefaults(c)
-}
-
-// TestNewFromToken_cleaned tests if the NewFromToken function returns a client with the default base URL and user agent with a valid token.
-func (suite *ClientTestSuite) TestNewFromToken_cleaned() {
-	testTokens := []string{"myToken ", " myToken", " myToken ", "'myToken'", " 'myToken' "}
-	expected := "Bearer myToken"
-
-	suite.mux.HandleFunc("/foo", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
-
-	for _, tt := range testTokens {
-		c := NewFromToken(tt)
-		req, _ := c.NewRequest(ctx, http.MethodGet, suite.server.URL+"/foo", nil)
-		resp, err := c.Do(ctx, req, nil)
-		if err != nil {
-			suite.FailNowf("Do(): %v", err.Error())
-		}
-
-		authHeader := resp.Request.Header.Get("Authorization")
-		if authHeader != expected {
-			suite.FailNowf("Authorization header = %v, expected %v", authHeader, expected)
-		}
-	}
 }
 
 // TestNew tests if the New function returns a client with the default base URL and user agent.
@@ -171,7 +123,7 @@ func (suite *ClientTestSuite) TestNewRequest_badURL() {
 // TestNewRequest_withCustomUserAgent tests if the NewRequest function returns a request with a custom user agent.
 func (suite *ClientTestSuite) TestNewRequest_withCustomUserAgent() {
 	ua := "testing/0.0.1"
-	c, err := New(nil, SetUserAgent(ua))
+	c, err := New(nil, WithUserAgent(ua))
 
 	if err != nil {
 		suite.FailNowf("New() unexpected error: %v", err.Error())
@@ -190,7 +142,7 @@ func (suite *ClientTestSuite) TestNewRequest_withCustomHeaders() {
 	expectedIdentity := "identity"
 	expectedCustom := "x_test_header"
 
-	c, err := New(nil, SetRequestHeaders(map[string]string{
+	c, err := New(nil, WithCustomHeaders(map[string]string{
 		"Accept-Encoding": expectedIdentity,
 		"X-Test-Header":   expectedCustom,
 	}))
@@ -300,7 +252,7 @@ func (suite *ClientTestSuite) TestDo_completion_callback() {
 // TestCustomUserAgent tests if the New function returns a client with a custom user agent.
 func (suite *ClientTestSuite) TestCustomUserAgent() {
 	ua := "testing/0.0.1"
-	c, err := New(nil, SetUserAgent(ua))
+	c, err := New(nil, WithUserAgent(ua))
 
 	if err != nil {
 		suite.FailNowf("", "New() unexpected error: %v", err)
@@ -315,7 +267,7 @@ func (suite *ClientTestSuite) TestCustomUserAgent() {
 // TestCustomBaseURL tests if the New function returns a client with a custom base URL.
 func (suite *ClientTestSuite) TestCustomBaseURL() {
 	baseURL := "http://localhost/foo"
-	c, err := New(nil, SetBaseURL(baseURL))
+	c, err := New(nil, WithBaseURL(baseURL))
 
 	if err != nil {
 		suite.FailNowf("", "New() unexpected error: %v", err)
@@ -330,7 +282,7 @@ func (suite *ClientTestSuite) TestCustomBaseURL() {
 // TestCustomBaseURL_badURL tests if the New function returns a URL parse error.
 func (suite *ClientTestSuite) TestCustomBaseURL_badURL() {
 	baseURL := ":"
-	_, err := New(nil, SetBaseURL(baseURL))
+	_, err := New(nil, WithBaseURL(baseURL))
 
 	suite.testURLParseError(err)
 }

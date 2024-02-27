@@ -3,17 +3,17 @@ package megaport
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
+	"sync"
 	"time"
-
-	"golang.org/x/oauth2"
 )
 
 const (
@@ -38,17 +38,14 @@ type Client struct {
 	// User agent for client
 	UserAgent string
 
-	// Access Token for client
-	AccessToken string
-	// Token Expiration
-	TokenExpiry time.Time
+	// The access key for the API token
+	AccessKey string
 
-	// Optional function called after every successful request made to the API
-	onRequestCompleted RequestCompletionCallback
+	// The secret key for the API token
+	SecretKey string
 
 	// Services used for communicating with the Megaport API
-	// AuthenticationService provides methods for authenticating with the API
-	AuthenticationService AuthenticationService
+
 	// PortService provides methods for interacting with the Ports API
 	PortService PortService
 	// PartnerService provides methods for interacting with the Partners API
@@ -64,28 +61,29 @@ type Client struct {
 	// MVEService provides methods for interacting with the MVEs API
 	MVEService MVEService
 
+	accessToken string    // Access Token for client
+	tokenExpiry time.Time // Token Expiration
+
+	// Optional function called after every successful request made to the API
+	onRequestCompleted RequestCompletionCallback
+
 	// Optional extra HTTP headers to set on every request to the API.
 	headers map[string]string
+
+	authMux sync.Mutex
+}
+
+// AccessTokenResponse is the response structure for the Login method containing the access token and expiration time.
+type AccessTokenResponse struct {
+	AccessToken  string `json:"access_token"`
+	TokenType    string `json:"token_type"`
+	ExpiresIn    int    `json:"expires_in"`
+	RefreshToken string `json:"refresh_token,omitempty"`
+	Error        string `json:"error"`
 }
 
 // RequestCompletionCallback defines the type of the request callback function
 type RequestCompletionCallback func(*http.Request, *http.Response)
-
-// NewFromToken returns a new Megaport API client with the given API
-// token.
-func NewFromToken(token string) *Client {
-	cleanToken := strings.Trim(strings.TrimSpace(token), "'")
-	ctx := context.Background()
-	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: cleanToken})
-
-	oauthClient := oauth2.NewClient(ctx, ts)
-	client, err := New(oauthClient)
-	if err != nil {
-		panic(err)
-	}
-
-	return client
-}
 
 // NewClient returns a new Megaport API client, using the given
 // http.Client to perform all requests.
@@ -110,7 +108,6 @@ func NewClient(httpClient *http.Client, base *url.URL) *Client {
 		Logger:     logger,
 	}
 
-	c.AuthenticationService = NewAuthenticationService(c)
 	c.ProductService = NewProductService(c)
 	c.PortService = NewPortService(c)
 	c.LocationService = NewLocationService(c)
@@ -139,8 +136,8 @@ func New(httpClient *http.Client, opts ...ClientOpt) (*Client, error) {
 	return c, nil
 }
 
-// SetBaseURL is a client option for setting the base URL.
-func SetBaseURL(bu string) ClientOpt {
+// WithBaseURL is a client option for setting the base URL.
+func WithBaseURL(bu string) ClientOpt {
 	return func(c *Client) error {
 		u, err := url.Parse(bu)
 		if err != nil {
@@ -152,25 +149,25 @@ func SetBaseURL(bu string) ClientOpt {
 	}
 }
 
-// SetLogHandler is an option to pass in a custom slog handler
-func SetLogHandler(h slog.Handler) ClientOpt {
+// WithLogHandler is an option to pass in a custom slog handler
+func WithLogHandler(h slog.Handler) ClientOpt {
 	return func(c *Client) error {
 		c.Logger = slog.New(h)
 		return nil
 	}
 }
 
-// SetUserAgent is a client option for setting the user agent.
-func SetUserAgent(ua string) ClientOpt {
+// WithUserAgent is a client option for setting the user agent.
+func WithUserAgent(ua string) ClientOpt {
 	return func(c *Client) error {
 		c.UserAgent = fmt.Sprintf("%s %s", ua, c.UserAgent)
 		return nil
 	}
 }
 
-// SetRequestHeaders sets optional HTTP headers on the client that are
+// WithCustomHeaders sets optional HTTP headers on the client that are
 // sent on each HTTP request.
-func SetRequestHeaders(headers map[string]string) ClientOpt {
+func WithCustomHeaders(headers map[string]string) ClientOpt {
 	return func(c *Client) error {
 		for k, v := range headers {
 			c.headers[k] = v
@@ -179,10 +176,22 @@ func SetRequestHeaders(headers map[string]string) ClientOpt {
 	}
 }
 
+// WithCredentials sets the client's API credentials
+func WithCredentials(accessKey, secretKey string) ClientOpt {
+	return func(c *Client) error {
+		c.AccessKey = accessKey
+		c.SecretKey = secretKey
+		return nil
+	}
+}
+
 // NewRequest creates an API request. A relative URL can be provided in urlStr, which will be resolved to the
 // BaseURL of the Client. Relative URLS should always be specified without a preceding slash. If specified, the
 // value pointed to by body is JSON encoded and included in as the request body.
 func (c *Client) NewRequest(ctx context.Context, method, urlStr string, body interface{}) (*http.Request, error) {
+	c.authMux.Lock()
+	defer c.authMux.Unlock()
+
 	u, err := c.BaseURL.Parse(urlStr)
 	if err != nil {
 		return nil, err
@@ -219,8 +228,8 @@ func (c *Client) NewRequest(ctx context.Context, method, urlStr string, body int
 	req.Header.Set("Accept", mediaType)
 	req.Header.Set("User-Agent", c.UserAgent)
 
-	if c.AccessToken != "" {
-		req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	if c.accessToken != "" {
+		req.Header.Set("Authorization", "Bearer "+c.accessToken)
 	}
 
 	return req, nil
@@ -263,6 +272,97 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*htt
 	}
 
 	return resp, nil
+}
+
+type AuthInfo struct {
+	Expiration  time.Time
+	AccessToken string
+}
+
+// Authorize performs an OAuth-style login using the client's AccessKey and SecretKey and updates the client's access token on a successful response.
+func (c *Client) Authorize(ctx context.Context) (*AuthInfo, error) {
+	c.authMux.Lock()
+	defer c.authMux.Unlock()
+
+	c.Logger.DebugContext(ctx, "authorizing client using access key and secret key", slog.String("access_key", c.AccessKey))
+
+	// Shortcut if we've already authenticated.
+	if time.Now().Before(c.tokenExpiry) {
+		return &AuthInfo{Expiration: c.tokenExpiry, AccessToken: c.accessToken}, nil
+	}
+
+	if c.AccessKey == "" {
+		return nil, errors.New("client has no AccessKey configured")
+	}
+
+	if c.SecretKey == "" {
+		return nil, errors.New("client has no SecretKey configured")
+	}
+
+	// Encode the client ID and client secret to create Basic Authentication
+	authHeader := base64.StdEncoding.EncodeToString([]byte(c.AccessKey + ":" + c.SecretKey))
+
+	// Set the URL for the token endpoint
+	var tokenURL string
+
+	if c.BaseURL.Host == "api.megaport.com" {
+		tokenURL = "https://auth-m2m.megaport.com/oauth2/token"
+	} else if c.BaseURL.Host == "api-staging.megaport.com" {
+		tokenURL = "https://oauth-m2m-staging.auth.ap-southeast-2.amazoncognito.com/oauth2/token"
+	} else if c.BaseURL.Host == "api-uat.megaport.com" {
+		tokenURL = "https://oauth-m2m-uat.auth.ap-southeast-2.amazoncognito.com/oauth2/token"
+	} else if c.BaseURL.Host == "api-uat2.megaport.com" {
+		tokenURL = "https://oauth-m2m-uat2.auth.ap-southeast-2.amazoncognito.com/oauth2/token"
+	}
+
+	// Create form data for the request body
+	data := url.Values{}
+	data.Set("grant_type", "client_credentials")
+
+	// Create an HTTP request
+	clientReq, err := c.NewRequest(ctx, "POST", tokenURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	clientReq.URL.RawQuery = data.Encode()
+
+	// Set the request headers
+	clientReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	clientReq.Header.Set("Authorization", "Basic "+authHeader)
+
+	// Create an HTTP client and send the request
+	c.Logger.DebugContext(ctx, "login request", slog.String("token_url", tokenURL), slog.String("authorization_header", clientReq.Header.Get("Authorization")), slog.String("content_type", clientReq.Header.Get("Content_Type")))
+	resp, err := c.Do(ctx, clientReq, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	// Read the response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse the response JSON to extract the access token and expiration time
+	authResponse := AccessTokenResponse{}
+	if err := json.Unmarshal(body, &authResponse); err != nil {
+		return nil, err
+	}
+
+	if authResponse.Error != "" {
+		return nil, errors.New("authentication error: " + authResponse.Error)
+	}
+
+	// Store the access token and expiration in the client
+	c.tokenExpiry = time.Now().Add(time.Duration(authResponse.ExpiresIn) * time.Second)
+	c.accessToken = authResponse.AccessToken
+
+	c.Logger.DebugContext(ctx, "successful login")
+
+	return &AuthInfo{Expiration: c.tokenExpiry, AccessToken: c.accessToken}, nil
 }
 
 // DoRequest submits an HTTP request.

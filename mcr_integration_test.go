@@ -30,47 +30,17 @@ func (suite *MCRIntegrationTestSuite) SetupSuite() {
 	handler := slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: programLevel})
 	programLevel.Set(slog.LevelDebug)
 
-	var err error
-
-	megaportClient, err = New(nil, SetBaseURL(MEGAPORTURL), SetLogHandler(handler))
+	megaportClient, err := New(nil, WithBaseURL(MEGAPORTURL), WithLogHandler(handler), WithCredentials(accessKey, secretKey))
 	if err != nil {
 		suite.FailNowf("", "could not initialize megaport test client: %s", err.Error())
 	}
 
+	_, err = megaportClient.Authorize(ctx)
+	if err != nil {
+		suite.FailNowf("", "could not authorize megaport test client: %s", err.Error())
+	}
+
 	suite.client = megaportClient
-}
-
-func (suite *MCRIntegrationTestSuite) SetupTest() {
-	suite.client.Logger.Debug("logging in")
-	if accessKey == "" {
-		suite.FailNow("MEGAPORT_ACCESS_KEY environment variable not set.")
-	}
-
-	if secretKey == "" {
-		suite.FailNow("MEGAPORT_SECRET_KEY environment variable not set.")
-	}
-
-	ctx := context.Background()
-	loginResp, loginErr := suite.client.AuthenticationService.Login(ctx, &LoginRequest{
-		AccessKey: accessKey,
-		SecretKey: secretKey,
-	})
-	if loginErr != nil {
-		suite.client.Logger.Error("login error", slog.String("error", loginErr.Error()))
-		suite.FailNowf("login error", "login error %v", loginErr)
-	}
-
-	// Session Token is not empty
-	if !suite.NotEmpty(loginResp.Token) {
-		suite.FailNow("empty token")
-	}
-
-	// SessionToken is a valid guid
-	if !suite.NotNil(IsGuid(loginResp.Token)) {
-		suite.FailNowf("invalid guid for token", "invalid guid for token %v", loginResp.Token)
-	}
-
-	suite.client.AccessToken = loginResp.Token
 }
 
 // TestMCRLifecycle tests the full lifecycle of an MCR

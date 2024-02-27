@@ -91,9 +91,8 @@ func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMV
 		ProductType:   strings.ToUpper(PRODUCT_MVE),
 		DiversityZone: req.DiversityZone,
 	}
-	switch req.VendorConfig.(type) {
+	switch c := req.VendorConfig.(type) {
 	case *ArubaConfig:
-		c := req.VendorConfig.(ArubaConfig)
 		order.VendorConfig = &ArubaConfig{
 			Vendor:      c.Vendor,
 			ImageID:     c.ImageID,
@@ -102,7 +101,6 @@ func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMV
 			AccountKey:  c.AccountKey,
 		}
 	case *CiscoConfig:
-		c := req.VendorConfig.(CiscoConfig)
 		order.VendorConfig = &CiscoConfig{
 			Vendor:            c.Vendor,
 			ImageID:           c.ImageID,
@@ -111,7 +109,6 @@ func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMV
 			CloudInit:         c.CloudInit,
 		}
 	case *FortinetConfig:
-		c := req.VendorConfig.(FortinetConfig)
 		order.VendorConfig = &FortinetConfig{
 			Vendor:            c.Vendor,
 			ImageID:           c.ImageID,
@@ -120,7 +117,6 @@ func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMV
 			LicenseData:       c.LicenseData,
 		}
 	case *PaloAltoConfig:
-		c := req.VendorConfig.(PaloAltoConfig)
 		order.VendorConfig = &PaloAltoConfig{
 			Vendor:            c.Vendor,
 			ImageID:           c.ImageID,
@@ -130,7 +126,6 @@ func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMV
 			LicenseData:       c.LicenseData,
 		}
 	case *VersaConfig:
-		c := req.VendorConfig.(VersaConfig)
 		order.VendorConfig = &VersaConfig{
 			Vendor:            c.Vendor,
 			ImageID:           c.ImageID,
@@ -142,7 +137,6 @@ func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMV
 			SerialNumber:      c.SerialNumber,
 		}
 	case *VmwareConfig:
-		c := req.VendorConfig.(VmwareConfig)
 		order.VendorConfig = &VmwareConfig{
 			Vendor:            c.Vendor,
 			ImageID:           c.ImageID,

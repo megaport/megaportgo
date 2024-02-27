@@ -11,9 +11,6 @@ var runIntegrationTests = flag.Bool("integration", false, "perform integration t
 var accessKey string
 var secretKey string
 
-// megaportClient is the client for the test suite
-var megaportClient *Client
-
 // programLevel is the log level for the test suite
 var programLevel = new(slog.LevelVar)
 

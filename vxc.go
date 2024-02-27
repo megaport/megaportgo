@@ -292,7 +292,7 @@ func (svc *VXCServiceOp) LookupPartnerPorts(ctx context.Context, req *LookupPart
 	}
 
 	lookupResponse := PartnerLookupResponse{}
-	parseErr := json.Unmarshal([]byte(body), &lookupResponse)
+	parseErr := json.Unmarshal(body, &lookupResponse)
 
 	if parseErr != nil {
 		return nil, parseErr

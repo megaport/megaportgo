@@ -25,49 +25,17 @@ func (suite *LocationIntegrationTestSuite) SetupSuite() {
 	handler := slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: programLevel})
 	programLevel.Set(slog.LevelDebug)
 
-	var err error
-
-	megaportClient, err = New(nil, SetBaseURL(MEGAPORTURL), SetLogHandler(handler))
+	megaportClient, err := New(nil, WithBaseURL(MEGAPORTURL), WithLogHandler(handler), WithCredentials(accessKey, secretKey))
 	if err != nil {
 		suite.FailNowf("", "could not initialize megaport test client: %s", err.Error())
 	}
 
+	_, err = megaportClient.Authorize(ctx)
+	if err != nil {
+		suite.FailNowf("", "could not authorize megaport test client: %s", err.Error())
+	}
+
 	suite.client = megaportClient
-}
-
-func (suite *LocationIntegrationTestSuite) SetupTest() {
-	suite.client.Logger.Debug("logging in")
-	if accessKey == "" {
-		suite.client.Logger.Error("MEGAPORT_ACCESS_KEY environment variable not set.")
-		os.Exit(1)
-	}
-
-	if secretKey == "" {
-		suite.client.Logger.Error("MEGAPORT_SECRET_KEY environment variable not set.")
-		os.Exit(1)
-	}
-
-	ctx := context.Background()
-	loginResp, loginErr := suite.client.AuthenticationService.Login(ctx, &LoginRequest{
-		AccessKey: accessKey,
-		SecretKey: secretKey,
-	})
-	if loginErr != nil {
-		suite.client.Logger.Error("login error", "error", loginErr.Error())
-		suite.FailNowf("login error", "login error %v", loginErr)
-	}
-
-	// Session Token is not empty
-	if !suite.NotEmpty(loginResp.Token) {
-		suite.FailNow("empty token")
-	}
-
-	// SessionToken is a valid guid
-	if !suite.NotNil(IsGuid(loginResp.Token)) {
-		suite.FailNowf("invalid guid for token", "invalid guid for token %v", loginResp.Token)
-	}
-
-	suite.client.AccessToken = loginResp.Token
 }
 
 // TestBadID tests the GetLocationByID method with an invalid ID.
@@ -162,7 +130,7 @@ func (suite *LocationIntegrationTestSuite) TestMarketCodes() {
 }
 
 // TestFilterLocationsByMarketCode tests the FilterLocationsByMarketCode method
-func (suite *IntegrationTestSuite) TestFilterLocationsByMarketCode() {
+func (suite *LocationIntegrationTestSuite) TestFilterLocationsByMarketCode() {
 	ctx := context.Background()
 
 	locations, err := suite.client.LocationService.ListLocations(ctx)
