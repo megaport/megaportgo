@@ -234,8 +234,8 @@ func (c *Client) NewRequest(ctx context.Context, method, urlStr string, body int
 	return req, nil
 }
 
-// OnRequestCompleted sets the Megaport API request completion callback
-func (c *Client) OnRequestCompleted(rc RequestCompletionCallback) {
+// SetOnRequestCompleted sets the Megaport API request completion callback
+func (c *Client) SetOnRequestCompleted(rc RequestCompletionCallback) {
 	c.onRequestCompleted = rc
 }
 

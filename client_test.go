@@ -228,7 +228,7 @@ func (suite *ClientTestSuite) TestDo_completion_callback() {
 	body := new(foo)
 	var completedReq *http.Request
 	var completedResp string
-	suite.client.OnRequestCompleted(func(req *http.Request, resp *http.Response) {
+	suite.client.SetOnRequestCompleted(func(req *http.Request, resp *http.Response) {
 		completedReq = req
 		b, err := httputil.DumpResponse(resp, true)
 		if err != nil {
