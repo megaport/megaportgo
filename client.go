@@ -16,9 +16,16 @@ import (
 	"time"
 )
 
+type Environment string
+
+const (
+	EnvironmentStaging    Environment = "https://api-staging.megaport.com/"
+	EnvironmentProduction Environment = "https://api.megaport.com/"
+)
+
 const (
 	libraryVersion = "1.0"
-	defaultBaseURL = "https://api-staging.megaport.com/"
+	defaultBaseURL = EnvironmentStaging
 	userAgent      = "Go-Megaport-Library/" + libraryVersion
 	mediaType      = "application/json"
 	headerTraceId  = "Trace-Id"
@@ -96,7 +103,7 @@ func NewClient(httpClient *http.Client, base *url.URL) *Client {
 	if base != nil {
 		baseURL = base
 	} else {
-		baseURL, _ = url.Parse(defaultBaseURL)
+		baseURL, _ = url.Parse(string(defaultBaseURL))
 	}
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
@@ -181,6 +188,19 @@ func WithCredentials(accessKey, secretKey string) ClientOpt {
 	return func(c *Client) error {
 		c.AccessKey = accessKey
 		c.SecretKey = secretKey
+		return nil
+	}
+}
+
+// WithEnvironment is a helper for setting a BaseURL by environment
+func WithEnvironment(e Environment) ClientOpt {
+	return func(c *Client) error {
+		u, err := url.Parse(string(e))
+		if err != nil {
+			return err
+		}
+
+		c.BaseURL = u
 		return nil
 	}
 }
