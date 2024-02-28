@@ -16,9 +16,16 @@ import (
 	"time"
 )
 
+type Environment string
+
+const (
+	EnvironmentStaging    Environment = "https://api-staging.megaport.com/"
+	EnvironmentProduction Environment = "https://api.megaport.com/"
+)
+
 const (
 	libraryVersion = "1.0"
-	defaultBaseURL = "https://api-staging.megaport.com/"
+	defaultBaseURL = EnvironmentStaging
 	userAgent      = "Go-Megaport-Library/" + libraryVersion
 	mediaType      = "application/json"
 	headerTraceId  = "Trace-Id"
@@ -96,7 +103,7 @@ func NewClient(httpClient *http.Client, base *url.URL) *Client {
 	if base != nil {
 		baseURL = base
 	} else {
-		baseURL, _ = url.Parse(defaultBaseURL)
+		baseURL, _ = url.Parse(string(defaultBaseURL))
 	}
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
@@ -185,6 +192,19 @@ func WithCredentials(accessKey, secretKey string) ClientOpt {
 	}
 }
 
+// WithEnvironment is a helper for setting a BaseURL by environment
+func WithEnvironment(e Environment) ClientOpt {
+	return func(c *Client) error {
+		u, err := url.Parse(string(e))
+		if err != nil {
+			return err
+		}
+
+		c.BaseURL = u
+		return nil
+	}
+}
+
 // NewRequest creates an API request. A relative URL can be provided in urlStr, which will be resolved to the
 // BaseURL of the Client. Relative URLS should always be specified without a preceding slash. If specified, the
 // value pointed to by body is JSON encoded and included in as the request body.
@@ -243,6 +263,7 @@ func (c *Client) SetOnRequestCompleted(rc RequestCompletionCallback) {
 // pointed to by v, or returned as an error if an API error has occurred. If v implements the io.Writer interface,
 // the raw response will be written to v, without attempting to decode it.
 func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*http.Response, error) {
+	reqStart := time.Now()
 	resp, err := DoRequestWithClient(ctx, c.HTTPClient, req)
 	if err != nil {
 		return nil, err
@@ -250,6 +271,15 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*htt
 	if c.onRequestCompleted != nil {
 		c.onRequestCompleted(req, resp)
 	}
+	reqTime := time.Since(reqStart)
+
+	c.Logger.DebugContext(ctx, "completed API request",
+		slog.Duration("duration", reqTime),
+		slog.Int("status_code", resp.StatusCode),
+		slog.String("path", req.URL.EscapedPath()),
+		slog.String("api_host", c.BaseURL.Host),
+		slog.String("method", req.Method),
+	)
 
 	err = CheckResponse(resp)
 	if err != nil {

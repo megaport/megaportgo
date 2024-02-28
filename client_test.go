@@ -56,7 +56,7 @@ func (suite *ClientTestSuite) testURLParseError(err error) {
 
 // testClientDefaultBaseURL tests if the client's default base URL is set to the defaultBaseURL.
 func (suite *ClientTestSuite) testClientDefaultBaseURL(c *Client) {
-	if c.BaseURL == nil || c.BaseURL.String() != defaultBaseURL {
+	if c.BaseURL == nil || c.BaseURL.String() != string(defaultBaseURL) {
 		suite.FailNowf("NewClient BaseURL = %v, expected %v", c.BaseURL.String(), defaultBaseURL)
 	}
 }
@@ -94,7 +94,7 @@ func (suite *ClientTestSuite) TestNew() {
 func (suite *ClientTestSuite) TestNewRequest_get() {
 	c := NewClient(nil, nil)
 
-	inURL, outURL := "/foo", defaultBaseURL+"foo"
+	inURL, outURL := "/foo", string(defaultBaseURL)+"foo"
 	req, _ := c.NewRequest(ctx, http.MethodGet, inURL, nil)
 
 	// test relative URL was expanded
