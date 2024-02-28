@@ -260,7 +260,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSHostedConnectionBuy() {
 	locSvc := suite.client.LocationService
 	mcrSvc := suite.client.MCRService
 
-	testLocation, locErr := locSvc.GetRandom(ctx, MCR_LOCATION)
+	testLocation, locErr := GetRandomLocation(ctx, locSvc, MCR_LOCATION)
 	if locErr != nil {
 		suite.FailNowf("cannot find location", "cannot find location %v", locErr)
 	}

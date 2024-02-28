@@ -29,8 +29,6 @@ type LocationService interface {
 	FilterLocationsByMarketCode(ctx context.Context, marketCode string, locations []*Location) ([]*Location, error)
 	// FilterLocationsByMcrAvailability filters locations by MCR availability in the Megaport Locations API.
 	FilterLocationsByMcrAvailability(ctx context.Context, mcrAvailable bool, locations []*Location) []*Location
-	// GetRandom returns a random location in the Megaport Locations API with MCR Availability. Used for integration testing.
-	GetRandom(ctx context.Context, marketCode string) (*Location, error)
 }
 
 // LocationServiceOp handles communication with Location methods of the Megaport API.
@@ -300,19 +298,4 @@ func (svc *LocationServiceOp) FilterLocationsByMcrAvailability(ctx context.Conte
 		}
 	}
 	return toReturn
-}
-
-// GetRandom returns a random location in the Megaport Locations API with MCR Availability. Used for integration testing.
-func (svc *LocationServiceOp) GetRandom(ctx context.Context, marketCode string) (*Location, error) {
-	testLocations, err := svc.ListLocations(ctx)
-	if err != nil {
-		return nil, err
-	}
-	filtered, err := svc.FilterLocationsByMarketCode(ctx, marketCode, testLocations)
-	if err != nil {
-		return nil, err
-	}
-	filteredByMCR := svc.FilterLocationsByMcrAvailability(ctx, true, filtered)
-	testLocation := filteredByMCR[GenerateRandomNumber(0, len(filteredByMCR)-1)]
-	return testLocation, nil
 }

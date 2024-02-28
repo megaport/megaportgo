@@ -34,13 +34,6 @@ var (
 	SERVICE_STATE_READY = []string{SERVICE_CONFIGURED, SERVICE_LIVE}
 )
 
-// GenericResponse is a generic response structure for API responses.
-type GenericResponse struct {
-	Message string                 `json:"message"`
-	Terms   string                 `json:"terms"`
-	Data    map[string]interface{} `json:"data"`
-}
-
 const APPLICATION_SHORT_NAME = "mpt"
 const MODIFY_NAME string = "NAME"
 const MODIFY_COST_CENTRE = "COST_CENTRE"
@@ -61,6 +54,6 @@ func (t *Time) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	t.Time = GetTime(timestamp) // Divide by 1000 to convert from milliseconds to seconds
+	t.Time = time.Unix(timestamp/1000, 0) // Divide by 1000 to convert from milliseconds to seconds
 	return nil
 }

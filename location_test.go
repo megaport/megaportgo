@@ -1174,7 +1174,7 @@ func (suite *LocationClientTestSuite) TestGetRandom() {
 		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob2)
 	})
-	got, err := locSvc.GetRandom(ctx, "US")
+	got, err := GetRandomLocation(ctx, locSvc, "US")
 	suite.NoError(err)
 	suite.Contains(want, got)
 }

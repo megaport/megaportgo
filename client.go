@@ -189,9 +189,6 @@ func WithCredentials(accessKey, secretKey string) ClientOpt {
 // BaseURL of the Client. Relative URLS should always be specified without a preceding slash. If specified, the
 // value pointed to by body is JSON encoded and included in as the request body.
 func (c *Client) NewRequest(ctx context.Context, method, urlStr string, body interface{}) (*http.Request, error) {
-	c.authMux.Lock()
-	defer c.authMux.Unlock()
-
 	u, err := c.BaseURL.Parse(urlStr)
 	if err != nil {
 		return nil, err
@@ -228,9 +225,11 @@ func (c *Client) NewRequest(ctx context.Context, method, urlStr string, body int
 	req.Header.Set("Accept", mediaType)
 	req.Header.Set("User-Agent", c.UserAgent)
 
+	c.authMux.Lock()
 	if c.accessToken != "" {
 		req.Header.Set("Authorization", "Bearer "+c.accessToken)
 	}
+	c.authMux.Unlock()
 
 	return req, nil
 }
@@ -281,9 +280,6 @@ type AuthInfo struct {
 
 // Authorize performs an OAuth-style login using the client's AccessKey and SecretKey and updates the client's access token on a successful response.
 func (c *Client) Authorize(ctx context.Context) (*AuthInfo, error) {
-	c.authMux.Lock()
-	defer c.authMux.Unlock()
-
 	c.Logger.DebugContext(ctx, "authorizing client using access key and secret key", slog.String("access_key", c.AccessKey))
 
 	// Shortcut if we've already authenticated.
@@ -356,9 +352,11 @@ func (c *Client) Authorize(ctx context.Context) (*AuthInfo, error) {
 		return nil, errors.New("authentication error: " + authResponse.Error)
 	}
 
+	c.authMux.Lock()
 	// Store the access token and expiration in the client
 	c.tokenExpiry = time.Now().Add(time.Duration(authResponse.ExpiresIn) * time.Second)
 	c.accessToken = authResponse.AccessToken
+	c.authMux.Unlock()
 
 	c.Logger.DebugContext(ctx, "successful login")
 

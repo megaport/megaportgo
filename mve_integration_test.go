@@ -58,7 +58,7 @@ func (suite *MVEIntegrationTestSuite) TestC8KVAutoLifecycle() {
 	logger := suite.client.Logger
 
 	logger.DebugContext(ctx, "Buying MVE")
-	testLocation, err := locSvc.GetRandom(ctx, TEST_MVE_TEST_LOCATION_MARKET)
+	testLocation, err := GetRandomLocation(ctx, locSvc, TEST_MVE_TEST_LOCATION_MARKET)
 	if err != nil {
 		suite.FailNowf("could not get location", "could not get location %v", err)
 	}

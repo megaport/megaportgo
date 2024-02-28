@@ -49,7 +49,7 @@ func (suite *MCRIntegrationTestSuite) TestMCRLifecycle() {
 	logger := suite.client.Logger
 	logger.DebugContext(ctx, "Buying MCR Port.")
 	mcrSvc := suite.client.MCRService
-	testLocation, locErr := suite.client.LocationService.GetRandom(ctx, TEST_MCR_TEST_LOCATION_MARKET)
+	testLocation, locErr := GetRandomLocation(ctx, suite.client.LocationService, TEST_MCR_TEST_LOCATION_MARKET)
 	if locErr != nil {
 		suite.FailNowf("could not get random location", "could not get random location %v", locErr)
 	}
@@ -182,7 +182,7 @@ func (suite *MCRIntegrationTestSuite) TestCreatePrefixFilterList() {
 	logger := suite.client.Logger
 
 	logger.Info("Buying MCR Port.")
-	testLocation, locErr := locSvc.GetRandom(ctx, TEST_MCR_TEST_LOCATION_MARKET)
+	testLocation, locErr := GetRandomLocation(ctx, locSvc, TEST_MCR_TEST_LOCATION_MARKET)
 	if locErr != nil {
 		suite.FailNowf("could not get location", "could not get location %v", locErr)
 	}
