@@ -20,7 +20,7 @@ To run integration tests against the Megaport API you will need to [generate an 
 export MEGAPORT_ACCESS_KEY=YOUR_KEY
 export MEGAPORT_SECRET_KEY=YOUR_KEY
 
-go test -integration ./... 
+go test -timeout 20m -integration ./... 
 ```
 
 ## Contributing
