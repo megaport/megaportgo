@@ -13,6 +13,7 @@ import (
 type PartnerIntegrationTestSuite IntegrationTestSuite
 
 func TestPartnerIntegrationTestSuite(t *testing.T) {
+	t.Parallel()
 	if *runIntegrationTests {
 		suite.Run(t, new(PartnerIntegrationTestSuite))
 	}

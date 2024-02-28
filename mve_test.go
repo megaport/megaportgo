@@ -19,6 +19,7 @@ type MVEClientTestSuite struct {
 }
 
 func TestMVEClientTestSuite(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(MVEClientTestSuite))
 }
 

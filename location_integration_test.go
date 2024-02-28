@@ -13,6 +13,7 @@ import (
 type LocationIntegrationTestSuite IntegrationTestSuite
 
 func TestLocationIntegrationTestSuite(t *testing.T) {
+	t.Parallel()
 	if *runIntegrationTests {
 		suite.Run(t, new(LocationIntegrationTestSuite))
 	}

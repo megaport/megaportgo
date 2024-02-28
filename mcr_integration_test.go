@@ -18,6 +18,7 @@ const (
 type MCRIntegrationTestSuite IntegrationTestSuite
 
 func TestMCRIntegrationTestSuite(t *testing.T) {
+	t.Parallel()
 	if *runIntegrationTests {
 		suite.Run(t, new(MCRIntegrationTestSuite))
 	}

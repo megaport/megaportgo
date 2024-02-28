@@ -18,6 +18,7 @@ type ProductClientTestSuite struct {
 }
 
 func TestProductClientTestSuite(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(ProductClientTestSuite))
 }
 

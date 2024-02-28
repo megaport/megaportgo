@@ -30,6 +30,7 @@ type PartnerClientTestSuite struct {
 }
 
 func TestPartnerClientTestSuite(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(PartnerClientTestSuite))
 }
 

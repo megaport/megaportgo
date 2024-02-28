@@ -19,6 +19,7 @@ const (
 type PortIntegrationTestSuite IntegrationTestSuite
 
 func TestPortIntegrationTestSuite(t *testing.T) {
+	t.Parallel()
 	if *runIntegrationTests {
 		suite.Run(t, new(PortIntegrationTestSuite))
 	}

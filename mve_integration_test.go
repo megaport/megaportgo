@@ -16,6 +16,7 @@ const (
 type MVEIntegrationTestSuite IntegrationTestSuite
 
 func TestMVEIntegrationTestSuite(t *testing.T) {
+	t.Parallel()
 	// if *runIntegrationTests {
 	// 	suite.Run(t, new(MVEIntegrationTestSuite))
 	// }

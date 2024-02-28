@@ -17,7 +17,8 @@ type IntegrationTestSuite struct {
 
 type ClientIntegrationTestSuite IntegrationTestSuite
 
-func TestAuthIntegrationTestSuite(t *testing.T) {
+func TestClientIntegrationTestSuite(t *testing.T) {
+	t.Parallel()
 	if *runIntegrationTests {
 		suite.Run(t, new(ClientIntegrationTestSuite))
 	}

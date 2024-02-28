@@ -18,6 +18,7 @@ type PortClientTestSuite struct {
 }
 
 func TestPortClientTestSuite(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(PortClientTestSuite))
 }
 

@@ -17,6 +17,7 @@ type LocationClientTestSuite struct {
 }
 
 func TestLocationClientTestSuite(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(LocationClientTestSuite))
 }
 

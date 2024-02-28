@@ -287,7 +287,7 @@ func (svc *VXCServiceOp) LookupPartnerPorts(ctx context.Context, req *LookupPart
 	defer response.Body.Close()
 
 	body, fileErr := io.ReadAll(response.Body)
-	if err != nil {
+	if fileErr != nil {
 		return nil, fileErr
 	}
 

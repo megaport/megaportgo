@@ -21,6 +21,7 @@ const (
 type VXCIntegrationTestSuite IntegrationTestSuite
 
 func TestVXCIntegrationTestSuite(t *testing.T) {
+	t.Parallel()
 	if *runIntegrationTests {
 		suite.Run(t, new(VXCIntegrationTestSuite))
 	}
