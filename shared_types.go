@@ -34,14 +34,6 @@ var (
 	SERVICE_STATE_READY = []string{SERVICE_CONFIGURED, SERVICE_LIVE}
 )
 
-const APPLICATION_SHORT_NAME = "mpt"
-const MODIFY_NAME string = "NAME"
-const MODIFY_COST_CENTRE = "COST_CENTRE"
-const MODIFY_MARKETPLACE_VISIBILITY string = "MARKETPLACE_VISIBILITY"
-const MODIFY_RATE_LIMIT = "RATE_LIMIT"
-const MODIFY_A_END_VLAN = "A_VLAN"
-const MODIFY_B_END_VLAN = "B_VLAN"
-
 // Time is a custom time type that allows for unmarshalling of Unix timestamps.
 type Time struct {
 	time.Time
