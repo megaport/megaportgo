@@ -243,6 +243,7 @@ func (c *Client) SetOnRequestCompleted(rc RequestCompletionCallback) {
 // pointed to by v, or returned as an error if an API error has occurred. If v implements the io.Writer interface,
 // the raw response will be written to v, without attempting to decode it.
 func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*http.Response, error) {
+	reqStart := time.Now()
 	resp, err := DoRequestWithClient(ctx, c.HTTPClient, req)
 	if err != nil {
 		return nil, err
@@ -250,6 +251,15 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*htt
 	if c.onRequestCompleted != nil {
 		c.onRequestCompleted(req, resp)
 	}
+	reqTime := time.Since(reqStart)
+
+	c.Logger.DebugContext(ctx, "completed API request",
+		slog.Duration("duration", reqTime),
+		slog.Int("status_code", resp.StatusCode),
+		slog.String("path", req.URL.EscapedPath()),
+		slog.String("api_host", c.BaseURL.Host),
+		slog.String("method", req.Method),
+	)
 
 	err = CheckResponse(resp)
 	if err != nil {
