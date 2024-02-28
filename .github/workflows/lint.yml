@@ -2,8 +2,12 @@ name: golangci-lint
 on:
   push:
     branches:
-      - main
-  pull_request:
+      - 'main'
+  pull_request_target:
+    branches:
+      - 'main'
+  workflow_dispatch:
+
 
 permissions:
   contents: read
