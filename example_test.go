@@ -24,7 +24,7 @@ func Example() {
 		// ...
 	}
 	fmt.Println(authInfo.AccessToken)
-	fmt.Println(authInfo.Expiration) // You can use the expriation here to reauthorize the client when your access token expires
+	fmt.Println(authInfo.Expiration) // You can use the expiration here to reauthorize the client when your access token expires
 
 	// After you have authorized you can interact with the API
 	locations, err := client.LocationService.ListLocations(context.TODO())
