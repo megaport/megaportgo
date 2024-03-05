@@ -1,3 +1,16 @@
+# 1.0.0 Release
+
+## New Features
+- All API methods now take `context`
+- More configurable 
+    - Custom HTTP client support
+    - Structured logging is configurable and is handled using the `slog` package
+- Documentation is improved
+- Errors are easier to work with and are defined at the package level
+- All APIs are now available in the `megaport` package rather than multiple packages in the `service` directory
+- General code cleanup and linting rule enforcement 
+- Missing types have been implemented
+
 # 0.2.0 Release
 
 ## New Features

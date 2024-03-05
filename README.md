@@ -106,10 +106,11 @@ Megaport is under no obligation to accept any pull requests or to accept them in
 The new V1 release of the `megaportgo` project has several changes users should be aware of:
 
 - All API methods now take `context`
-- Much more configurable 
+- More configurable 
     - Custom HTTP client support
-    - Structured logging is much more configurable and is handled using the `slog` package
+    - Structured logging is configurable and is handled using the `slog` package
 - Documentation is improved
 - Errors are easier to work with and are defined at the package level
 - All APIs are now available in the `megaport` package rather than multiple packages in the `service` directory
-- General code cleanup
+- General code cleanup and linting rule enforcement 
+- Missing types have been implemented
