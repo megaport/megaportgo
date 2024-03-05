@@ -139,7 +139,7 @@ func (suite *PortIntegrationTestSuite) TestLAGPort() {
 	}
 
 	if !foundNewPort {
-		suite.client.Logger.Debug("Failed to find port we just created in ports list", slog.String("port_id", mainPortId))
+		suite.client.Logger.DebugContext(ctx, "Failed to find port we just created in ports list", slog.String("port_id", mainPortId))
 		suite.FailNowf("Failed to find port we just created in ports list", "Failed to find port we just created in ports list %v", mainPortId)
 	}
 
@@ -152,7 +152,7 @@ func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Con
 	var portErr error
 	var orderRes *BuyPortResponse
 
-	suite.client.Logger.Debug("Buying Port", slog.String("port_type", portType))
+	suite.client.Logger.DebugContext(ctx, "Buying Port", slog.String("port_type", portType))
 	if portType == LAG_PORT {
 		orderRes, portErr = c.PortService.BuyLAGPort(ctx, &BuyLAGPortRequest{
 			Name:             "Buy Port (LAG) Test",
@@ -193,7 +193,7 @@ func (suite *PortIntegrationTestSuite) testModifyPort(c *Client, ctx context.Con
 
 	newPortName := fmt.Sprintf("Buy Port (%s) [Modified]", portType)
 
-	suite.client.Logger.Debug("Modifying Port", slog.String("port_id", portId), slog.String("port_type", portType))
+	suite.client.Logger.DebugContext(ctx, "Modifying Port", slog.String("port_id", portId), slog.String("port_type", portType))
 	_, modifyErr := c.PortService.ModifyPort(ctx, &ModifyPortRequest{
 		PortID:                portId,
 		Name:                  newPortName,
@@ -217,7 +217,7 @@ func (suite *PortIntegrationTestSuite) testModifyPort(c *Client, ctx context.Con
 // and Soft/Hard Deletes.
 func (suite *PortIntegrationTestSuite) testCancelPort(c *Client, ctx context.Context, portId string, portType string) {
 	// Soft Delete
-	suite.client.Logger.Debug("Scheduling Port for deletion (30 days).", slog.String("port_id", portId), slog.String("port_type", portType))
+	suite.client.Logger.DebugContext(ctx, "Scheduling Port for deletion (30 days).", slog.String("port_id", portId), slog.String("port_type", portType))
 	resp, deleteErr := c.PortService.DeletePort(ctx, &DeletePortRequest{
 		PortID:    portId,
 		DeleteNow: false,
@@ -233,7 +233,7 @@ func (suite *PortIntegrationTestSuite) testCancelPort(c *Client, ctx context.Con
 	}
 	suite.EqualValues(STATUS_CANCELLED, portInfo.ProvisioningStatus)
 
-	suite.client.Logger.Debug("port scheduled for cancellation", slog.String("status", portInfo.ProvisioningStatus), slog.String("port_id", portId))
+	suite.client.Logger.DebugContext(ctx, "port scheduled for cancellation", slog.String("status", portInfo.ProvisioningStatus), slog.String("port_id", portId))
 	restoreResp, restoreErr := c.PortService.RestorePort(ctx, portId)
 	if restoreErr != nil {
 		suite.FailNowf("could not restore port", "could not restore port %v", restoreErr)
@@ -245,7 +245,7 @@ func (suite *PortIntegrationTestSuite) testCancelPort(c *Client, ctx context.Con
 // testDeletePort tests the deletion of a port, both hard and soft.
 func (suite *PortIntegrationTestSuite) testDeletePort(c *Client, ctx context.Context, portId string, portType string) {
 	// Hard Delete
-	suite.client.Logger.Debug("Deleting Port now.", slog.String("port_type", portType), slog.String("port_id", portId))
+	suite.client.Logger.DebugContext(ctx, "Deleting Port now.", slog.String("port_type", portType), slog.String("port_id", portId))
 	hardDeleteResp, deleteErr := c.PortService.DeletePort(ctx, &DeletePortRequest{
 		PortID:    portId,
 		DeleteNow: true,
@@ -260,12 +260,12 @@ func (suite *PortIntegrationTestSuite) testDeletePort(c *Client, ctx context.Con
 		suite.FailNowf("could not find port", "could not find port %v", err)
 	}
 	suite.EqualValues(STATUS_DECOMMISSIONED, portInfo.ProvisioningStatus)
-	suite.client.Logger.Debug("port deleted", slog.String("status", portInfo.ProvisioningStatus), slog.String("port_id", portId))
+	suite.client.Logger.DebugContext(ctx, "port deleted", slog.String("status", portInfo.ProvisioningStatus), slog.String("port_id", portId))
 }
 
 // testLockPort tests the locking and unlocking of a port.
 func (suite *PortIntegrationTestSuite) testLockPort(c *Client, ctx context.Context, portId string) {
-	suite.client.Logger.Debug("Locking Port now.", slog.String("port_id", portId))
+	suite.client.Logger.DebugContext(ctx, "Locking Port now.", slog.String("port_id", portId))
 	lockResp, lockErr := c.PortService.LockPort(ctx, portId)
 	if lockErr != nil {
 		suite.FailNowf("could not lock port", "could not lock port %v", lockErr)
@@ -278,19 +278,19 @@ func (suite *PortIntegrationTestSuite) testLockPort(c *Client, ctx context.Conte
 	}
 	suite.EqualValues(true, portInfo.Locked)
 
-	suite.client.Logger.Debug("Test lock of an already locked port.", slog.String("port_id", portId))
+	suite.client.Logger.DebugContext(ctx, "Test lock of an already locked port.", slog.String("port_id", portId))
 	lockRes, lockErr := c.PortService.LockPort(ctx, portId)
 	suite.Nil(lockRes)
 	suite.Error(ErrPortAlreadyLocked, lockErr)
 
-	suite.client.Logger.Debug("Unlocking Port now.", slog.String("port_id", portId))
+	suite.client.Logger.DebugContext(ctx, "Unlocking Port now.", slog.String("port_id", portId))
 	unlockResp, unlockErr := c.PortService.UnlockPort(ctx, portId)
 	if unlockErr != nil {
 		suite.FailNowf("could not unlock port", "could not unlock port %v", unlockErr)
 	}
 	suite.True(unlockResp.IsUnlocking)
 
-	suite.client.Logger.Debug("Test unlocking of a port that doesn't have a lock.", slog.String("port_id", portId))
+	suite.client.Logger.DebugContext(ctx, "Test unlocking of a port that doesn't have a lock.", slog.String("port_id", portId))
 	unlockResp, unlockErr = c.PortService.UnlockPort(ctx, portId)
 	suite.Nil(unlockResp)
 	suite.Error(ErrPortNotLocked, unlockErr)

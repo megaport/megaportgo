@@ -132,7 +132,7 @@ func (suite *MCRIntegrationTestSuite) TestMCRLifecycle() {
 	suite.True(restoreRes.IsRestored)
 
 	// Testing MCR Delete
-	logger.Info("Deleting MCR now.")
+	logger.InfoContext(ctx, "Deleting MCR now.")
 
 	// This is a Hard Delete
 	hardDeleteRes, deleteErr := mcrSvc.DeleteMCR(ctx, &DeleteMCRRequest{
@@ -182,7 +182,7 @@ func (suite *MCRIntegrationTestSuite) TestCreatePrefixFilterList() {
 	mcrSvc := suite.client.MCRService
 	logger := suite.client.Logger
 
-	logger.Info("Buying MCR Port.")
+	logger.InfoContext(ctx, "Buying MCR Port.")
 	testLocation, locErr := GetRandomLocation(ctx, locSvc, TEST_MCR_TEST_LOCATION_MARKET)
 	if locErr != nil {
 		suite.FailNowf("could not get location", "could not get location %v", locErr)

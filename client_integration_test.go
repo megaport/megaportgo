@@ -49,7 +49,7 @@ func (suite *ClientIntegrationTestSuite) TestLogin() {
 	ctx := context.Background()
 	resp, err := suite.client.Authorize(ctx)
 	if err != nil {
-		suite.client.Logger.Error("login error", "error", err.Error())
+		suite.client.Logger.ErrorContext(ctx, "login error", slog.String("error", err.Error()))
 	}
 	suite.NoError(err)
 

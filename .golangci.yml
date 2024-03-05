@@ -24,3 +24,15 @@ linters:
     - unused
     - vet
     - sloglint
+linters-settings:
+  sloglint:
+    # Enforce using attributes only (overrides no-mixed-args, incompatible with kv-only).
+    # Default: false
+    attr-only: true
+    # Enforce using methods that accept a context.
+    # Default: false
+    context-only: true
+    # Enforce a single key naming convention.
+    # Values: snake, kebab, camel, pascal
+    # Default: ""
+    key-naming-case: snake
