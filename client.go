@@ -279,6 +279,7 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*htt
 		slog.String("path", req.URL.EscapedPath()),
 		slog.String("api_host", c.BaseURL.Host),
 		slog.String("method", req.Method),
+		slog.String("trace_id", resp.Header.Get(headerTraceId)),
 	)
 
 	err = CheckResponse(resp)
