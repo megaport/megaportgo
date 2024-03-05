@@ -251,6 +251,7 @@ func (suite *PortClientTestSuite) TestListPorts() {
 
 	startDate := &Time{GetTime(1706104800000)}
 	endDate := &Time{GetTime(1737727200000)}
+	liveDate := &Time{GetTime(1737728200000)}
 
 	want1 := &Port{
 		ID:                    999999,
@@ -278,6 +279,7 @@ func (suite *PortClientTestSuite) TestListPorts() {
 		Locked:                false,
 		AdminLocked:           false,
 		Cancelable:            true,
+		LiveDate:              liveDate,
 	}
 	want2 := &Port{
 		ID:                    999998,
@@ -305,6 +307,7 @@ func (suite *PortClientTestSuite) TestListPorts() {
 		Locked:                false,
 		AdminLocked:           false,
 		Cancelable:            true,
+		LiveDate:              liveDate,
 	}
 	want3 := &Port{
 		ID:                    999997,
@@ -332,13 +335,14 @@ func (suite *PortClientTestSuite) TestListPorts() {
 		Locked:                false,
 		AdminLocked:           false,
 		Cancelable:            true,
+		LiveDate:              liveDate,
 	}
 	wantPorts := []*Port{want1, want2, want3}
 	jblob := `{
 			"message": "test-message",
 			"terms": "test-terms",
 			"data": [{
-			"productId":999999,"productUid":"36b3f68e-2f54-4331-bf94-f8984449365f","productName":"test-port","productType":"megaport","provisioningStatus":"CONFIGURED","createDate":1706104800000,"createdBy":"","portSpeed":10000,"terminateDate":1737727200000,"liveDate":0,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":false,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0}}}, {"productId":999998,"productUid":"9b1c46c7-1e8d-4035-bf38-1bc60d346d57","productName":"test-port2","productType":"megaport","provisioningStatus":"CONFIGURED","createDate":1706104800000,"createdBy":"","portSpeed":10000,"terminateDate":1737727200000,"liveDate":0,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name2","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":false,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0}}}, {"productId":999997,"productUid":"91ededc2-473f-4a30-ad24-0703c7f35e50","productName":"test-port3","productType":"megaport","provisioningStatus":"CONFIGURED","createDate":1706104800000,"createdBy":"","portSpeed":10000,"terminateDate":1737727200000,"liveDate":0,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name3","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":false,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0}}}]
+			"productId":999999,"productUid":"36b3f68e-2f54-4331-bf94-f8984449365f","productName":"test-port","productType":"megaport","provisioningStatus":"CONFIGURED","createDate":1706104800000,"createdBy":"","portSpeed":10000,"terminateDate":1737727200000,"liveDate":1737728200000,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":false,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0}}}, {"productId":999998,"productUid":"9b1c46c7-1e8d-4035-bf38-1bc60d346d57","productName":"test-port2","productType":"megaport","provisioningStatus":"CONFIGURED","createDate":1706104800000,"createdBy":"","portSpeed":10000,"terminateDate":1737727200000,"liveDate":1737728200000,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name2","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":false,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0}}}, {"productId":999997,"productUid":"91ededc2-473f-4a30-ad24-0703c7f35e50","productName":"test-port3","productType":"megaport","provisioningStatus":"CONFIGURED","createDate":1706104800000,"createdBy":"","portSpeed":10000,"terminateDate":1737727200000,"liveDate":1737728200000,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name3","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":false,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0}}}]
 	}`
 	suite.mux.HandleFunc("/v2/products", func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
@@ -360,6 +364,7 @@ func (suite *PortClientTestSuite) TestGetPort() {
 
 	startDate := &Time{GetTime(1706104800000)}
 	endDate := &Time{GetTime(1737727200000)}
+	liveDate := &Time{GetTime(1737728200000)}
 
 	want := &Port{
 		ID:                    999999,
@@ -387,13 +392,14 @@ func (suite *PortClientTestSuite) TestGetPort() {
 		Locked:                false,
 		AdminLocked:           false,
 		Cancelable:            true,
+		LiveDate:              liveDate,
 	}
 
 	jblob := `{
 			"message": "Found Product 36b3f68e-2f54-4331-bf94-f8984449365f",
 			"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
 			"data": {
-			"productId":999999,"productUid":"36b3f68e-2f54-4331-bf94-f8984449365f","productName":"test-port","productType":"megaport","provisioningStatus":"CONFIGURED","createDate":1706104800000,"createdBy":"","portSpeed":10000,"terminateDate":1737727200000,"liveDate":0,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":false,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0}}
+			"productId":999999,"productUid":"36b3f68e-2f54-4331-bf94-f8984449365f","productName":"test-port","productType":"megaport","provisioningStatus":"CONFIGURED","createDate":1706104800000,"createdBy":"","portSpeed":10000,"terminateDate":1737727200000,"liveDate":1737728200000,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":false,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0}}
 			}
 			}`
 	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/%s", productUid), func(w http.ResponseWriter, r *http.Request) {

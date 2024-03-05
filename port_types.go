@@ -31,7 +31,7 @@ type Port struct {
 	CreatedBy             string            `json:"createdBy"`
 	PortSpeed             int               `json:"portSpeed"`
 	TerminateDate         *Time             `json:"terminateDate"`
-	LiveDate              int               `json:"liveDate"`
+	LiveDate              *Time             `json:"liveDate"`
 	Market                string            `json:"market"`
 	LocationID            int               `json:"locationId"`
 	UsageAlgorithm        string            `json:"usageAlgorithm"`
