@@ -268,7 +268,7 @@ func (svc *MVEServiceOp) ModifyMVE(ctx context.Context, req *ModifyMVERequest) (
 				if err != nil {
 					return nil, err
 				}
-				if mveDetails.Name == req.Name && mveDetails.ProvisioningStatus == "LIVE" {
+				if mveDetails.ProvisioningStatus == "LIVE" {
 					return toReturn, nil
 				}
 			}

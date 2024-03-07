@@ -306,7 +306,7 @@ func (svc *MCRServiceOp) ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (
 				if err != nil {
 					return nil, err
 				}
-				if mcrDetails.Name == req.Name && mcrDetails.CostCentre == req.CostCentre && mcrDetails.MarketplaceVisibility == req.MarketplaceVisibility && mcrDetails.ProvisioningStatus == "LIVE" {
+				if mcrDetails.ProvisioningStatus == "LIVE" {
 					return toReturn, nil
 				}
 			}

@@ -403,7 +403,7 @@ func (svc *PortServiceOp) ModifyPort(ctx context.Context, req *ModifyPortRequest
 				if err != nil {
 					return nil, err
 				}
-				if portDetails.Name == req.Name && portDetails.CostCentre == req.CostCentre && portDetails.MarketplaceVisibility == req.MarketplaceVisibility && portDetails.ProvisioningStatus == "LIVE" {
+				if portDetails.ProvisioningStatus == "LIVE" {
 					return toReturn, nil
 				}
 			}
