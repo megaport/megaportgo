@@ -63,7 +63,7 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 
 	logger.InfoContext(ctx, "buying port a end")
 
-	aEndPortRes, portErr := portSvc.BuySinglePort(ctx, &BuySinglePortRequest{
+	aEndPortRes, portErr := portSvc.BuyPort(ctx, &BuyPortRequest{
 		Name:             "VXC Port A",
 		LocationId:       testLocation.ID,
 		PortSpeed:        1000,
@@ -77,12 +77,12 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 		suite.FailNowf("cannot buy port", "cannot buy port %v", portErr)
 	}
 
-	aEndUid := aEndPortRes.TechnicalServiceUID
+	aEndUid := aEndPortRes.TechnicalServiceUIDs[0]
 
 	suite.True(IsGuid(aEndUid), "invalid guid for a end uid")
 
 	logger.InfoContext(ctx, "buying port b end")
-	bEndPortRes, portErr := portSvc.BuySinglePort(ctx, &BuySinglePortRequest{
+	bEndPortRes, portErr := portSvc.BuyPort(ctx, &BuyPortRequest{
 		Name:             "VXC Port B",
 		LocationId:       testLocation.ID,
 		PortSpeed:        1000,
@@ -95,7 +95,7 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 	if portErr != nil {
 		suite.FailNowf("cannot buy port", "cannot buy port %v", portErr)
 	}
-	bEndUid := bEndPortRes.TechnicalServiceUID
+	bEndUid := bEndPortRes.TechnicalServiceUIDs[0]
 	suite.True(IsGuid(bEndUid), "invalid guid for b end uid")
 
 	logger.InfoContext(ctx, "buying vxc")
@@ -189,7 +189,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSVIFConnectionBuy() {
 
 	logger.InfoContext(ctx, "buying port a end")
 
-	portRes, portErr := portSvc.BuySinglePort(ctx, &BuySinglePortRequest{
+	portRes, portErr := portSvc.BuyPort(ctx, &BuyPortRequest{
 		Name:             "AWS VIF Test Port",
 		Term:             1,
 		LocationId:       testLocation.ID,
@@ -202,7 +202,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSVIFConnectionBuy() {
 	if portErr != nil {
 		suite.FailNowf("cannot buy port", "cannot buy port %v", portErr)
 	}
-	portUid := portRes.TechnicalServiceUID
+	portUid := portRes.TechnicalServiceUIDs[0]
 	suite.True(IsGuid(portUid), "invalid guid for port uid")
 
 	logger.InfoContext(ctx, "buying aws vif connection (b-end)")
@@ -369,7 +369,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSConnectionBuyDefaults() {
 
 	logger.InfoContext(ctx, "buying port a end")
 
-	portRes, portErr := portSvc.BuySinglePort(ctx, &BuySinglePortRequest{
+	portRes, portErr := portSvc.BuyPort(ctx, &BuyPortRequest{
 		Name:             "AWS VIF Test Port",
 		Term:             1,
 		LocationId:       testLocation.ID,
@@ -382,7 +382,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSConnectionBuyDefaults() {
 	if portErr != nil {
 		suite.FailNowf("cannot buy port", "cannot buy port %v", portErr)
 	}
-	portUid := portRes.TechnicalServiceUID
+	portUid := portRes.TechnicalServiceUIDs[0]
 	suite.True(IsGuid(portUid), "invalid guid for port uid")
 	logger.InfoContext(ctx, "buying aws vif connection (b-end)")
 
@@ -450,7 +450,7 @@ func (suite *VXCIntegrationTestSuite) TestBuyAzureExpressRoute() {
 
 	logger.InfoContext(ctx, "buying azure expressroute port a end")
 
-	aEndPortRes, portErr := portSvc.BuySinglePort(ctx, &BuySinglePortRequest{
+	aEndPortRes, portErr := portSvc.BuyPort(ctx, &BuyPortRequest{
 		Name:             "Azure ExpressRoute Test Port",
 		LocationId:       testLocation.ID,
 		PortSpeed:        1000,
@@ -464,7 +464,7 @@ func (suite *VXCIntegrationTestSuite) TestBuyAzureExpressRoute() {
 		suite.FailNowf("cannot buy port", "cannot buy port %v", portErr)
 	}
 
-	aEndUid := aEndPortRes.TechnicalServiceUID
+	aEndUid := aEndPortRes.TechnicalServiceUIDs[0]
 
 	suite.True(IsGuid(aEndUid), "invalid guid for a end uid")
 
@@ -561,7 +561,7 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnect() {
 
 	logger.InfoContext(ctx, "buying google interconect port a end")
 
-	portRes, portErr := portSvc.BuySinglePort(ctx, &BuySinglePortRequest{
+	portRes, portErr := portSvc.BuyPort(ctx, &BuyPortRequest{
 		Name:             "Google Interconnect Test Port",
 		Term:             1,
 		LocationId:       testLocation.ID,
@@ -574,7 +574,7 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnect() {
 	if portErr != nil {
 		suite.FailNowf("cannot buy port", "cannot buy port %v", portErr)
 	}
-	portUid := portRes.TechnicalServiceUID
+	portUid := portRes.TechnicalServiceUIDs[0]
 	suite.True(IsGuid(portUid), "invalid guid for port uid")
 
 	pairingKey := "27325c3a-b640-4b69-a2d5-cdcca797a151/us-west2/1"
@@ -654,7 +654,7 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnectLocation() {
 
 	logger.InfoContext(ctx, "buying google interconect port a end")
 
-	portRes, portErr := portSvc.BuySinglePort(ctx, &BuySinglePortRequest{
+	portRes, portErr := portSvc.BuyPort(ctx, &BuyPortRequest{
 		Name:             "Google Interconnect Test Port",
 		Term:             1,
 		LocationId:       testLocation.ID,
@@ -667,7 +667,7 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnectLocation() {
 	if portErr != nil {
 		suite.FailNowf("cannot buy port", "cannot buy port %v", portErr)
 	}
-	portUid := portRes.TechnicalServiceUID
+	portUid := portRes.TechnicalServiceUIDs[0]
 	suite.True(IsGuid(portUid), "invalid guid for port uid")
 
 	pairingKey := "7e51371e-72a3-40b5-b844-2e3efefaee59/australia-southeast1/2"

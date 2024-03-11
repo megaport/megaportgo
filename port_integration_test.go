@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"slices"
 	"testing"
 	"time"
 
@@ -56,12 +57,12 @@ func (suite *PortIntegrationTestSuite) TestSinglePort() {
 	portsListInitial, err := suite.client.PortService.ListPorts(ctx)
 	suite.NoError(err)
 
-	createRes, portErr := suite.testCreatePort(suite.client, ctx, SINGLE_PORT, *testLocation)
+	createRes, portErr := suite.testCreatePort(suite.client, ctx, 0, *testLocation)
 	suite.NoError(portErr)
 
-	portId := createRes.TechnicalServiceUID
+	portID := createRes.TechnicalServiceUIDs[0]
 
-	if !suite.NoError(portErr) && !suite.True(IsGuid(portId)) {
+	if !suite.NoError(portErr) && !suite.True(IsGuid(portID)) {
 		suite.FailNow("")
 	}
 
@@ -70,30 +71,30 @@ func (suite *PortIntegrationTestSuite) TestSinglePort() {
 
 	portIsActuallyNew := true
 	for _, p := range portsListInitial {
-		if p.UID == portId {
+		if p.UID == portID {
 			portIsActuallyNew = false
 		}
 	}
 
 	if !portIsActuallyNew {
-		suite.FailNowf("Failed to find port we just created in ports list", "Failed to find port we just created in ports list %s", portId)
+		suite.FailNowf("Failed to find port we just created in ports list", "Failed to find port we just created in ports list %s", portID)
 	}
 
 	foundNewPort := false
 	for _, p := range portsListPostCreate {
-		if p.UID == portId {
+		if p.UID == portID {
 			foundNewPort = true
 		}
 	}
 
 	if !foundNewPort {
-		suite.FailNowf("Failed to find port we just created in ports list", "Failed to find port we just created in ports list: %v", portId)
+		suite.FailNowf("Failed to find port we just created in ports list", "Failed to find port we just created in ports list: %v", portID)
 	}
 
-	suite.testModifyPort(suite.client, ctx, portId, SINGLE_PORT)
-	suite.testLockPort(suite.client, ctx, portId)
-	suite.testCancelPort(suite.client, ctx, portId, SINGLE_PORT)
-	suite.testDeletePort(suite.client, ctx, portId, SINGLE_PORT)
+	suite.testModifyPort(suite.client, ctx, portID)
+	suite.testLockPort(suite.client, ctx, portID)
+	suite.testCancelPort(suite.client, ctx, portID)
+	suite.testDeletePort(suite.client, ctx, portID)
 
 }
 
@@ -108,12 +109,12 @@ func (suite *PortIntegrationTestSuite) TestLAGPort() {
 	portsListInitial, err := suite.client.PortService.ListPorts(ctx)
 	suite.NoError(err)
 
-	orderRes, portErr := suite.testCreatePort(suite.client, ctx, LAG_PORT, *testLocation)
+	orderRes, portErr := suite.testCreatePort(suite.client, ctx, 2, *testLocation)
 	suite.NoError(portErr)
 
-	mainPortId := orderRes.TechnicalServiceUID
+	mainPortIDs := orderRes.TechnicalServiceUIDs
 
-	if !suite.NoError(portErr) && !suite.True(IsGuid(mainPortId)) {
+	if !suite.NoError(portErr) && !suite.True(IsGuid(mainPortIDs...)) {
 		suite.FailNow("")
 	}
 
@@ -122,78 +123,61 @@ func (suite *PortIntegrationTestSuite) TestLAGPort() {
 
 	portIsActuallyNew := true
 	for _, p := range portsListInitial {
-		if p.UID == mainPortId {
+		if slices.Contains(mainPortIDs, p.UID) {
 			portIsActuallyNew = false
 		}
 	}
-
 	if !portIsActuallyNew {
-		suite.FailNowf("Failed to find port we just created in ports list", "Failed to find port we just created in ports list %v", mainPortId)
+		suite.FailNowf("Failed to find port we just created in ports list", "Failed to find port we just created in ports list %v", mainPortIDs)
 	}
 
 	foundNewPort := false
 	for _, p := range portsListPostCreate {
-		if p.UID == mainPortId {
+		if slices.Contains(mainPortIDs, p.UID) {
 			foundNewPort = true
 		}
 	}
 
 	if !foundNewPort {
-		suite.client.Logger.DebugContext(ctx, "Failed to find port we just created in ports list", slog.String("port_id", mainPortId))
-		suite.FailNowf("Failed to find port we just created in ports list", "Failed to find port we just created in ports list %v", mainPortId)
+		suite.client.Logger.DebugContext(ctx, "Failed to find port we just created in ports list", slog.String("port_ids", mainPortIDs[0]))
+		suite.FailNowf("Failed to find port we just created in ports list", "Failed to find port we just created in ports list %v", mainPortIDs)
 	}
 
-	suite.testModifyPort(suite.client, ctx, mainPortId, LAG_PORT)
-	suite.testCancelPort(suite.client, ctx, mainPortId, LAG_PORT)
-	suite.testDeletePort(suite.client, ctx, mainPortId, LAG_PORT)
+	suite.testModifyPort(suite.client, ctx, mainPortIDs[0])
+	suite.testCancelPort(suite.client, ctx, mainPortIDs[0])
+	suite.testDeletePort(suite.client, ctx, mainPortIDs[0])
 }
 
-func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Context, portType string, location Location) (*BuyPortResponse, error) {
-	var portErr error
-	var orderRes *BuyPortResponse
+func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Context, lagCount int, location Location) (*BuyPortResponse, error) {
+	suite.client.Logger.DebugContext(ctx, "Buying Port", slog.Int("lag_count", lagCount))
+	orderRes, err := c.PortService.BuyPort(ctx, &BuyPortRequest{
+		Name:             "Buy Port (LAG) Test",
+		Term:             1,
+		PortSpeed:        10000,
+		LocationId:       location.ID,
+		Market:           location.Market,
+		LagCount:         lagCount,
+		IsPrivate:        true,
+		DiversityZone:    "red",
+		WaitForProvision: true,
+		WaitForTime:      5 * time.Minute,
+	})
 
-	suite.client.Logger.DebugContext(ctx, "Buying Port", slog.String("port_type", portType))
-	if portType == LAG_PORT {
-		orderRes, portErr = c.PortService.BuyLAGPort(ctx, &BuyLAGPortRequest{
-			Name:             "Buy Port (LAG) Test",
-			Term:             1,
-			PortSpeed:        10000,
-			LocationId:       location.ID,
-			Market:           location.Market,
-			LagCount:         2,
-			IsPrivate:        true,
-			DiversityZone:    "red",
-			WaitForProvision: true,
-			WaitForTime:      5 * time.Minute,
-		})
-	} else {
-		orderRes, portErr = c.PortService.BuySinglePort(ctx, &BuySinglePortRequest{
-			Name:             "Buy Port (Single) Test",
-			Term:             1,
-			PortSpeed:        10000,
-			LocationId:       location.ID,
-			Market:           location.Market,
-			DiversityZone:    "red",
-			IsPrivate:        true,
-			WaitForProvision: true,
-			WaitForTime:      5 * time.Minute,
-		})
-	}
-	if portErr != nil {
-		return nil, portErr
+	if err != nil {
+		return nil, err
 	}
 	return orderRes, nil
 }
 
-func (suite *PortIntegrationTestSuite) testModifyPort(c *Client, ctx context.Context, portId string, portType string) {
+func (suite *PortIntegrationTestSuite) testModifyPort(c *Client, ctx context.Context, portId string) {
 	portInfo, err := c.PortService.GetPort(ctx, portId)
 	if err != nil {
 		suite.FailNowf("could not find port", "could not find port %v", err)
 	}
 
-	newPortName := fmt.Sprintf("Buy Port (%s) [Modified]", portType)
+	newPortName := fmt.Sprintf("Buy Port (%s) [Modified]", portId)
 
-	suite.client.Logger.DebugContext(ctx, "Modifying Port", slog.String("port_id", portId), slog.String("port_type", portType))
+	suite.client.Logger.DebugContext(ctx, "Modifying Port", slog.String("port_id", portId))
 	_, modifyErr := c.PortService.ModifyPort(ctx, &ModifyPortRequest{
 		PortID:                portId,
 		Name:                  newPortName,
@@ -215,9 +199,9 @@ func (suite *PortIntegrationTestSuite) testModifyPort(c *Client, ctx context.Con
 
 // PortScript tests the remaining lifecycle for a Port (not dependant on port-type), Go-Live, Modification,
 // and Soft/Hard Deletes.
-func (suite *PortIntegrationTestSuite) testCancelPort(c *Client, ctx context.Context, portId string, portType string) {
+func (suite *PortIntegrationTestSuite) testCancelPort(c *Client, ctx context.Context, portId string) {
 	// Soft Delete
-	suite.client.Logger.DebugContext(ctx, "Scheduling Port for deletion (30 days).", slog.String("port_id", portId), slog.String("port_type", portType))
+	suite.client.Logger.DebugContext(ctx, "Scheduling Port for deletion (30 days).", slog.String("port_id", portId))
 	resp, deleteErr := c.PortService.DeletePort(ctx, &DeletePortRequest{
 		PortID:    portId,
 		DeleteNow: false,
@@ -243,9 +227,9 @@ func (suite *PortIntegrationTestSuite) testCancelPort(c *Client, ctx context.Con
 }
 
 // testDeletePort tests the deletion of a port, both hard and soft.
-func (suite *PortIntegrationTestSuite) testDeletePort(c *Client, ctx context.Context, portId string, portType string) {
+func (suite *PortIntegrationTestSuite) testDeletePort(c *Client, ctx context.Context, portId string) {
 	// Hard Delete
-	suite.client.Logger.DebugContext(ctx, "Deleting Port now.", slog.String("port_type", portType), slog.String("port_id", portId))
+	suite.client.Logger.DebugContext(ctx, "Deleting Port now.", slog.String("port_id", portId))
 	hardDeleteResp, deleteErr := c.PortService.DeletePort(ctx, &DeletePortRequest{
 		PortID:    portId,
 		DeleteNow: true,

@@ -41,7 +41,7 @@ func (suite *PortClientTestSuite) TestBuyPort() {
 
 	portSvc := suite.client.PortService
 
-	want := &BuyPortResponse{TechnicalServiceUID: "36b3f68e-2f54-4331-bf94-f8984449365f"}
+	want := &BuyPortResponse{TechnicalServiceUIDs: []string{"36b3f68e-2f54-4331-bf94-f8984449365f"}}
 
 	req := &BuyPortRequest{
 		Name:          "test-port",
@@ -49,7 +49,6 @@ func (suite *PortClientTestSuite) TestBuyPort() {
 		PortSpeed:     10000,
 		LocationId:    226,
 		Market:        "US",
-		IsLag:         false,
 		LagCount:      0,
 		IsPrivate:     true,
 		DiversityZone: "red",
@@ -97,127 +96,6 @@ func (suite *PortClientTestSuite) TestBuyPort() {
 	suite.Equal(want, got)
 }
 
-// TestBuySinglePort tests the BuySinglePort method
-func (suite *PortClientTestSuite) TestBuySinglePort() {
-	ctx := context.Background()
-
-	portSvc := suite.client.PortService
-
-	want := &BuyPortResponse{TechnicalServiceUID: "36b3f68e-2f54-4331-bf94-f8984449365f"}
-
-	req := &BuySinglePortRequest{
-		Name:       "test-port",
-		Term:       12,
-		PortSpeed:  10000,
-		LocationId: 226,
-		Market:     "US",
-		IsPrivate:  true,
-	}
-
-	jblob := `{
-			"message": "test-message",
-			"terms": "test-terms",
-			"data": [
-			{"technicalServiceUid": "36b3f68e-2f54-4331-bf94-f8984449365f"}
-			]
-			}`
-	portOrder := []PortOrder{
-		{
-			Name:                  req.Name,
-			Term:                  req.Term,
-			PortSpeed:             req.PortSpeed,
-			LocationID:            req.LocationId,
-			Virtual:               false,
-			Market:                req.Market,
-			MarketplaceVisibility: !req.IsPrivate,
-		},
-	}
-	suite.mux.HandleFunc("/v3/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
-		v := new([]PortOrder)
-		err := json.NewDecoder(r.Body).Decode(v)
-		if err != nil {
-			suite.FailNowf("could not decode json", "could not decode json %v", err)
-		}
-		orders := *v
-		wantOrder := portOrder[0]
-		gotOrder := orders[0]
-		suite.testMethod(r, http.MethodPost)
-		fmt.Fprint(w, jblob)
-		suite.Equal(wantOrder.Name, gotOrder.Name)
-		suite.Equal(wantOrder.Term, gotOrder.Term)
-		suite.Equal(wantOrder.PortSpeed, gotOrder.PortSpeed)
-		suite.Equal(wantOrder.LocationID, gotOrder.LocationID)
-		suite.Equal(wantOrder.Virtual, gotOrder.Virtual)
-		suite.Equal(wantOrder.MarketplaceVisibility, gotOrder.MarketplaceVisibility)
-	})
-	got, err := portSvc.BuySinglePort(ctx, req)
-	suite.NoError(err)
-	suite.Equal(want, got)
-}
-
-// TestBuyLAGPort tests the BuyLAGPort method
-func (suite *PortClientTestSuite) TestBuyLAGPort() {
-	ctx := context.Background()
-
-	portSvc := suite.client.PortService
-
-	want := &BuyPortResponse{TechnicalServiceUID: "36b3f68e-2f54-4331-bf94-f8984449365f"}
-
-	req := &BuyLAGPortRequest{
-		Name:       "test-port",
-		Term:       12,
-		PortSpeed:  10000,
-		LocationId: 226,
-		Market:     "US",
-		IsPrivate:  true,
-		LagCount:   2,
-	}
-
-	jblob := `{
-			"message": "test-message",
-			"terms": "test-terms",
-			"data": [
-			{"technicalServiceUid": "36b3f68e-2f54-4331-bf94-f8984449365f"},
-			{"technicalServiceUid": "251238f5-89de-4a06-8ccd-76846453a33f"}
-			]
-			}`
-
-	portOrder := []PortOrder{
-		{
-			Name:                  req.Name,
-			Term:                  req.Term,
-			PortSpeed:             req.PortSpeed,
-			LocationID:            req.LocationId,
-			Virtual:               false,
-			Market:                req.Market,
-			MarketplaceVisibility: !req.IsPrivate,
-			LagPortCount:          req.LagCount,
-		},
-	}
-	suite.mux.HandleFunc("/v3/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
-		v := new([]PortOrder)
-		err := json.NewDecoder(r.Body).Decode(v)
-		if err != nil {
-			suite.FailNowf("could not decode json", "could not decode json %v", err)
-		}
-		orders := *v
-		wantOrder := portOrder[0]
-		gotOrder := orders[0]
-		suite.testMethod(r, http.MethodPost)
-		fmt.Fprint(w, jblob)
-		suite.Equal(wantOrder.Name, gotOrder.Name)
-		suite.Equal(wantOrder.Term, gotOrder.Term)
-		suite.Equal(wantOrder.PortSpeed, gotOrder.PortSpeed)
-		suite.Equal(wantOrder.LocationID, gotOrder.LocationID)
-		suite.Equal(wantOrder.Virtual, gotOrder.Virtual)
-		suite.Equal(wantOrder.MarketplaceVisibility, gotOrder.MarketplaceVisibility)
-		suite.Equal(wantOrder.LagPortCount, gotOrder.LagPortCount)
-	})
-	got, err := portSvc.BuyLAGPort(ctx, req)
-	suite.NoError(err)
-	suite.Equal(want, got)
-}
-
 // TestBuyPortInvalidTerm tests the BuyPort method with an invalid term
 func (suite *PortClientTestSuite) TestBuyPortInvalidTerm() {
 	ctx := context.Background()
@@ -230,7 +108,6 @@ func (suite *PortClientTestSuite) TestBuyPortInvalidTerm() {
 		PortSpeed:  10000,
 		LocationId: 226,
 		Market:     "US",
-		IsLag:      false,
 		LagCount:   0,
 		IsPrivate:  true,
 	}

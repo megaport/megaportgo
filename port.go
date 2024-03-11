@@ -14,10 +14,6 @@ import (
 type PortService interface {
 	// BuyPort buys a port from the Megaport Port API.
 	BuyPort(ctx context.Context, req *BuyPortRequest) (*BuyPortResponse, error)
-	// BuySinglePort buys a single port from the Megaport Port API.
-	BuySinglePort(ctx context.Context, req *BuySinglePortRequest) (*BuyPortResponse, error)
-	// BuyLAGPort buys a LAG port from the Megaport Port API.
-	BuyLAGPort(ctx context.Context, req *BuyLAGPortRequest) (*BuyPortResponse, error)
 	// ListPorts lists all ports in the Megaport Port API.
 	ListPorts(ctx context.Context) ([]*Port, error)
 	// GetPort gets a single port in the Megaport Port API.
@@ -53,8 +49,7 @@ type BuyPortRequest struct {
 	PortSpeed     int    `json:"portSpeed"`
 	LocationId    int    `json:"locationId"`
 	Market        string `json:"market"`
-	IsLag         bool   `json:"isLag"`
-	LagCount      int    `json:"lagCount"`
+	LagCount      int    `json:"lagCount"` // A lag count of 1 or higher will order the port as a single LAG
 	IsPrivate     bool   `json:"isPrivate"`
 	DiversityZone string `json:"diversityZone"`
 
@@ -62,38 +57,9 @@ type BuyPortRequest struct {
 	WaitForTime      time.Duration // How long to wait for the VXC to provision if WaitForProvision is true (default is 5 minutes)
 }
 
-// BuySinglePortRequest represents a request to buy a single port.
-type BuySinglePortRequest struct {
-	Name          string
-	Term          int
-	PortSpeed     int
-	LocationId    int
-	Market        string
-	IsPrivate     bool
-	DiversityZone string
-
-	WaitForProvision bool          // Wait until the VXC provisions before returning
-	WaitForTime      time.Duration // How long to wait for the VXC to provision if WaitForProvision is true (default is 5 minutes)
-}
-
-// BuyLAGPortRequest represents a request to buy a LAG port.
-type BuyLAGPortRequest struct {
-	Name          string
-	Term          int
-	PortSpeed     int
-	LocationId    int
-	Market        string
-	LagCount      int
-	IsPrivate     bool
-	DiversityZone string
-
-	WaitForProvision bool          // Wait until the Port provisions before returning
-	WaitForTime      time.Duration // How long to wait for the Port to provision if WaitForProvision is true (default is 5 minutes)
-}
-
 // BuyPortResponse represents a response from buying a port.
 type BuyPortResponse struct {
-	TechnicalServiceUID string
+	TechnicalServiceUIDs []string
 }
 
 // GetPortRequest represents a request to get a port.
@@ -164,35 +130,19 @@ func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*Bu
 	if req.Term != 1 && req.Term != 12 && req.Term != 24 && req.Term != 36 {
 		return nil, ErrInvalidTerm
 	}
-	if req.IsLag {
-		buyOrder = []PortOrder{
-			{
-				Name:                  req.Name,
-				Term:                  req.Term,
-				ProductType:           "MEGAPORT",
-				PortSpeed:             req.PortSpeed,
-				LocationID:            req.LocationId,
-				DiversityZone:         req.DiversityZone,
-				Virtual:               false,
-				Market:                req.Market,
-				LagPortCount:          req.LagCount,
-				MarketplaceVisibility: !req.IsPrivate,
-			},
-		}
-	} else {
-		buyOrder = []PortOrder{
-			{
-				Name:                  req.Name,
-				Term:                  req.Term,
-				ProductType:           "MEGAPORT",
-				PortSpeed:             req.PortSpeed,
-				LocationID:            req.LocationId,
-				DiversityZone:         req.DiversityZone,
-				Virtual:               false,
-				Market:                req.Market,
-				MarketplaceVisibility: !req.IsPrivate,
-			},
-		}
+	buyOrder = []PortOrder{
+		{
+			Name:                  req.Name,
+			Term:                  req.Term,
+			ProductType:           "MEGAPORT",
+			PortSpeed:             req.PortSpeed,
+			LocationID:            req.LocationId,
+			DiversityZone:         req.DiversityZone,
+			Virtual:               false,
+			Market:                req.Market,
+			LagPortCount:          req.LagCount,
+			MarketplaceVisibility: !req.IsPrivate,
+		},
 	}
 
 	responseBody, responseError := svc.Client.ProductService.ExecuteOrder(ctx, buyOrder)
@@ -206,7 +156,10 @@ func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*Bu
 	}
 
 	toReturn := &BuyPortResponse{
-		TechnicalServiceUID: orderInfo.Data[0].TechnicalServiceUID,
+		TechnicalServiceUIDs: []string{},
+	}
+	for _, d := range orderInfo.Data {
+		toReturn.TechnicalServiceUIDs = append(toReturn.TechnicalServiceUIDs, d.TechnicalServiceUID)
 	}
 
 	// wait until the Port is provisioned before returning if requested by the user
@@ -224,59 +177,36 @@ func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*Bu
 		for {
 			select {
 			case <-timer.C:
-				return nil, fmt.Errorf("time expired waiting for Port %s to provision", toReturn.TechnicalServiceUID)
+				return nil, fmt.Errorf("time expired waiting for Port %s to provision", toReturn.TechnicalServiceUIDs)
 			case <-ctx.Done():
-				return nil, fmt.Errorf("context expired waiting for Port %s to provision", toReturn.TechnicalServiceUID)
+				return nil, fmt.Errorf("context expired waiting for Port %s to provision", toReturn.TechnicalServiceUIDs)
 			case <-ticker.C:
-				portDetails, err := svc.GetPort(ctx, toReturn.TechnicalServiceUID)
-				if err != nil {
-					return nil, err
+				ports := []*Port{}
+				for _, uid := range toReturn.TechnicalServiceUIDs {
+					portDetails, err := svc.GetPort(ctx, uid)
+					if err != nil {
+						return nil, err
+					}
+
+					ports = append(ports, portDetails)
 				}
 
-				if slices.Contains(SERVICE_STATE_READY, portDetails.ProvisioningStatus) {
+				// if all ports are ready return
+				numReady := 0
+				for _, port := range ports {
+					if slices.Contains(SERVICE_STATE_READY, port.ProvisioningStatus) {
+						numReady++
+					}
+				}
+				if numReady == len(ports) {
 					return toReturn, nil
 				}
-
 			}
 		}
 	} else {
 		// return the service UID right away if the user doesn't want to wait for provision
 		return toReturn, nil
 	}
-}
-
-// BuySinglePort buys a single port from the Megaport Port API.
-func (svc *PortServiceOp) BuySinglePort(ctx context.Context, req *BuySinglePortRequest) (*BuyPortResponse, error) {
-	return svc.BuyPort(ctx, &BuyPortRequest{
-		Name:             req.Name,
-		Term:             req.Term,
-		PortSpeed:        req.PortSpeed,
-		LocationId:       req.LocationId,
-		Market:           req.Market,
-		IsLag:            false,
-		LagCount:         0,
-		IsPrivate:        req.IsPrivate,
-		DiversityZone:    req.DiversityZone,
-		WaitForProvision: req.WaitForProvision,
-		WaitForTime:      req.WaitForTime,
-	})
-}
-
-// BuyLAGPort buys a LAG port from the Megaport Port API.
-func (svc *PortServiceOp) BuyLAGPort(ctx context.Context, req *BuyLAGPortRequest) (*BuyPortResponse, error) {
-	return svc.BuyPort(ctx, &BuyPortRequest{
-		Name:             req.Name,
-		Term:             req.Term,
-		PortSpeed:        req.PortSpeed,
-		LocationId:       req.LocationId,
-		Market:           req.Market,
-		IsLag:            true,
-		LagCount:         req.LagCount,
-		IsPrivate:        req.IsPrivate,
-		DiversityZone:    req.DiversityZone,
-		WaitForProvision: req.WaitForProvision,
-		WaitForTime:      req.WaitForTime,
-	})
 }
 
 // ListPorts lists all ports in the Megaport Port API.

@@ -38,14 +38,16 @@ func GenerateRandomNumber(lowerBound int, upperBound int) int {
 }
 
 // IsGuid checks if a string is a valid GUID.
-func IsGuid(guid string) bool {
+func IsGuid(guids ...string) bool {
 	guidRegex := regexp.MustCompile(`(?mi)^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$`)
 
-	if guidRegex.FindIndex([]byte(guid)) == nil {
-		return false
-	} else {
-		return true
+	for _, s := range guids {
+		if guidRegex.FindIndex([]byte(s)) == nil {
+			return false
+		}
 	}
+
+	return true
 }
 
 func GetRandomLocation(ctx context.Context, svc LocationService, marketCode string) (*Location, error) {
