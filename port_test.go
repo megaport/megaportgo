@@ -44,14 +44,14 @@ func (suite *PortClientTestSuite) TestBuyPort() {
 	want := &BuyPortResponse{TechnicalServiceUIDs: []string{"36b3f68e-2f54-4331-bf94-f8984449365f"}}
 
 	req := &BuyPortRequest{
-		Name:          "test-port",
-		Term:          12,
-		PortSpeed:     10000,
-		LocationId:    226,
-		Market:        "US",
-		LagCount:      0,
-		IsPrivate:     true,
-		DiversityZone: "red",
+		Name:                  "test-port",
+		Term:                  12,
+		PortSpeed:             10000,
+		LocationId:            226,
+		Market:                "US",
+		LagCount:              0,
+		MarketPlaceVisibility: true,
+		DiversityZone:         "red",
 	}
 
 	jblob := `{
@@ -70,7 +70,7 @@ func (suite *PortClientTestSuite) TestBuyPort() {
 			Virtual:               false,
 			Market:                req.Market,
 			DiversityZone:         "red",
-			MarketplaceVisibility: !req.IsPrivate,
+			MarketplaceVisibility: req.MarketPlaceVisibility,
 		},
 	}
 	suite.mux.HandleFunc("/v3/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
@@ -103,13 +103,13 @@ func (suite *PortClientTestSuite) TestBuyPortInvalidTerm() {
 	portSvc := suite.client.PortService
 
 	req := &BuyPortRequest{
-		Name:       "test-port-bad-term",
-		Term:       37,
-		PortSpeed:  10000,
-		LocationId: 226,
-		Market:     "US",
-		LagCount:   0,
-		IsPrivate:  true,
+		Name:                  "test-port-bad-term",
+		Term:                  37,
+		PortSpeed:             10000,
+		LocationId:            226,
+		Market:                "US",
+		LagCount:              0,
+		MarketPlaceVisibility: true,
 	}
 	_, err := portSvc.BuyPort(ctx, req)
 	suite.Equal(ErrInvalidTerm, err)

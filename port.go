@@ -44,14 +44,14 @@ type PortServiceOp struct {
 
 // BuyPortRequest represents a request to buy a port.
 type BuyPortRequest struct {
-	Name          string `json:"name"`
-	Term          int    `json:"term"`
-	PortSpeed     int    `json:"portSpeed"`
-	LocationId    int    `json:"locationId"`
-	Market        string `json:"market"`
-	LagCount      int    `json:"lagCount"` // A lag count of 1 or higher will order the port as a single LAG
-	IsPrivate     bool   `json:"isPrivate"`
-	DiversityZone string `json:"diversityZone"`
+	Name                  string `json:"name"`
+	Term                  int    `json:"term"`
+	PortSpeed             int    `json:"portSpeed"`
+	LocationId            int    `json:"locationId"`
+	Market                string `json:"market"`
+	LagCount              int    `json:"lagCount"` // A lag count of 1 or higher will order the port as a single LAG
+	MarketPlaceVisibility bool   `json:"marketPlaceVisibility"`
+	DiversityZone         string `json:"diversityZone"`
 
 	WaitForProvision bool          // Wait until the VXC provisions before returning
 	WaitForTime      time.Duration // How long to wait for the VXC to provision if WaitForProvision is true (default is 5 minutes)
@@ -141,7 +141,7 @@ func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*Bu
 			Virtual:               false,
 			Market:                req.Market,
 			LagPortCount:          req.LagCount,
-			MarketplaceVisibility: !req.IsPrivate,
+			MarketplaceVisibility: req.MarketPlaceVisibility,
 		},
 	}
 

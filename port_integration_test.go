@@ -151,16 +151,16 @@ func (suite *PortIntegrationTestSuite) TestLAGPort() {
 func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Context, lagCount int, location Location) (*BuyPortResponse, error) {
 	suite.client.Logger.DebugContext(ctx, "Buying Port", slog.Int("lag_count", lagCount))
 	orderRes, err := c.PortService.BuyPort(ctx, &BuyPortRequest{
-		Name:             "Buy Port (LAG) Test",
-		Term:             1,
-		PortSpeed:        10000,
-		LocationId:       location.ID,
-		Market:           location.Market,
-		LagCount:         lagCount,
-		IsPrivate:        true,
-		DiversityZone:    "red",
-		WaitForProvision: true,
-		WaitForTime:      5 * time.Minute,
+		Name:                  "Buy Port (LAG) Test",
+		Term:                  1,
+		PortSpeed:             10000,
+		LocationId:            location.ID,
+		Market:                location.Market,
+		LagCount:              lagCount,
+		MarketPlaceVisibility: true,
+		DiversityZone:         "red",
+		WaitForProvision:      true,
+		WaitForTime:           5 * time.Minute,
 	})
 
 	if err != nil {

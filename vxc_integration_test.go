@@ -64,14 +64,14 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 	logger.InfoContext(ctx, "buying port a end")
 
 	aEndPortRes, portErr := portSvc.BuyPort(ctx, &BuyPortRequest{
-		Name:             "VXC Port A",
-		LocationId:       testLocation.ID,
-		PortSpeed:        1000,
-		Term:             1,
-		Market:           "AU",
-		IsPrivate:        true,
-		WaitForProvision: true,
-		WaitForTime:      5 * time.Minute,
+		Name:                  "VXC Port A",
+		LocationId:            testLocation.ID,
+		PortSpeed:             1000,
+		Term:                  1,
+		Market:                "AU",
+		MarketPlaceVisibility: true,
+		WaitForProvision:      true,
+		WaitForTime:           5 * time.Minute,
 	})
 	if portErr != nil {
 		suite.FailNowf("cannot buy port", "cannot buy port %v", portErr)
@@ -83,14 +83,14 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 
 	logger.InfoContext(ctx, "buying port b end")
 	bEndPortRes, portErr := portSvc.BuyPort(ctx, &BuyPortRequest{
-		Name:             "VXC Port B",
-		LocationId:       testLocation.ID,
-		PortSpeed:        1000,
-		Term:             1,
-		Market:           "AU",
-		IsPrivate:        true,
-		WaitForProvision: true,
-		WaitForTime:      5 * time.Minute,
+		Name:                  "VXC Port B",
+		LocationId:            testLocation.ID,
+		PortSpeed:             1000,
+		Term:                  1,
+		Market:                "AU",
+		MarketPlaceVisibility: true,
+		WaitForProvision:      true,
+		WaitForTime:           5 * time.Minute,
 	})
 	if portErr != nil {
 		suite.FailNowf("cannot buy port", "cannot buy port %v", portErr)
@@ -190,14 +190,14 @@ func (suite *VXCIntegrationTestSuite) TestAWSVIFConnectionBuy() {
 	logger.InfoContext(ctx, "buying port a end")
 
 	portRes, portErr := portSvc.BuyPort(ctx, &BuyPortRequest{
-		Name:             "AWS VIF Test Port",
-		Term:             1,
-		LocationId:       testLocation.ID,
-		PortSpeed:        1000,
-		Market:           "AU",
-		IsPrivate:        true,
-		WaitForProvision: true,
-		WaitForTime:      5 * time.Minute,
+		Name:                  "AWS VIF Test Port",
+		Term:                  1,
+		LocationId:            testLocation.ID,
+		PortSpeed:             1000,
+		Market:                "AU",
+		MarketPlaceVisibility: true,
+		WaitForProvision:      true,
+		WaitForTime:           5 * time.Minute,
 	})
 	if portErr != nil {
 		suite.FailNowf("cannot buy port", "cannot buy port %v", portErr)
@@ -370,14 +370,14 @@ func (suite *VXCIntegrationTestSuite) TestAWSConnectionBuyDefaults() {
 	logger.InfoContext(ctx, "buying port a end")
 
 	portRes, portErr := portSvc.BuyPort(ctx, &BuyPortRequest{
-		Name:             "AWS VIF Test Port",
-		Term:             1,
-		LocationId:       testLocation.ID,
-		PortSpeed:        1000,
-		Market:           "AU",
-		IsPrivate:        true,
-		WaitForProvision: true,
-		WaitForTime:      5 * time.Minute,
+		Name:                  "AWS VIF Test Port",
+		Term:                  1,
+		LocationId:            testLocation.ID,
+		PortSpeed:             1000,
+		Market:                "AU",
+		MarketPlaceVisibility: true,
+		WaitForProvision:      true,
+		WaitForTime:           5 * time.Minute,
 	})
 	if portErr != nil {
 		suite.FailNowf("cannot buy port", "cannot buy port %v", portErr)
@@ -451,14 +451,14 @@ func (suite *VXCIntegrationTestSuite) TestBuyAzureExpressRoute() {
 	logger.InfoContext(ctx, "buying azure expressroute port a end")
 
 	aEndPortRes, portErr := portSvc.BuyPort(ctx, &BuyPortRequest{
-		Name:             "Azure ExpressRoute Test Port",
-		LocationId:       testLocation.ID,
-		PortSpeed:        1000,
-		Term:             1,
-		Market:           "AU",
-		IsPrivate:        true,
-		WaitForProvision: true,
-		WaitForTime:      5 * time.Minute,
+		Name:                  "Azure ExpressRoute Test Port",
+		LocationId:            testLocation.ID,
+		PortSpeed:             1000,
+		Term:                  1,
+		Market:                "AU",
+		MarketPlaceVisibility: true,
+		WaitForProvision:      true,
+		WaitForTime:           5 * time.Minute,
 	})
 	if portErr != nil {
 		suite.FailNowf("cannot buy port", "cannot buy port %v", portErr)
@@ -562,14 +562,14 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnect() {
 	logger.InfoContext(ctx, "buying google interconect port a end")
 
 	portRes, portErr := portSvc.BuyPort(ctx, &BuyPortRequest{
-		Name:             "Google Interconnect Test Port",
-		Term:             1,
-		LocationId:       testLocation.ID,
-		PortSpeed:        1000,
-		Market:           "AU",
-		IsPrivate:        true,
-		WaitForProvision: true,
-		WaitForTime:      5 * time.Minute,
+		Name:                  "Google Interconnect Test Port",
+		Term:                  1,
+		LocationId:            testLocation.ID,
+		PortSpeed:             1000,
+		Market:                "AU",
+		MarketPlaceVisibility: true,
+		WaitForProvision:      true,
+		WaitForTime:           5 * time.Minute,
 	})
 	if portErr != nil {
 		suite.FailNowf("cannot buy port", "cannot buy port %v", portErr)
@@ -655,14 +655,14 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnectLocation() {
 	logger.InfoContext(ctx, "buying google interconect port a end")
 
 	portRes, portErr := portSvc.BuyPort(ctx, &BuyPortRequest{
-		Name:             "Google Interconnect Test Port",
-		Term:             1,
-		LocationId:       testLocation.ID,
-		PortSpeed:        1000,
-		Market:           "AU",
-		IsPrivate:        true,
-		WaitForProvision: true,
-		WaitForTime:      5 * time.Minute,
+		Name:                  "Google Interconnect Test Port",
+		Term:                  1,
+		LocationId:            testLocation.ID,
+		PortSpeed:             1000,
+		Market:                "AU",
+		MarketPlaceVisibility: true,
+		WaitForProvision:      true,
+		WaitForTime:           5 * time.Minute,
 	})
 	if portErr != nil {
 		suite.FailNowf("cannot buy port", "cannot buy port %v", portErr)
