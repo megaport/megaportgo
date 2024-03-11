@@ -12,4 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package megaport holds the Megaport Go Library. It allows users to orchestrate the creation of Megaport Services.
+//
+// Before using this library, please ensure you read Megaport's [Terms and Conditions].
+//
+// The [Megaport API Documentation] is also available online.
+//
+// [Terms and Conditions]: https://www.megaport.com/legal/global-services-agreement/
+// [Megaport API Documentation]: https://dev.megaport.com/
 package megaport
