@@ -54,6 +54,7 @@ type Port struct {
 	Locked                bool              `json:"locked"`
 	AdminLocked           bool              `json:"adminLocked"`
 	Cancelable            bool              `json:"cancelable"`
+	DiversityZone         string            `json:"diversityZone"`
 	VXCResources          PortResources     `json:"resources"`
 }
 
