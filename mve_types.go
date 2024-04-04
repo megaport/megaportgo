@@ -113,7 +113,7 @@ type MVE struct {
 	CreateDate            *Time                  `json:"createDate"`
 	CreatedBy             string                 `json:"createdBy"`
 	TerminateDate         *Time                  `json:"terminateDate"`
-	LiveDate              int                    `json:"liveDate"`
+	LiveDate              *Time                  `json:"liveDate"`
 	Market                string                 `json:"market"`
 	LocationID            int                    `json:"locationId"`
 	UsageAlgorithm        string                 `json:"usageAlgorithm"`

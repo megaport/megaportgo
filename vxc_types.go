@@ -214,8 +214,8 @@ type VXCPartnerConfigGoogle struct {
 // VXCPartnerConfigOracle represents the configuration of a VXC partner for Oracle Cloud Infrastructure FastConnect.
 type VXCPartnerConfigOracle struct {
 	VXCPartnerConfiguration
-	ConnectType     string `json:"connectType"`
-	VirtualCircutId string `json:"virtualCircuitId"`
+	ConnectType      string `json:"connectType"`
+	VirtualCircuitId string `json:"virtualCircuitId"`
 }
 
 // VXCOrderMVEConfig represents the configuration of a VXC endpoint for MVE.
