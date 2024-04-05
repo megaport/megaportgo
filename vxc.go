@@ -69,7 +69,7 @@ type DeleteVXCResponse struct {
 // UpdateVXCRequest represents a request to update a VXC in the Megaport VXC API.
 type UpdateVXCRequest struct {
 	AEndVLAN  *int
-	BEndVlan  *int
+	BEndVLAN  *int
 	RateLimit *int
 	Name      *string
 
@@ -209,7 +209,7 @@ func (svc *VXCServiceOp) UpdateVXC(ctx context.Context, id string, req *UpdateVX
 		Name:      req.Name,
 		RateLimit: req.RateLimit,
 		AEndVLAN:  req.AEndVLAN,
-		BEndVLAN:  req.BEndVlan,
+		BEndVLAN:  req.BEndVLAN,
 	}
 
 	clientReq, err := svc.Client.NewRequest(ctx, http.MethodPut, url, update)

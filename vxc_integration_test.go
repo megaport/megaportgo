@@ -125,7 +125,7 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 
 	updateRes, updateErr := vxcSvc.UpdateVXC(ctx, vxcUid, &UpdateVXCRequest{
 		AEndVLAN:      &newAVLAN,
-		BEndVlan:      &newBVLAN,
+		BEndVLAN:      &newBVLAN,
 		Name:          PtrTo("Updated VXC"),
 		RateLimit:     PtrTo(1000),
 		WaitForUpdate: true,

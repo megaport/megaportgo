@@ -817,7 +817,7 @@ func (suite *VXCClientTestSuite) TestUpdateVXC() {
 	updateReq := &UpdateVXCRequest{
 		Name:      &updateName,
 		AEndVLAN:  &aEndVlan,
-		BEndVlan:  &bEndVlan,
+		BEndVLAN:  &bEndVlan,
 		RateLimit: &rateLimit,
 	}
 
@@ -980,7 +980,7 @@ func (suite *VXCClientTestSuite) TestUpdateVXC() {
 		Name:      updateReq.Name,
 		RateLimit: updateReq.RateLimit,
 		AEndVLAN:  updateReq.AEndVLAN,
-		BEndVLAN:  updateReq.BEndVlan,
+		BEndVLAN:  updateReq.BEndVLAN,
 	}
 	path := fmt.Sprintf("/v2/product/%s/%s", PRODUCT_VXC, vxcUid)
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
