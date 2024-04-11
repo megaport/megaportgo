@@ -45,6 +45,7 @@ type BuyVXCRequest struct {
 	VXCName           string
 	RateLimit         int
 	Term              int
+	Shutdown          bool
 	AEndConfiguration VXCOrderEndpointConfiguration
 	BEndConfiguration VXCOrderEndpointConfiguration
 
@@ -74,6 +75,7 @@ type UpdateVXCRequest struct {
 	RateLimit  *int
 	Name       *string
 	CostCentre *string
+	Shutdown   *bool
 
 	WaitForUpdate bool          // Wait until the VXC updates before returning
 	WaitForTime   time.Duration // How long to wait for the VXC to update if WaitForUpdate is true (default is 5 minutes)
@@ -109,6 +111,7 @@ func (svc *VXCServiceOp) BuyVXC(ctx context.Context, req *BuyVXCRequest) (*BuyVX
 				Name:      req.VXCName,
 				RateLimit: req.RateLimit,
 				Term:      req.Term,
+				Shutdown:  req.Shutdown,
 				AEnd:      req.AEndConfiguration,
 				BEnd:      req.BEndConfiguration,
 			},
@@ -168,7 +171,7 @@ func (svc *VXCServiceOp) BuyVXC(ctx context.Context, req *BuyVXCRequest) (*BuyVX
 
 // GetVXC gets details about a single VXC from the Megaport VXC API.
 func (svc *VXCServiceOp) GetVXC(ctx context.Context, id string) (*VXC, error) {
-	path := "/v2/product/" + id
+	path := "/v3/product/" + id
 	url := svc.Client.BaseURL.JoinPath(path).String()
 
 	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, url, nil)
@@ -209,7 +212,7 @@ func (svc *VXCServiceOp) DeleteVXC(ctx context.Context, id string, req *DeleteVX
 
 // UpdateVXC updates a VXC in the Megaport VXC API.
 func (svc *VXCServiceOp) UpdateVXC(ctx context.Context, id string, req *UpdateVXCRequest) (*VXC, error) {
-	path := fmt.Sprintf("/v2/product/%s/%s", PRODUCT_VXC, id)
+	path := fmt.Sprintf("/v3/product/%s/%s", PRODUCT_VXC, id)
 	url := svc.Client.BaseURL.JoinPath(path).String()
 
 	update := &VXCUpdate{
@@ -218,6 +221,7 @@ func (svc *VXCServiceOp) UpdateVXC(ctx context.Context, id string, req *UpdateVX
 		AEndVLAN:   req.AEndVLAN,
 		BEndVLAN:   req.BEndVLAN,
 		CostCentre: req.CostCentre,
+		Shutdown:   req.Shutdown,
 	}
 
 	clientReq, err := svc.Client.NewRequest(ctx, http.MethodPut, url, update)

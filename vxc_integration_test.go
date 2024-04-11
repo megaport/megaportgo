@@ -105,6 +105,7 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 		VXCName:   "Test VXC",
 		RateLimit: 500,
 		Term:      1,
+		Shutdown:  false,
 		AEndConfiguration: VXCOrderEndpointConfiguration{
 			VLAN: GenerateRandomVLAN(),
 		},
@@ -216,6 +217,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSVIFConnectionBuy() {
 		VXCName:   "Hosted AWS VIF Test Connection",
 		RateLimit: 500,
 		Term:      1,
+		Shutdown:  false,
 		AEndConfiguration: VXCOrderEndpointConfiguration{
 			VLAN: GenerateRandomVLAN(),
 		},
@@ -294,6 +296,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSHostedConnectionBuy() {
 		VXCName:   "Hosted Connection AWS Test Connection",
 		Term:      1,
 		RateLimit: 500,
+		Shutdown:  false,
 		AEndConfiguration: VXCOrderEndpointConfiguration{
 			VLAN: GenerateRandomVLAN(),
 			PartnerConfig: VXCOrderAEndPartnerConfig{
@@ -397,6 +400,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSConnectionBuyDefaults() {
 		VXCName:   "Hosted AWS VIF Test Connection",
 		RateLimit: 500,
 		Term:      1,
+		Shutdown:  false,
 		AEndConfiguration: VXCOrderEndpointConfiguration{
 			VLAN: 0,
 		},
@@ -521,6 +525,7 @@ func (suite *VXCIntegrationTestSuite) TestBuyAzureExpressRoute() {
 		VXCName:   "Azure ExpressRoute Test VXC",
 		RateLimit: 1000,
 		Term:      1,
+		Shutdown:  false,
 		AEndConfiguration: VXCOrderEndpointConfiguration{
 			VLAN: 0,
 		},
@@ -613,6 +618,7 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnect() {
 		VXCName:   "Test Google Interconnect VXC",
 		RateLimit: 1000,
 		Term:      1,
+		Shutdown:  false,
 		AEndConfiguration: VXCOrderEndpointConfiguration{
 			VLAN: 0,
 		},
@@ -706,7 +712,8 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnectLocation() {
 		AEndConfiguration: VXCOrderEndpointConfiguration{
 			VLAN: 0,
 		},
-		Term: 1,
+		Term:     1,
+		Shutdown: false,
 		BEndConfiguration: VXCOrderEndpointConfiguration{
 			ProductUID:    partnerPortId,
 			PartnerConfig: partnerConfig,

@@ -30,6 +30,7 @@ type VXC struct {
 	CreateDate         *Time               `json:"createDate"`
 	Resources          VXCResources        `json:"resources"`
 	VXCApproval        VXCApproval         `json:"vxcApproval"`
+	Shutdown           bool                `json:"shutdown"`
 	ContractStartDate  *Time               `json:"contractStartDate"`
 	ContractEndDate    *Time               `json:"contractEndDate"`
 	ContractTermMonths int                 `json:"contractTermMonths"`
@@ -82,6 +83,7 @@ type VLLConfig struct {
 	RateLimitMBPS int    `json:"rate_limit_mbps"`
 	ResourceName  string `json:"resource_name"`
 	ResourceType  string `json:"resource_type"`
+	Shutdown      bool   `json:"shutdown"`
 }
 
 // VXCApproval represents the approval status of a VXC.
@@ -138,6 +140,7 @@ type VXCUpdate struct {
 	Name       *string `json:"name,omitempty"`
 	RateLimit  *int    `json:"rateLimit,omitempty"`
 	CostCentre *string `json:"costCentre,omitempty"`
+	Shutdown   *bool   `json:"shutdown,omitempty"`
 	AEndVLAN   *int    `json:"aEndVlan,omitempty"`
 	BEndVLAN   *int    `json:"bEndVlan,omitempty"`
 }
@@ -167,6 +170,7 @@ type VXCOrderConfiguration struct {
 	Name      string                        `json:"productName"`
 	RateLimit int                           `json:"rateLimit"`
 	Term      int                           `json:"term"`
+	Shutdown  bool                          `json:"shutdown"`
 	AEnd      VXCOrderEndpointConfiguration `json:"aEnd"`
 	BEnd      VXCOrderEndpointConfiguration `json:"bEnd"`
 }

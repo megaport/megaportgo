@@ -44,6 +44,7 @@ func (suite *VXCClientTestSuite) TestBuyVXC() {
 		VXCName:   "test-vxc",
 		RateLimit: 50,
 		Term:      1,
+		Shutdown:  false,
 		AEndConfiguration: VXCOrderEndpointConfiguration{
 			VLAN: 0,
 		},
@@ -60,6 +61,8 @@ func (suite *VXCClientTestSuite) TestBuyVXC() {
 				RateLimit: req.RateLimit,
 				AEnd:      req.AEndConfiguration,
 				BEnd:      req.BEndConfiguration,
+				Term:      req.Term,
+				Shutdown:  req.Shutdown,
 			},
 		},
 	}}
@@ -122,7 +125,7 @@ func (suite *VXCClientTestSuite) TestBuyVXC() {
 				"asn": null,
 				"bgpPassword": null,
 				"usageAlgorithm": "POST_PAID_HOURLY_SPEED_LONG_HAUL_VXC",
-				"costCentre": null,
+				"costCentre": "test-cost-centre",
 				"azureServiceKey": null,
 				"oracleVirtualCircuitId": null,
 				"serviceKey": null,
@@ -276,6 +279,7 @@ func (suite *VXCClientTestSuite) TestGetVXC() {
 				RateLimitMBPS: 50,
 				ResourceName:  "vll",
 				ResourceType:  "vll",
+				Shutdown:      false,
 			},
 		},
 		VXCApproval: VXCApproval{
@@ -290,6 +294,7 @@ func (suite *VXCClientTestSuite) TestGetVXC() {
 		CompanyName:        "Test Company",
 		AttributeTags:      map[string]string{},
 		Cancelable:         true,
+		Shutdown:           false,
 		AEndConfiguration: VXCEndConfiguration{
 			OwnerUID:   companyUid,
 			UID:        portUid,
@@ -396,7 +401,7 @@ func (suite *VXCClientTestSuite) TestGetVXC() {
 			}
 		}
 	}`
-	path := "/v2/product/" + vxcUid
+	path := "/v3/product/" + vxcUid
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
@@ -593,7 +598,7 @@ func (suite *VXCClientTestSuite) TestGetAzureVXC() {
 			}
 		}
 	}`
-	path := "/v2/product/" + vxcUid
+	path := "/v3/product/" + vxcUid
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
@@ -675,6 +680,7 @@ func (suite *VXCClientTestSuite) TestGetGoogleVXC() {
 		CompanyName:        "Test Company",
 		AttributeTags:      map[string]string{},
 		Cancelable:         true,
+		CostCentre:         "",
 		AEndConfiguration: VXCEndConfiguration{
 			OwnerUID:   companyUid,
 			UID:        portUid,
@@ -746,6 +752,7 @@ func (suite *VXCClientTestSuite) TestGetGoogleVXC() {
 			"contractTermMonths": 1,
 			"companyUid": "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
 			"companyName": "Test Company",
+			"costCentre": "",
 			"locked": false,
 			"adminLocked": false,
 			"attributeTags": {},
@@ -786,7 +793,7 @@ func (suite *VXCClientTestSuite) TestGetGoogleVXC() {
 			}
 		}
 	}`
-	path := "/v2/product/" + vxcUid
+	path := "/v3/product/" + vxcUid
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
@@ -811,15 +818,19 @@ func (suite *VXCClientTestSuite) TestUpdateVXC() {
 	aEndVlan := 1
 	bEndVlan := 1
 	rateLimit := 100
+	costCentre := "test-cost-centre"
+	shutdown := false
 
 	startDate := &Time{GetTime(1706104800000)}
 	endDate := &Time{GetTime(1737727200000)}
 
 	updateReq := &UpdateVXCRequest{
-		Name:      &updateName,
-		AEndVLAN:  &aEndVlan,
-		BEndVLAN:  &bEndVlan,
-		RateLimit: &rateLimit,
+		Name:       &updateName,
+		AEndVLAN:   &aEndVlan,
+		BEndVLAN:   &bEndVlan,
+		RateLimit:  &rateLimit,
+		Shutdown:   &shutdown,
+		CostCentre: &costCentre,
 	}
 
 	jblob := `{
@@ -870,6 +881,7 @@ func (suite *VXCClientTestSuite) TestUpdateVXC() {
 			"contractEndDate": 1737727200000,
 			"contractTermMonths": 1,
 			"companyUid": "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
+			"costCentre": "test-cost-centre",
 			"companyName": "Test Company",
 			"locked": false,
 			"adminLocked": false,
@@ -925,6 +937,7 @@ func (suite *VXCClientTestSuite) TestUpdateVXC() {
 		CreateDate:         startDate,
 		ContractStartDate:  startDate,
 		ContractEndDate:    endDate,
+		CostCentre:         costCentre,
 		Resources: VXCResources{
 			CSPConnection: CSPConnection{
 				CSPConnection: []CSPConnectionConfig{
@@ -946,6 +959,7 @@ func (suite *VXCClientTestSuite) TestUpdateVXC() {
 				RateLimitMBPS: 100,
 				ResourceName:  "vll",
 				ResourceType:  "vll",
+				Shutdown:      false,
 			},
 		},
 		VXCApproval: VXCApproval{
@@ -978,12 +992,14 @@ func (suite *VXCClientTestSuite) TestUpdateVXC() {
 		},
 	}
 	update := &VXCUpdate{
-		Name:      updateReq.Name,
-		RateLimit: updateReq.RateLimit,
-		AEndVLAN:  updateReq.AEndVLAN,
-		BEndVLAN:  updateReq.BEndVLAN,
+		Name:       updateReq.Name,
+		RateLimit:  updateReq.RateLimit,
+		AEndVLAN:   updateReq.AEndVLAN,
+		BEndVLAN:   updateReq.BEndVLAN,
+		Shutdown:   updateReq.Shutdown,
+		CostCentre: updateReq.CostCentre,
 	}
-	path := fmt.Sprintf("/v2/product/%s/%s", PRODUCT_VXC, vxcUid)
+	path := fmt.Sprintf("/v3/product/%s/%s", PRODUCT_VXC, vxcUid)
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		v := new(VXCUpdate)
 		err := json.NewDecoder(r.Body).Decode(v)
@@ -996,6 +1012,7 @@ func (suite *VXCClientTestSuite) TestUpdateVXC() {
 	})
 	gotVxc, err := vxcSvc.UpdateVXC(ctx, vxcUid, updateReq)
 	suite.NoError(err)
+	fmt.Println("got vxc is this", gotVxc)
 	suite.Equal(wantVxc, gotVxc)
 }
 
