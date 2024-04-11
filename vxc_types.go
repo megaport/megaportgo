@@ -35,6 +35,7 @@ type VXC struct {
 	ContractTermMonths int                 `json:"contractTermMonths"`
 	CompanyUID         string              `json:"companyUid"`
 	CompanyName        string              `json:"companyName"`
+	CostCentre         string              `json:"costCentre"`
 	Locked             bool                `json:"locked"`
 	AdminLocked        bool                `json:"adminLocked"`
 	AttributeTags      map[string]string   `json:"attributeTags"`
@@ -134,10 +135,11 @@ type Peer struct {
 
 // VXCUpdate represents the fields that can be updated on a VXC.
 type VXCUpdate struct {
-	Name      *string `json:"name,omitempty"`
-	RateLimit *int    `json:"rateLimit,omitempty"`
-	AEndVLAN  *int    `json:"aEndVlan,omitempty"`
-	BEndVLAN  *int    `json:"bEndVlan,omitempty"`
+	Name       *string `json:"name,omitempty"`
+	RateLimit  *int    `json:"rateLimit,omitempty"`
+	CostCentre *string `json:"costCentre,omitempty"`
+	AEndVLAN   *int    `json:"aEndVlan,omitempty"`
+	BEndVLAN   *int    `json:"bEndVlan,omitempty"`
 }
 
 // VXCOrderResponse represents the response from the VXC Order API.

@@ -69,10 +69,11 @@ type DeleteVXCResponse struct {
 
 // UpdateVXCRequest represents a request to update a VXC in the Megaport VXC API.
 type UpdateVXCRequest struct {
-	AEndVLAN  *int
-	BEndVLAN  *int
-	RateLimit *int
-	Name      *string
+	AEndVLAN   *int
+	BEndVLAN   *int
+	RateLimit  *int
+	Name       *string
+	CostCentre *string
 
 	WaitForUpdate bool          // Wait until the VXC updates before returning
 	WaitForTime   time.Duration // How long to wait for the VXC to update if WaitForUpdate is true (default is 5 minutes)
@@ -212,10 +213,11 @@ func (svc *VXCServiceOp) UpdateVXC(ctx context.Context, id string, req *UpdateVX
 	url := svc.Client.BaseURL.JoinPath(path).String()
 
 	update := &VXCUpdate{
-		Name:      req.Name,
-		RateLimit: req.RateLimit,
-		AEndVLAN:  req.AEndVLAN,
-		BEndVLAN:  req.BEndVLAN,
+		Name:       req.Name,
+		RateLimit:  req.RateLimit,
+		AEndVLAN:   req.AEndVLAN,
+		BEndVLAN:   req.BEndVLAN,
+		CostCentre: req.CostCentre,
 	}
 
 	clientReq, err := svc.Client.NewRequest(ctx, http.MethodPut, url, update)
