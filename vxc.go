@@ -44,6 +44,7 @@ type BuyVXCRequest struct {
 	PortUID           string
 	VXCName           string
 	RateLimit         int
+	Term              int
 	AEndConfiguration VXCOrderEndpointConfiguration
 	BEndConfiguration VXCOrderEndpointConfiguration
 
@@ -96,12 +97,17 @@ type LookupPartnerPortsResponse struct {
 
 // BuyVXC buys a VXC from the Megaport VXC API.
 func (svc *VXCServiceOp) BuyVXC(ctx context.Context, req *BuyVXCRequest) (*BuyVXCResponse, error) {
+	if req.Term != 1 && req.Term != 12 && req.Term != 24 && req.Term != 36 {
+		return nil, ErrInvalidTerm
+	}
+
 	buyOrder := []VXCOrder{{
 		PortID: req.PortUID,
 		AssociatedVXCs: []VXCOrderConfiguration{
 			{
 				Name:      req.VXCName,
 				RateLimit: req.RateLimit,
+				Term:      req.Term,
 				AEnd:      req.AEndConfiguration,
 				BEnd:      req.BEndConfiguration,
 			},

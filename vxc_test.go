@@ -43,6 +43,7 @@ func (suite *VXCClientTestSuite) TestBuyVXC() {
 		PortUID:   portProductUid,
 		VXCName:   "test-vxc",
 		RateLimit: 50,
+		Term:      1,
 		AEndConfiguration: VXCOrderEndpointConfiguration{
 			VLAN: 0,
 		},
@@ -161,7 +162,7 @@ func (suite *VXCClientTestSuite) TestBuyVXC() {
 					"terminationDate": null,
 					"contractStartDate": 1706104800000,
 					"contractEndDate": 1737727200000,
-					"contractTermMonths": 1,
+					"contractTermMonths": 12,
 					"rateType": "MONTHLY",
 					"trialAgreement": false,
 					"payerCompanyId": null,

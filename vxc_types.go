@@ -164,6 +164,7 @@ type VXCOrder struct {
 type VXCOrderConfiguration struct {
 	Name      string                        `json:"productName"`
 	RateLimit int                           `json:"rateLimit"`
+	Term      int                           `json:"term"`
 	AEnd      VXCOrderEndpointConfiguration `json:"aEnd"`
 	BEnd      VXCOrderEndpointConfiguration `json:"bEnd"`
 }

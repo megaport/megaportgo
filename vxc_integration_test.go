@@ -104,6 +104,7 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 		PortUID:   aEndUid,
 		VXCName:   "Test VXC",
 		RateLimit: 500,
+		Term:      1,
 		AEndConfiguration: VXCOrderEndpointConfiguration{
 			VLAN: GenerateRandomVLAN(),
 		},
@@ -211,6 +212,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSVIFConnectionBuy() {
 		PortUID:   portUid,
 		VXCName:   "Hosted AWS VIF Test Connection",
 		RateLimit: 500,
+		Term:      1,
 		AEndConfiguration: VXCOrderEndpointConfiguration{
 			VLAN: GenerateRandomVLAN(),
 		},
@@ -287,6 +289,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSHostedConnectionBuy() {
 	hcRes, hcErr := vxcSvc.BuyVXC(ctx, &BuyVXCRequest{
 		PortUID:   mcrUid,
 		VXCName:   "Hosted Connection AWS Test Connection",
+		Term:      1,
 		RateLimit: 500,
 		AEndConfiguration: VXCOrderEndpointConfiguration{
 			VLAN: GenerateRandomVLAN(),
@@ -390,6 +393,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSConnectionBuyDefaults() {
 		PortUID:   portUid,
 		VXCName:   "Hosted AWS VIF Test Connection",
 		RateLimit: 500,
+		Term:      1,
 		AEndConfiguration: VXCOrderEndpointConfiguration{
 			VLAN: 0,
 		},
@@ -513,6 +517,7 @@ func (suite *VXCIntegrationTestSuite) TestBuyAzureExpressRoute() {
 		PortUID:   aEndUid,
 		VXCName:   "Azure ExpressRoute Test VXC",
 		RateLimit: 1000,
+		Term:      1,
 		AEndConfiguration: VXCOrderEndpointConfiguration{
 			VLAN: 0,
 		},
@@ -604,6 +609,7 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnect() {
 		PortUID:   portUid,
 		VXCName:   "Test Google Interconnect VXC",
 		RateLimit: 1000,
+		Term:      1,
 		AEndConfiguration: VXCOrderEndpointConfiguration{
 			VLAN: 0,
 		},
@@ -697,6 +703,7 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnectLocation() {
 		AEndConfiguration: VXCOrderEndpointConfiguration{
 			VLAN: 0,
 		},
+		Term: 1,
 		BEndConfiguration: VXCOrderEndpointConfiguration{
 			ProductUID:    partnerPortId,
 			PartnerConfig: partnerConfig,
