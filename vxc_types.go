@@ -137,13 +137,15 @@ type Peer struct {
 
 // VXCUpdate represents the fields that can be updated on a VXC.
 type VXCUpdate struct {
-	Name       *string `json:"name,omitempty"`
-	RateLimit  *int    `json:"rateLimit,omitempty"`
-	CostCentre *string `json:"costCentre,omitempty"`
-	Shutdown   *bool   `json:"shutdown,omitempty"`
-	AEndVLAN   *int    `json:"aEndVlan,omitempty"`
-	BEndVLAN   *int    `json:"bEndVlan,omitempty"`
-	Term       *int    `json:"term,omitempty"`
+	Name           *string `json:"name,omitempty"`
+	RateLimit      *int    `json:"rateLimit,omitempty"`
+	CostCentre     *string `json:"costCentre,omitempty"`
+	Shutdown       *bool   `json:"shutdown,omitempty"`
+	AEndVLAN       *int    `json:"aEndVlan,omitempty"`
+	BEndVLAN       *int    `json:"bEndVlan,omitempty"`
+	AEndProductUID *string `json:"aEndProductUid,omitempty"`
+	BEndProductUID *string `json:"bEndProductUid,omitempty"`
+	Term           *int    `json:"term,omitempty"`
 }
 
 // VXCOrderResponse represents the response from the VXC Order API.
