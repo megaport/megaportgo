@@ -75,6 +75,7 @@ type UpdateVXCRequest struct {
 	RateLimit  *int
 	Name       *string
 	CostCentre *string
+	Term       *int
 	Shutdown   *bool
 
 	WaitForUpdate bool          // Wait until the VXC updates before returning
@@ -212,6 +213,9 @@ func (svc *VXCServiceOp) DeleteVXC(ctx context.Context, id string, req *DeleteVX
 
 // UpdateVXC updates a VXC in the Megaport VXC API.
 func (svc *VXCServiceOp) UpdateVXC(ctx context.Context, id string, req *UpdateVXCRequest) (*VXC, error) {
+	if req.Term != nil && (*req.Term != 1 && *req.Term != 12 && *req.Term != 24 && *req.Term != 36) {
+		return nil, ErrInvalidTerm
+	}
 	path := fmt.Sprintf("/v3/product/%s/%s", PRODUCT_VXC, id)
 	url := svc.Client.BaseURL.JoinPath(path).String()
 

@@ -125,6 +125,7 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 	newAVLAN := GenerateRandomVLAN()
 	newBVLAN := GenerateRandomVLAN()
 	newCostCentre := "Test Cost Centre 2"
+	newTerm := 12
 
 	updateRes, updateErr := vxcSvc.UpdateVXC(ctx, vxcUid, &UpdateVXCRequest{
 		AEndVLAN:      &newAVLAN,
@@ -132,6 +133,7 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 		Name:          PtrTo("Updated VXC"),
 		RateLimit:     PtrTo(1000),
 		CostCentre:    PtrTo(newCostCentre),
+		Term:          PtrTo(newTerm),
 		WaitForUpdate: true,
 		WaitForTime:   8 * time.Minute,
 	})
@@ -150,6 +152,7 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 	suite.EqualValues(newAVLAN, vxcInfo.AEndConfiguration.VLAN, "vxc a end vlan is not updated")
 	suite.EqualValues(newBVLAN, vxcInfo.BEndConfiguration.VLAN, "vxc b end vlan is not updated")
 	suite.EqualValues(newCostCentre, vxcInfo.CostCentre, "vxc cost centre is not updated")
+	suite.EqualValues(newTerm, vxcInfo.ContractTermMonths, "vxc terms are not updated")
 
 	logger.InfoContext(ctx, "deleting vxc")
 

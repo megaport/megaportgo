@@ -143,6 +143,7 @@ type VXCUpdate struct {
 	Shutdown   *bool   `json:"shutdown,omitempty"`
 	AEndVLAN   *int    `json:"aEndVlan,omitempty"`
 	BEndVLAN   *int    `json:"bEndVlan,omitempty"`
+	Term       *int    `json:"term,omitempty"`
 }
 
 // VXCOrderResponse represents the response from the VXC Order API.

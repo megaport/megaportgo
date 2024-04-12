@@ -820,6 +820,7 @@ func (suite *VXCClientTestSuite) TestUpdateVXC() {
 	rateLimit := 100
 	costCentre := "test-cost-centre"
 	shutdown := false
+	updatedTerms := 12
 
 	startDate := &Time{GetTime(1706104800000)}
 	endDate := &Time{GetTime(1737727200000)}
@@ -829,6 +830,7 @@ func (suite *VXCClientTestSuite) TestUpdateVXC() {
 		AEndVLAN:   &aEndVlan,
 		BEndVLAN:   &bEndVlan,
 		RateLimit:  &rateLimit,
+		Term:       &updatedTerms,
 		Shutdown:   &shutdown,
 		CostCentre: &costCentre,
 	}
@@ -879,7 +881,7 @@ func (suite *VXCClientTestSuite) TestUpdateVXC() {
 			},
 			"contractStartDate": 1706104800000,
 			"contractEndDate": 1737727200000,
-			"contractTermMonths": 1,
+			"contractTermMonths": 12,
 			"companyUid": "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
 			"costCentre": "test-cost-centre",
 			"companyName": "Test Company",
@@ -969,7 +971,7 @@ func (suite *VXCClientTestSuite) TestUpdateVXC() {
 			Type:     "",
 			NewSpeed: 0,
 		},
-		ContractTermMonths: 1,
+		ContractTermMonths: 12,
 		CompanyUID:         companyUid,
 		CompanyName:        "Test Company",
 		AttributeTags:      map[string]string{},
