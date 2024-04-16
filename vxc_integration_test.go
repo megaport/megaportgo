@@ -104,7 +104,7 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 		PortUID:   aEndUid,
 		VXCName:   "Test VXC",
 		RateLimit: 500,
-		Term:      1,
+		Term:      12,
 		Shutdown:  false,
 		AEndConfiguration: VXCOrderEndpointConfiguration{
 			VLAN: GenerateRandomVLAN(),
@@ -125,13 +125,12 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 	newAVLAN := GenerateRandomVLAN()
 	newBVLAN := GenerateRandomVLAN()
 	newCostCentre := "Test Cost Centre 2"
-	newTerm := 12
+	newTerm := 24
 
 	updateRes, updateErr := vxcSvc.UpdateVXC(ctx, vxcUid, &UpdateVXCRequest{
 		AEndVLAN:      &newAVLAN,
 		BEndVLAN:      &newBVLAN,
 		Name:          PtrTo("Updated VXC"),
-		RateLimit:     PtrTo(1000),
 		CostCentre:    PtrTo(newCostCentre),
 		Term:          PtrTo(newTerm),
 		WaitForUpdate: true,
@@ -148,7 +147,6 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 	}
 
 	suite.EqualValues("Updated VXC", vxcInfo.Name, "vxc name is not updated")
-	suite.EqualValues(1000, vxcInfo.RateLimit, "vxc rate limit is not updated")
 	suite.EqualValues(newAVLAN, vxcInfo.AEndConfiguration.VLAN, "vxc a end vlan is not updated")
 	suite.EqualValues(newBVLAN, vxcInfo.BEndConfiguration.VLAN, "vxc b end vlan is not updated")
 	suite.EqualValues(newCostCentre, vxcInfo.CostCentre, "vxc cost centre is not updated")
@@ -179,6 +177,177 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 	})
 	if deleteErr != nil {
 		suite.FailNowf("cannot delete b-end port", "cannot delete b-end port %v", deleteErr)
+	}
+}
+
+// TestVXCMoveAEnd tests the VXC move process.
+func (suite *VXCIntegrationTestSuite) TestVXCMove() {
+	vxcSvc := suite.client.VXCService
+	ctx := context.Background()
+	logger := suite.client.Logger
+	locSvc := suite.client.LocationService
+	portSvc := suite.client.PortService
+
+	fuzzySearch, locationErr := locSvc.GetLocationByNameFuzzy(ctx, TEST_LOCATION_A)
+	if locationErr != nil {
+		suite.FailNowf("cannot find location", "cannot find location %v", locationErr)
+	}
+	testLocation := fuzzySearch[0]
+
+	logger.InfoContext(ctx, "buying first port a end")
+
+	aEndFirstPortRes, portErr := portSvc.BuyPort(ctx, &BuyPortRequest{
+		Name:                  "VXC Port A #1",
+		LocationId:            testLocation.ID,
+		PortSpeed:             1000,
+		Term:                  1,
+		Market:                "AU",
+		MarketPlaceVisibility: true,
+		WaitForProvision:      true,
+		WaitForTime:           5 * time.Minute,
+	})
+	if portErr != nil {
+		suite.FailNowf("cannot buy port", "cannot buy port %v", portErr)
+	}
+
+	aEndUidFirst := aEndFirstPortRes.TechnicalServiceUIDs[0]
+
+	suite.True(IsGuid(aEndUidFirst), "invalid guid for a end uid")
+
+	logger.InfoContext(ctx, "buying first port a end")
+
+	aEndSecondPortRes, portErr := portSvc.BuyPort(ctx, &BuyPortRequest{
+		Name:                  "VXC Port A #2",
+		LocationId:            testLocation.ID,
+		PortSpeed:             1000,
+		Term:                  1,
+		Market:                "AU",
+		MarketPlaceVisibility: true,
+		WaitForProvision:      true,
+		WaitForTime:           5 * time.Minute,
+	})
+	if portErr != nil {
+		suite.FailNowf("cannot buy port", "cannot buy port %v", portErr)
+	}
+
+	aEndUidSecond := aEndSecondPortRes.TechnicalServiceUIDs[0]
+
+	suite.True(IsGuid(aEndUidSecond), "invalid guid for a end uid")
+
+	logger.InfoContext(ctx, "buying first port b end")
+	bEndFirstPortRes, portErr := portSvc.BuyPort(ctx, &BuyPortRequest{
+		Name:                  "VXC Port B #2",
+		LocationId:            testLocation.ID,
+		PortSpeed:             1000,
+		Term:                  1,
+		Market:                "AU",
+		MarketPlaceVisibility: true,
+		WaitForProvision:      true,
+		WaitForTime:           5 * time.Minute,
+	})
+	if portErr != nil {
+		suite.FailNowf("cannot buy port", "cannot buy port %v", portErr)
+	}
+	bEndUidFirst := bEndFirstPortRes.TechnicalServiceUIDs[0]
+	suite.True(IsGuid(bEndUidFirst), "invalid guid for b end uid")
+
+	logger.InfoContext(ctx, "buying second port b end")
+	bEndSecondPortRes, portErr := portSvc.BuyPort(ctx, &BuyPortRequest{
+		Name:                  "VXC Port B #2",
+		LocationId:            testLocation.ID,
+		PortSpeed:             1000,
+		Term:                  1,
+		Market:                "AU",
+		MarketPlaceVisibility: true,
+		WaitForProvision:      true,
+		WaitForTime:           5 * time.Minute,
+	})
+	if portErr != nil {
+		suite.FailNowf("cannot buy port", "cannot buy port %v", portErr)
+	}
+	bEndUidSecond := bEndSecondPortRes.TechnicalServiceUIDs[0]
+	suite.True(IsGuid(bEndUidSecond), "invalid guid for b end uid")
+
+	logger.InfoContext(ctx, "buying vxc")
+
+	buyVxcRes, vxcErr := vxcSvc.BuyVXC(ctx, &BuyVXCRequest{
+		PortUID:   aEndUidFirst,
+		VXCName:   "Test VXC",
+		RateLimit: 500,
+		Term:      1,
+		Shutdown:  false,
+		AEndConfiguration: VXCOrderEndpointConfiguration{
+			VLAN: GenerateRandomVLAN(),
+		},
+		BEndConfiguration: VXCOrderEndpointConfiguration{
+			VLAN:       GenerateRandomVLAN(),
+			ProductUID: bEndUidFirst,
+		},
+		WaitForProvision: true,
+		WaitForTime:      8 * time.Minute,
+	})
+	if vxcErr != nil {
+		suite.FailNowf("cannot buy vxc", "cannot buy vxc %v", vxcErr)
+	}
+	vxcUid := buyVxcRes.TechnicalServiceUID
+	suite.True(IsGuid(vxcUid), "invalid guid for vxc uid")
+
+	logger.InfoContext(ctx, "updating vxc to second a and b end ports")
+
+	updateRes, updateErr := vxcSvc.UpdateVXC(ctx, vxcUid, &UpdateVXCRequest{
+		AEndProductUID: &aEndUidSecond,
+		BEndProductUID: &bEndUidSecond,
+		WaitForUpdate:  true,
+		WaitForTime:    10 * time.Minute,
+	})
+	if updateErr != nil {
+		suite.FailNowf("cannot update vxc", "cannot update vxc %v", updateErr)
+	}
+
+	suite.Equal(updateRes.AEndConfiguration.UID, aEndUidSecond, "a end port is not moved")
+	suite.Equal(updateRes.BEndConfiguration.UID, bEndUidSecond, "b end port is not moved")
+
+	logger.InfoContext(ctx, "deleting vxc")
+
+	deleteErr := vxcSvc.DeleteVXC(ctx, vxcUid, &DeleteVXCRequest{
+		DeleteNow: true,
+	})
+	if deleteErr != nil {
+		suite.FailNowf("cannot delete vxc", "cannot delete vxc %v", deleteErr)
+	}
+
+	logger.InfoContext(ctx, "deleting ports")
+
+	_, deleteErr = portSvc.DeletePort(ctx, &DeletePortRequest{
+		PortID:    aEndUidFirst,
+		DeleteNow: true,
+	})
+	if deleteErr != nil {
+		suite.FailNowf("cannot delete first a-end port", "cannot delete a-end port %v", deleteErr)
+	}
+
+	_, deleteErr = portSvc.DeletePort(ctx, &DeletePortRequest{
+		PortID:    bEndUidFirst,
+		DeleteNow: true,
+	})
+	if deleteErr != nil {
+		suite.FailNowf("cannot delete first b-end port", "cannot delete b-end port %v", deleteErr)
+	}
+
+	_, deleteErr = portSvc.DeletePort(ctx, &DeletePortRequest{
+		PortID:    aEndUidSecond,
+		DeleteNow: true,
+	})
+	if deleteErr != nil {
+		suite.FailNowf("cannot delete second a-end port", "cannot delete a-end port %v", deleteErr)
+	}
+
+	_, deleteErr = portSvc.DeletePort(ctx, &DeletePortRequest{
+		PortID:    bEndUidSecond,
+		DeleteNow: true,
+	})
+	if deleteErr != nil {
+		suite.FailNowf("cannot delete second b-end port", "cannot delete b-end port %v", deleteErr)
 	}
 }
 

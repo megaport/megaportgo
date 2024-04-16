@@ -174,7 +174,7 @@ func (svc *VXCServiceOp) BuyVXC(ctx context.Context, req *BuyVXCRequest) (*BuyVX
 
 // GetVXC gets details about a single VXC from the Megaport VXC API.
 func (svc *VXCServiceOp) GetVXC(ctx context.Context, id string) (*VXC, error) {
-	path := "/v3/product/" + id
+	path := "/v2/product/" + id
 	url := svc.Client.BaseURL.JoinPath(path).String()
 
 	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, url, nil)
@@ -228,6 +228,7 @@ func (svc *VXCServiceOp) UpdateVXC(ctx context.Context, id string, req *UpdateVX
 		BEndVLAN:       req.BEndVLAN,
 		AEndProductUID: req.AEndProductUID,
 		BEndProductUID: req.BEndProductUID,
+		Term:           req.Term,
 		CostCentre:     req.CostCentre,
 		Shutdown:       req.Shutdown,
 	}

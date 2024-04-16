@@ -401,7 +401,7 @@ func (suite *VXCClientTestSuite) TestGetVXC() {
 			}
 		}
 	}`
-	path := "/v3/product/" + vxcUid
+	path := "/v2/product/" + vxcUid
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
@@ -598,7 +598,7 @@ func (suite *VXCClientTestSuite) TestGetAzureVXC() {
 			}
 		}
 	}`
-	path := "/v3/product/" + vxcUid
+	path := "/v2/product/" + vxcUid
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
@@ -793,7 +793,7 @@ func (suite *VXCClientTestSuite) TestGetGoogleVXC() {
 			}
 		}
 	}`
-	path := "/v3/product/" + vxcUid
+	path := "/v2/product/" + vxcUid
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
@@ -1014,7 +1014,6 @@ func (suite *VXCClientTestSuite) TestUpdateVXC() {
 	})
 	gotVxc, err := vxcSvc.UpdateVXC(ctx, vxcUid, updateReq)
 	suite.NoError(err)
-	fmt.Println("got vxc is this", gotVxc)
 	suite.Equal(wantVxc, gotVxc)
 }
 
