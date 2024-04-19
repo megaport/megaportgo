@@ -296,6 +296,10 @@ func (svc *PortServiceOp) GetPort(ctx context.Context, portId string) (*Port, er
 
 // ModifyPort modifies a port in the Megaport Port API.
 func (svc *PortServiceOp) ModifyPort(ctx context.Context, req *ModifyPortRequest) (*ModifyPortResponse, error) {
+	if len(req.CostCentre) > 255 {
+		return nil, ErrCostCentreTooLong
+	}
+
 	modifyRes, err := svc.Client.ProductService.ModifyProduct(ctx, &ModifyProductRequest{
 		ProductID:             req.PortID,
 		ProductType:           PRODUCT_MEGAPORT,

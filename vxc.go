@@ -218,6 +218,10 @@ func (svc *VXCServiceOp) UpdateVXC(ctx context.Context, id string, req *UpdateVX
 	if req.Term != nil && (*req.Term != 1 && *req.Term != 12 && *req.Term != 24 && *req.Term != 36) {
 		return nil, ErrInvalidTerm
 	}
+	if req.CostCentre != nil && len(*req.CostCentre) > 255 {
+		return nil, ErrCostCentreTooLong
+	}
+
 	path := fmt.Sprintf("/v3/product/%s/%s", PRODUCT_VXC, id)
 	url := svc.Client.BaseURL.JoinPath(path).String()
 

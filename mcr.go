@@ -268,6 +268,9 @@ func (svc *MCRServiceOp) GetMCRPrefixFilterLists(ctx context.Context, mcrId stri
 
 // ModifyMCR modifies an MCR in the Megaport MCR API.
 func (svc *MCRServiceOp) ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (*ModifyMCRResponse, error) {
+	if len(req.CostCentre) > 255 {
+		return nil, ErrCostCentreTooLong
+	}
 	modifyReq := &ModifyProductRequest{
 		ProductID:             req.MCRID,
 		ProductType:           PRODUCT_MCR,

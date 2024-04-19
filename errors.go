@@ -57,3 +57,6 @@ var ErrNoPartnerPortsFound = errors.New("sorry there were no results returned ba
 
 // ErrNoAvailableVxcPorts is returned when there are no available ports for a user to connect to
 var ErrNoAvailableVxcPorts = errors.New("there are no available ports for you to connect to")
+
+// ErrCostCentreTooLong is returned when a cost centre is longer than 255 characters
+var ErrCostCentreTooLong = errors.New("cost centre must be less than 255 characters")
