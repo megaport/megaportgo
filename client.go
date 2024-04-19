@@ -336,10 +336,8 @@ func (c *Client) Authorize(ctx context.Context) (*AuthInfo, error) {
 		tokenURL = "https://auth-m2m.megaport.com/oauth2/token"
 	} else if c.BaseURL.Host == "api-staging.megaport.com" {
 		tokenURL = "https://oauth-m2m-staging.auth.ap-southeast-2.amazoncognito.com/oauth2/token"
-	} else if c.BaseURL.Host == "api-uat.megaport.com" {
-		tokenURL = "https://oauth-m2m-uat.auth.ap-southeast-2.amazoncognito.com/oauth2/token"
-	} else if c.BaseURL.Host == "api-uat2.megaport.com" {
-		tokenURL = "https://oauth-m2m-uat2.auth.ap-southeast-2.amazoncognito.com/oauth2/token"
+	} else {
+		return nil, errors.New("unknown API environment")
 	}
 
 	// Create form data for the request body
