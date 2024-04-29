@@ -28,8 +28,8 @@ type VXC struct {
 	CreatedBy          string              `json:"createdBy"`
 	LiveDate           *Time               `json:"liveDate"`
 	CreateDate         *Time               `json:"createDate"`
-	Resources          VXCResources        `json:"resources"`
-	VXCApproval        VXCApproval         `json:"vxcApproval"`
+	Resources          *VXCResources       `json:"resources"`
+	VXCApproval        *VXCApproval        `json:"vxcApproval"`
 	Shutdown           bool                `json:"shutdown"`
 	ContractStartDate  *Time               `json:"contractStartDate"`
 	ContractEndDate    *Time               `json:"contractEndDate"`
@@ -58,10 +58,10 @@ type VXCEndConfiguration struct {
 
 // VXCResources represents the resources associated with a VXC.
 type VXCResources struct {
-	Interface     []PortInterface `json:"interface"`
-	VirtualRouter VirtualRouter   `json:"virtual_router"`
-	CSPConnection CSPConnection   `json:"csp_connection"`
-	VLL           VLLConfig       `json:"vll"`
+	Interface     []*PortInterface `json:"interface"`
+	VirtualRouter *VirtualRouter   `json:"virtual_router"`
+	CSPConnection *CSPConnection   `json:"csp_connection"`
+	VLL           *VLLConfig       `json:"vll"`
 }
 
 // VirtualRouter represents the configuration of a virtual router.

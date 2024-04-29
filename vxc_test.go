@@ -258,8 +258,8 @@ func (suite *VXCClientTestSuite) TestGetVXC() {
 		CreateDate:         startDate,
 		ContractStartDate:  startDate,
 		ContractEndDate:    endDate,
-		Resources: VXCResources{
-			CSPConnection: CSPConnection{
+		Resources: &VXCResources{
+			CSPConnection: &CSPConnection{
 				CSPConnection: []CSPConnectionConfig{
 					CSPConnectionAWSHC{
 						Bandwidth:    50,
@@ -273,7 +273,7 @@ func (suite *VXCClientTestSuite) TestGetVXC() {
 					},
 				},
 			},
-			VLL: VLLConfig{
+			VLL: &VLLConfig{
 				AEndVLAN:      0,
 				BEndVLAN:      0,
 				RateLimitMBPS: 50,
@@ -282,7 +282,7 @@ func (suite *VXCClientTestSuite) TestGetVXC() {
 				Shutdown:      false,
 			},
 		},
-		VXCApproval: VXCApproval{
+		VXCApproval: &VXCApproval{
 			Status:   "",
 			Message:  "",
 			UID:      "",
@@ -438,8 +438,8 @@ func (suite *VXCClientTestSuite) TestGetAzureVXC() {
 		CreateDate:         startDate,
 		ContractStartDate:  startDate,
 		ContractEndDate:    endDate,
-		Resources: VXCResources{
-			CSPConnection: CSPConnection{
+		Resources: &VXCResources{
+			CSPConnection: &CSPConnection{
 				CSPConnection: []CSPConnectionConfig{
 					CSPConnectionAzure{
 						Bandwidth:    50,
@@ -465,7 +465,7 @@ func (suite *VXCClientTestSuite) TestGetAzureVXC() {
 					},
 				},
 			},
-			VLL: VLLConfig{
+			VLL: &VLLConfig{
 				AEndVLAN:      0,
 				BEndVLAN:      0,
 				RateLimitMBPS: 50,
@@ -473,7 +473,7 @@ func (suite *VXCClientTestSuite) TestGetAzureVXC() {
 				ResourceType:  "vll",
 			},
 		},
-		VXCApproval: VXCApproval{
+		VXCApproval: &VXCApproval{
 			Status:   "",
 			Message:  "",
 			UID:      "",
@@ -635,8 +635,8 @@ func (suite *VXCClientTestSuite) TestGetGoogleVXC() {
 		CreateDate:         startDate,
 		ContractStartDate:  startDate,
 		ContractEndDate:    endDate,
-		Resources: VXCResources{
-			CSPConnection: CSPConnection{
+		Resources: &VXCResources{
+			CSPConnection: &CSPConnection{
 				CSPConnection: []CSPConnectionConfig{
 					CSPConnectionGoogle{
 						Bandwidth:    50,
@@ -660,7 +660,7 @@ func (suite *VXCClientTestSuite) TestGetGoogleVXC() {
 					},
 				},
 			},
-			VLL: VLLConfig{
+			VLL: &VLLConfig{
 				AEndVLAN:      0,
 				BEndVLAN:      0,
 				RateLimitMBPS: 50,
@@ -668,7 +668,7 @@ func (suite *VXCClientTestSuite) TestGetGoogleVXC() {
 				ResourceType:  "vll",
 			},
 		},
-		VXCApproval: VXCApproval{
+		VXCApproval: &VXCApproval{
 			Status:   "",
 			Message:  "",
 			UID:      "",
@@ -940,8 +940,8 @@ func (suite *VXCClientTestSuite) TestUpdateVXC() {
 		ContractStartDate:  startDate,
 		ContractEndDate:    endDate,
 		CostCentre:         costCentre,
-		Resources: VXCResources{
-			CSPConnection: CSPConnection{
+		Resources: &VXCResources{
+			CSPConnection: &CSPConnection{
 				CSPConnection: []CSPConnectionConfig{
 					CSPConnectionAWSHC{
 						Bandwidth:    50,
@@ -955,7 +955,7 @@ func (suite *VXCClientTestSuite) TestUpdateVXC() {
 					},
 				},
 			},
-			VLL: VLLConfig{
+			VLL: &VLLConfig{
 				AEndVLAN:      0,
 				BEndVLAN:      0,
 				RateLimitMBPS: 100,
@@ -964,7 +964,7 @@ func (suite *VXCClientTestSuite) TestUpdateVXC() {
 				Shutdown:      false,
 			},
 		},
-		VXCApproval: VXCApproval{
+		VXCApproval: &VXCApproval{
 			Status:   "",
 			Message:  "",
 			UID:      "",
@@ -1000,6 +1000,7 @@ func (suite *VXCClientTestSuite) TestUpdateVXC() {
 		BEndVLAN:   updateReq.BEndVLAN,
 		Shutdown:   updateReq.Shutdown,
 		CostCentre: updateReq.CostCentre,
+		Term:       updateReq.Term,
 	}
 	path := fmt.Sprintf("/v3/product/%s/%s", PRODUCT_VXC, vxcUid)
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
