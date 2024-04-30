@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 
 	"github.com/megaport/megaportgo/mega_err"
 	"github.com/megaport/megaportgo/shared"
@@ -45,9 +46,12 @@ func (c *Config) MakeAPICall(verb string, endpoint string, body []byte) (*http.R
 	var request *http.Request
 	var reqErr error
 
-	url := c.Endpoint + endpoint
+	url, err := url.JoinPath(c.Endpoint, endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("could not create API endpoint URL: %w", err)
+	}
 
-	c.Log.Debugln("Making call to: ", string(url))
+	c.Log.Debugln("Making call to: ", url)
 
 	if body == nil {
 		request, reqErr = http.NewRequest(verb, url, nil)
