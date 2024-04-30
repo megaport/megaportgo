@@ -598,7 +598,7 @@ func (c *CSPConnection) UnmarshalJSON(data []byte) error {
 					return err
 				}
 				c.CSPConnection = append(c.CSPConnection, azure)
-			case "VIRTUAL_ROUTER":
+			case "VROUTER":
 				marshaled, err := json.Marshal(cn)
 				if err != nil {
 					return err
