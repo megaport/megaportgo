@@ -607,7 +607,6 @@ func (c *CSPConnection) UnmarshalJSON(data []byte) error {
 				if err := json.Unmarshal(marshaled, &vr); err != nil {
 					return err
 				}
-				fmt.Println("got yourself a virtual router!!!")
 				c.CSPConnection = append(c.CSPConnection, vr)
 			case "TRANSIT":
 				marshaled, err := json.Marshal(cn)
