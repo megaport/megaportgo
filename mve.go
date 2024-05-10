@@ -206,7 +206,7 @@ func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMV
 
 // GetMVE retrieves a single MVE from the Megaport MVE API.
 func (svc *MVEServiceOp) GetMVE(ctx context.Context, mveId string) (*MVE, error) {
-	path := "/v2/product" + mveId
+	path := "/v2/product/" + mveId
 	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err

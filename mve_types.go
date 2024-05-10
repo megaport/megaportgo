@@ -8,7 +8,7 @@ type MVEOrderConfig struct {
 	ProductType       string                `json:"productType"`
 	DiversityZone     string                `json:"diversityZone"`
 	NetworkInterfaces []MVENetworkInterface `json:"vnics"`
-	VendorConfig      VendorConfig          `json:"VendorConfig"`
+	VendorConfig      VendorConfig          `json:"vendorConfig"`
 }
 
 // VendorConfig is an interface for MVE vendor configuration.
@@ -24,6 +24,7 @@ type ArubaConfig struct {
 	ProductSize string `json:"productSize"`
 	AccountName string `json:"accountName"`
 	AccountKey  string `json:"accountKey"`
+	SystemTag   string `json:"systemTag"`
 }
 
 // CiscoConfig represents the configuration for a Cisco MVE.

@@ -6,6 +6,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/suite"
 )
 
 const (
@@ -17,9 +19,9 @@ type MVEIntegrationTestSuite IntegrationTestSuite
 
 func TestMVEIntegrationTestSuite(t *testing.T) {
 	t.Parallel()
-	// if *runIntegrationTests {
-	// 	suite.Run(t, new(MVEIntegrationTestSuite))
-	// }
+	if *runIntegrationTests {
+		suite.Run(t, new(MVEIntegrationTestSuite))
+	}
 }
 
 func (suite *MVEIntegrationTestSuite) SetupSuite() {
@@ -42,17 +44,8 @@ func (suite *MVEIntegrationTestSuite) SetupSuite() {
 	suite.client = megaportClient
 }
 
-// readSSHPubKey reads the ssh public key from the default location
-func readSSHPubKey() string {
-	key, err := os.ReadFile(os.Getenv("HOME") + "/.ssh/id_rsa.pub")
-	if err != nil {
-		panic(err)
-	}
-	return string(key)
-}
-
-// TestC8KVAutoLifecycle tests the lifecycle of a C8KV MVE
-func (suite *MVEIntegrationTestSuite) TestC8KVAutoLifecycle() {
+// TestArubaMVE tests the lifecycle of an Aruba SD-WAN MVE
+func (suite *MVEIntegrationTestSuite) TestArubaMVE() {
 	mveSvc := suite.client.MVEService
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
@@ -64,11 +57,13 @@ func (suite *MVEIntegrationTestSuite) TestC8KVAutoLifecycle() {
 		suite.FailNowf("could not get location", "could not get location %v", err)
 	}
 	logger.DebugContext(ctx, "test location determined", slog.String("location", testLocation.Name))
-	mveConfig := &CiscoConfig{
-		Vendor:            "cisco",
-		ProductSize:       "SMALL",
-		ImageID:           42,
-		AdminSSHPublicKey: readSSHPubKey(),
+	mveConfig := &ArubaConfig{
+		Vendor:      "aruba",
+		ProductSize: "MEDIUM",
+		ImageID:     23,
+		AccountName: "test",
+		AccountKey:  "test",
+		SystemTag:   "test",
 	}
 
 	buyMVERes, err := mveSvc.BuyMVE(ctx, &BuyMVERequest{
