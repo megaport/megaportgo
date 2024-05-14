@@ -11,8 +11,7 @@ import (
 	"time"
 )
 
-// MVEService is an interface for interfacing with the MVE endpoints
-// of the Megaport API.
+// MVEService is an interface for interfacing with the MVE endpoints of the Megaport API.
 type MVEService interface {
 	// BuyMVE buys an MVE from the Megaport MVE API.
 	BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMVEResponse, error)
