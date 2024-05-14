@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -340,6 +341,7 @@ func (suite *MVEClientTestSuite) TestGetMVE() {
 		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
 	})
+	time.Sleep(1 * time.Second)
 	got, err := mveSvc.GetMVE(ctx, productUid)
 	suite.NoError(err)
 	suite.Equal(wantMVE, got)
