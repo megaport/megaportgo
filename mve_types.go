@@ -22,6 +22,7 @@ type ArubaConfig struct {
 	Vendor      string `json:"vendor"`
 	ImageID     int    `json:"imageId"`
 	ProductSize string `json:"productSize"`
+	MVELabel    string `json:"mveLabel"`
 	AccountName string `json:"accountName"`
 	AccountKey  string `json:"accountKey"`
 	SystemTag   string `json:"systemTag"`
@@ -33,6 +34,7 @@ type CiscoConfig struct {
 	Vendor             string `json:"vendor"`
 	ImageID            int    `json:"imageId"`
 	ProductSize        string `json:"productSize"`
+	MVELabel           string `json:"mveLabel"`
 	ManageLocally      bool   `json:"manageLocally"`
 	AdminSSHPublicKey  string `json:"adminSshPublicKey"`
 	SSHPublicKey       string `json:"sshPublicKey"`
@@ -48,6 +50,7 @@ type FortinetConfig struct {
 	Vendor            string `json:"vendor"`
 	ImageID           int    `json:"imageId"`
 	ProductSize       string `json:"productSize"`
+	MVELabel          string `json:"mveLabel"`
 	AdminSSHPublicKey string `json:"adminSshPublicKey"`
 	SSHPublicKey      string `json:"sshPublicKey"`
 	LicenseData       string `json:"licenseData"`
@@ -59,6 +62,7 @@ type PaloAltoConfig struct {
 	Vendor            string `json:"vendor"`
 	ImageID           int    `json:"imageId"`
 	ProductSize       string `json:"productSize"`
+	MVELabel          string `json:"mveLabel"`
 	AdminSSHPublicKey string `json:"adminSshPublicKey"`
 	AdminPasswordHash string `json:"adminPasswordHash"`
 	LicenseData       string `json:"licenseData"`
@@ -70,6 +74,7 @@ type VersaConfig struct {
 	Vendor            string `json:"vendor"`
 	ImageID           int    `json:"imageId"`
 	ProductSize       string `json:"productSize"`
+	MVELabel          string `json:"mveLabel"`
 	DirectorAddress   string `json:"directorAddress"`
 	ControllerAddress string `json:"controllerAddress"`
 	LocalAuth         string `json:"localAuth"`
@@ -83,10 +88,21 @@ type VmwareConfig struct {
 	Vendor            string `json:"vendor"`
 	ImageID           int    `json:"imageId"`
 	ProductSize       string `json:"productSize"`
+	MVELabel          string `json:"mveLabel"`
 	AdminSSHPublicKey string `json:"adminSshPublicKey"`
 	SSHPublicKey      string `json:"sshPublicKey"`
 	VcoAddress        string `json:"vcoAddress"`
 	VcoActivationCode string `json:"vcoActivationCode"`
+}
+
+// MerakiConfig represents the configuration for a Meraki MVE.
+type MerakiConfig struct {
+	VendorConfig
+	Vendor      string `json:"vendor"`
+	ImageID     int    `json:"imageId"`
+	ProductSize string `json:"productSize"`
+	MVELabel    string `json:"mveLabel"`
+	Token       string `json:"token"`
 }
 
 // MVENetworkInterface represents a vNIC.

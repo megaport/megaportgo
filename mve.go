@@ -97,6 +97,7 @@ func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMV
 			Vendor:      c.Vendor,
 			ImageID:     c.ImageID,
 			ProductSize: c.ProductSize,
+			MVELabel:    c.MVELabel,
 			AccountName: c.AccountName,
 			AccountKey:  c.AccountKey,
 		}
@@ -105,6 +106,7 @@ func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMV
 			Vendor:             c.Vendor,
 			ImageID:            c.ImageID,
 			ProductSize:        c.ProductSize,
+			MVELabel:           c.MVELabel,
 			AdminSSHPublicKey:  c.AdminSSHPublicKey,
 			SSHPublicKey:       c.SSHPublicKey,
 			ManageLocally:      c.ManageLocally,
@@ -118,6 +120,7 @@ func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMV
 			Vendor:            c.Vendor,
 			ImageID:           c.ImageID,
 			ProductSize:       c.ProductSize,
+			MVELabel:          c.MVELabel,
 			AdminSSHPublicKey: c.AdminSSHPublicKey,
 			SSHPublicKey:      c.SSHPublicKey,
 			LicenseData:       c.LicenseData,
@@ -127,6 +130,7 @@ func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMV
 			Vendor:            c.Vendor,
 			ImageID:           c.ImageID,
 			ProductSize:       c.ProductSize,
+			MVELabel:          c.MVELabel,
 			AdminSSHPublicKey: c.AdminSSHPublicKey,
 			AdminPasswordHash: c.AdminPasswordHash,
 			LicenseData:       c.LicenseData,
@@ -136,6 +140,7 @@ func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMV
 			Vendor:            c.Vendor,
 			ImageID:           c.ImageID,
 			ProductSize:       c.ProductSize,
+			MVELabel:          c.MVELabel,
 			DirectorAddress:   c.DirectorAddress,
 			ControllerAddress: c.ControllerAddress,
 			LocalAuth:         c.LocalAuth,
@@ -147,10 +152,19 @@ func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMV
 			Vendor:            c.Vendor,
 			ImageID:           c.ImageID,
 			ProductSize:       c.ProductSize,
+			MVELabel:          c.MVELabel,
 			AdminSSHPublicKey: c.AdminSSHPublicKey,
 			SSHPublicKey:      c.SSHPublicKey,
 			VcoAddress:        c.VcoAddress,
 			VcoActivationCode: c.VcoActivationCode,
+		}
+	case *MerakiConfig:
+		order.VendorConfig = &MerakiConfig{
+			Vendor:      c.Vendor,
+			ImageID:     c.ImageID,
+			ProductSize: c.ProductSize,
+			MVELabel:    c.MVELabel,
+			Token:       c.Token,
 		}
 	}
 
