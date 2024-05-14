@@ -141,7 +141,7 @@ func (svc *MCRServiceOp) BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMC
 		TechnicalServiceUID: orderInfo.Data[0].TechnicalServiceUID,
 	}
 
-	// wait until the MCR is provisioned before returning if requested by the user
+	// wait until the MCR is provisioned before returning if requested by the user.
 	if req.WaitForProvision {
 		toWait := req.WaitForTime
 		if toWait == 0 {
