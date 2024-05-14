@@ -30,11 +30,16 @@ type ArubaConfig struct {
 // CiscoConfig represents the configuration for a Cisco MVE.
 type CiscoConfig struct {
 	VendorConfig
-	Vendor            string `json:"vendor"`
-	ImageID           int    `json:"imageId"`
-	ProductSize       string `json:"productSize"`
-	AdminSSHPublicKey string `json:"adminSshPublicKey"`
-	CloudInit         string `json:"cloudInit"`
+	Vendor             string `json:"vendor"`
+	ImageID            int    `json:"imageId"`
+	ProductSize        string `json:"productSize"`
+	ManageLocally      bool   `json:"manageLocally"`
+	AdminSSHPublicKey  string `json:"adminSshPublicKey"`
+	SSHPublicKey       string `json:"sshPublicKey"`
+	CloudInit          string `json:"cloudInit"`
+	FMCIPAddress       string `json:"fmcIpAddress"`
+	FMCRegistrationKey string `json:"fmcRegistrationKey"`
+	FMCNatID           string `json:"fmcNatId"`
 }
 
 // FortinetConfig represents the configuration for a Fortinet MVE.
@@ -44,6 +49,7 @@ type FortinetConfig struct {
 	ImageID           int    `json:"imageId"`
 	ProductSize       string `json:"productSize"`
 	AdminSSHPublicKey string `json:"adminSshPublicKey"`
+	SSHPublicKey      string `json:"sshPublicKey"`
 	LicenseData       string `json:"licenseData"`
 }
 
@@ -78,6 +84,7 @@ type VmwareConfig struct {
 	ImageID           int    `json:"imageId"`
 	ProductSize       string `json:"productSize"`
 	AdminSSHPublicKey string `json:"adminSshPublicKey"`
+	SSHPublicKey      string `json:"sshPublicKey"`
 	VcoAddress        string `json:"vcoAddress"`
 	VcoActivationCode string `json:"vcoActivationCode"`
 }

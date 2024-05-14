@@ -102,11 +102,16 @@ func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMV
 		}
 	case *CiscoConfig:
 		order.VendorConfig = &CiscoConfig{
-			Vendor:            c.Vendor,
-			ImageID:           c.ImageID,
-			ProductSize:       c.ProductSize,
-			AdminSSHPublicKey: c.AdminSSHPublicKey,
-			CloudInit:         c.CloudInit,
+			Vendor:             c.Vendor,
+			ImageID:            c.ImageID,
+			ProductSize:        c.ProductSize,
+			AdminSSHPublicKey:  c.AdminSSHPublicKey,
+			SSHPublicKey:       c.SSHPublicKey,
+			ManageLocally:      c.ManageLocally,
+			CloudInit:          c.CloudInit,
+			FMCIPAddress:       c.FMCIPAddress,
+			FMCRegistrationKey: c.FMCRegistrationKey,
+			FMCNatID:           c.FMCNatID,
 		}
 	case *FortinetConfig:
 		order.VendorConfig = &FortinetConfig{
@@ -114,6 +119,7 @@ func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMV
 			ImageID:           c.ImageID,
 			ProductSize:       c.ProductSize,
 			AdminSSHPublicKey: c.AdminSSHPublicKey,
+			SSHPublicKey:      c.SSHPublicKey,
 			LicenseData:       c.LicenseData,
 		}
 	case *PaloAltoConfig:
@@ -142,6 +148,7 @@ func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMV
 			ImageID:           c.ImageID,
 			ProductSize:       c.ProductSize,
 			AdminSSHPublicKey: c.AdminSSHPublicKey,
+			SSHPublicKey:      c.SSHPublicKey,
 			VcoAddress:        c.VcoAddress,
 			VcoActivationCode: c.VcoActivationCode,
 		}
