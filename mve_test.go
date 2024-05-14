@@ -267,7 +267,7 @@ func (suite *MVEClientTestSuite) TestGetMVE() {
 		"cancelable": true
 	}
 }`
-	path := "/v2/product" + productUid
+	path := "/v2/product/" + productUid
 	wantMVE := &MVE{
 		ID:                    1,
 		UID:                   productUid,
