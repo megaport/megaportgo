@@ -994,12 +994,12 @@ func (suite *VXCClientTestSuite) TestUpdateVXC() {
 		},
 	}
 	update := &VXCUpdate{
-		Name:       updateReq.Name,
+		Name:       *updateReq.Name,
 		RateLimit:  updateReq.RateLimit,
 		AEndVLAN:   updateReq.AEndVLAN,
 		BEndVLAN:   updateReq.BEndVLAN,
 		Shutdown:   updateReq.Shutdown,
-		CostCentre: updateReq.CostCentre,
+		CostCentre: *updateReq.CostCentre,
 		Term:       updateReq.Term,
 	}
 	path := fmt.Sprintf("/v3/product/%s/%s", PRODUCT_VXC, vxcUid)

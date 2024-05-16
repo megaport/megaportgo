@@ -276,7 +276,7 @@ func (svc *MCRServiceOp) ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (
 		ProductType:           PRODUCT_MCR,
 		Name:                  req.Name,
 		CostCentre:            req.CostCentre,
-		MarketplaceVisibility: req.MarketplaceVisibility,
+		MarketplaceVisibility: PtrTo(req.MarketplaceVisibility),
 	}
 	_, err := svc.Client.ProductService.ModifyProduct(ctx, modifyReq)
 	if err != nil {

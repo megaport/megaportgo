@@ -415,7 +415,7 @@ func (suite *MVEClientTestSuite) TestModifyMVE() {
 		ProductType:           PRODUCT_MVE,
 		Name:                  req.Name,
 		CostCentre:            "",
-		MarketplaceVisibility: false,
+		MarketplaceVisibility: PtrTo(false),
 	}
 	path := fmt.Sprintf("/v2/product/%s/%s", PRODUCT_MVE, productUid)
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {

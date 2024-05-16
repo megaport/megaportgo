@@ -52,6 +52,7 @@ type BuyPortRequest struct {
 	LagCount              int    `json:"lagCount"` // A lag count of 1 or higher will order the port as a single LAG
 	MarketPlaceVisibility bool   `json:"marketPlaceVisibility"`
 	DiversityZone         string `json:"diversityZone"`
+	CostCentre            string `json:"costCentre"`
 
 	WaitForProvision bool          // Wait until the VXC provisions before returning
 	WaitForTime      time.Duration // How long to wait for the VXC to provision if WaitForProvision is true (default is 5 minutes)
@@ -130,19 +131,24 @@ func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*Bu
 	if req.Term != 1 && req.Term != 12 && req.Term != 24 && req.Term != 36 {
 		return nil, ErrInvalidTerm
 	}
+	portOrder := PortOrder{
+		Name:                  req.Name,
+		Term:                  req.Term,
+		ProductType:           "MEGAPORT",
+		PortSpeed:             req.PortSpeed,
+		LocationID:            req.LocationId,
+		DiversityZone:         req.DiversityZone,
+		Virtual:               false,
+		Market:                req.Market,
+		LagPortCount:          req.LagCount,
+		MarketplaceVisibility: req.MarketPlaceVisibility,
+	}
+	if req.CostCentre != "" {
+		portOrder.CostCentre = req.CostCentre
+	}
+
 	buyOrder = []PortOrder{
-		{
-			Name:                  req.Name,
-			Term:                  req.Term,
-			ProductType:           "MEGAPORT",
-			PortSpeed:             req.PortSpeed,
-			LocationID:            req.LocationId,
-			DiversityZone:         req.DiversityZone,
-			Virtual:               false,
-			Market:                req.Market,
-			LagPortCount:          req.LagCount,
-			MarketplaceVisibility: req.MarketPlaceVisibility,
-		},
+		portOrder,
 	}
 
 	responseBody, responseError := svc.Client.ProductService.ExecuteOrder(ctx, buyOrder)
@@ -305,7 +311,7 @@ func (svc *PortServiceOp) ModifyPort(ctx context.Context, req *ModifyPortRequest
 		ProductType:           PRODUCT_MEGAPORT,
 		Name:                  req.Name,
 		CostCentre:            req.CostCentre,
-		MarketplaceVisibility: req.MarketplaceVisibility,
+		MarketplaceVisibility: &req.MarketplaceVisibility,
 	})
 	if err != nil {
 		return nil, err

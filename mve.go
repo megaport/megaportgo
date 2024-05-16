@@ -255,7 +255,7 @@ func (svc *MVEServiceOp) ModifyMVE(ctx context.Context, req *ModifyMVERequest) (
 		ProductType:           PRODUCT_MVE,
 		Name:                  req.Name,
 		CostCentre:            "",
-		MarketplaceVisibility: false,
+		MarketplaceVisibility: PtrTo(false),
 	}
 	_, err := svc.Client.ProductService.ModifyProduct(ctx, modifyProductReq)
 	if err != nil {

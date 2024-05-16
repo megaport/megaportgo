@@ -334,7 +334,7 @@ func (suite *MCRClientTestSuite) TestModifyMCR() {
 		ProductType:           PRODUCT_MCR,
 		Name:                  req.Name,
 		CostCentre:            req.CostCentre,
-		MarketplaceVisibility: req.MarketplaceVisibility,
+		MarketplaceVisibility: PtrTo(req.MarketplaceVisibility),
 	}
 	path := fmt.Sprintf("/v2/product/%s/%s", PRODUCT_MCR, productUid)
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
