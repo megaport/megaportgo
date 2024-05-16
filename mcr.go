@@ -48,6 +48,7 @@ type BuyMCRRequest struct {
 	Term          int
 	PortSpeed     int
 	MCRAsn        int
+	CostCentre    string
 
 	WaitForProvision bool          // Wait until the MCR provisions before returning
 	WaitForTime      time.Duration // How long to wait for the MCR to provision if WaitForProvision is true (default is 5 minutes)
