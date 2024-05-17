@@ -182,7 +182,7 @@ func (suite *PortIntegrationTestSuite) testModifyPort(c *Client, ctx context.Con
 		PortID:                portId,
 		Name:                  newPortName,
 		CostCentre:            "",
-		MarketplaceVisibility: portInfo.MarketplaceVisibility,
+		MarketplaceVisibility: &portInfo.MarketplaceVisibility,
 		WaitForUpdate:         true,
 		WaitForTime:           5 * time.Minute,
 	})

@@ -297,7 +297,7 @@ func (suite *PortClientTestSuite) TestModifyPort() {
 		PortID:                productUid,
 		Name:                  "updated-test-product",
 		CostCentre:            "US",
-		MarketplaceVisibility: false,
+		MarketplaceVisibility: PtrTo(false),
 	}
 	jblob := `{
     "message": "Product [36b3f68e-2f54-4331-bf94-f8984449365f] has been updated",
@@ -377,7 +377,7 @@ func (suite *PortClientTestSuite) TestModifyPort() {
 		ProductType:           PRODUCT_MEGAPORT,
 		Name:                  req.Name,
 		CostCentre:            req.CostCentre,
-		MarketplaceVisibility: &req.MarketplaceVisibility,
+		MarketplaceVisibility: req.MarketplaceVisibility,
 	}
 	path := fmt.Sprintf("/v2/product/%s/%s", PRODUCT_MEGAPORT, productUid)
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {

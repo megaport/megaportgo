@@ -72,7 +72,7 @@ type GetPortRequest struct {
 type ModifyPortRequest struct {
 	PortID                string
 	Name                  string
-	MarketplaceVisibility bool
+	MarketplaceVisibility *bool
 	CostCentre            string
 
 	WaitForUpdate bool          // Wait until the Port updates before returning
@@ -309,7 +309,7 @@ func (svc *PortServiceOp) ModifyPort(ctx context.Context, req *ModifyPortRequest
 		ProductType:           PRODUCT_MEGAPORT,
 		Name:                  req.Name,
 		CostCentre:            req.CostCentre,
-		MarketplaceVisibility: &req.MarketplaceVisibility,
+		MarketplaceVisibility: req.MarketplaceVisibility,
 	})
 	if err != nil {
 		return nil, err
