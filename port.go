@@ -142,9 +142,7 @@ func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*Bu
 		Market:                req.Market,
 		LagPortCount:          req.LagCount,
 		MarketplaceVisibility: req.MarketPlaceVisibility,
-	}
-	if req.CostCentre != "" {
-		portOrder.CostCentre = req.CostCentre
+		CostCentre:            req.CostCentre,
 	}
 
 	buyOrder = []PortOrder{
