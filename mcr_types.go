@@ -8,6 +8,7 @@ type MCROrder struct {
 	Term          int            `json:"term"`
 	Type          string         `json:"productType"`
 	PortSpeed     int            `json:"portSpeed"`
+	CostCentre    string         `json:"costCentre"`
 	Config        MCROrderConfig `json:"config"`
 }
 

@@ -226,15 +226,24 @@ func (svc *VXCServiceOp) UpdateVXC(ctx context.Context, id string, req *UpdateVX
 	url := svc.Client.BaseURL.JoinPath(path).String()
 
 	update := &VXCUpdate{
-		Name:           req.Name,
-		RateLimit:      req.RateLimit,
-		AEndVLAN:       req.AEndVLAN,
-		BEndVLAN:       req.BEndVLAN,
-		AEndProductUID: req.AEndProductUID,
-		BEndProductUID: req.BEndProductUID,
-		Term:           req.Term,
-		CostCentre:     req.CostCentre,
-		Shutdown:       req.Shutdown,
+		RateLimit: req.RateLimit,
+		AEndVLAN:  req.AEndVLAN,
+		BEndVLAN:  req.BEndVLAN,
+		Term:      req.Term,
+		Shutdown:  req.Shutdown,
+	}
+
+	if req.Name != nil {
+		update.Name = *req.Name
+	}
+	if req.AEndProductUID != nil {
+		update.AEndProductUID = *req.AEndProductUID
+	}
+	if req.BEndProductUID != nil {
+		update.BEndProductUID = *req.BEndProductUID
+	}
+	if req.CostCentre != nil {
+		update.CostCentre = *req.CostCentre
 	}
 
 	clientReq, err := svc.Client.NewRequest(ctx, http.MethodPut, url, update)

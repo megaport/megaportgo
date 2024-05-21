@@ -297,7 +297,7 @@ func (suite *PortClientTestSuite) TestModifyPort() {
 		PortID:                productUid,
 		Name:                  "updated-test-product",
 		CostCentre:            "US",
-		MarketplaceVisibility: false,
+		MarketplaceVisibility: PtrTo(false),
 	}
 	jblob := `{
     "message": "Product [36b3f68e-2f54-4331-bf94-f8984449365f] has been updated",

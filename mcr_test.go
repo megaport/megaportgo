@@ -243,7 +243,7 @@ func (suite *MCRClientTestSuite) TestModifyMCR() {
 		MCRID:                 productUid,
 		Name:                  "test-mcr-updated",
 		CostCentre:            "US",
-		MarketplaceVisibility: false,
+		MarketplaceVisibility: PtrTo(false),
 	}
 	jblobGet := `{
     "message": "Product [36b3f68e-2f54-4331-bf94-f8984449365f] has been updated",

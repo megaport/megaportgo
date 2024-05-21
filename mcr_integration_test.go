@@ -92,7 +92,7 @@ func (suite *MCRIntegrationTestSuite) TestMCRLifecycle() {
 		MCRID:                 mcrId,
 		Name:                  newMCRName,
 		CostCentre:            "",
-		MarketplaceVisibility: mcr.MarketplaceVisibility,
+		MarketplaceVisibility: &mcr.MarketplaceVisibility,
 		WaitForUpdate:         true,
 		WaitForTime:           5 * time.Minute,
 	})

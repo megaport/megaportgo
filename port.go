@@ -52,6 +52,7 @@ type BuyPortRequest struct {
 	LagCount              int    `json:"lagCount"` // A lag count of 1 or higher will order the port as a single LAG
 	MarketPlaceVisibility bool   `json:"marketPlaceVisibility"`
 	DiversityZone         string `json:"diversityZone"`
+	CostCentre            string `json:"costCentre"`
 
 	WaitForProvision bool          // Wait until the VXC provisions before returning
 	WaitForTime      time.Duration // How long to wait for the VXC to provision if WaitForProvision is true (default is 5 minutes)
@@ -71,7 +72,7 @@ type GetPortRequest struct {
 type ModifyPortRequest struct {
 	PortID                string
 	Name                  string
-	MarketplaceVisibility bool
+	MarketplaceVisibility *bool
 	CostCentre            string
 
 	WaitForUpdate bool          // Wait until the Port updates before returning
@@ -130,19 +131,22 @@ func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*Bu
 	if req.Term != 1 && req.Term != 12 && req.Term != 24 && req.Term != 36 {
 		return nil, ErrInvalidTerm
 	}
+	portOrder := PortOrder{
+		Name:                  req.Name,
+		Term:                  req.Term,
+		ProductType:           "MEGAPORT",
+		PortSpeed:             req.PortSpeed,
+		LocationID:            req.LocationId,
+		DiversityZone:         req.DiversityZone,
+		Virtual:               false,
+		Market:                req.Market,
+		LagPortCount:          req.LagCount,
+		MarketplaceVisibility: req.MarketPlaceVisibility,
+		CostCentre:            req.CostCentre,
+	}
+
 	buyOrder = []PortOrder{
-		{
-			Name:                  req.Name,
-			Term:                  req.Term,
-			ProductType:           "MEGAPORT",
-			PortSpeed:             req.PortSpeed,
-			LocationID:            req.LocationId,
-			DiversityZone:         req.DiversityZone,
-			Virtual:               false,
-			Market:                req.Market,
-			LagPortCount:          req.LagCount,
-			MarketplaceVisibility: req.MarketPlaceVisibility,
-		},
+		portOrder,
 	}
 
 	responseBody, responseError := svc.Client.ProductService.ExecuteOrder(ctx, buyOrder)

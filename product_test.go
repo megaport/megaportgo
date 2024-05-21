@@ -168,7 +168,7 @@ func (suite *ProductClientTestSuite) TestModifyProduct() {
 		ProductType:           productType,
 		Name:                  "updated-test-product",
 		CostCentre:            "US",
-		MarketplaceVisibility: false,
+		MarketplaceVisibility: PtrTo(false),
 	}
 	path := fmt.Sprintf("/v2/product/%s/%s", productType, productUid)
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {

@@ -10,6 +10,7 @@ type PortOrder struct {
 	CreateDate            int64  `json:"createDate"`
 	Virtual               bool   `json:"virtual"`
 	Market                string `json:"market"`
+	CostCentre            string `json:"costCentre,omitempty"`
 	LagPortCount          int    `json:"lagPortCount,omitempty"`
 	MarketplaceVisibility bool   `json:"marketplaceVisibility"`
 	DiversityZone         string `json:"diversityZone"`

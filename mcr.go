@@ -48,6 +48,7 @@ type BuyMCRRequest struct {
 	Term          int
 	PortSpeed     int
 	MCRAsn        int
+	CostCentre    string
 
 	WaitForProvision bool          // Wait until the MCR provisions before returning
 	WaitForTime      time.Duration // How long to wait for the MCR to provision if WaitForProvision is true (default is 5 minutes)
@@ -74,7 +75,7 @@ type ModifyMCRRequest struct {
 	MCRID                 string
 	Name                  string
 	CostCentre            string
-	MarketplaceVisibility bool
+	MarketplaceVisibility *bool
 
 	WaitForUpdate bool          // Wait until the MCR updates before returning
 	WaitForTime   time.Duration // How long to wait for the MCR to update if WaitForUpdate is true (default is 5 minutes)
@@ -116,6 +117,10 @@ func (svc *MCRServiceOp) BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMC
 		Type:          "MCR2",
 		PortSpeed:     req.PortSpeed,
 		Config:        MCROrderConfig{},
+	}
+
+	if req.CostCentre != "" {
+		order.CostCentre = req.CostCentre
 	}
 
 	order.Config.ASN = req.MCRAsn
