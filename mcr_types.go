@@ -14,7 +14,8 @@ type MCROrder struct {
 
 // MCROrderConfig represents the configuration for an MCR order.
 type MCROrderConfig struct {
-	ASN int `json:"mcrAsn,omitempty"`
+	ASN           int    `json:"mcrAsn,omitempty"`
+	DiversityZone string `json:"diversityZone,omitempty"`
 }
 
 // MCROrderConfirmation represents a response from the Megaport Products API after ordering an MCR.

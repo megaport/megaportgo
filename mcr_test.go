@@ -58,14 +58,14 @@ func (suite *MCRClientTestSuite) TestBuyMCR() {
 
 	mcrOrder := []MCROrder{
 		{
-			LocationID:    req.LocationID,
-			Name:          req.Name,
-			Term:          1,
-			DiversityZone: "red",
-			Type:          "MCR2",
-			PortSpeed:     1000,
+			LocationID: req.LocationID,
+			Name:       req.Name,
+			Term:       1,
+			Type:       "MCR2",
+			PortSpeed:  1000,
 			Config: MCROrderConfig{
-				ASN: 0,
+				DiversityZone: "red",
+				ASN:           0,
 			},
 		},
 	}

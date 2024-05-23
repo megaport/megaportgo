@@ -110,13 +110,12 @@ func (svc *MCRServiceOp) BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMC
 	}
 
 	order := MCROrder{
-		LocationID:    req.LocationID,
-		Name:          req.Name,
-		Term:          req.Term,
-		DiversityZone: req.DiversityZone,
-		Type:          "MCR2",
-		PortSpeed:     req.PortSpeed,
-		Config:        MCROrderConfig{},
+		LocationID: req.LocationID,
+		Name:       req.Name,
+		Term:       req.Term,
+		Type:       "MCR2",
+		PortSpeed:  req.PortSpeed,
+		Config:     MCROrderConfig{},
 	}
 
 	if req.CostCentre != "" {
@@ -124,6 +123,9 @@ func (svc *MCRServiceOp) BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMC
 	}
 
 	order.Config.ASN = req.MCRAsn
+	if req.DiversityZone != "" {
+		order.Config.DiversityZone = req.DiversityZone
+	}
 
 	mcrOrders := []MCROrder{
 		order,
