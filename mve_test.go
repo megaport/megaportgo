@@ -192,6 +192,7 @@ func (suite *MVEClientTestSuite) TestGetMVE() {
 		"locationId": 1,
 		"lagPrimary": false,
 		"lagId": null,
+		"locationDetail":{"name":"Test Location","city":"Atlanta","metro":"Atlanta","country":"USA"},
 		"aggregationId": null,
 		"createDate": 1706104800000,
 		"createdBy": "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
@@ -293,7 +294,13 @@ func (suite *MVEClientTestSuite) TestGetMVE() {
 		Locked:                false,
 		AdminLocked:           false,
 		Cancelable:            true,
-		AttributeTags:         map[string]string{},
+		LocationDetails: &ProductLocationDetails{
+			Name:    "Test Location",
+			City:    "Atlanta",
+			Metro:   "Atlanta",
+			Country: "USA",
+		},
+		AttributeTags: map[string]string{},
 		Resources: &MVEResources{
 			Interface: &PortInterface{
 				Demarcation:  "",

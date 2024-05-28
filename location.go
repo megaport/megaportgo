@@ -122,6 +122,14 @@ type CountryInnerResponse struct {
 	NetworkRegion string     `json:"networkRegion"`
 }
 
+// ProductLocationDetails represents the location details of a product.
+type ProductLocationDetails struct {
+	Name    string `json:"name"`
+	City    string `json:"city"`
+	Metro   string `json:"metro"`
+	Country string `json:"country"`
+}
+
 // ListLocations returns a list of all locations in the Megaport Locations API.
 func (svc *LocationServiceOp) ListLocations(ctx context.Context) ([]*Location, error) {
 	path := "/v2/locations"
