@@ -341,7 +341,7 @@ func (svc *PortServiceOp) ModifyPort(ctx context.Context, req *ModifyPortRequest
 				if err != nil {
 					return nil, err
 				}
-				if portDetails.ProvisioningStatus == "LIVE" {
+				if slices.Contains(SERVICE_STATE_READY, portDetails.ProvisioningStatus) {
 					return toReturn, nil
 				}
 			}

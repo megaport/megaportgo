@@ -58,14 +58,14 @@ func (suite *MCRClientTestSuite) TestBuyMCR() {
 
 	mcrOrder := []MCROrder{
 		{
-			LocationID:    req.LocationID,
-			Name:          req.Name,
-			Term:          1,
-			DiversityZone: "red",
-			Type:          "MCR2",
-			PortSpeed:     1000,
+			LocationID: req.LocationID,
+			Name:       req.Name,
+			Term:       1,
+			Type:       "MCR2",
+			PortSpeed:  1000,
 			Config: MCROrderConfig{
-				ASN: 0,
+				DiversityZone: "red",
+				ASN:           0,
 			},
 		},
 	}
@@ -112,6 +112,12 @@ func (suite *MCRClientTestSuite) TestGetMCR() {
 		Market:             "US",
 		PortSpeed:          1000,
 		CompanyName:        "Test Company",
+		LocationDetails: &ProductLocationDetails{
+			Name:    "Test Location",
+			City:    "Atlanta",
+			Metro:   "Atlanta",
+			Country: "USA",
+		},
 		ContractTermMonths: 12,
 		ContractStartDate:  startDate,
 		ContractEndDate:    endDate,
@@ -134,6 +140,7 @@ func (suite *MCRClientTestSuite) TestGetMCR() {
 		"secondaryName": null,
 		"productType": "MCR2",
 		"provisioningStatus": "LIVE",
+		"locationDetail":{"name":"Test Location","city":"Atlanta","metro":"Atlanta","country":"USA"},
 		"portSpeed": 1000,
 		"maxVxcSpeed": 1000,
 		"locationId": 1,
@@ -274,6 +281,7 @@ func (suite *MCRClientTestSuite) TestModifyMCR() {
 		"vxcPermitted": true,
 		"vxcAutoApproval": false,
 		"virtual": true,
+		"locationDetail":{"name":"Test Location","city":"Atlanta","metro":"Atlanta","country":"USA"},
 		"buyoutPort": false,
 		"locked": false,
 		"adminLocked": false,
@@ -374,6 +382,12 @@ func (suite *MCRClientTestSuite) TestModifyMCR() {
 		CompanyUID:         companyUid,
 		UsageAlgorithm:     "POST_PAID_HOURLY_SPEED_MCR2",
 		AttributeTags:      map[string]string{},
+		LocationDetails: &ProductLocationDetails{
+			Name:    "Test Location",
+			City:    "Atlanta",
+			Metro:   "Atlanta",
+			Country: "USA",
+		},
 	}
 	got, err := mcrSvc.GetMCR(ctx, productUid)
 	suite.NoError(err)

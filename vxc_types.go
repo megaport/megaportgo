@@ -45,15 +45,16 @@ type VXC struct {
 
 // VXCEndConfiguration represents the configuration of an endpoint of a VXC.
 type VXCEndConfiguration struct {
-	OwnerUID              string `json:"ownerUid"`
-	UID                   string `json:"productUid"`
-	Name                  string `json:"productName"`
-	LocationID            int    `json:"locationId"`
-	Location              string `json:"location"`
-	VLAN                  int    `json:"vlan"`
-	InnerVLAN             int    `json:"innerVlan"`
-	NetworkInterfaceIndex int    `json:"vNicIndex"`
-	SecondaryName         string `json:"secondaryName"`
+	OwnerUID              string                  `json:"ownerUid"`
+	UID                   string                  `json:"productUid"`
+	Name                  string                  `json:"productName"`
+	LocationID            int                     `json:"locationId"`
+	Location              string                  `json:"location"`
+	VLAN                  int                     `json:"vlan"`
+	InnerVLAN             int                     `json:"innerVlan"`
+	NetworkInterfaceIndex int                     `json:"vNicIndex"`
+	SecondaryName         string                  `json:"secondaryName"`
+	LocationDetails       *ProductLocationDetails `json:"locationDetail"`
 }
 
 // VXCResources represents the resources associated with a VXC.

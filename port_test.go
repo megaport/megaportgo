@@ -270,13 +270,19 @@ func (suite *PortClientTestSuite) TestGetPort() {
 		AdminLocked:           false,
 		Cancelable:            true,
 		LiveDate:              liveDate,
+		LocationDetails: &ProductLocationDetails{
+			Name:    "Test Location",
+			City:    "Atlanta",
+			Metro:   "Atlanta",
+			Country: "USA",
+		},
 	}
 
 	jblob := `{
 			"message": "Found Product 36b3f68e-2f54-4331-bf94-f8984449365f",
 			"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
 			"data": {
-			"productId":999999,"productUid":"36b3f68e-2f54-4331-bf94-f8984449365f","productName":"test-port","productType":"megaport","provisioningStatus":"CONFIGURED","createDate":1706104800000,"createdBy":"","portSpeed":10000,"terminateDate":1737727200000,"liveDate":1737728200000,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":false,"adminLocked":false,"cancelable":true,"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0}}
+			"productId":999999,"productUid":"36b3f68e-2f54-4331-bf94-f8984449365f","productName":"test-port","productType":"megaport","provisioningStatus":"CONFIGURED","createDate":1706104800000,"createdBy":"","portSpeed":10000,"terminateDate":1737727200000,"liveDate":1737728200000,"market":"US","locationId":226,"usageAlgorithm":"","marketplaceVisibility":false,"vxcpermitted":true,"vxcAutoApproval":false,"secondaryName":"test-secondary-name","lagPrimary":false,"lagId":0,"aggregationId":0,"companyUid":"32df7107-fdca-4c2a-8ccb-c6867813b3f2","companyName":"test-company","contractStartDate":1706104800000,"contractEndDate":1737727200000,"contractTermMonths":12,"attributeTags":null,"virtual":false,"buyoutPort":false,"locked":false,"adminLocked":false,"cancelable":true,"locationDetail":{"name":"Test Location","city":"Atlanta","metro":"Atlanta","country":"USA"},"resources":{"interface":{"demarcation":"","description":"","id":0,"loa_template":"","media":"","name":"","port_speed":0,"resource_name":"","resource_type":"","up":0}}
 			}
 			}`
 	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/%s", productUid), func(w http.ResponseWriter, r *http.Request) {
@@ -326,6 +332,7 @@ func (suite *PortClientTestSuite) TestModifyPort() {
         "productType": "megaport",
         "provisioningStatus": "DEPLOYABLE",
         "failedReason": null,
+		"locationDetail":{"name":"Test Location","city":"Atlanta","metro":"Atlanta","country":"USA"},
         "inAdvanceBillingStatus": null,
         "provisioningItems": [],
         "tags": [],

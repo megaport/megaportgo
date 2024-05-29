@@ -302,6 +302,12 @@ func (suite *VXCClientTestSuite) TestGetVXC() {
 			LocationID: 1,
 			Location:   "Test Location",
 			VLAN:       0,
+			LocationDetails: &ProductLocationDetails{
+				Name:    "Test Location",
+				City:    "Atlanta",
+				Metro:   "Atlanta",
+				Country: "USA",
+			},
 		},
 		BEndConfiguration: VXCEndConfiguration{
 			OwnerUID:   companyUid,
@@ -310,6 +316,12 @@ func (suite *VXCClientTestSuite) TestGetVXC() {
 			LocationID: 1,
 			Location:   "Test Location",
 			VLAN:       0,
+			LocationDetails: &ProductLocationDetails{
+				Name:    "Test Location",
+				City:    "New York",
+				Metro:   "New York",
+				Country: "USA",
+			},
 		}}
 
 	jblob := `{
@@ -492,6 +504,12 @@ func (suite *VXCClientTestSuite) TestGetAzureVXC() {
 			LocationID: 1,
 			Location:   "Test Location",
 			VLAN:       0,
+			LocationDetails: &ProductLocationDetails{
+				Name:    "Test Location",
+				City:    "Atlanta",
+				Metro:   "Atlanta",
+				Country: "USA",
+			},
 		},
 		BEndConfiguration: VXCEndConfiguration{
 			OwnerUID:   companyUid,
@@ -500,6 +518,12 @@ func (suite *VXCClientTestSuite) TestGetAzureVXC() {
 			LocationID: 1,
 			Location:   "Test Location",
 			VLAN:       0,
+			LocationDetails: &ProductLocationDetails{
+				Name:    "Test Location",
+				City:    "New York",
+				Metro:   "New York",
+				Country: "USA",
+			},
 		}}
 
 	jblob := `{
@@ -688,6 +712,12 @@ func (suite *VXCClientTestSuite) TestGetGoogleVXC() {
 			LocationID: 1,
 			Location:   "Test Location",
 			VLAN:       0,
+			LocationDetails: &ProductLocationDetails{
+				Name:    "Test Location",
+				City:    "Atlanta",
+				Metro:   "Atlanta",
+				Country: "USA",
+			},
 		},
 		BEndConfiguration: VXCEndConfiguration{
 			OwnerUID:   companyUid,
@@ -696,6 +726,12 @@ func (suite *VXCClientTestSuite) TestGetGoogleVXC() {
 			LocationID: 1,
 			Location:   "Test Location",
 			VLAN:       0,
+			LocationDetails: &ProductLocationDetails{
+				Name:    "Test Location",
+				City:    "New York",
+				Metro:   "New York",
+				Country: "USA",
+			},
 		}}
 
 	jblob := `{
@@ -983,6 +1019,12 @@ func (suite *VXCClientTestSuite) TestUpdateVXC() {
 			LocationID: 1,
 			Location:   "Test Location",
 			VLAN:       1,
+			LocationDetails: &ProductLocationDetails{
+				Name:    "Test Location",
+				City:    "Atlanta",
+				Metro:   "Atlanta",
+				Country: "USA",
+			},
 		},
 		BEndConfiguration: VXCEndConfiguration{
 			OwnerUID:   companyUid,
@@ -991,6 +1033,12 @@ func (suite *VXCClientTestSuite) TestUpdateVXC() {
 			LocationID: 1,
 			Location:   "Test Location",
 			VLAN:       1,
+			LocationDetails: &ProductLocationDetails{
+				Name:    "Test Location",
+				City:    "New York",
+				Metro:   "New York",
+				Country: "USA",
+			},
 		},
 	}
 	update := &VXCUpdate{
