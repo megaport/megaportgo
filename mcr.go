@@ -316,7 +316,7 @@ func (svc *MCRServiceOp) ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (
 				if err != nil {
 					return nil, err
 				}
-				if mcrDetails.ProvisioningStatus == "LIVE" {
+				if slices.Contains(SERVICE_STATE_READY, mcrDetails.ProvisioningStatus) {
 					return toReturn, nil
 				}
 			}
