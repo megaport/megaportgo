@@ -127,12 +127,12 @@ type PartnerLookupItem struct {
 
 // Peer represents a VXC Peer.
 type Peer struct {
-	PeerASN         string `json:"peer_asn"`
+	PeerASN         int    `json:"peer_asn"`
 	Prefixes        string `json:"prefixes"`
 	PrimarySubnet   string `json:"primary_subnet"`
 	SecondarySubnet string `json:"secondary_subnet"`
 	Type            string `json:"type"`
-	VLAN            string `json:"vlan"`
+	VLAN            int    `json:"vlan"`
 	SharedKey       string `json:"shared_key"`
 }
 
