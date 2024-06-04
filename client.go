@@ -67,6 +67,8 @@ type Client struct {
 	MCRService MCRService
 	// MVEService provides methods for interacting with the MVEs API
 	MVEService MVEService
+	// ServiceKeyService provides methods for interacting with the Service Keys API
+	ServiceKeyService ServiceKeyService
 
 	accessToken string    // Access Token for client
 	tokenExpiry time.Time // Token Expiration
@@ -122,6 +124,7 @@ func NewClient(httpClient *http.Client, base *url.URL) *Client {
 	c.MVEService = NewMVEService(c)
 	c.VXCService = NewVXCService(c)
 	c.PartnerService = NewPartnerService(c)
+	c.ServiceKeyService = NewServiceKeyService(c)
 
 	c.headers = make(map[string]string)
 
