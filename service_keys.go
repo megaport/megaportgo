@@ -67,7 +67,7 @@ func (svc *ServiceKeyServiceOp) CreateServiceKey(ctx context.Context, req *Creat
 		req.ValidFor.StartUnixNano = req.ValidFor.StartTime.UnixNano()
 		req.ValidFor.EndUnixNano = req.ValidFor.EndTime.UnixNano()
 	}
-	path := "/service/key"
+	path := "/v2/service/key"
 	url := svc.Client.BaseURL.JoinPath(path).String()
 	clientReq, err := svc.Client.NewRequest(ctx, http.MethodPost, url, req)
 	if err != nil {
