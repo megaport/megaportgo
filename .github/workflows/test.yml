@@ -30,3 +30,6 @@ jobs:
           go-version: '1.22'
       - name: Run Tests
         run: go test -timeout=30m -v -integration ./... 
+        env: 
+          MEGAPORT_ACCESS_KEY: ${{ secrets.MEGAPORT_ACCESS_KEY }}
+          MEGAPORT_SECRET_KEY: ${{ secrets.MEGAPORT_SECRET_KEY }}
