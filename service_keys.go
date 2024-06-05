@@ -226,6 +226,10 @@ func (svc *ServiceKeyServiceOp) ListServiceKeys(ctx context.Context, req *ListSe
 func (svc *ServiceKeyServiceOp) UpdateServiceKey(ctx context.Context, req *UpdateServiceKeyRequest) (*UpdateServiceKeyResponse, error) {
 	path := "/v2/service/key"
 	url := svc.Client.BaseURL.JoinPath(path).String()
+	if req.ValidFor != nil {
+		req.ValidFor.StartUnixNano = req.ValidFor.StartTime.UnixNano()
+		req.ValidFor.EndUnixNano = req.ValidFor.EndTime.UnixNano()
+	}
 	clientReq, err := svc.Client.NewRequest(ctx, http.MethodPut, url, req)
 	if err != nil {
 		return nil, err
