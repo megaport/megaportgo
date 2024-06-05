@@ -6,12 +6,16 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
+	"time"
 )
 
 // ServiceKeyService is an interface for interfacing with the Service Key endpoints in the Megaport Service Key API.
 type ServiceKeyService interface {
 	// CreateServiceKey creates a service key in the Megaport Service Key API.
 	CreateServiceKey(ctx context.Context, req *CreateServiceKeyRequest) (*CreateServiceKeyResponse, error)
+	// ListServiceKeys lists service keys in the Megaport Service Key API.
+	ListServiceKeys(ctx context.Context, req *ListServiceKeysRequest) (*ListServiceKeysResponse, error)
 }
 
 // NewServiceKeyService creates a new instance of the Service Key Service.
@@ -28,6 +32,28 @@ type ServiceKeyServiceOp struct {
 	Client *Client
 }
 
+type ServiceKey struct {
+	Key         string    `json:"key"`
+	CreateDate  *Time     `json:"createDate"`
+	CompanyID   int       `json:"companyId"`
+	CompanyUID  string    `json:"companyUid"`
+	CompanyName string    `json:"companyName"`
+	Description string    `json:"description"`
+	ProductID   int       `json:"productId"`
+	ProductUID  string    `json:"productUid"`
+	ProductName string    `json:"productName"`
+	VLAN        int       `json:"vlan"`
+	MaxSpeed    int       `json:"maxSpeed"`
+	PreApproved bool      `json:"preApproved"`
+	SingleUse   bool      `json:"singleUse"`
+	LastUsed    *Time     `json:"lastUsed"`
+	Active      bool      `json:"active"`
+	ValidFor    *ValidFor `json:"validFor"`
+	Expired     bool      `json:"expired"`
+	Valid       bool      `json:"valid"`
+	PromoCode   string    `json:"promoCode"`
+}
+
 // CreateServiceKeyRequest represents a request to create a service key from the Megaport Service Key API.
 type CreateServiceKeyRequest struct {
 	ProductUID  string    `json:"productUid"`
@@ -40,21 +66,24 @@ type CreateServiceKeyRequest struct {
 	ValidFor    *ValidFor `json:"validFor"`
 }
 
+// CreateServiceKeyAPIResponse represents a response from creating a service key from the Megaport Service Key API.
 type CreateServiceKeyAPIResponse struct {
 	Message string                           `json:"message"`
 	Terms   string                           `json:"terms"`
 	Data    *CreateServiceKeyAPIResponseData `json:"data"`
 }
 
+// CreateServiceKeyAPIResponseData represents the data field in the CreateServiceKeyAPIResponse.
 type CreateServiceKeyAPIResponseData struct {
 	Key string `json:"key"`
 }
 
+// ValidFor represents the validFor field in the CreateServiceKeyRequest.
 type ValidFor struct {
-	StartTime     *Time
-	EndTime       *Time
-	StartUnixNano int64 `json:"start"`
-	EndUnixNano   int64 `json:"end"`
+	StartTime     *Time // Start time of the service key
+	EndTime       *Time // End time of the service key
+	StartUnixNano int64 `json:"start"` // Parsed for Megaport API
+	EndUnixNano   int64 `json:"end"`   // Parsed for Megaport API
 }
 
 // CreateServiceKeyResponse represents a response from creating a service key from the Megaport Service Key API.
@@ -62,6 +91,23 @@ type CreateServiceKeyResponse struct {
 	ServiceKeyUID string
 }
 
+// ListServiceKeysRequest represents a request to list service keys from the Megaport Service Key API.
+type ListServiceKeysRequest struct {
+	ProductUID *string // List keys linked to the Port specified by the product ID or UID. (Optional)
+	Key        *string // Get details for the specified key. (Optional) You can use the first 8 digits of a key, or you can use the full value.
+}
+
+type ListServiceKeysAPIResponse struct {
+	Message string        `json:"message"`
+	Terms   string        `json:"terms"`
+	Data    []*ServiceKey `json:"data"`
+}
+
+type ListServiceKeysResponse struct {
+	ServiceKeys []*ServiceKey
+}
+
+// CreateServiceKey creates a service key in the Megaport Service Key API.
 func (svc *ServiceKeyServiceOp) CreateServiceKey(ctx context.Context, req *CreateServiceKeyRequest) (*CreateServiceKeyResponse, error) {
 	if req.ValidFor != nil {
 		req.ValidFor.StartUnixNano = req.ValidFor.StartTime.UnixNano()
@@ -93,6 +139,68 @@ func (svc *ServiceKeyServiceOp) CreateServiceKey(ctx context.Context, req *Creat
 	}
 	toReturn := &CreateServiceKeyResponse{
 		ServiceKeyUID: createServiceKeyAPIResponse.Data.Key,
+	}
+	return toReturn, nil
+}
+
+func (svc *ServiceKeyServiceOp) ListServiceKeys(ctx context.Context, req *ListServiceKeysRequest) (*ListServiceKeysResponse, error) {
+	path := "/v2/service/key"
+	params := url.Values{}
+	if req.ProductUID != nil {
+		params.Add("productIdOrUid", *req.ProductUID)
+	}
+	if req.Key != nil {
+		params.Add("key", *req.Key)
+	}
+	url := svc.Client.BaseURL.JoinPath(path)
+	if len(params) > 0 {
+		url.RawQuery = params.Encode()
+	}
+	urlString := url.String()
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, urlString, req)
+	if err != nil {
+		return nil, err
+	}
+	response, resErr := svc.Client.Do(ctx, clientReq, nil)
+	if resErr != nil {
+		return nil, resErr
+	}
+	if response != nil {
+		defer response.Body.Close()
+	}
+	body, fileErr := io.ReadAll(response.Body)
+	if fileErr != nil {
+		return nil, fileErr
+	}
+	var listServiceKeysAPIResponse ListServiceKeysAPIResponse
+	if err = json.Unmarshal(body, &listServiceKeysAPIResponse); err != nil {
+		return nil, err
+	}
+	toReturn := &ListServiceKeysResponse{}
+	for _, key := range listServiceKeysAPIResponse.Data {
+		toAppend := &ServiceKey{
+			Key:         key.Key,
+			CreateDate:  key.CreateDate,
+			CompanyID:   key.CompanyID,
+			CompanyUID:  key.CompanyUID,
+			CompanyName: key.CompanyName,
+			Description: key.Description,
+			ProductID:   key.ProductID,
+			ProductUID:  key.ProductUID,
+			ProductName: key.ProductName,
+			VLAN:        key.VLAN,
+			MaxSpeed:    key.MaxSpeed,
+			PreApproved: key.PreApproved,
+			SingleUse:   key.SingleUse,
+			LastUsed:    key.LastUsed,
+			Active:      key.Active,
+			ValidFor:    key.ValidFor,
+		}
+		toAppend.ValidFor.StartTime = &Time{}
+		toAppend.ValidFor.StartTime.Time = time.Unix(toAppend.ValidFor.StartUnixNano/1000, 0)
+		toAppend.ValidFor.EndTime = &Time{}
+		toAppend.ValidFor.EndTime.Time = time.Unix(toAppend.ValidFor.EndUnixNano/1000, 0)
+		toReturn.ServiceKeys = append(toReturn.ServiceKeys, toAppend)
 	}
 	return toReturn, nil
 }
