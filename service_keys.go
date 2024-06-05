@@ -16,6 +16,8 @@ type ServiceKeyService interface {
 	CreateServiceKey(ctx context.Context, req *CreateServiceKeyRequest) (*CreateServiceKeyResponse, error)
 	// ListServiceKeys lists service keys in the Megaport Service Key API.
 	ListServiceKeys(ctx context.Context, req *ListServiceKeysRequest) (*ListServiceKeysResponse, error)
+	// UpdateServiceKey updates a service key in the Megaport Service Key API.
+	UpdateServiceKey(ctx context.Context, req *UpdateServiceKeyRequest) (*UpdateServiceKeyResponse, error)
 }
 
 // NewServiceKeyService creates a new instance of the Service Key Service.
@@ -97,14 +99,30 @@ type ListServiceKeysRequest struct {
 	Key        *string // Get details for the specified key. (Optional) You can use the first 8 digits of a key, or you can use the full value.
 }
 
+// ListServiceKeysAPIResponse represents the Megaport API HTTP response from listing service keys from the Megaport Service Key API.
 type ListServiceKeysAPIResponse struct {
 	Message string        `json:"message"`
 	Terms   string        `json:"terms"`
 	Data    []*ServiceKey `json:"data"`
 }
 
+// ListServiceKeysResponse represents the Go SDK response from listing service keys from the Megaport Service Key API.
 type ListServiceKeysResponse struct {
 	ServiceKeys []*ServiceKey
+}
+
+// UpdateServiceKeyRequest represents a request to update a service key in the Megaport Service Key API.
+type UpdateServiceKeyRequest struct {
+	Key       string    `json:"key"`
+	ProductID int       `json:"productId"` // The Port for the service key.
+	SingleUse bool      `json:"singleUse"` // Determines whether the service key is single-use or multi-use. Valid values are true (single-use) and false (multi-use). With a multi-use key, the customer that you share the key with can request multiple connections using that key.
+	Active    bool      `json:"active"`    // Determines whether the service key is available for use. Valid values are true if you want the key to be available right away and false if you don’t want the key to be available right away.
+	ValidFor  *ValidFor `json:"validFor"`  // The range of dates for which the service key is valid.
+}
+
+// UpdateServiceKeyResponse represents a response from updating a service key in the Megaport Service Key API.
+type UpdateServiceKeyResponse struct {
+	IsUpdated bool
 }
 
 // CreateServiceKey creates a service key in the Megaport Service Key API.
@@ -203,4 +221,20 @@ func (svc *ServiceKeyServiceOp) ListServiceKeys(ctx context.Context, req *ListSe
 		toReturn.ServiceKeys = append(toReturn.ServiceKeys, toAppend)
 	}
 	return toReturn, nil
+}
+
+func (svc *ServiceKeyServiceOp) UpdateServiceKey(ctx context.Context, req *UpdateServiceKeyRequest) (*UpdateServiceKeyResponse, error) {
+	path := "/v2/service/key"
+	url := svc.Client.BaseURL.JoinPath(path).String()
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodPut, url, req)
+	if err != nil {
+		return nil, err
+	}
+	_, resErr := svc.Client.Do(ctx, clientReq, nil)
+	if resErr != nil {
+		return nil, resErr
+	}
+	return &UpdateServiceKeyResponse{
+		IsUpdated: true,
+	}, nil
 }
