@@ -172,7 +172,7 @@ type VXCOrder struct {
 // VXCOrderConfiguration represents the configuration of a VXC to be ordered from the Megaport Products API.
 type VXCOrderConfiguration struct {
 	Name       string                        `json:"productName"`
-	ServiceKey string                        `json:"serviceKey"`
+	ServiceKey string                        `json:"serviceKey,omitempty"`
 	RateLimit  int                           `json:"rateLimit"`
 	Term       int                           `json:"term"`
 	Shutdown   bool                          `json:"shutdown"`
