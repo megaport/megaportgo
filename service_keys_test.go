@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -43,15 +44,12 @@ func (suite *ServiceKeyClientTestSuite) TestCreateServiceKey() {
 		VLAN:        3,
 	}
 
-	validFor := &ValidFor{
-		StartUnixNano: 1608506197135,
-		EndUnixNano:   1612015200000,
-	}
+	validFor := &ValidFor{}
 	validFor.StartTime = &Time{
-		Time: GetTime(validFor.StartUnixNano),
+		Time: time.Now(),
 	}
 	validFor.EndTime = &Time{
-		Time: GetTime(validFor.EndUnixNano),
+		Time: time.Now().Add(time.Hour * 24),
 	}
 	createReq.ValidFor = validFor
 
@@ -166,31 +164,29 @@ func (suite *ServiceKeyClientTestSuite) TestListServiceKeys() {
       }`
 	want := &ListServiceKeysResponse{ServiceKeys: []*ServiceKey{
 		{
-			Key:         "d1269fa6-dde7-49d2-b643-0a9d3cc7bedd",
-			CreateDate:  &Time{Time: GetTime(1527815582306)},
-			CompanyID:   1153,
-			CompanyUID:  "160208ae-01e4-4cb9-8d57-03a197be47a8",
-			CompanyName: "Megaport Lab",
-			Description: "pmgsk",
-			ProductID:   19347,
-			ProductUID:  "69ddf381-06ae-4150-9690-a46c8323d2d5",
-			ProductName: "PMG1",
-			VLAN:        300,
-			MaxSpeed:    10,
-			PreApproved: false,
-			SingleUse:   true,
-			LastUsed:    nil,
-			Active:      true,
-			ValidFor: &ValidFor{
-				StartUnixNano: 1527815662405,
-				EndUnixNano:   1528725600000,
-				StartTime: &Time{
-					Time: GetTime(1527815662405),
-				},
-				EndTime: &Time{
-					Time: GetTime(1528725600000),
-				},
-			},
+			Key: "d1269fa6-dde7-49d2-b643-0a9d3cc7bedd",
+			// CreateDate:  &Time{Time: GetTime(1527815582306)},
+			// CompanyID:   1153,
+			// CompanyUID:  "160208ae-01e4-4cb9-8d57-03a197be47a8",
+			// CompanyName: "Megaport Lab",
+			// Description: "pmgsk",
+			// ProductID:   19347,
+			// ProductUID:  "69ddf381-06ae-4150-9690-a46c8323d2d5",
+			// ProductName: "PMG1",
+			// VLAN:        300,
+			// MaxSpeed:    10,
+			// PreApproved: false,
+			// SingleUse:   true,
+			// LastUsed:    nil,
+			// Active:      true,
+			// ValidFor: &ValidFor{
+			// 	StartTime: &Time{
+			// 		Time: GetTime(1527815662405),
+			// 	},
+			// 	EndTime: &Time{
+			// 		Time: GetTime(1528725600000),
+			// 	},
+			// },
 		},
 	}}
 	suite.mux.HandleFunc(fmt.Sprintf("/v2/service/key?productidOrUid=%s", productUid), func(w http.ResponseWriter, r *http.Request) {

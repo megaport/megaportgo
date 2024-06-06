@@ -46,6 +46,7 @@ type BuyVXCRequest struct {
 	RateLimit         int
 	Term              int
 	Shutdown          bool
+	ServiceKey        string
 	AEndConfiguration VXCOrderEndpointConfiguration
 	BEndConfiguration VXCOrderEndpointConfiguration
 
@@ -111,12 +112,13 @@ func (svc *VXCServiceOp) BuyVXC(ctx context.Context, req *BuyVXCRequest) (*BuyVX
 		PortID: req.PortUID,
 		AssociatedVXCs: []VXCOrderConfiguration{
 			{
-				Name:      req.VXCName,
-				RateLimit: req.RateLimit,
-				Term:      req.Term,
-				Shutdown:  req.Shutdown,
-				AEnd:      req.AEndConfiguration,
-				BEnd:      req.BEndConfiguration,
+				Name:       req.VXCName,
+				RateLimit:  req.RateLimit,
+				Term:       req.Term,
+				Shutdown:   req.Shutdown,
+				ServiceKey: req.ServiceKey,
+				AEnd:       req.AEndConfiguration,
+				BEnd:       req.BEndConfiguration,
 			},
 		},
 	}}
