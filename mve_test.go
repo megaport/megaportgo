@@ -443,6 +443,105 @@ func (suite *MVEClientTestSuite) TestModifyMVE() {
 	suite.Equal(wantRes, gotRes)
 }
 
+func (suite *MVEClientTestSuite) TestListMVEs() {
+	mveSvc := suite.client.MVEService
+	ctx := context.Background()
+	jblob := `{
+		"message": "Current supported MVE images",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": {
+		  "mveImages": [
+			{
+			  "id": 56,
+			  "version": "6.4.15",
+			  "product": "FortiGate-VM",
+			  "vendor": "Fortinet",
+			  "vendorDescription": null,
+			  "releaseImage": true,
+			  "productCode": "fortigate"
+			},
+			{
+			  "id": 57,
+			  "version": "7.0.14",
+			  "product": "FortiGate-VM",
+			  "vendor": "Fortinet",
+			  "vendorDescription": null,
+			  "releaseImage": true,
+			  "productCode": "fortigate"
+			}]
+		}
+	}`
+	want := []*MVEImage{
+		{
+			ID:                56,
+			Version:           "6.4.15",
+			Product:           "FortiGate-VM",
+			Vendor:            "Fortinet",
+			VendorDescription: "",
+			ReleaseImage:      true,
+			ProductCode:       "fortigate",
+		},
+		{
+			ID:                57,
+			Version:           "7.0.14",
+			Product:           "FortiGate-VM",
+			Vendor:            "Fortinet",
+			VendorDescription: "",
+			ReleaseImage:      true,
+			ProductCode:       "fortigate",
+		},
+	}
+	suite.mux.HandleFunc("/v3/product/mve/images", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, jblob)
+	})
+	got, err := mveSvc.ListMVEImages(ctx)
+	suite.NoError(err)
+	suite.Equal(want, got)
+}
+
+func (suite *MVEClientTestSuite) TestListAvailableMVESizes() {
+	mveSvc := suite.client.MVEService
+	ctx := context.Background()
+	jblob := `{
+		"message": "Current supported MVE sizes",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": [
+		  {
+			"size": "SMALL",
+			"label": "MVE 2/8",
+			"cpuCoreCount": 2,
+			"ramGB": 8
+		  },
+		  {
+			"size": "MEDIUM",
+			"label": "MVE 4/16",
+			"cpuCoreCount": 4,
+			"ramGB": 16
+		  }]}`
+	want := []*MVESize{
+		{
+			Size:         "SMALL",
+			Label:        "MVE 2/8",
+			CPUCoreCount: 2,
+			RamGB:        8,
+		},
+		{
+			Size:         "MEDIUM",
+			Label:        "MVE 4/16",
+			CPUCoreCount: 4,
+			RamGB:        16,
+		},
+	}
+	suite.mux.HandleFunc("/v3/product/mve/variants", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, jblob)
+	})
+	got, err := mveSvc.ListAvailableMVESizes(ctx)
+	suite.NoError(err)
+	suite.Equal(want, got)
+}
+
 // TestDeleteMVE tests the DeleteMVE method.
 func (suite *MVEClientTestSuite) TestDeleteMVE() {
 	ctx := context.Background()
