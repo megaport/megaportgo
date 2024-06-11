@@ -43,6 +43,7 @@ type BuyMVERequest struct {
 	VendorConfig  VendorConfig
 	Vnics         []MVENetworkInterface
 	DiversityZone string
+	PromoCode     string
 
 	WaitForProvision bool          // Wait until the MVE provisions before returning
 	WaitForTime      time.Duration // How long to wait for the MVE to provision if WaitForProvision is true (default is 5 minutes)
@@ -88,6 +89,7 @@ func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMV
 		LocationID:    req.LocationID,
 		Name:          req.Name,
 		Term:          req.Term,
+		PromoCode:     req.PromoCode,
 		ProductType:   strings.ToUpper(PRODUCT_MVE),
 		DiversityZone: req.DiversityZone,
 	}

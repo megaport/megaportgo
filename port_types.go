@@ -14,6 +14,7 @@ type PortOrder struct {
 	LagPortCount          int    `json:"lagPortCount,omitempty"`
 	MarketplaceVisibility bool   `json:"marketplaceVisibility"`
 	DiversityZone         string `json:"diversityZone"`
+	PromoCode             string `json:"promoCode,omitempty"`
 }
 
 // PortOrderConfirmation represents a response from the Megaport Products API after ordering a port.
