@@ -51,6 +51,9 @@ type Client struct {
 	// The secret key for the API token
 	SecretKey string
 
+	// Request Wait Time in Minutes
+	WaitForTime time.Duration
+
 	// Services used for communicating with the Megaport API
 
 	// PortService provides methods for interacting with the Ports API
@@ -171,6 +174,13 @@ func WithLogHandler(h slog.Handler) ClientOpt {
 func WithUserAgent(ua string) ClientOpt {
 	return func(c *Client) error {
 		c.UserAgent = fmt.Sprintf("%s %s", ua, c.UserAgent)
+		return nil
+	}
+}
+
+func WithCustomWaitTime(waitTime time.Duration) ClientOpt {
+	return func(c *Client) error {
+		c.WaitForTime = waitTime
 		return nil
 	}
 }
