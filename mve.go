@@ -21,6 +21,10 @@ type MVEService interface {
 	ModifyMVE(ctx context.Context, req *ModifyMVERequest) (*ModifyMVEResponse, error)
 	// DeleteMVE deletes an MVE in the Megaport MVE API.
 	DeleteMVE(ctx context.Context, req *DeleteMVERequest) (*DeleteMVEResponse, error)
+	// ListMVEImages returns a list of currently supported MVE images and details for each image, including image ID, version, product, and vendor. The image id returned indicates the software version and key configuration parameters of the image. The releaseImage value returned indicates whether the MVE image is available for selection when ordering an MVE.
+	ListMVEImages(ctx context.Context) ([]*MVEImage, error)
+	// ListAvailableMVESizes returns a list of currently available MVE sizes and details for each size. The instance size determines the MVE capabilities, such as how many concurrent connections it can support. The compute sizes are 2/8, 4/16, 8/32, and 12/48, where the first number is the CPU and the second number is the GB of available RAM. Each size has 4 GB of RAM for every vCPU allocated.
+	ListAvailableMVESizes(ctx context.Context) ([]*MVESize, error)
 }
 
 // NewMVEService creates a new instance of the MVE Service.
@@ -310,6 +314,52 @@ func (svc *MVEServiceOp) DeleteMVE(ctx context.Context, req *DeleteMVERequest) (
 		return nil, err
 	}
 	return &DeleteMVEResponse{IsDeleted: true}, nil
+}
+
+// ListMVEImages returns a list of currently supported MVE images and details for each image, including image ID, version, product, and vendor. The image id returned indicates the software version and key configuration parameters of the image. The releaseImage value returned indicates whether the MVE image is available for selection when ordering an MVE.
+func (svc *MVEServiceOp) ListMVEImages(ctx context.Context) ([]*MVEImage, error) {
+	path := "/v3/product/mve/images"
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := svc.Client.Do(ctx, clientReq, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	imageResp := MVEImageAPIResponse{}
+	if err := json.Unmarshal(body, &imageResp); err != nil {
+		return nil, err
+	}
+	return imageResp.Data.Images, nil
+}
+
+// ListAvailableMVESizes returns a list of currently available MVE sizes and details for each size. The instance size determines the MVE capabilities, such as how many concurrent connections it can support. The compute sizes are 2/8, 4/16, 8/32, and 12/48, where the first number is the CPU and the second number is the GB of available RAM. Each size has 4 GB of RAM for every vCPU allocated.
+func (svc *MVEServiceOp) ListAvailableMVESizes(ctx context.Context) ([]*MVESize, error) {
+	path := "/v3/product/mve/variants"
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := svc.Client.Do(ctx, clientReq, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	sizeResp := MVESizeAPIResponse{}
+	if err := json.Unmarshal(body, &sizeResp); err != nil {
+		return nil, err
+	}
+	return sizeResp.Data, nil
 }
 
 // validateBuyMVERequest validates a BuyMVERequest for proper term length.
