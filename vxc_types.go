@@ -173,6 +173,7 @@ type VXCOrder struct {
 type VXCOrderConfiguration struct {
 	Name       string                        `json:"productName"`
 	ServiceKey string                        `json:"serviceKey,omitempty"`
+	PromoCode  string                        `json:"promoCode,omitempty"`
 	RateLimit  int                           `json:"rateLimit"`
 	Term       int                           `json:"term"`
 	Shutdown   bool                          `json:"shutdown"`

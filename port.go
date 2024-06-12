@@ -53,6 +53,7 @@ type BuyPortRequest struct {
 	MarketPlaceVisibility bool   `json:"marketPlaceVisibility"`
 	DiversityZone         string `json:"diversityZone"`
 	CostCentre            string `json:"costCentre"`
+	PromoCode             string `json:"promoCode"`
 
 	WaitForProvision bool          // Wait until the VXC provisions before returning
 	WaitForTime      time.Duration // How long to wait for the VXC to provision if WaitForProvision is true (default is 5 minutes)
@@ -143,6 +144,7 @@ func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*Bu
 		LagPortCount:          req.LagCount,
 		MarketplaceVisibility: req.MarketPlaceVisibility,
 		CostCentre:            req.CostCentre,
+		PromoCode:             req.PromoCode,
 	}
 
 	buyOrder = []PortOrder{
