@@ -68,7 +68,8 @@ type CreateMCRPrefixFilterListRequest struct {
 
 // CreateMCRPrefixFilterListResponse represents a response from creating a prefix filter list on an MCR
 type CreateMCRPrefixFilterListResponse struct {
-	IsCreated bool
+	IsCreated          bool
+	PrefixFilterListID int // The ID of the created prefix filter list
 }
 
 // ModifyMCRRequest represents a request to modify an MCR
@@ -235,13 +236,27 @@ func (svc *MCRServiceOp) CreatePrefixFilterList(ctx context.Context, req *Create
 		return nil, err
 	}
 
-	_, err = svc.Client.Do(ctx, clientReq, nil)
+	response, err := svc.Client.Do(ctx, clientReq, nil)
 	if err != nil {
 		return nil, err
 	}
 
+	defer response.Body.Close()
+	body, fileErr := io.ReadAll(response.Body)
+
+	if fileErr != nil {
+		return nil, fileErr
+	}
+
+	createRes := &CreateMCRPrefixFilterListAPIResponse{}
+	unmarshalErr := json.Unmarshal(body, createRes)
+	if unmarshalErr != nil {
+		return nil, unmarshalErr
+	}
+
 	return &CreateMCRPrefixFilterListResponse{
-		IsCreated: true,
+		IsCreated:          true,
+		PrefixFilterListID: createRes.Data.ID,
 	}, nil
 }
 

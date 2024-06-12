@@ -79,6 +79,7 @@ type MCRVirtualRouter struct {
 
 // MCRPrefixFilterList represents a prefix filter list associated with an MCR.
 type MCRPrefixFilterList struct {
+	ID            int                   `json:"id"` // ID of the prefix filter list.
 	Description   string                `json:"description"`
 	AddressFamily string                `json:"addressFamily"`
 	Entries       []*MCRPrefixListEntry `json:"entries"`
@@ -111,6 +112,13 @@ type PrefixFilterList struct {
 	Id            int    `json:"id"`
 	Description   string `json:"description"`
 	AddressFamily string `json:"addressFamily"`
+}
+
+// CreateMCRPrefixFilterListResponse represents a response from the Megaport MCR API after creating a prefix filter list.
+type CreateMCRPrefixFilterListAPIResponse struct {
+	Message string               `json:"message"`
+	Terms   string               `json:"terms"`
+	Data    *MCRPrefixFilterList `json:"data"`
 }
 
 // MCRPrefixFilterListResponse represents a response from the Megaport MCR API after querying an MCR's prefix filter list.
