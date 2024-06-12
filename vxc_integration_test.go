@@ -81,6 +81,8 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 
 	suite.True(IsGuid(aEndUid), "invalid guid for a end uid")
 
+	serviceKeySvc := suite.client.ServiceKeyService
+
 	logger.InfoContext(ctx, "buying port b end")
 	bEndPortRes, portErr := portSvc.BuyPort(ctx, &BuyPortRequest{
 		Name:                  "VXC Port B",
@@ -98,14 +100,37 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 	bEndUid := bEndPortRes.TechnicalServiceUIDs[0]
 	suite.True(IsGuid(bEndUid), "invalid guid for b end uid")
 
+	serviceKeyOrder := &CreateServiceKeyRequest{
+		ProductUID:  bEndUid,
+		Active:      true,
+		SingleUse:   true,
+		VLAN:        3,
+		PreApproved: true,
+		MaxSpeed:    1000,
+		ValidFor: &ValidFor{
+			StartTime: &Time{
+				Time: time.Now(),
+			},
+			EndTime: &Time{
+				Time: time.Now().Add(24 * time.Hour),
+			},
+		},
+	}
+	serviceKeyRes, serviceKeyErr := serviceKeySvc.CreateServiceKey(ctx, serviceKeyOrder)
+	if serviceKeyErr != nil {
+		suite.FailNowf("cannot create service key", "cannot create service key: %s", serviceKeyErr)
+	}
+	serviceKeyID := serviceKeyRes.ServiceKeyUID
+
 	logger.InfoContext(ctx, "buying vxc")
 
 	buyVxcRes, vxcErr := vxcSvc.BuyVXC(ctx, &BuyVXCRequest{
-		PortUID:   aEndUid,
-		VXCName:   "Test VXC",
-		RateLimit: 500,
-		Term:      12,
-		Shutdown:  false,
+		PortUID:    aEndUid,
+		VXCName:    "Test VXC",
+		RateLimit:  500,
+		Term:       12,
+		Shutdown:   false,
+		ServiceKey: serviceKeyID,
 		AEndConfiguration: VXCOrderEndpointConfiguration{
 			VLAN: GenerateRandomVLAN(),
 		},
