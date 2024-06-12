@@ -202,12 +202,12 @@ func (suite *PortIntegrationTestSuite) testCreateServiceKey(c *Client, ctx conte
 	createReq.ValidFor = validFor
 	createRes, err := c.ServiceKeyService.CreateServiceKey(ctx, createReq)
 	if err != nil {
-		suite.FailNowf("could not create service key", "could not create service key %v", err)
+		return nil, err
 	}
 	suite.True(IsGuid(createRes.ServiceKeyUID))
 	foundKey, err := c.ServiceKeyService.GetServiceKey(ctx, createRes.ServiceKeyUID)
 	if err != nil {
-		suite.FailNowf("could not get service key", "could not get service key %v", err)
+		return nil, err
 	}
 	suite.Equal(createRes.ServiceKeyUID, foundKey.Key)
 	suite.Equal(foundKey.Description, createReq.Description)
@@ -244,7 +244,7 @@ func (suite *PortIntegrationTestSuite) testCreateServiceKey(c *Client, ctx conte
 		ProductUID: &portId,
 	})
 	if err != nil {
-		suite.FailNowf("could not list service keys", "could not list service keys %v", err)
+		return nil, err
 	}
 	suite.Equal(len(listRes.ServiceKeys), 2)
 	return foundKey, nil
