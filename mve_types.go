@@ -7,6 +7,7 @@ type MVEOrderConfig struct {
 	Term              int                   `json:"term"`
 	ProductType       string                `json:"productType"`
 	DiversityZone     string                `json:"diversityZone"`
+	PromoCode         string                `json:"promoCode,omitempty"`
 	NetworkInterfaces []MVENetworkInterface `json:"vnics"`
 	VendorConfig      VendorConfig          `json:"vendorConfig"`
 }
