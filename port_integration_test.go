@@ -91,6 +91,12 @@ func (suite *PortIntegrationTestSuite) TestSinglePort() {
 		suite.FailNowf("Failed to find port we just created in ports list", "Failed to find port we just created in ports list: %v", portID)
 	}
 
+	createdServiceKey, err := suite.testCreateServiceKey(suite.client, ctx, portID)
+	if err != nil {
+		suite.FailNowf("could not create service key", "could not create service key %v", err)
+	}
+	suite.testUpdateServiceKey(suite.client, ctx, createdServiceKey.Key, createdServiceKey.ProductID)
+
 	suite.testModifyPort(suite.client, ctx, portID)
 	suite.testLockPort(suite.client, ctx, portID)
 	suite.testCancelPort(suite.client, ctx, portID)
@@ -143,6 +149,11 @@ func (suite *PortIntegrationTestSuite) TestLAGPort() {
 		suite.FailNowf("Failed to find port we just created in ports list", "Failed to find port we just created in ports list %v", mainPortIDs)
 	}
 
+	key, err := suite.testCreateServiceKey(suite.client, ctx, mainPortIDs[0])
+	if err != nil {
+		suite.FailNowf("could not create service key", "could not create service key %v", err)
+	}
+	suite.testUpdateServiceKey(suite.client, ctx, key.Key, key.ProductID)
 	suite.testModifyPort(suite.client, ctx, mainPortIDs[0])
 	suite.testCancelPort(suite.client, ctx, mainPortIDs[0])
 	suite.testDeletePort(suite.client, ctx, mainPortIDs[0])
@@ -167,6 +178,99 @@ func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Con
 		return nil, err
 	}
 	return orderRes, nil
+}
+
+func (suite *PortIntegrationTestSuite) testCreateServiceKey(c *Client, ctx context.Context, portId string) (*ServiceKey, error) {
+	suite.client.Logger.DebugContext(ctx, "Creating Service Key", slog.String("port_id", portId))
+	createReq := &CreateServiceKeyRequest{
+		ProductUID:  portId,
+		Description: "Test Service Key",
+		Active:      true,
+		SingleUse:   true,
+		MaxSpeed:    500,
+		PreApproved: true,
+		VLAN:        3,
+	}
+	validFor := &ValidFor{
+		StartTime: &Time{
+			Time: time.Now(),
+		},
+		EndTime: &Time{
+			Time: time.Now().Add(24 * time.Hour),
+		},
+	}
+	createReq.ValidFor = validFor
+	createRes, err := c.ServiceKeyService.CreateServiceKey(ctx, createReq)
+	if err != nil {
+		suite.FailNowf("could not create service key", "could not create service key %v", err)
+	}
+	suite.True(IsGuid(createRes.ServiceKeyUID))
+	foundKey, err := c.ServiceKeyService.GetServiceKey(ctx, createRes.ServiceKeyUID)
+	if err != nil {
+		suite.FailNowf("could not get service key", "could not get service key %v", err)
+	}
+	suite.Equal(createRes.ServiceKeyUID, foundKey.Key)
+	suite.Equal(foundKey.Description, createReq.Description)
+	suite.Equal(foundKey.ProductUID, portId)
+	suite.Equal(foundKey.Active, createReq.Active)
+	suite.Equal(foundKey.SingleUse, createReq.SingleUse)
+	suite.Equal(foundKey.MaxSpeed, createReq.MaxSpeed)
+	suite.Equal(foundKey.PreApproved, createReq.PreApproved)
+	suite.Equal(foundKey.VLAN, createReq.VLAN)
+
+	createReq2 := &CreateServiceKeyRequest{
+		ProductUID:  portId,
+		Description: "Test Service Key 2",
+		Active:      true,
+		SingleUse:   true,
+		MaxSpeed:    500,
+		PreApproved: true,
+		VLAN:        3,
+	}
+	validFor2 := &ValidFor{
+		StartTime: &Time{
+			Time: time.Now(),
+		},
+		EndTime: &Time{
+			Time: time.Now().Add(24 * time.Hour),
+		},
+	}
+	createReq2.ValidFor = validFor2
+	_, err = c.ServiceKeyService.CreateServiceKey(ctx, createReq2)
+	if err != nil {
+		suite.FailNowf("could not create service key", "could not create service key %v", err)
+	}
+	listRes, err := c.ServiceKeyService.ListServiceKeys(ctx, &ListServiceKeysRequest{
+		ProductUID: &portId,
+	})
+	if err != nil {
+		suite.FailNowf("could not list service keys", "could not list service keys %v", err)
+	}
+	suite.Equal(len(listRes.ServiceKeys), 2)
+	return foundKey, nil
+}
+
+func (suite *PortIntegrationTestSuite) testUpdateServiceKey(c *Client, ctx context.Context, key string, productID int) {
+	suite.client.Logger.DebugContext(ctx, "Updating Service Key", slog.String("key", key))
+	updateReq := &UpdateServiceKeyRequest{
+		Key:       key,
+		ProductID: productID,
+		Active:    false,
+		SingleUse: true,
+	}
+	validFor := &ValidFor{
+		StartTime: &Time{
+			Time: time.Now(),
+		},
+		EndTime: &Time{
+			Time: time.Now().Add(24 * time.Hour),
+		},
+	}
+	updateReq.ValidFor = validFor
+	_, err := c.ServiceKeyService.UpdateServiceKey(ctx, updateReq)
+	if err != nil {
+		suite.FailNowf("could not update service key", "could not update service key %v", err)
+	}
 }
 
 func (suite *PortIntegrationTestSuite) testModifyPort(c *Client, ctx context.Context, portId string) {

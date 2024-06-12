@@ -200,3 +200,41 @@ type MVEResponse struct {
 	Terms   string `json:"terms"`
 	Data    *MVE   `json:"data"`
 }
+
+// MVEImage represents details for an MVE image, including image ID, version, product, and vendor.
+type MVEImage struct {
+	ID                int    `json:"id"`
+	Version           string `json:"version"`
+	Product           string `json:"product"`
+	Vendor            string `json:"vendor"`
+	VendorDescription string `json:"vendorDescription"`
+	ReleaseImage      bool   `json:"releaseImage"`
+	ProductCode       string `json:"productCode"`
+}
+
+// MVEImageAPIResponse represents the response to an MVE image request.
+type MVEImageAPIResponse struct {
+	Message string                   `json:"message"`
+	Terms   string                   `json:"terms"`
+	Data    *MVEImageAPIResponseData `json:"data"`
+}
+
+// MVEImageAPIResponseData represents the data in an MVE image response.
+type MVEImageAPIResponseData struct {
+	Images []*MVEImage `json:"mveImages"`
+}
+
+// MVESize represents the details on the MVE size. The instance size determines the MVE capabilities, such as how many concurrent connections it can support. The compute sizes are 2/8, 4/16, 8/32, and 12/48, where the first number is the CPU and the second number is the GB of available RAM. Each size has 4 GB of RAM for every vCPU allocated.
+type MVESize struct {
+	Size         string `json:"size"`
+	Label        string `json:"label"`
+	CPUCoreCount int    `json:"cpuCoreCount"`
+	RamGB        int    `json:"ramGB"`
+}
+
+// MVESizeAPIResponse represents the response to an MVE size request, returning a list of currently available MVE sizes and details for each size.
+type MVESizeAPIResponse struct {
+	Message string     `json:"message"`
+	Terms   string     `json:"terms"`
+	Data    []*MVESize `json:"data"`
+}
