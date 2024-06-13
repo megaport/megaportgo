@@ -231,6 +231,11 @@ type VXCPartnerConfigOracle struct {
 	VirtualCircuitId string `json:"virtualCircuitId"`
 }
 
+type VXCPartnerConfigTransit struct {
+	VXCPartnerConfiguration
+	ConnectType string `json:"connectType"`
+}
+
 // VXCOrderMVEConfig represents the configuration of a VXC endpoint for MVE.
 type VXCOrderMVEConfig struct {
 	InnerVLAN             int `json:"innerVlan,omitempty"`
