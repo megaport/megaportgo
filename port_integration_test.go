@@ -170,7 +170,7 @@ func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Con
 		LagCount:              lagCount,
 		MarketPlaceVisibility: true,
 		DiversityZone:         "red",
-		WaitForProvision:      true,g
+		WaitForProvision:      true,
 		WaitForTime:           5 * time.Minute,
 	})
 
