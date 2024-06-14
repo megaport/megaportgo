@@ -170,7 +170,7 @@ func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Con
 		LagCount:              lagCount,
 		MarketPlaceVisibility: true,
 		DiversityZone:         "red",
-		WaitForProvision:      true,
+		WaitForProvision:      true,g
 		WaitForTime:           5 * time.Minute,
 	})
 
@@ -180,6 +180,7 @@ func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Con
 	return orderRes, nil
 }
 
+//nolint:unparam
 func (suite *PortIntegrationTestSuite) testCreateServiceKey(c *Client, ctx context.Context, portId string) (*ServiceKey, error) {
 	suite.client.Logger.DebugContext(ctx, "Creating Service Key", slog.String("port_id", portId))
 	createReq := &CreateServiceKeyRequest{
