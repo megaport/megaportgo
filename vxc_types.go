@@ -177,6 +177,7 @@ type VXCOrderConfiguration struct {
 	RateLimit  int                           `json:"rateLimit"`
 	Term       int                           `json:"term"`
 	Shutdown   bool                          `json:"shutdown"`
+	CostCentre string                        `json:"costCentre,omitempty"`
 	AEnd       VXCOrderEndpointConfiguration `json:"aEnd"`
 	BEnd       VXCOrderEndpointConfiguration `json:"bEnd"`
 }
