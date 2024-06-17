@@ -48,6 +48,7 @@ type BuyVXCRequest struct {
 	Shutdown          bool
 	PromoCode         string
 	ServiceKey        string
+	CostCentre        string
 	AEndConfiguration VXCOrderEndpointConfiguration
 	BEndConfiguration VXCOrderEndpointConfiguration
 
@@ -119,6 +120,7 @@ func (svc *VXCServiceOp) BuyVXC(ctx context.Context, req *BuyVXCRequest) (*BuyVX
 				Shutdown:   req.Shutdown,
 				PromoCode:  req.PromoCode,
 				ServiceKey: req.ServiceKey,
+				CostCentre: req.CostCentre,
 				AEnd:       req.AEndConfiguration,
 				BEnd:       req.BEndConfiguration,
 			},
