@@ -21,7 +21,7 @@ type MCRService interface {
 	// GetMCRPrefixFilterLists returns prefix filter lists for the specified MCR2 from the Megaport MCR API.
 	ListMCRPrefixFilterLists(ctx context.Context, mcrId string) ([]*PrefixFilterList, error)
 	// GetMCRPrefixFilterList returns a single prefix filter list by ID for the specified MCR2 from the Megaport MCR API.
-	GetMCRPrefixFilterList(ctx context.Context, mcrID string, prefixFilterListID string) (*MCRPrefixFilterList, error)
+	GetMCRPrefixFilterList(ctx context.Context, mcrID string, prefixFilterListID int) (*MCRPrefixFilterList, error)
 	// ModifyMCR modifies an MCR in the Megaport MCR API.
 	ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (*ModifyMCRResponse, error)
 	// DeleteMCR deletes an MCR in the Megaport MCR API.
