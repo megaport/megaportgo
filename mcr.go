@@ -251,7 +251,7 @@ func (svc *MCRServiceOp) CreatePrefixFilterList(ctx context.Context, req *Create
 		return nil, fileErr
 	}
 
-	createRes := &CreateMCRPrefixFilterListAPIResponse{}
+	createRes := &APIMCRPrefixFilterListResponse{}
 	unmarshalErr := json.Unmarshal(body, createRes)
 	if unmarshalErr != nil {
 		return nil, unmarshalErr
@@ -314,12 +314,17 @@ func (svc *MCRServiceOp) GetMCRPrefixFilterList(ctx context.Context, mcrID strin
 		return nil, fileErr
 	}
 
-	prefixFilterList := &GetMCRPrefixFilterListResponse{}
-	unmarshalErr := json.Unmarshal(body, prefixFilterList)
+	apiPrefixFilterList := &APIMCRPrefixFilterListResponse{}
+	unmarshalErr := json.Unmarshal(body, apiPrefixFilterList)
 	if unmarshalErr != nil {
 		return nil, unmarshalErr
 	}
-	return prefixFilterList.Data, nil
+
+	prefixFilterList, err := apiPrefixFilterList.Data.ToMCRPrefixFilterList()
+	if err != nil {
+		return nil, err
+	}
+	return prefixFilterList, nil
 }
 
 // ModifyMCR modifies an MCR in the Megaport MCR API.
