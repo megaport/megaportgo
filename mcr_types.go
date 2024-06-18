@@ -121,9 +121,15 @@ type CreateMCRPrefixFilterListAPIResponse struct {
 	Data    *MCRPrefixFilterList `json:"data"`
 }
 
-// MCRPrefixFilterListResponse represents a response from the Megaport MCR API after querying an MCR's prefix filter list.
-type MCRPrefixFilterListResponse struct {
+// ListMCRPrefixFilterListResponse represents a response from the Megaport MCR API after querying an MCR's prefix filter list.
+type ListMCRPrefixFilterListResponse struct {
 	Message string              `json:"message"`
 	Terms   string              `json:"terms"`
 	Data    []*PrefixFilterList `json:"data"`
+}
+
+type GetMCRPrefixFilterListResponse struct {
+	Message string               `json:"message"`
+	Terms   string               `json:"terms"`
+	Data    *MCRPrefixFilterList `json:"data"`
 }

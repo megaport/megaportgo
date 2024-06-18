@@ -19,7 +19,9 @@ type MCRService interface {
 	// CreatePrefixFilterList creates a Prefix Filter List on an MCR from the Megaport MCR API.
 	CreatePrefixFilterList(ctx context.Context, req *CreateMCRPrefixFilterListRequest) (*CreateMCRPrefixFilterListResponse, error)
 	// GetMCRPrefixFilterLists returns prefix filter lists for the specified MCR2 from the Megaport MCR API.
-	GetMCRPrefixFilterLists(ctx context.Context, mcrId string) ([]*PrefixFilterList, error)
+	ListMCRPrefixFilterLists(ctx context.Context, mcrId string) ([]*PrefixFilterList, error)
+	// GetMCRPrefixFilterList returns a single prefix filter list by ID for the specified MCR2 from the Megaport MCR API.
+	GetMCRPrefixFilterList(ctx context.Context, mcrID string, prefixFilterListID string) (*MCRPrefixFilterList, error)
 	// ModifyMCR modifies an MCR in the Megaport MCR API.
 	ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (*ModifyMCRResponse, error)
 	// DeleteMCR deletes an MCR in the Megaport MCR API.
@@ -260,8 +262,8 @@ func (svc *MCRServiceOp) CreatePrefixFilterList(ctx context.Context, req *Create
 	}, nil
 }
 
-// GetMCRPrefixFilterLists returns prefix filter lists for the specified MCR2 from the Megaport MCR API.
-func (svc *MCRServiceOp) GetMCRPrefixFilterLists(ctx context.Context, mcrId string) ([]*PrefixFilterList, error) {
+// ListMCRPrefixFilterLists returns prefix filter lists for the specified MCR2 from the Megaport MCR API.
+func (svc *MCRServiceOp) ListMCRPrefixFilterLists(ctx context.Context, mcrId string) ([]*PrefixFilterList, error) {
 	url := "/v2/product/mcr2/" + mcrId + "/prefixLists?"
 
 	req, err := svc.Client.NewRequest(ctx, "GET", url, nil)
@@ -280,13 +282,41 @@ func (svc *MCRServiceOp) GetMCRPrefixFilterLists(ctx context.Context, mcrId stri
 		return nil, fileErr
 	}
 
-	prefixFilterList := &MCRPrefixFilterListResponse{}
+	prefixFilterList := &ListMCRPrefixFilterListResponse{}
 	unmarshalErr := json.Unmarshal(body, prefixFilterList)
 
 	if unmarshalErr != nil {
 		return nil, unmarshalErr
 	}
 
+	return prefixFilterList.Data, nil
+}
+
+// GetMCRPrefixFilterList returns a single prefix filter list by ID for the specified MCR2 from the Megaport MCR API.
+func (svc *MCRServiceOp) GetMCRPrefixFilterList(ctx context.Context, mcrID string, prefixFilterListID string) (*MCRPrefixFilterList, error) {
+	url := "/v2/product/mcr2/" + mcrID + "/prefixList/" + prefixFilterListID
+
+	req, err := svc.Client.NewRequest(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := svc.Client.Do(ctx, req, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	body, fileErr := io.ReadAll(response.Body)
+	if fileErr != nil {
+		return nil, fileErr
+	}
+
+	prefixFilterList := &GetMCRPrefixFilterListResponse{}
+	unmarshalErr := json.Unmarshal(body, prefixFilterList)
+	if unmarshalErr != nil {
+		return nil, unmarshalErr
+	}
 	return prefixFilterList.Data, nil
 }
 
