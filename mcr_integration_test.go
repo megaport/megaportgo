@@ -414,6 +414,124 @@ func (suite *MCRIntegrationTestSuite) TestMegaportPrefixFilterList() {
 	}
 	wg.Wait()
 
+	update1 := &MCRPrefixFilterList{
+		Description:   "Test Prefix Filter List 1 Updated",
+		AddressFamily: "IPv4",
+		Entries: []*MCRPrefixListEntry{
+			{
+				Action: "permit",
+				Prefix: "10.0.1.0/24",
+				Ge:     26,
+				Le:     32,
+			},
+			{
+				Action: "deny",
+				Prefix: "10.0.2.0/24",
+				Ge:     24,
+				Le:     26,
+			},
+		},
+	}
+	update2 := &MCRPrefixFilterList{
+		Description:   "Test Prefix Filter List 2 Updated",
+		AddressFamily: "IPv4",
+		Entries: []*MCRPrefixListEntry{
+			{
+				Action: "permit",
+				Prefix: "10.0.1.0/24",
+				Ge:     27,
+				Le:     32,
+			},
+			{
+				Action: "deny",
+				Prefix: "10.0.2.0/24",
+				Ge:     25,
+				Le:     27,
+			},
+		},
+	}
+	wantUpdate1 := &MCRPrefixFilterList{
+		ID:            want1.ID,
+		Description:   "Test Prefix Filter List 1 Updated",
+		AddressFamily: "IPv4",
+		Entries: []*MCRPrefixListEntry{
+			{
+				Action: "permit",
+				Prefix: "10.0.1.0/24",
+				Ge:     26,
+				Le:     32,
+			},
+			{
+				Action: "deny",
+				Prefix: "10.0.2.0/24",
+				Ge:     0,
+				Le:     26,
+			},
+		},
+	}
+	wantUpdate2 := &MCRPrefixFilterList{
+		ID:            want2.ID,
+		Description:   "Test Prefix Filter List 2 Updated",
+		AddressFamily: "IPv4",
+		Entries: []*MCRPrefixListEntry{
+			{
+				Action: "permit",
+				Prefix: "10.0.1.0/24",
+				Ge:     27,
+				Le:     32,
+			},
+			{
+				Action: "deny",
+				Prefix: "10.0.2.0/24",
+				Ge:     25,
+				Le:     27,
+			},
+		},
+	}
+	_, updateErr := mcrSvc.ModifyMCRPrefixFilterList(ctx, mcrId, want1.ID, update1)
+	if updateErr != nil {
+		suite.FailNowf("could not update prefix filter list", "could not update prefix filter list %v", updateErr)
+	}
+	_, updateErr = mcrSvc.ModifyMCRPrefixFilterList(ctx, mcrId, want2.ID, update2)
+	if updateErr != nil {
+		suite.FailNowf("could not update prefix filter list", "could not update prefix filter list %v", updateErr)
+	}
+	wantUpdate1.ID = want1.ID
+	wantUpdate2.ID = want2.ID
+
+	// Check for Updated MCR Prefix Filter Lists
+	wg2 := sync.WaitGroup{}
+	for _, id := range ids {
+		wg2.Add(1)
+		go func(id int) {
+			defer wg2.Done()
+			getPrefixFilterListRes, getPrefixFilterListErr := mcrSvc.GetMCRPrefixFilterList(ctx, mcrId, id)
+			if getPrefixFilterListErr != nil {
+				suite.FailNowf("could not get prefix filter list", "could not get prefix filter list %v", getPrefixFilterListErr)
+			}
+			switch id {
+			case wantUpdate1.ID:
+				suite.EqualValues(wantUpdate1, getPrefixFilterListRes)
+			case wantUpdate2.ID:
+				suite.EqualValues(wantUpdate2, getPrefixFilterListRes)
+			}
+		}(id)
+	}
+	wg2.Wait()
+
+	// Delete MCR Prefix Filter List
+	_, deleteErr := mcrSvc.DeleteMCRPrefixFilterList(ctx, mcrId, want2.ID)
+	if deleteErr != nil {
+		suite.FailNowf("could not delete prefix filter list", "could not delete prefix filter list %v", deleteErr)
+	}
+
+	// Check for Deleted MCR Prefix Filter List
+	listRes, listErr := mcrSvc.ListMCRPrefixFilterLists(ctx, mcrId)
+	if listErr != nil {
+		suite.FailNowf("could not list prefix filter lists", "could not list prefix filter lists %v", listErr)
+	}
+	suite.Len(listRes, 1)
+
 	logger.InfoContext(ctx, "Deleting MCR now.", slog.String("mcr_id", mcrId))
 	hardDeleteRes, deleteErr := mcrSvc.DeleteMCR(ctx, &DeleteMCRRequest{
 		MCRID:     mcrId,
