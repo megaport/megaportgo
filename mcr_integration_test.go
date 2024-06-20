@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -240,6 +241,178 @@ func (suite *MCRIntegrationTestSuite) TestCreatePrefixFilterList() {
 	if prefixErr != nil {
 		suite.FailNowf("could not create prefix filter list", "could not create prefix filter list %v", prefixErr)
 	}
+
+	logger.InfoContext(ctx, "Deleting MCR now.", slog.String("mcr_id", mcrId))
+	hardDeleteRes, deleteErr := mcrSvc.DeleteMCR(ctx, &DeleteMCRRequest{
+		MCRID:     mcrId,
+		DeleteNow: true,
+	})
+	if deleteErr != nil {
+		suite.FailNowf("could not delete mcr", "could not delete mcr %v", deleteErr)
+	}
+	suite.True(hardDeleteRes.IsDeleting)
+
+	mcrDeleteInfo, getErr := mcrSvc.GetMCR(ctx, mcrId)
+	if getErr != nil {
+		suite.FailNowf("could not get mcr", "could not get mcr %v", getErr)
+	}
+	suite.EqualValues(STATUS_DECOMMISSIONED, mcrDeleteInfo.ProvisioningStatus)
+
+	logger.DebugContext(ctx, "mcr deleted", slog.String("status", mcrDeleteInfo.ProvisioningStatus))
+}
+
+// TestCreatePrefixFilterList tests the creation of a prefix filter list for an MCR.
+func (suite *MCRIntegrationTestSuite) TestMegaportPrefixFilterList() {
+	ctx := context.Background()
+	locSvc := suite.client.LocationService
+	mcrSvc := suite.client.MCRService
+	logger := suite.client.Logger
+
+	logger.InfoContext(ctx, "Buying MCR Port.")
+	testLocation, locErr := GetRandomLocation(ctx, locSvc, TEST_MCR_TEST_LOCATION_MARKET)
+	if locErr != nil {
+		suite.FailNowf("could not get location", "could not get location %v", locErr)
+	}
+
+	logger.InfoContext(ctx, "Test location determined", slog.String("location", testLocation.Name))
+	mcrRes, portErr := mcrSvc.BuyMCR(ctx, &BuyMCRRequest{
+		LocationID:       testLocation.ID,
+		Name:             "Buy MCR",
+		Term:             1,
+		PortSpeed:        1000,
+		MCRAsn:           0,
+		WaitForProvision: true,
+		WaitForTime:      5 * time.Minute,
+	})
+	if portErr != nil {
+		suite.FailNowf("could not buy mcr", "could not buy mcr %v", portErr)
+	}
+	mcrId := mcrRes.TechnicalServiceUID
+
+	if !IsGuid(mcrId) {
+		suite.FailNowf("invalid mcr id", "invalid mcr id %s", mcrId)
+	}
+
+	logger.InfoContext(ctx, "MCR Purchased", slog.String("mcr_id", mcrId))
+
+	logger.InfoContext(ctx, "Creating prefix filter list")
+
+	prefixFilterEntries1 := []*MCRPrefixListEntry{
+		{
+			Action: "permit",
+			Prefix: "10.0.1.0/24",
+			Ge:     25,
+			Le:     32,
+		},
+		{
+			Action: "deny",
+			Prefix: "10.0.2.0/24",
+			Ge:     24,
+			Le:     25,
+		},
+	}
+
+	prefixFilterEntries2 := []*MCRPrefixListEntry{
+		{
+			Action: "permit",
+			Prefix: "10.0.1.0/24",
+			Ge:     26,
+			Le:     32,
+		},
+		{
+			Action: "deny",
+			Prefix: "10.0.2.0/24",
+			Ge:     25,
+			Le:     27,
+		},
+	}
+
+	validatedPrefixFilterList1 := MCRPrefixFilterList{
+		Description:   "Test Prefix Filter List 1",
+		AddressFamily: "IPv4",
+		Entries:       prefixFilterEntries1,
+	}
+
+	validatedPrefixFilterList2 := MCRPrefixFilterList{
+		Description:   "Test Prefix Filter List 2",
+		AddressFamily: "IPv4",
+		Entries:       prefixFilterEntries2,
+	}
+
+	want1 := &MCRPrefixFilterList{
+		Description:   "Test Prefix Filter List 1",
+		AddressFamily: "IPv4",
+		Entries: []*MCRPrefixListEntry{
+			{
+				Action: "permit",
+				Prefix: "10.0.1.0/24",
+				Ge:     25,
+				Le:     32,
+			},
+			{
+				Action: "deny",
+				Prefix: "10.0.2.0/24",
+				Ge:     0,
+				Le:     25,
+			},
+		},
+	}
+	want2 := &MCRPrefixFilterList{
+		Description:   "Test Prefix Filter List 2",
+		AddressFamily: "IPv4",
+		Entries: []*MCRPrefixListEntry{
+			{
+				Action: "permit",
+				Prefix: "10.0.1.0/24",
+				Ge:     26,
+				Le:     32,
+			},
+			{
+				Action: "deny",
+				Prefix: "10.0.2.0/24",
+				Ge:     25,
+				Le:     27,
+			},
+		},
+	}
+	prefixRes1, prefixErr := mcrSvc.CreatePrefixFilterList(ctx, &CreateMCRPrefixFilterListRequest{
+		MCRID:            mcrId,
+		PrefixFilterList: validatedPrefixFilterList1,
+	})
+	if prefixErr != nil {
+		suite.FailNowf("could not create prefix filter list", "could not create prefix filter list %v", prefixErr)
+	}
+	want1.ID = prefixRes1.PrefixFilterListID
+
+	prefixRes2, prefixErr := mcrSvc.CreatePrefixFilterList(ctx, &CreateMCRPrefixFilterListRequest{
+		MCRID:            mcrId,
+		PrefixFilterList: validatedPrefixFilterList2,
+	})
+	if prefixErr != nil {
+		suite.FailNowf("could not create prefix filter list", "could not create prefix filter list %v", prefixErr)
+	}
+	want2.ID = prefixRes2.PrefixFilterListID
+
+	ids := []int{prefixRes1.PrefixFilterListID, prefixRes2.PrefixFilterListID}
+
+	wg := sync.WaitGroup{}
+	for _, id := range ids {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			getPrefixFilterListRes, getPrefixFilterListErr := mcrSvc.GetMCRPrefixFilterList(ctx, mcrId, id)
+			if getPrefixFilterListErr != nil {
+				suite.FailNowf("could not get prefix filter list", "could not get prefix filter list %v", getPrefixFilterListErr)
+			}
+			switch id {
+			case want1.ID:
+				suite.EqualValues(want1, getPrefixFilterListRes)
+			case want2.ID:
+				suite.EqualValues(want2, getPrefixFilterListRes)
+			}
+		}(id)
+	}
+	wg.Wait()
 
 	logger.InfoContext(ctx, "Deleting MCR now.", slog.String("mcr_id", mcrId))
 	hardDeleteRes, deleteErr := mcrSvc.DeleteMCR(ctx, &DeleteMCRRequest{
