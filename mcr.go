@@ -33,6 +33,9 @@ type MCRService interface {
 	DeleteMCR(ctx context.Context, req *DeleteMCRRequest) (*DeleteMCRResponse, error)
 	// RestoreMCR restores a deleted MCR in the Megaport MCR API.
 	RestoreMCR(ctx context.Context, mcrId string) (*RestoreMCRResponse, error)
+
+	// DEPRECATED - Use ListMCRPrefixFilterLists instead
+	GetMCRPrefixFilterLists(ctx context.Context, mcrId string) ([]*PrefixFilterList, error)
 }
 
 // MCRServiceOp handles communication with MCR methods of the Megaport API.
@@ -277,7 +280,16 @@ func (svc *MCRServiceOp) CreatePrefixFilterList(ctx context.Context, req *Create
 	}, nil
 }
 
-// ListMCRPrefixFilterLists returns prefix filter lists for the specified MCR2 from the Megaport MCR API.
+// DEPRECATED - Use ListMCRPrefixFilterLists instead
+func (svc *MCRServiceOp) GetMCRPrefixFilterLists(ctx context.Context, mcrId string) ([]*PrefixFilterList, error) {
+	res, err := svc.ListMCRPrefixFilterLists(ctx, mcrId)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+// GetMCRPrefixFilterLists returns prefix filter lists for the specified MCR2 from the Megaport MCR API.
 func (svc *MCRServiceOp) ListMCRPrefixFilterLists(ctx context.Context, mcrId string) ([]*PrefixFilterList, error) {
 	url := "/v2/product/mcr2/" + mcrId + "/prefixLists?"
 
