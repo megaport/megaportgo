@@ -8,6 +8,7 @@ type MVEOrderConfig struct {
 	ProductType       string                `json:"productType"`
 	DiversityZone     string                `json:"diversityZone"`
 	PromoCode         string                `json:"promoCode,omitempty"`
+	CostCentre        string                `json:"costCentre,omitempty"`
 	NetworkInterfaces []MVENetworkInterface `json:"vnics"`
 	VendorConfig      VendorConfig          `json:"vendorConfig"`
 }
@@ -152,6 +153,7 @@ type MVE struct {
 	ContractEndDate       *Time                   `json:"contractEndDate"`
 	ContractTermMonths    int                     `json:"contractTermMonths"`
 	AttributeTags         map[string]string       `json:"attributeTags"`
+	CostCentre            string                  `json:"costCentre"`
 	Virtual               bool                    `json:"virtual"`
 	BuyoutPort            bool                    `json:"buyoutPort"`
 	Locked                bool                    `json:"locked"`
