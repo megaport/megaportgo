@@ -1,5 +1,7 @@
 package megaport
 
+import "strconv"
+
 // MCROrder represents a request to buy an MCR from the Megaport Products API.
 type MCROrder struct {
 	LocationID int            `json:"locationId"`
@@ -85,12 +87,20 @@ type MCRPrefixFilterList struct {
 	Entries       []*MCRPrefixListEntry `json:"entries"`
 }
 
+// APIMCRPrefixFilterListEntry represents an entry in a prefix filter list.
+type APIMCRPrefixFilterListEntry struct {
+	Action string `json:"action"`
+	Prefix string `json:"prefix"`
+	Ge     string `json:"ge,omitempty"` // Greater than or equal to - (Optional) The minimum starting prefix length to be matched. Valid values are from 0 to 32 (IPv4), or 0 to 128 (IPv6). The minimum (ge) must be no greater than or equal to the maximum value (le).
+	Le     string `json:"le,omitempty"` // Less than or equal to - (Optional) The maximum ending prefix length to be matched. The prefix length is greater than or equal to the minimum value (ge). Valid values are from 0 to 32 (IPv4), or 0 to 128 (IPv6), but the maximum must be no less than the minimum value (ge).
+}
+
 // MCRPrefixListEntry represents an entry in a prefix filter list.
 type MCRPrefixListEntry struct {
 	Action string `json:"action"`
 	Prefix string `json:"prefix"`
-	Ge     int    `json:"ge,omitempty"`
-	Le     int    `json:"le,omitempty"`
+	Ge     int    `json:"ge,omitempty"` // Great than or equal to - (Optional) The minimum starting prefix length to be matched. Valid values are from 0 to 32 (IPv4), or 0 to 128 (IPv6). The minimum (ge) must be no greater than or equal to the maximum value (le).
+	Le     int    `json:"le,omitempty"` // Less than or equal to - (Optional) The maximum ending prefix length to be matched. The prefix length is greater than or equal to the minimum value (ge). Valid values are from 0 to 32 (IPv4), or 0 to 128 (IPv6), but the maximum must be no less than the minimum value (ge).
 }
 
 // MCROrdersResponse represents a response from the Megaport Products API after ordering an MCR.
@@ -116,14 +126,68 @@ type PrefixFilterList struct {
 
 // CreateMCRPrefixFilterListResponse represents a response from the Megaport MCR API after creating a prefix filter list.
 type CreateMCRPrefixFilterListAPIResponse struct {
-	Message string               `json:"message"`
-	Terms   string               `json:"terms"`
-	Data    *MCRPrefixFilterList `json:"data"`
+	Message string                  `json:"message"`
+	Terms   string                  `json:"terms"`
+	Data    *APIMCRPrefixFilterList `json:"data"`
 }
 
-// MCRPrefixFilterListResponse represents a response from the Megaport MCR API after querying an MCR's prefix filter list.
-type MCRPrefixFilterListResponse struct {
+// ListMCRPrefixFilterListResponse represents a response from the Megaport MCR API after querying an MCR's prefix filter list.
+type ListMCRPrefixFilterListResponse struct {
 	Message string              `json:"message"`
 	Terms   string              `json:"terms"`
 	Data    []*PrefixFilterList `json:"data"`
+}
+
+type APIMCRPrefixFilterListResponse struct {
+	Message string                  `json:"message"`
+	Terms   string                  `json:"terms"`
+	Data    *APIMCRPrefixFilterList `json:"data"`
+}
+
+type APIMCRPrefixFilterList struct {
+	ID            int                            `json:"id"`
+	Description   string                         `json:"description"`
+	AddressFamily string                         `json:"addressFamily"`
+	Entries       []*APIMCRPrefixFilterListEntry `json:"entries"`
+}
+
+func (e *APIMCRPrefixFilterList) ToMCRPrefixFilterList() (*MCRPrefixFilterList, error) {
+	entries := make([]*MCRPrefixListEntry, len(e.Entries))
+	for i, entry := range e.Entries {
+		mcrEntry, err := entry.ToMCRPrefixFilterListEntry()
+		if err != nil {
+			return nil, err
+		}
+		entries[i] = mcrEntry
+	}
+	return &MCRPrefixFilterList{
+		ID:            e.ID,
+		Description:   e.Description,
+		AddressFamily: e.AddressFamily,
+		Entries:       entries,
+	}, nil
+}
+
+func (e *APIMCRPrefixFilterListEntry) ToMCRPrefixFilterListEntry() (*MCRPrefixListEntry, error) {
+	var ge, le int
+	if e.Ge != "" {
+		geVal, err := strconv.Atoi(e.Ge)
+		if err != nil {
+			return nil, err
+		}
+		ge = geVal
+	}
+	if e.Le != "" {
+		leVal, err := strconv.Atoi(e.Le)
+		if err != nil {
+			return nil, err
+		}
+		le = leVal
+	}
+	return &MCRPrefixListEntry{
+		Action: e.Action,
+		Prefix: e.Prefix,
+		Ge:     ge,
+		Le:     le,
+	}, nil
 }

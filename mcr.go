@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"slices"
+	"strconv"
 	"time"
 )
 
@@ -18,14 +19,23 @@ type MCRService interface {
 	GetMCR(ctx context.Context, mcrId string) (*MCR, error)
 	// CreatePrefixFilterList creates a Prefix Filter List on an MCR from the Megaport MCR API.
 	CreatePrefixFilterList(ctx context.Context, req *CreateMCRPrefixFilterListRequest) (*CreateMCRPrefixFilterListResponse, error)
-	// GetMCRPrefixFilterLists returns prefix filter lists for the specified MCR2 from the Megaport MCR API.
-	GetMCRPrefixFilterLists(ctx context.Context, mcrId string) ([]*PrefixFilterList, error)
+	// ListMCRPrefixFilterLists returns prefix filter lists for the specified MCR2 from the Megaport MCR API.
+	ListMCRPrefixFilterLists(ctx context.Context, mcrId string) ([]*PrefixFilterList, error)
+	// GetMCRPrefixFilterList returns a single prefix filter list by ID for the specified MCR2 from the Megaport MCR API.
+	GetMCRPrefixFilterList(ctx context.Context, mcrID string, prefixFilterListID int) (*MCRPrefixFilterList, error)
+	// ModifyMCRPrefixFilterList modifies a prefix filter list on an MCR in the Megaport MCR API.
+	ModifyMCRPrefixFilterList(ctx context.Context, mcrID string, prefixFilterListID int, prefixFilterList *MCRPrefixFilterList) (*ModifyMCRPrefixFilterListResponse, error)
+	// DeleteMCRPrefixFilterList deletes a prefix filter list on an MCR from the Megaport MCR API.
+	DeleteMCRPrefixFilterList(ctx context.Context, mcrID string, prefixFilterListID int) (*DeleteMCRPrefixFilterListResponse, error)
 	// ModifyMCR modifies an MCR in the Megaport MCR API.
 	ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (*ModifyMCRResponse, error)
 	// DeleteMCR deletes an MCR in the Megaport MCR API.
 	DeleteMCR(ctx context.Context, req *DeleteMCRRequest) (*DeleteMCRResponse, error)
 	// RestoreMCR restores a deleted MCR in the Megaport MCR API.
 	RestoreMCR(ctx context.Context, mcrId string) (*RestoreMCRResponse, error)
+
+	// DEPRECATED - Use ListMCRPrefixFilterLists instead
+	GetMCRPrefixFilterLists(ctx context.Context, mcrId string) ([]*PrefixFilterList, error)
 }
 
 // MCRServiceOp handles communication with MCR methods of the Megaport API.
@@ -102,6 +112,16 @@ type DeleteMCRResponse struct {
 // RestoreMCRequest represents a request to restore a deleted MCR
 type RestoreMCRResponse struct {
 	IsRestored bool
+}
+
+// ModifyMCRPrefixFilterListRequest represents a request to modify a prefix filter list on an MCR
+type ModifyMCRPrefixFilterListResponse struct {
+	IsUpdated bool
+}
+
+// DeleteMCRPrefixFilterListResponse represents a response from deleting a prefix filter list on an MCR
+type DeleteMCRPrefixFilterListResponse struct {
+	IsDeleted bool
 }
 
 // BuyMCR purchases an MCR from the Megaport MCR API.
@@ -248,7 +268,7 @@ func (svc *MCRServiceOp) CreatePrefixFilterList(ctx context.Context, req *Create
 		return nil, fileErr
 	}
 
-	createRes := &CreateMCRPrefixFilterListAPIResponse{}
+	createRes := &APIMCRPrefixFilterListResponse{}
 	unmarshalErr := json.Unmarshal(body, createRes)
 	if unmarshalErr != nil {
 		return nil, unmarshalErr
@@ -260,8 +280,17 @@ func (svc *MCRServiceOp) CreatePrefixFilterList(ctx context.Context, req *Create
 	}, nil
 }
 
-// GetMCRPrefixFilterLists returns prefix filter lists for the specified MCR2 from the Megaport MCR API.
+// DEPRECATED - Use ListMCRPrefixFilterLists instead
 func (svc *MCRServiceOp) GetMCRPrefixFilterLists(ctx context.Context, mcrId string) ([]*PrefixFilterList, error) {
+	res, err := svc.ListMCRPrefixFilterLists(ctx, mcrId)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+// GetMCRPrefixFilterLists returns prefix filter lists for the specified MCR2 from the Megaport MCR API.
+func (svc *MCRServiceOp) ListMCRPrefixFilterLists(ctx context.Context, mcrId string) ([]*PrefixFilterList, error) {
 	url := "/v2/product/mcr2/" + mcrId + "/prefixLists?"
 
 	req, err := svc.Client.NewRequest(ctx, "GET", url, nil)
@@ -280,7 +309,7 @@ func (svc *MCRServiceOp) GetMCRPrefixFilterLists(ctx context.Context, mcrId stri
 		return nil, fileErr
 	}
 
-	prefixFilterList := &MCRPrefixFilterListResponse{}
+	prefixFilterList := &ListMCRPrefixFilterListResponse{}
 	unmarshalErr := json.Unmarshal(body, prefixFilterList)
 
 	if unmarshalErr != nil {
@@ -288,6 +317,40 @@ func (svc *MCRServiceOp) GetMCRPrefixFilterLists(ctx context.Context, mcrId stri
 	}
 
 	return prefixFilterList.Data, nil
+}
+
+// GetMCRPrefixFilterList returns a single prefix filter list by ID for the specified MCR2 from the Megaport MCR API.
+func (svc *MCRServiceOp) GetMCRPrefixFilterList(ctx context.Context, mcrID string, prefixFilterListID int) (*MCRPrefixFilterList, error) {
+	listID := strconv.Itoa(prefixFilterListID)
+	url := "/v2/product/mcr2/" + mcrID + "/prefixList/" + listID
+
+	req, err := svc.Client.NewRequest(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := svc.Client.Do(ctx, req, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	body, fileErr := io.ReadAll(response.Body)
+	if fileErr != nil {
+		return nil, fileErr
+	}
+
+	apiPrefixFilterList := &APIMCRPrefixFilterListResponse{}
+	unmarshalErr := json.Unmarshal(body, apiPrefixFilterList)
+	if unmarshalErr != nil {
+		return nil, unmarshalErr
+	}
+
+	prefixFilterList, err := apiPrefixFilterList.Data.ToMCRPrefixFilterList()
+	if err != nil {
+		return nil, err
+	}
+	return prefixFilterList, nil
 }
 
 // ModifyMCR modifies an MCR in the Megaport MCR API.
@@ -342,6 +405,38 @@ func (svc *MCRServiceOp) ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (
 		// return the response right away if the user doesn't want to wait for update
 		return toReturn, nil
 	}
+}
+
+// DeleteMCRPrefixFilterList deletes a prefix filter list on an MCR from the Megaport MCR API.
+func (svc *MCRServiceOp) DeleteMCRPrefixFilterList(ctx context.Context, mcrID string, prefixFilterListID int) (*DeleteMCRPrefixFilterListResponse, error) {
+	url := fmt.Sprintf("/v2/product/mcr2/%s/prefixList/%d", mcrID, prefixFilterListID)
+	clientReq, err := svc.Client.NewRequest(ctx, "DELETE", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	_, err = svc.Client.Do(ctx, clientReq, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &DeleteMCRPrefixFilterListResponse{
+		IsDeleted: true,
+	}, nil
+}
+
+// ModifyMCRPrefixFilterList modifies a prefix filter list on an MCR in the Megaport MCR API.
+func (svc *MCRServiceOp) ModifyMCRPrefixFilterList(ctx context.Context, mcrID string, prefixFilterListID int, prefixFilterList *MCRPrefixFilterList) (*ModifyMCRPrefixFilterListResponse, error) {
+	url := fmt.Sprintf("/v2/product/mcr2/%s/prefixList/%d", mcrID, prefixFilterListID)
+	clientReq, err := svc.Client.NewRequest(ctx, "PUT", url, prefixFilterList)
+	if err != nil {
+		return nil, err
+	}
+	_, err = svc.Client.Do(ctx, clientReq, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &ModifyMCRPrefixFilterListResponse{
+		IsUpdated: true,
+	}, nil
 }
 
 // DeleteMCR deletes an MCR in the Megaport MCR API.
