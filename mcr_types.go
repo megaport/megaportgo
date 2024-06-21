@@ -91,16 +91,16 @@ type MCRPrefixFilterList struct {
 type APIMCRPrefixFilterListEntry struct {
 	Action string `json:"action"`
 	Prefix string `json:"prefix"`
-	Ge     string `json:"ge,omitempty"`
-	Le     string `json:"le,omitempty"`
+	Ge     string `json:"ge,omitempty"` // Greater than or equal to - (Optional) The minimum starting prefix length to be matched. Valid values are from 0 to 32 (IPv4), or 0 to 128 (IPv6). The minimum (ge) must be no greater than or equal to the maximum value (le).
+	Le     string `json:"le,omitempty"` // Less than or equal to - (Optional) The maximum ending prefix length to be matched. The prefix length is greater than or equal to the minimum value (ge). Valid values are from 0 to 32 (IPv4), or 0 to 128 (IPv6), but the maximum must be no less than the minimum value (ge).
 }
 
 // MCRPrefixListEntry represents an entry in a prefix filter list.
 type MCRPrefixListEntry struct {
 	Action string `json:"action"`
 	Prefix string `json:"prefix"`
-	Ge     int    `json:"ge,omitempty"`
-	Le     int    `json:"le,omitempty"`
+	Ge     int    `json:"ge,omitempty"` // Great than or equal to - (Optional) The minimum starting prefix length to be matched. Valid values are from 0 to 32 (IPv4), or 0 to 128 (IPv6). The minimum (ge) must be no greater than or equal to the maximum value (le).
+	Le     int    `json:"le,omitempty"` // Less than or equal to - (Optional) The maximum ending prefix length to be matched. The prefix length is greater than or equal to the minimum value (ge). Valid values are from 0 to 32 (IPv4), or 0 to 128 (IPv6), but the maximum must be no less than the minimum value (ge).
 }
 
 // MCROrdersResponse represents a response from the Megaport Products API after ordering an MCR.
