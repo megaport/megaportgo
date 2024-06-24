@@ -144,6 +144,8 @@ type VXCUpdate struct {
 	Shutdown       *bool  `json:"shutdown,omitempty"`
 	AEndVLAN       *int   `json:"aEndVlan,omitempty"`
 	BEndVLAN       *int   `json:"bEndVlan,omitempty"`
+	AEndInnerVLAN  *int   `json:"aEndInnerVlan,omitempty"`
+	BEndInnerVLAN  *int   `json:"bEndInnerVlan,omitempty"`
 	AEndProductUID string `json:"aEndProductUid,omitempty"`
 	BEndProductUID string `json:"bEndProductUid,omitempty"`
 	Term           *int   `json:"term,omitempty"`
