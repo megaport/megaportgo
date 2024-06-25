@@ -136,3 +136,30 @@ func (suite *ManagedAccountClientTestSuite) TestUpdateManagedAccount() {
 	suite.NotNil(updateRes)
 	suite.Equal(want, updateRes)
 }
+
+func (suite *ManagedAccountClientTestSuite) TestGetManagedAccount() {
+	ctx := context.Background()
+	path := "/v2/managedCompanies/fd404dc9-9efd-43c1-9e0b-a58a9d250130"
+	jblob := `{
+        "message": "Managed company details.",
+        "terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+        "data": {
+          "accountRef": "555-1212-0317-1967",
+          "accountName": "Best Company Ever",
+          "companyUid": "fd404dc9-9efd-43c1-9e0b-a58a9d250130"
+        }
+      }`
+	want := &ManagedAccount{
+		AccountRef:  "555-1212-0317-1967",
+		AccountName: "Best Company Ever",
+		CompanyUID:  "fd404dc9-9efd-43c1-9e0b-a58a9d250130",
+	}
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, jblob)
+	})
+	getRes, err := suite.client.ManagedAccountService.GetManagedAccount(ctx, "fd404dc9-9efd-43c1-9e0b-a58a9d250130", "Best Company Ever")
+	suite.NoError(err)
+	suite.NotNil(getRes)
+	suite.Equal(want, getRes)
+}

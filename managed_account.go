@@ -13,6 +13,8 @@ type ManagedAccountService interface {
 	CreateManagedAccount(ctx context.Context, req *ManagedAccountRequest) (*ManagedAccount, error)
 	// UpdateManagedAccount updates an existing managed account. As a Megaport Partner, use this endpoint to update an existing managed company. You identify the company by providing the companyUid as a parameter for the endpoint.
 	UpdateManagedAccount(ctx context.Context, companyUID string, req *ManagedAccountRequest) (*ManagedAccount, error)
+	// GetManagedAccount retrieves a managed account by name. As a Megaport Partner, use this endpoint to retrieve a managed company by name.
+	GetManagedAccount(ctx context.Context, companyUID string, managedAccountName string) (*ManagedAccount, error)
 }
 
 type ManagedAccountServiceOp struct {
@@ -119,4 +121,17 @@ func (svc *ManagedAccountServiceOp) UpdateManagedAccount(ctx context.Context, co
 		return nil, err
 	}
 	return updateManagedAccountResponse.Data, nil
+}
+
+func (svc *ManagedAccountServiceOp) GetManagedAccount(ctx context.Context, companyUID string, managedAccountName string) (*ManagedAccount, error) {
+	accounts, err := svc.ListManagedAccounts(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, account := range accounts {
+		if account.AccountName == managedAccountName {
+			return account, nil
+		}
+	}
+	return nil, ErrManagedAccountNotFound
 }
