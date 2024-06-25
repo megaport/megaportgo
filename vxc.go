@@ -83,6 +83,8 @@ type UpdateVXCRequest struct {
 	Term           *int
 	Shutdown       *bool
 
+	AEndInnerVLAN *int
+
 	WaitForUpdate bool          // Wait until the VXC updates before returning
 	WaitForTime   time.Duration // How long to wait for the VXC to update if WaitForUpdate is true (default is 5 minutes)
 }
@@ -250,6 +252,9 @@ func (svc *VXCServiceOp) UpdateVXC(ctx context.Context, id string, req *UpdateVX
 	}
 	if req.CostCentre != nil {
 		update.CostCentre = *req.CostCentre
+	}
+	if req.AEndInnerVLAN != nil {
+		update.AEndInnerVLAN = req.AEndInnerVLAN
 	}
 
 	clientReq, err := svc.Client.NewRequest(ctx, http.MethodPut, url, update)
