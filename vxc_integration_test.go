@@ -496,7 +496,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSHostedConnectionBuy() {
 		Shutdown:  false,
 		AEndConfiguration: VXCOrderEndpointConfiguration{
 			VLAN: GenerateRandomVLAN(),
-			PartnerConfig: VXCOrderAEndPartnerConfig{
+			PartnerConfig: VXCOrderVrouterPartnerConfig{
 				Interfaces: []PartnerConfigInterface{
 					{
 						IpAddresses: []string{"10.0.0.1/30"},
