@@ -245,6 +245,13 @@ type VXCOrderMVEConfig struct {
 	NetworkInterfaceIndex int `json:"vNicIndex"`
 }
 
+// VXCOrderVrouterPartnerConfig represents the configuration of a VXC Vrouter Configuration partner.
+type VXCOrderVrouterPartnerConfig struct {
+	VXCPartnerConfiguration
+	Interfaces []PartnerConfigInterface `json:"interfaces,omitempty"`
+}
+
+// DEPRECATED - Use VXCOrderVrouterPartnerConfig instead
 // VXCOrderAEndPartnerConfig represents the configuration of a VXC A-End partner.
 type VXCOrderAEndPartnerConfig struct {
 	VXCPartnerConfiguration
@@ -283,22 +290,23 @@ type BfdConfig struct {
 
 // BgpConnectionConfig represents the configuration of a BGP connection.
 type BgpConnectionConfig struct {
-	PeerAsn         int      `json:"peerAsn"`
-	LocalIpAddress  string   `json:"localIpAddress"`
-	PeerIpAddress   string   `json:"peerIpAddress"`
-	Password        string   `json:"password,omitempty"`
-	Shutdown        bool     `json:"shutdown"`
-	Description     string   `json:"description,omitempty"`
-	MedIn           int      `json:"medIn,omitempty"`
-	MedOut          int      `json:"medOut,omitempty"`
-	BfdEnabled      bool     `json:"bfdEnabled"`
-	ExportPolicy    string   `json:"exportPolicy,omitempty"`
-	PermitExportTo  []string `json:"permitExportTo,omitempty"`
-	DenyExportTo    []string `json:"denyExportTo,omitempty"`
-	ImportWhitelist int      `json:"importWhitelist,omitempty"`
-	ImportBlacklist int      `json:"importBlacklist,omitempty"`
-	ExportWhitelist int      `json:"exportWhitelist,omitempty"`
-	ExportBlacklist int      `json:"exportBlacklist,omitempty"`
+	PeerAsn            int      `json:"peerAsn"`
+	LocalIpAddress     string   `json:"localIpAddress"`
+	PeerIpAddress      string   `json:"peerIpAddress"`
+	Password           string   `json:"password,omitempty"`
+	Shutdown           bool     `json:"shutdown"`
+	Description        string   `json:"description,omitempty"`
+	MedIn              int      `json:"medIn,omitempty"`
+	MedOut             int      `json:"medOut,omitempty"`
+	BfdEnabled         bool     `json:"bfdEnabled"`
+	ExportPolicy       string   `json:"exportPolicy,omitempty"`
+	PermitExportTo     []string `json:"permitExportTo,omitempty"`
+	DenyExportTo       []string `json:"denyExportTo,omitempty"`
+	ImportWhitelist    int      `json:"importWhitelist,omitempty"`
+	ImportBlacklist    int      `json:"importBlacklist,omitempty"`
+	ExportWhitelist    int      `json:"exportWhitelist,omitempty"`
+	ExportBlacklist    int      `json:"exportBlacklist,omitempty"`
+	AsPathPrependCount int      `json:"asPathPrependCount,omitempty"`
 }
 
 // AWS STUFF
