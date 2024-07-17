@@ -251,6 +251,13 @@ type VXCOrderVrouterPartnerConfig struct {
 	Interfaces []PartnerConfigInterface `json:"interfaces,omitempty"`
 }
 
+// DEPRECATED - Use VXCOrderVrouterPartnerConfig instead
+// VXCOrderAEndPartnerConfig represents the configuration of a VXC A-End partner.
+type VXCOrderAEndPartnerConfig struct {
+	VXCPartnerConfiguration
+	Interfaces []PartnerConfigInterface `json:"interfaces,omitempty"`
+}
+
 // VXCOrderConfirmation represents the confirmation of a VXC order from the Megaport Products API.
 type VXCOrderConfirmation struct {
 	TechnicalServiceUID string `json:"vxcJTechnicalServiceUid"`
