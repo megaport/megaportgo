@@ -1,6 +1,7 @@
 package megaport
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 )
@@ -43,6 +44,30 @@ type VXC struct {
 	Cancelable         bool                `json:"cancelable"`
 }
 
+var emptyVLL = []byte(`[]`)
+var jsonNull = []byte(`null`)
+
+// we need to have a custom unmarshal function because the API returns an "[]" (empty array)
+// for vll when the VXC is decomissioned, which will break the regular unmarhsal.
+func (w *VXCResources) UnmarshalJSON(data []byte) error {
+	// these are all the empty cases for this type
+	if len(data) == 0 || bytes.Equal(data, jsonNull) {
+		return nil
+	}
+
+	type TempVXC VXCResources // A new type that doesn't have UnmarshalJSON method
+	if err := json.Unmarshal(data, (*TempVXC)(w)); err != nil {
+		return err
+	}
+
+	// set this to nil if the json was null. this is a workaround to handle the api response coming back as `[]` for the empty case sometimes
+	if w.VLL != nil && w.VLL.isEmpty {
+		w.VLL = nil
+	}
+
+	return nil
+}
+
 // VXCEndConfiguration represents the configuration of an endpoint of a VXC.
 type VXCEndConfiguration struct {
 	OwnerUID              string                  `json:"ownerUid"`
@@ -65,6 +90,19 @@ type VXCResources struct {
 	VLL           *VLLConfig       `json:"vll"`
 }
 
+// we need to have a custom unmarshal function because the API returns an "[]" (empty array)
+// when the VXC is decomissioned, which will break the regular unmarhsal.
+func (w *VLLConfig) UnmarshalJSON(data []byte) error {
+	// these are all the empty cases for this type
+	if len(data) == 0 || bytes.Equal(data, emptyVLL) || bytes.Equal(data, jsonNull) {
+		w.isEmpty = true
+		return nil
+	}
+
+	type TempVLLConfig VLLConfig // A new type that doesn't have UnmarshalJSON method
+	return json.Unmarshal(data, (*TempVLLConfig)(w))
+}
+
 // VirtualRouter represents the configuration of a virtual router.
 type VirtualRouter struct {
 	MCRAsn             int    `json:"mcrAsn"`
@@ -85,6 +123,8 @@ type VLLConfig struct {
 	ResourceName  string `json:"resource_name"`
 	ResourceType  string `json:"resource_type"`
 	Shutdown      bool   `json:"shutdown"`
+
+	isEmpty bool // to signal that this field was empty with the API response `[]` we need to do this so we can correclty assign this field as nil
 }
 
 // VXCApproval represents the approval status of a VXC.
