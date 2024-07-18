@@ -48,7 +48,7 @@ var emptyVLL = []byte(`[]`)
 var jsonNull = []byte(`null`)
 
 // we need to have a custom unmarshal function because the API returns an "[]" (empty array)
-// for vll when the VXC is decomissioned, which will break the regular unmarhsal.
+// for vll when the VXC is decommissioned, which will break the regular unmarhsal.
 func (w *VXCResources) UnmarshalJSON(data []byte) error {
 	// these are all the empty cases for this type
 	if len(data) == 0 || bytes.Equal(data, jsonNull) {
@@ -91,7 +91,7 @@ type VXCResources struct {
 }
 
 // we need to have a custom unmarshal function because the API returns an "[]" (empty array)
-// when the VXC is decomissioned, which will break the regular unmarhsal.
+// when the VXC is decommissioned, which will break the regular unmarhsal.
 func (w *VLLConfig) UnmarshalJSON(data []byte) error {
 	// these are all the empty cases for this type
 	if len(data) == 0 || bytes.Equal(data, emptyVLL) || bytes.Equal(data, jsonNull) {
@@ -124,7 +124,7 @@ type VLLConfig struct {
 	ResourceType  string `json:"resource_type"`
 	Shutdown      bool   `json:"shutdown"`
 
-	isEmpty bool // to signal that this field was empty with the API response `[]` we need to do this so we can correclty assign this field as nil
+	isEmpty bool // to signal that this field was empty with the API response `[]` we need to do this so we can correctly assign this field as nil
 }
 
 // VXCApproval represents the approval status of a VXC.
