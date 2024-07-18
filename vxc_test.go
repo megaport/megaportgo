@@ -1093,3 +1093,44 @@ func (suite *VXCClientTestSuite) TestDeleteVXC() {
 
 	suite.NoError(err)
 }
+
+// TestDeleteVXC tests to see if the custom unmarshalling works for decommed VXCs.
+func (suite *VXCClientTestSuite) TestDecomissionedVXCMarshal() {
+	ctx := context.Background()
+
+	vxcSvc := suite.client.VXCService
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	jblob := `{
+		"message": "Found Product 6b3f68e-2f54-4331-bf94-f8984449365f",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": {
+			"productId": 1,
+			"productUid": "36b3f68e-2f54-4331-bf94-f8984449365f",
+			"productName": "test-vxc",
+			"resources": {
+				"vll": []
+			}
+		}
+	}`
+
+	path := "/v2/product/" + productUid
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, jblob)
+	})
+
+	gotVxc, err := vxcSvc.GetVXC(ctx, productUid)
+
+	wantVxc := &VXC{
+		ID:   1,
+		UID:  productUid,
+		Name: "test-vxc",
+		Resources: &VXCResources{
+			VLL: nil,
+		},
+	}
+
+	suite.Equal(wantVxc, gotVxc)
+	suite.NoError(err)
+}
