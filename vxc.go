@@ -23,6 +23,8 @@ type VXCService interface {
 	UpdateVXC(ctx context.Context, id string, req *UpdateVXCRequest) (*VXC, error)
 	// LookupPartnerPorts looks up available partner ports in the Megaport VXC API.
 	LookupPartnerPorts(ctx context.Context, req *LookupPartnerPortsRequest) (*LookupPartnerPortsResponse, error)
+	// ListPartnerPorts lists available partner ports in the Megaport VXC API.
+	ListPartnerPorts(ctx context.Context, req *ListPartnerPortsRequest) (*ListPartnerPortsResponse, error)
 }
 
 // NewVXCService creates a new instance of the VXC Service.
@@ -105,6 +107,16 @@ type LookupPartnerPortsRequest struct {
 // LookupPartnerPortsResponse represents a response from looking up available partner ports in the Megaport VXC API.
 type LookupPartnerPortsResponse struct {
 	ProductUID string
+}
+
+// ListPartnerPortsRequest represents a request to list available partner ports in the Megaport VXC API.
+type ListPartnerPortsRequest struct {
+	Key     string
+	Partner string
+}
+
+type ListPartnerPortsResponse struct {
+	Data PartnerLookup
 }
 
 // BuyVXC buys a VXC from the Megaport VXC API.
@@ -363,4 +375,35 @@ func (svc *VXCServiceOp) LookupPartnerPorts(ctx context.Context, req *LookupPart
 		}
 	}
 	return nil, ErrNoAvailableVxcPorts
+}
+
+// LookupPartnerPorts looks up available partner ports in the Megaport VXC API.
+func (svc *VXCServiceOp) ListPartnerPorts(ctx context.Context, req *ListPartnerPortsRequest) (*ListPartnerPortsResponse, error) {
+	lookupUrl := "/v2/secure/" + strings.ToLower(req.Partner) + "/" + req.Key
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, lookupUrl, nil)
+	if err != nil {
+		return nil, err
+	}
+	response, err := svc.Client.Do(ctx, clientReq, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	defer response.Body.Close()
+
+	body, fileErr := io.ReadAll(response.Body)
+	if fileErr != nil {
+		return nil, fileErr
+	}
+
+	lookupResponse := PartnerLookupResponse{}
+	parseErr := json.Unmarshal(body, &lookupResponse)
+
+	if parseErr != nil {
+		return nil, parseErr
+	}
+
+	return &ListPartnerPortsResponse{
+		Data: lookupResponse.Data,
+	}, nil
 }
