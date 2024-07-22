@@ -133,12 +133,14 @@ func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*Bu
 		return nil, ErrInvalidTerm
 	}
 	portOrder := PortOrder{
-		Name:                  req.Name,
-		Term:                  req.Term,
-		ProductType:           "MEGAPORT",
-		PortSpeed:             req.PortSpeed,
-		LocationID:            req.LocationId,
-		DiversityZone:         req.DiversityZone,
+		Name:        req.Name,
+		Term:        req.Term,
+		ProductType: "MEGAPORT",
+		PortSpeed:   req.PortSpeed,
+		LocationID:  req.LocationId,
+		Config: PortOrderConfig{
+			DiversityZone: req.DiversityZone,
+		},
 		Virtual:               false,
 		Market:                req.Market,
 		LagPortCount:          req.LagCount,
