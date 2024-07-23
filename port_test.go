@@ -63,13 +63,15 @@ func (suite *PortClientTestSuite) TestBuyPort() {
 			}`
 	portOrder := []PortOrder{
 		{
-			Name:                  req.Name,
-			Term:                  req.Term,
-			PortSpeed:             req.PortSpeed,
-			LocationID:            req.LocationId,
-			Virtual:               false,
-			Market:                req.Market,
-			DiversityZone:         "red",
+			Name:       req.Name,
+			Term:       req.Term,
+			PortSpeed:  req.PortSpeed,
+			LocationID: req.LocationId,
+			Virtual:    false,
+			Market:     req.Market,
+			Config: PortOrderConfig{
+				DiversityZone: req.DiversityZone,
+			},
 			MarketplaceVisibility: req.MarketPlaceVisibility,
 		},
 	}
