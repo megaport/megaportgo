@@ -18,7 +18,7 @@ type PortOrder struct {
 }
 
 type PortOrderConfig struct {
-	DiversityZone string `json:"diversityZone"`
+	DiversityZone string `json:"diversityZone,omitempty"`
 }
 
 // PortOrderConfirmation represents a response from the Megaport Products API after ordering a port.
