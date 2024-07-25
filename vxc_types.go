@@ -239,44 +239,44 @@ type VXCPartnerConfiguration interface {
 
 // VXCPartnerConfigAWS represents the configuration of a VXC partner for AWS Virtual Interface.
 type VXCPartnerConfigAWS struct {
-	VXCPartnerConfiguration
-	ConnectType       string `json:"connectType"`
-	Type              string `json:"type"`
-	OwnerAccount      string `json:"ownerAccount"`
-	ASN               int    `json:"asn,omitempty"`
-	AmazonASN         int    `json:"amazonAsn,omitempty"`
-	AuthKey           string `json:"authKey,omitempty"`
-	Prefixes          string `json:"prefixes,omitempty"`
-	CustomerIPAddress string `json:"customerIpAddress,omitempty"`
-	AmazonIPAddress   string `json:"amazonIpAddress,omitempty"`
-	ConnectionName    string `json:"name,omitempty"`
+	VXCPartnerConfiguration `json:"-"`
+	ConnectType             string `json:"connectType"`
+	Type                    string `json:"type"`
+	OwnerAccount            string `json:"ownerAccount"`
+	ASN                     int    `json:"asn,omitempty"`
+	AmazonASN               int    `json:"amazonAsn,omitempty"`
+	AuthKey                 string `json:"authKey,omitempty"`
+	Prefixes                string `json:"prefixes,omitempty"`
+	CustomerIPAddress       string `json:"customerIpAddress,omitempty"`
+	AmazonIPAddress         string `json:"amazonIpAddress,omitempty"`
+	ConnectionName          string `json:"name,omitempty"`
 }
 
 // VXCPartnerConfigAzure represents the configuration of a VXC partner for Azure ExpressRoute.
 type VXCPartnerConfigAzure struct {
-	VXCPartnerConfiguration
-	ConnectType string                           `json:"connectType"`
-	ServiceKey  string                           `json:"serviceKey"`
-	Peers       []PartnerOrderAzurePeeringConfig `json:"peers"`
+	VXCPartnerConfiguration `json:"-"`
+	ConnectType             string                           `json:"connectType"`
+	ServiceKey              string                           `json:"serviceKey"`
+	Peers                   []PartnerOrderAzurePeeringConfig `json:"peers"`
 }
 
 // VXCPartnerConfigGoogle represents the configuration of a VXC partner for Google Cloud Interconnect.
 type VXCPartnerConfigGoogle struct {
-	VXCPartnerConfiguration
-	ConnectType string `json:"connectType"`
-	PairingKey  string `json:"pairingKey"`
+	VXCPartnerConfiguration `json:"-"`
+	ConnectType             string `json:"connectType"`
+	PairingKey              string `json:"pairingKey"`
 }
 
 // VXCPartnerConfigOracle represents the configuration of a VXC partner for Oracle Cloud Infrastructure FastConnect.
 type VXCPartnerConfigOracle struct {
-	VXCPartnerConfiguration
-	ConnectType      string `json:"connectType"`
-	VirtualCircuitId string `json:"virtualCircuitId"`
+	VXCPartnerConfiguration `json:"-"`
+	ConnectType             string `json:"connectType"`
+	VirtualCircuitId        string `json:"virtualCircuitId"`
 }
 
 type VXCPartnerConfigTransit struct {
-	VXCPartnerConfiguration
-	ConnectType string `json:"connectType"`
+	VXCPartnerConfiguration `json:"-"`
+	ConnectType             string `json:"connectType"`
 }
 
 // VXCOrderMVEConfig represents the configuration of a VXC endpoint for MVE.
@@ -287,15 +287,15 @@ type VXCOrderMVEConfig struct {
 
 // VXCOrderVrouterPartnerConfig represents the configuration of a VXC Vrouter Configuration partner.
 type VXCOrderVrouterPartnerConfig struct {
-	VXCPartnerConfiguration
-	Interfaces []PartnerConfigInterface `json:"interfaces,omitempty"`
+	VXCPartnerConfiguration `json:"-"`
+	Interfaces              []PartnerConfigInterface `json:"interfaces,omitempty"`
 }
 
 // DEPRECATED - Use VXCOrderVrouterPartnerConfig instead
 // VXCOrderAEndPartnerConfig represents the configuration of a VXC A-End partner.
 type VXCOrderAEndPartnerConfig struct {
-	VXCPartnerConfiguration
-	Interfaces []PartnerConfigInterface `json:"interfaces,omitempty"`
+	VXCPartnerConfiguration `json:"-"`
+	Interfaces              []PartnerConfigInterface `json:"interfaces,omitempty"`
 }
 
 // VXCOrderConfirmation represents the confirmation of a VXC order from the Megaport Products API.
