@@ -142,6 +142,11 @@ func (svc *VXCServiceOp) BuyVXC(ctx context.Context, req *BuyVXCRequest) (*BuyVX
 		},
 	}}
 
+	validateErr := svc.Client.ProductService.ValidateProductOrder(ctx, buyOrder)
+	if validateErr != nil {
+		return nil, validateErr
+	}
+
 	responseBody, responseError := svc.Client.ProductService.ExecuteOrder(ctx, buyOrder)
 	if responseError != nil {
 		return nil, responseError

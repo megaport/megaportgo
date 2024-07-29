@@ -68,6 +68,16 @@ func (suite *VXCClientTestSuite) TestBuyVXC() {
 	}}
 	vxcSvc := suite.client.VXCService
 	ctx := context.Background()
+	validateBlob := `
+	{
+  "message": "Validation passed",
+  "terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+  "data": []
+	}
+	`
+	suite.mux.HandleFunc("/v3/networkdesign/validate", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, validateBlob)
+	})
 	jblob := `{
 		"message": "VXC [f36b3f68e-2f54-4331-bf94-f8984449365f] created.",
 		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",

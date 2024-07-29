@@ -154,6 +154,11 @@ func (svc *MCRServiceOp) BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMC
 		order,
 	}
 
+	validateErr := svc.Client.ProductService.ValidateProductOrder(ctx, mcrOrders)
+	if validateErr != nil {
+		return nil, validateErr
+	}
+
 	body, resErr := svc.Client.ProductService.ExecuteOrder(ctx, mcrOrders)
 
 	if resErr != nil {

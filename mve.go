@@ -183,6 +183,11 @@ func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMV
 		order.NetworkInterfaces = req.Vnics
 	}
 
+	validateErr := svc.Client.ProductService.ValidateProductOrder(ctx, order)
+	if validateErr != nil {
+		return nil, validateErr
+	}
+
 	resp, err := svc.Client.ProductService.ExecuteOrder(ctx, []*MVEOrderConfig{order})
 	if err != nil {
 		return nil, err
