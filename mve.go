@@ -15,6 +15,8 @@ import (
 type MVEService interface {
 	// BuyMVE buys an MVE from the Megaport MVE API.
 	BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMVEResponse, error)
+	// ValidateMVEOrder validates an MVE order in the Megaport Products API.
+	ValidateMVEOrder(ctx context.Context, req *BuyMVERequest) error
 	// GetMVE gets details about a single MVE from the Megaport MVE API.
 	GetMVE(ctx context.Context, mveId string) (*MVE, error)
 	// ModifyMVE modifies an MVE in the Megaport MVE API.
@@ -91,6 +93,70 @@ func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMV
 	if err != nil {
 		return nil, err
 	}
+
+	mveOrder := createMVEOrder(req)
+
+	resp, err := svc.Client.ProductService.ExecuteOrder(ctx, mveOrder)
+	if err != nil {
+		return nil, err
+	}
+
+	orderInfo := MVEOrderResponse{}
+
+	if err := json.Unmarshal(*resp, &orderInfo); err != nil {
+		return nil, err
+	}
+
+	toReturn := &BuyMVEResponse{
+		TechnicalServiceUID: orderInfo.Data[0].TechnicalServiceUID,
+	}
+
+	// wait until the MCR is provisioned before returning if requested by the user
+	if req.WaitForProvision {
+		toWait := req.WaitForTime
+		if toWait == 0 {
+			toWait = 5 * time.Minute
+		}
+
+		ticker := time.NewTicker(30 * time.Second) // check on the provision status every 30 seconds
+		timer := time.NewTimer(toWait)
+		defer ticker.Stop()
+		defer timer.Stop()
+
+		for {
+			select {
+			case <-timer.C:
+				return nil, fmt.Errorf("time expired waiting for MVE %s to provision", toReturn.TechnicalServiceUID)
+			case <-ctx.Done():
+				return nil, fmt.Errorf("context expired waiting for MVE %s to provision", toReturn.TechnicalServiceUID)
+			case <-ticker.C:
+				mveDetails, err := svc.GetMVE(ctx, toReturn.TechnicalServiceUID)
+				if err != nil {
+					return nil, err
+				}
+
+				if slices.Contains(SERVICE_STATE_READY, mveDetails.ProvisioningStatus) {
+					return toReturn, nil
+				}
+
+			}
+		}
+	} else {
+		// return the service UID right away if the user doesn't want to wait for provision
+		return toReturn, nil
+	}
+}
+
+func (svc *MVEServiceOp) ValidateMVEOrder(ctx context.Context, req *BuyMVERequest) error {
+	err := validateBuyMVERequest(req)
+	if err != nil {
+		return err
+	}
+	mveOrder := createMVEOrder(req)
+	return svc.Client.ProductService.ValidateProductOrder(ctx, mveOrder)
+}
+
+func createMVEOrder(req *BuyMVERequest) []*MVEOrderConfig {
 	order := &MVEOrderConfig{
 		LocationID:    req.LocationID,
 		Name:          req.Name,
@@ -183,55 +249,8 @@ func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMV
 		order.NetworkInterfaces = req.Vnics
 	}
 
-	resp, err := svc.Client.ProductService.ExecuteOrder(ctx, []*MVEOrderConfig{order})
-	if err != nil {
-		return nil, err
-	}
-
-	orderInfo := MVEOrderResponse{}
-
-	if err := json.Unmarshal(*resp, &orderInfo); err != nil {
-		return nil, err
-	}
-
-	toReturn := &BuyMVEResponse{
-		TechnicalServiceUID: orderInfo.Data[0].TechnicalServiceUID,
-	}
-
-	// wait until the MCR is provisioned before returning if requested by the user
-	if req.WaitForProvision {
-		toWait := req.WaitForTime
-		if toWait == 0 {
-			toWait = 5 * time.Minute
-		}
-
-		ticker := time.NewTicker(30 * time.Second) // check on the provision status every 30 seconds
-		timer := time.NewTimer(toWait)
-		defer ticker.Stop()
-		defer timer.Stop()
-
-		for {
-			select {
-			case <-timer.C:
-				return nil, fmt.Errorf("time expired waiting for MVE %s to provision", toReturn.TechnicalServiceUID)
-			case <-ctx.Done():
-				return nil, fmt.Errorf("context expired waiting for MVE %s to provision", toReturn.TechnicalServiceUID)
-			case <-ticker.C:
-				mveDetails, err := svc.GetMVE(ctx, toReturn.TechnicalServiceUID)
-				if err != nil {
-					return nil, err
-				}
-
-				if slices.Contains(SERVICE_STATE_READY, mveDetails.ProvisioningStatus) {
-					return toReturn, nil
-				}
-
-			}
-		}
-	} else {
-		// return the service UID right away if the user doesn't want to wait for provision
-		return toReturn, nil
-	}
+	mveOrder := []*MVEOrderConfig{order}
+	return mveOrder
 }
 
 // GetMVE retrieves a single MVE from the Megaport MVE API.

@@ -20,6 +20,8 @@ type ProductService interface {
 	RestoreProduct(ctx context.Context, productId string) (*RestoreProductResponse, error)
 	// ManageProductLock is responsible for locking or unlocking a product in the Megaport Products API.
 	ManageProductLock(ctx context.Context, req *ManageProductLockRequest) (*ManageProductLockResponse, error)
+	// ValidateProductOrder is responsible for validating an order for a product in the Megaport Products API.
+	ValidateProductOrder(ctx context.Context, requestBody interface{}) error
 }
 
 // ProductServiceOp handles communication with Product methods of the Megaport API.
@@ -194,4 +196,23 @@ func (svc *ProductServiceOp) ManageProductLock(ctx context.Context, req *ManageP
 		return nil, err
 	}
 	return &ManageProductLockResponse{}, nil
+}
+
+// ValidateProductOrder is responsible for validating an order for a product in the Megaport Products API.
+func (svc *ProductServiceOp) ValidateProductOrder(ctx context.Context, requestBody interface{}) error {
+	path := "/v3/networkdesign/validate"
+
+	url := svc.Client.BaseURL.JoinPath(path).String()
+
+	req, err := svc.Client.NewRequest(ctx, http.MethodPost, url, requestBody)
+	if err != nil {
+		return err
+	}
+
+	_, resErr := svc.Client.Do(ctx, req, nil)
+	if resErr != nil {
+		return resErr
+	}
+
+	return nil
 }
