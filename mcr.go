@@ -135,11 +135,6 @@ func (svc *MCRServiceOp) BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMC
 
 	mcrOrders := createMCROrder(req)
 
-	validateErr := svc.Client.ProductService.ValidateProductOrder(ctx, mcrOrders)
-	if validateErr != nil {
-		return nil, validateErr
-	}
-
 	body, resErr := svc.Client.ProductService.ExecuteOrder(ctx, mcrOrders)
 
 	if resErr != nil {
@@ -204,7 +199,7 @@ func validateBuyMCRRequest(order *BuyMCRRequest) error {
 	return nil
 }
 
-func createMCROrder(req *BuyMCRRequest) MCROrder {
+func createMCROrder(req *BuyMCRRequest) []MCROrder {
 	order := MCROrder{
 		LocationID: req.LocationID,
 		Name:       req.Name,
@@ -224,7 +219,7 @@ func createMCROrder(req *BuyMCRRequest) MCROrder {
 		order.Config.DiversityZone = req.DiversityZone
 	}
 
-	return order
+	return []MCROrder{order}
 }
 
 func (svc *MCRServiceOp) ValidateMCROrder(ctx context.Context, req *BuyMCRRequest) error {
