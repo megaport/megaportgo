@@ -15,6 +15,8 @@ import (
 type MCRService interface {
 	// BuyMCR buys an MCR from the Megaport MCR API.
 	BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMCRResponse, error)
+	// ValidateMCROrder validates an MCR order in the Megaport Products API.
+	ValidateMCROrder(ctx context.Context, req *BuyMCRRequest) error
 	// GetMCR gets details about a single MCR from the Megaport MCR API.
 	GetMCR(ctx context.Context, mcrId string) (*MCR, error)
 	// CreatePrefixFilterList creates a Prefix Filter List on an MCR from the Megaport MCR API.
@@ -131,28 +133,7 @@ func (svc *MCRServiceOp) BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMC
 		return nil, err
 	}
 
-	order := MCROrder{
-		LocationID: req.LocationID,
-		Name:       req.Name,
-		Term:       req.Term,
-		Type:       "MCR2",
-		PortSpeed:  req.PortSpeed,
-		PromoCode:  req.PromoCode,
-		Config:     MCROrderConfig{},
-	}
-
-	if req.CostCentre != "" {
-		order.CostCentre = req.CostCentre
-	}
-
-	order.Config.ASN = req.MCRAsn
-	if req.DiversityZone != "" {
-		order.Config.DiversityZone = req.DiversityZone
-	}
-
-	mcrOrders := []MCROrder{
-		order,
-	}
+	mcrOrders := createMCROrder(req)
 
 	validateErr := svc.Client.ProductService.ValidateProductOrder(ctx, mcrOrders)
 	if validateErr != nil {
@@ -221,6 +202,40 @@ func validateBuyMCRRequest(order *BuyMCRRequest) error {
 		return ErrMCRInvalidPortSpeed
 	}
 	return nil
+}
+
+func createMCROrder(req *BuyMCRRequest) MCROrder {
+	order := MCROrder{
+		LocationID: req.LocationID,
+		Name:       req.Name,
+		Term:       req.Term,
+		Type:       "MCR2",
+		PortSpeed:  req.PortSpeed,
+		PromoCode:  req.PromoCode,
+		Config:     MCROrderConfig{},
+	}
+
+	if req.CostCentre != "" {
+		order.CostCentre = req.CostCentre
+	}
+
+	order.Config.ASN = req.MCRAsn
+	if req.DiversityZone != "" {
+		order.Config.DiversityZone = req.DiversityZone
+	}
+
+	return order
+}
+
+func (svc *MCRServiceOp) ValidateMCROrder(ctx context.Context, req *BuyMCRRequest) error {
+	err := validateBuyMCRRequest(req)
+	if err != nil {
+		return err
+	}
+
+	mcrOrders := createMCROrder(req)
+
+	return svc.Client.ProductService.ValidateProductOrder(ctx, mcrOrders)
 }
 
 // GetMCR returns the details of a single MCR in the Megaport MCR API.

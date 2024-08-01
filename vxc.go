@@ -15,6 +15,8 @@ import (
 type VXCService interface {
 	// BuyVXC buys a VXC from the Megaport VXC API.
 	BuyVXC(ctx context.Context, req *BuyVXCRequest) (*BuyVXCResponse, error)
+	// ValidateVXCOrder validates a VXC order in the Megaport Products API.
+	ValidateVXCOrder(ctx context.Context, req *BuyVXCRequest) error
 	// GetVXC gets details about a single VXC from the Megaport VXC API.
 	GetVXC(ctx context.Context, id string) (*VXC, error)
 	// DeleteVXC deletes a VXC in the Megaport VXC API.
@@ -125,27 +127,7 @@ func (svc *VXCServiceOp) BuyVXC(ctx context.Context, req *BuyVXCRequest) (*BuyVX
 		return nil, ErrInvalidTerm
 	}
 
-	buyOrder := []VXCOrder{{
-		PortID: req.PortUID,
-		AssociatedVXCs: []VXCOrderConfiguration{
-			{
-				Name:       req.VXCName,
-				RateLimit:  req.RateLimit,
-				Term:       req.Term,
-				Shutdown:   req.Shutdown,
-				PromoCode:  req.PromoCode,
-				ServiceKey: req.ServiceKey,
-				CostCentre: req.CostCentre,
-				AEnd:       req.AEndConfiguration,
-				BEnd:       req.BEndConfiguration,
-			},
-		},
-	}}
-
-	validateErr := svc.Client.ProductService.ValidateProductOrder(ctx, buyOrder)
-	if validateErr != nil {
-		return nil, validateErr
-	}
+	buyOrder := createVXCOrder(req)
 
 	responseBody, responseError := svc.Client.ProductService.ExecuteOrder(ctx, buyOrder)
 	if responseError != nil {
@@ -225,6 +207,32 @@ func (svc *VXCServiceOp) GetVXC(ctx context.Context, id string) (*VXC, error) {
 	}
 
 	return &vxcDetails.Data, nil
+}
+
+func createVXCOrder(req *BuyVXCRequest) []VXCOrder {
+	return []VXCOrder{{
+		PortID: req.PortUID,
+		AssociatedVXCs: []VXCOrderConfiguration{
+			{
+				Name:       req.VXCName,
+				RateLimit:  req.RateLimit,
+				Term:       req.Term,
+				Shutdown:   req.Shutdown,
+				PromoCode:  req.PromoCode,
+				ServiceKey: req.ServiceKey,
+				CostCentre: req.CostCentre,
+				AEnd:       req.AEndConfiguration,
+				BEnd:       req.BEndConfiguration,
+			},
+		},
+	}}
+}
+
+// ValidateVXCOrder validates a VXC order in the Megaport VXC API.
+func (svc *VXCServiceOp) ValidateVXCOrder(ctx context.Context, req *BuyVXCRequest) error {
+	buyOrder := createVXCOrder(req)
+
+	return svc.Client.ProductService.ValidateProductOrder(ctx, buyOrder)
 }
 
 // DeleteVXC deletes a VXC in the Megaport VXC API.

@@ -14,6 +14,8 @@ import (
 type PortService interface {
 	// BuyPort buys a port from the Megaport Port API.
 	BuyPort(ctx context.Context, req *BuyPortRequest) (*BuyPortResponse, error)
+	// ValidatePortOrder validates a port order in the Megaport Products API.
+	ValidatePortOrder(ctx context.Context, req *BuyPortRequest) error
 	// ListPorts lists all ports in the Megaport Port API.
 	ListPorts(ctx context.Context) ([]*Port, error)
 	// GetPort gets a single port in the Megaport Port API.
@@ -128,35 +130,11 @@ type UnlockPortResponse struct {
 
 // BuyPort buys a port from the Megaport Port API.
 func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*BuyPortResponse, error) {
-	var buyOrder []PortOrder
 	if req.Term != 1 && req.Term != 12 && req.Term != 24 && req.Term != 36 {
 		return nil, ErrInvalidTerm
 	}
-	portOrder := PortOrder{
-		Name:        req.Name,
-		Term:        req.Term,
-		ProductType: "MEGAPORT",
-		PortSpeed:   req.PortSpeed,
-		LocationID:  req.LocationId,
-		Config: PortOrderConfig{
-			DiversityZone: req.DiversityZone,
-		},
-		Virtual:               false,
-		Market:                req.Market,
-		LagPortCount:          req.LagCount,
-		MarketplaceVisibility: req.MarketPlaceVisibility,
-		CostCentre:            req.CostCentre,
-		PromoCode:             req.PromoCode,
-	}
 
-	buyOrder = []PortOrder{
-		portOrder,
-	}
-
-	validateErr := svc.Client.ProductService.ValidateProductOrder(ctx, buyOrder)
-	if validateErr != nil {
-		return nil, validateErr
-	}
+	buyOrder := createPortOrder(req)
 
 	responseBody, responseError := svc.Client.ProductService.ExecuteOrder(ctx, buyOrder)
 	if responseError != nil {
@@ -220,6 +198,35 @@ func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*Bu
 		// return the service UID right away if the user doesn't want to wait for provision
 		return toReturn, nil
 	}
+}
+
+func createPortOrder(req *BuyPortRequest) []PortOrder {
+	return []PortOrder{{
+		Name:        req.Name,
+		Term:        req.Term,
+		ProductType: "MEGAPORT",
+		PortSpeed:   req.PortSpeed,
+		LocationID:  req.LocationId,
+		Config: PortOrderConfig{
+			DiversityZone: req.DiversityZone,
+		},
+		Virtual:               false,
+		Market:                req.Market,
+		LagPortCount:          req.LagCount,
+		MarketplaceVisibility: req.MarketPlaceVisibility,
+		CostCentre:            req.CostCentre,
+		PromoCode:             req.PromoCode,
+	}}
+}
+
+func (svc *PortServiceOp) ValidatePortOrder(ctx context.Context, req *BuyPortRequest) error {
+	if req.Term != 1 && req.Term != 12 && req.Term != 24 && req.Term != 36 {
+		return ErrInvalidTerm
+	}
+
+	buyOrder := createPortOrder(req)
+
+	return svc.Client.ProductService.ValidateProductOrder(ctx, buyOrder)
 }
 
 // ListPorts lists all ports in the Megaport Port API.
