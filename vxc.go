@@ -15,7 +15,7 @@ import (
 type VXCService interface {
 	// BuyVXC buys a VXC from the Megaport VXC API.
 	BuyVXC(ctx context.Context, req *BuyVXCRequest) (*BuyVXCResponse, error)
-	// ValidateVXCOrder validates a VXC order in the Megaport Products API.
+	// ValidateVXCOrder validates a VXC order in the Megaport Product API.
 	ValidateVXCOrder(ctx context.Context, req *BuyVXCRequest) error
 	// GetVXC gets details about a single VXC from the Megaport VXC API.
 	GetVXC(ctx context.Context, id string) (*VXC, error)
