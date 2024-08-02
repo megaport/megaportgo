@@ -122,6 +122,25 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 	}
 	serviceKeyID := serviceKeyRes.ServiceKeyUID
 
+	aEndVLAN := GenerateRandomVLAN()
+	bEndVLAN := GenerateRandomVLAN()
+
+	aEndAvailable, err := portSvc.CheckPortVLANAvailability(ctx, aEndUid, aEndVLAN)
+	if err != nil {
+		suite.FailNowf("cannot check a end vlan availability", "cannot check a end vlan availability %v", err)
+	}
+	if !aEndAvailable {
+		suite.FailNowf("a end vlan not available", "a end vlan %d is not available", aEndVLAN)
+	}
+
+	bEndAvailable, err := portSvc.CheckPortVLANAvailability(ctx, bEndUid, bEndVLAN)
+	if err != nil {
+		suite.FailNowf("cannot check b end vlan availability", "cannot check b end vlan availability %v", err)
+	}
+	if !bEndAvailable {
+		suite.FailNowf("b end vlan not available", "b end vlan %d is not available", bEndVLAN)
+	}
+
 	logger.InfoContext(ctx, "buying vxc")
 
 	buyVxcRes, vxcErr := vxcSvc.BuyVXC(ctx, &BuyVXCRequest{
@@ -132,10 +151,10 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 		Shutdown:   false,
 		ServiceKey: serviceKeyID,
 		AEndConfiguration: VXCOrderEndpointConfiguration{
-			VLAN: GenerateRandomVLAN(),
+			VLAN: aEndVLAN,
 		},
 		BEndConfiguration: VXCOrderEndpointConfiguration{
-			VLAN:       GenerateRandomVLAN(),
+			VLAN:       bEndVLAN,
 			ProductUID: bEndUid,
 		},
 		WaitForProvision: true,
@@ -151,6 +170,21 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 	newBVLAN := GenerateRandomVLAN()
 	newCostCentre := "Test Cost Centre 2"
 	newTerm := 24
+
+	newAEndAvailable, err := portSvc.CheckPortVLANAvailability(ctx, aEndUid, newAVLAN)
+	if err != nil {
+		suite.FailNowf("cannot check new a end vlan availability", "cannot check new a end vlan availability %v", err)
+	}
+	if !newAEndAvailable {
+		suite.FailNowf("new a end vlan not available", "new a end vlan %d is not available", newAVLAN)
+	}
+	newBEndAvailable, err := portSvc.CheckPortVLANAvailability(ctx, bEndUid, newBVLAN)
+	if err != nil {
+		suite.FailNowf("cannot check new b end vlan availability", "cannot check new b end vlan availability %v", err)
+	}
+	if !newBEndAvailable {
+		suite.FailNowf("new b end vlan not available", "new b end vlan %d is not available", newBVLAN)
+	}
 
 	updateRes, updateErr := vxcSvc.UpdateVXC(ctx, vxcUid, &UpdateVXCRequest{
 		AEndVLAN:      &newAVLAN,
@@ -408,6 +442,14 @@ func (suite *VXCIntegrationTestSuite) TestAWSVIFConnectionBuy() {
 	suite.True(IsGuid(portUid), "invalid guid for port uid")
 
 	logger.InfoContext(ctx, "buying aws vif connection (b-end)")
+	aEndVLAN := GenerateRandomVLAN()
+	vlanAvailable, err := portSvc.CheckPortVLANAvailability(ctx, portUid, aEndVLAN)
+	if err != nil {
+		suite.FailNowf("cannot check vlan availability", "cannot check vlan availability %v", err)
+	}
+	if !vlanAvailable {
+		suite.FailNowf("vlan not available", "vlan %d is not available", aEndVLAN)
+	}
 
 	buyVxcRes, vxcErr := vxcSvc.BuyVXC(ctx, &BuyVXCRequest{
 		PortUID:   portUid,
@@ -416,7 +458,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSVIFConnectionBuy() {
 		Term:      1,
 		Shutdown:  false,
 		AEndConfiguration: VXCOrderEndpointConfiguration{
-			VLAN: GenerateRandomVLAN(),
+			VLAN: aEndVLAN,
 		},
 		BEndConfiguration: VXCOrderEndpointConfiguration{
 			ProductUID: "87860c28-81ef-4e79-8cc7-cfc5a4c4bc86",

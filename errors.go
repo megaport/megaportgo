@@ -60,3 +60,5 @@ var ErrNoAvailableVxcPorts = errors.New("there are no available ports for you to
 
 // ErrCostCentreTooLong is returned when a cost centre is longer than 255 characters
 var ErrCostCentreTooLong = errors.New("cost centre must be less than 255 characters")
+
+var ErrInvalidVLAN = errors.New("invalid VLAN, must be between 1 and 4094")
