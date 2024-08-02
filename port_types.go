@@ -142,3 +142,9 @@ type PortTerminatedServiceDetailsInterface struct {
 	Up           int    `json:"up"`
 	Shutdown     bool   `json:"shutdown"`
 }
+
+type PortVLANAvailabilityAPIResponse struct {
+	Message string `json:"message"`
+	Terms   string `json:"terms"`
+	Data    []int  `json:"data"`
+}
