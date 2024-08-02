@@ -123,6 +123,7 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 	serviceKeyID := serviceKeyRes.ServiceKeyUID
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 	var aEndVLAN, bEndVLAN int
 	var aEndAvailable, bEndAvailable bool
 	var err error
@@ -155,6 +156,8 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 	if !bEndAvailable {
 		suite.FailNowf("b end vlan not available after 10 attempts", "b end vlan %d is not available after 10 attempts", bEndVLAN)
 =======
+=======
+>>>>>>> 43f38a0 (feat: endpoint to check vlan availability for port)
 	aEndVLAN := GenerateRandomVLAN()
 	bEndVLAN := GenerateRandomVLAN()
 
@@ -172,7 +175,10 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 	}
 	if !bEndAvailable {
 		suite.FailNowf("b end vlan not available", "b end vlan %d is not available", bEndVLAN)
+<<<<<<< HEAD
 >>>>>>> bf218d9 (feat: endpoint to check vlan availability for port)
+=======
+>>>>>>> 43f38a0 (feat: endpoint to check vlan availability for port)
 	}
 
 	logger.InfoContext(ctx, "buying vxc")
@@ -207,6 +213,7 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 	newTerm := 24
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 	for i := 0; i < 10; i++ {
 		newAVLAN = GenerateRandomVLAN()
 		newAEndAvailable, err = portSvc.CheckPortVLANAvailability(ctx, aEndUid, newAVLAN)
@@ -235,6 +242,8 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 	if !newBEndAvailable {
 		suite.FailNowf("new b end vlan not available after 10 attempts", "new b end vlan %d is not available after 10 attempts", newBVLAN)
 =======
+=======
+>>>>>>> 43f38a0 (feat: endpoint to check vlan availability for port)
 	newAEndAvailable, err := portSvc.CheckPortVLANAvailability(ctx, aEndUid, newAVLAN)
 	if err != nil {
 		suite.FailNowf("cannot check new a end vlan availability", "cannot check new a end vlan availability %v", err)
@@ -248,7 +257,10 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 	}
 	if !newBEndAvailable {
 		suite.FailNowf("new b end vlan not available", "new b end vlan %d is not available", newBVLAN)
+<<<<<<< HEAD
 >>>>>>> bf218d9 (feat: endpoint to check vlan availability for port)
+=======
+>>>>>>> 43f38a0 (feat: endpoint to check vlan availability for port)
 	}
 
 	updateRes, updateErr := vxcSvc.UpdateVXC(ctx, vxcUid, &UpdateVXCRequest{
@@ -508,6 +520,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSVIFConnectionBuy() {
 
 	logger.InfoContext(ctx, "buying aws vif connection (b-end)")
 <<<<<<< HEAD
+<<<<<<< HEAD
 	var aEndVLAN int
 	var vlanAvailable bool
 	var err error
@@ -524,6 +537,8 @@ func (suite *VXCIntegrationTestSuite) TestAWSVIFConnectionBuy() {
 	if !vlanAvailable {
 		suite.FailNowf("vlan not available after 10 attempts", "vlan %d is not available after 10 attempts", aEndVLAN)
 =======
+=======
+>>>>>>> 43f38a0 (feat: endpoint to check vlan availability for port)
 	aEndVLAN := GenerateRandomVLAN()
 	vlanAvailable, err := portSvc.CheckPortVLANAvailability(ctx, portUid, aEndVLAN)
 	if err != nil {
@@ -531,7 +546,10 @@ func (suite *VXCIntegrationTestSuite) TestAWSVIFConnectionBuy() {
 	}
 	if !vlanAvailable {
 		suite.FailNowf("vlan not available", "vlan %d is not available", aEndVLAN)
+<<<<<<< HEAD
 >>>>>>> bf218d9 (feat: endpoint to check vlan availability for port)
+=======
+>>>>>>> 43f38a0 (feat: endpoint to check vlan availability for port)
 	}
 
 	buyVxcRes, vxcErr := vxcSvc.BuyVXC(ctx, &BuyVXCRequest{
