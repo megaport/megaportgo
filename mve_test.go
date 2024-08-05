@@ -305,6 +305,7 @@ func (suite *MVEClientTestSuite) TestGetMVE() {
 			Metro:   "Atlanta",
 			Country: "USA",
 		},
+		DiversityZone: "blue",
 		AttributeTags: map[string]string{},
 		Resources: &MVEResources{
 			Interface: &PortInterface{
