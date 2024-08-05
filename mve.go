@@ -158,13 +158,15 @@ func (svc *MVEServiceOp) ValidateMVEOrder(ctx context.Context, req *BuyMVEReques
 
 func createMVEOrder(req *BuyMVERequest) []*MVEOrderConfig {
 	order := &MVEOrderConfig{
-		LocationID:    req.LocationID,
-		Name:          req.Name,
-		Term:          req.Term,
-		PromoCode:     req.PromoCode,
-		CostCentre:    req.CostCentre,
-		ProductType:   strings.ToUpper(PRODUCT_MVE),
-		DiversityZone: req.DiversityZone,
+		LocationID:  req.LocationID,
+		Name:        req.Name,
+		Term:        req.Term,
+		PromoCode:   req.PromoCode,
+		CostCentre:  req.CostCentre,
+		ProductType: strings.ToUpper(PRODUCT_MVE),
+		Config: MVEConfig{
+			DiversityZone: req.DiversityZone,
+		},
 	}
 	switch c := req.VendorConfig.(type) {
 	case *ArubaConfig:
