@@ -167,6 +167,7 @@ type MVE struct {
 	Resources             *MVEResources           `json:"resources"`
 	Vendor                string                  `json:"vendor"`
 	Size                  string                  `json:"mveSize"`
+	DiversityZone         string                  `json:"diversityZone"`
 	NetworkInterfaces     []*MVENetworkInterface  `json:"vnics"`
 	LocationDetails       *ProductLocationDetails `json:"locationDetail"`
 }
