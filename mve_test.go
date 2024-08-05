@@ -52,6 +52,7 @@ func (suite *MVEClientTestSuite) TestBuyMVE() {
 			AdminSSHPublicKey: "test-key",
 			AdminPasswordHash: "test-hash",
 		},
+		DiversityZone: "blue",
 	}
 	jblob := `{
     "message": "MVE [36b3f68e-2f54-4331-bf94-f8984449365f] created.",
@@ -143,6 +144,9 @@ func (suite *MVEClientTestSuite) TestBuyMVE() {
 			AdminPasswordHash: "test-hash",
 		},
 		NetworkInterfaces: []MVENetworkInterface{{Description: "Data Plane", VLAN: 0}},
+		Config: MVEConfig{
+			DiversityZone: req.DiversityZone,
+		},
 	}}
 	want := &BuyMVEResponse{TechnicalServiceUID: productUid}
 
@@ -163,6 +167,7 @@ func (suite *MVEClientTestSuite) TestBuyMVE() {
 		suite.Equal(wantOrder.ProductType, gotOrder.ProductType)
 		suite.Equal(wantOrder.LocationID, gotOrder.LocationID)
 		suite.Equal(wantOrder.NetworkInterfaces, gotOrder.NetworkInterfaces)
+		suite.Equal(wantOrder.Config, gotOrder.Config)
 	})
 	got, err := mveSvc.BuyMVE(ctx, req)
 	suite.NoError(err)
