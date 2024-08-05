@@ -6,11 +6,16 @@ type MVEOrderConfig struct {
 	Name              string                `json:"productName"`
 	Term              int                   `json:"term"`
 	ProductType       string                `json:"productType"`
-	DiversityZone     string                `json:"diversityZone"`
 	PromoCode         string                `json:"promoCode,omitempty"`
 	CostCentre        string                `json:"costCentre,omitempty"`
 	NetworkInterfaces []MVENetworkInterface `json:"vnics"`
 	VendorConfig      VendorConfig          `json:"vendorConfig"`
+	Config            MVEConfig             `json:"config"`
+}
+
+// Nested configuration Fields for the MVE Order
+type MVEConfig struct {
+	DiversityZone string `json:"diversityZone,omitempty"`
 }
 
 // VendorConfig is an interface for MVE vendor configuration.
