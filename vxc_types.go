@@ -312,6 +312,7 @@ type PartnerConfigInterface struct {
 	NatIpAddresses []string              `json:"natIpAddresses,omitempty"`
 	Bfd            BfdConfig             `json:"bfd,omitempty"`
 	BgpConnections []BgpConnectionConfig `json:"bgpConnections,omitempty"`
+	VLAN           int                   `json:"vlan,omitempty"`
 }
 
 // IpRoute represents an IP route.
@@ -347,6 +348,7 @@ type BgpConnectionConfig struct {
 	ExportWhitelist    int      `json:"exportWhitelist,omitempty"`
 	ExportBlacklist    int      `json:"exportBlacklist,omitempty"`
 	AsPathPrependCount int      `json:"asPathPrependCount,omitempty"`
+	PeerType           string   `json:"peerType,omitempty"` // can be NON_CLOUD, PRIV_CLOUD, or PUB_CLOUD
 }
 
 // AWS STUFF
