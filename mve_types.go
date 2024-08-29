@@ -29,7 +29,7 @@ type ArubaConfig struct {
 	Vendor      string `json:"vendor"`
 	ImageID     int    `json:"imageId"`
 	ProductSize string `json:"productSize"`
-	MVELabel    string `json:"mveLabel"`
+	MVELabel    string `json:"mveLabel,omitempty"`
 	AccountName string `json:"accountName"`
 	AccountKey  string `json:"accountKey"`
 	SystemTag   string `json:"systemTag"`
@@ -41,7 +41,7 @@ type CiscoConfig struct {
 	Vendor             string `json:"vendor"`
 	ImageID            int    `json:"imageId"`
 	ProductSize        string `json:"productSize"`
-	MVELabel           string `json:"mveLabel"`
+	MVELabel           string `json:"mveLabel,omitempty"`
 	ManageLocally      bool   `json:"manageLocally"`
 	AdminSSHPublicKey  string `json:"adminSshPublicKey"`
 	SSHPublicKey       string `json:"sshPublicKey"`
@@ -57,7 +57,7 @@ type FortinetConfig struct {
 	Vendor            string `json:"vendor"`
 	ImageID           int    `json:"imageId"`
 	ProductSize       string `json:"productSize"`
-	MVELabel          string `json:"mveLabel"`
+	MVELabel          string `json:"mveLabel,omitempty"`
 	AdminSSHPublicKey string `json:"adminSshPublicKey"`
 	SSHPublicKey      string `json:"sshPublicKey"`
 	LicenseData       string `json:"licenseData"`
@@ -69,7 +69,7 @@ type PaloAltoConfig struct {
 	Vendor            string `json:"vendor"`
 	ImageID           int    `json:"imageId"`
 	ProductSize       string `json:"productSize"`
-	MVELabel          string `json:"mveLabel"`
+	MVELabel          string `json:"mveLabel,omitempty"`
 	AdminSSHPublicKey string `json:"adminSshPublicKey"`
 	AdminPasswordHash string `json:"adminPasswordHash"`
 	LicenseData       string `json:"licenseData"`
@@ -81,7 +81,7 @@ type VersaConfig struct {
 	Vendor            string `json:"vendor"`
 	ImageID           int    `json:"imageId"`
 	ProductSize       string `json:"productSize"`
-	MVELabel          string `json:"mveLabel"`
+	MVELabel          string `json:"mveLabel,omitempty"`
 	DirectorAddress   string `json:"directorAddress"`
 	ControllerAddress string `json:"controllerAddress"`
 	LocalAuth         string `json:"localAuth"`
@@ -95,7 +95,7 @@ type VmwareConfig struct {
 	Vendor            string `json:"vendor"`
 	ImageID           int    `json:"imageId"`
 	ProductSize       string `json:"productSize"`
-	MVELabel          string `json:"mveLabel"`
+	MVELabel          string `json:"mveLabel,omitempty"`
 	AdminSSHPublicKey string `json:"adminSshPublicKey"`
 	SSHPublicKey      string `json:"sshPublicKey"`
 	VcoAddress        string `json:"vcoAddress"`
@@ -108,7 +108,7 @@ type MerakiConfig struct {
 	Vendor      string `json:"vendor"`
 	ImageID     int    `json:"imageId"`
 	ProductSize string `json:"productSize"`
-	MVELabel    string `json:"mveLabel"`
+	MVELabel    string `json:"mveLabel,omitempty"`
 	Token       string `json:"token"`
 }
 
