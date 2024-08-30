@@ -414,6 +414,7 @@ type CSPConnectionAWS struct {
 	Account           string `json:"account"`
 	AmazonAddress     string `json:"amazon_address"`
 	ASN               int    `json:"asn"`
+	AmazonASN         int    `json:"amazonAsn"`
 	AuthKey           string `json:"authKey"`
 	CustomerAddress   string `json:"customer_address"`
 	CustomerIPAddress string `json:"customerIpAddress"`
