@@ -507,7 +507,8 @@ type CSPConnectionVirtualRouter struct {
 
 // CSPConnectionVirtualRouterInterface represents the configuration of a CSP connection for Virtual Router interface.
 type CSPConnectionVirtualRouterInterface struct {
-	IPAddresses []string `json:"ipAddresses"`
+	IPAddresses []string  `json:"ipAddresses"`
+	IPRoutes    []IpRoute `json:"ipRoutes"`
 }
 
 // CSPConnectionTransit represents the configuration of a CSP connection for a Transit VXC.
