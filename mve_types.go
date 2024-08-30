@@ -68,11 +68,12 @@ type PaloAltoConfig struct {
 	VendorConfig
 	Vendor            string `json:"vendor"`
 	ImageID           int    `json:"imageId"`
-	ProductSize       string `json:"productSize"`
+	ProductSize       string `json:"productSize,omitempty"`
 	MVELabel          string `json:"mveLabel,omitempty"`
-	AdminSSHPublicKey string `json:"adminSshPublicKey"`
-	AdminPasswordHash string `json:"adminPasswordHash"`
-	LicenseData       string `json:"licenseData"`
+	AdminSSHPublicKey string `json:"adminSshPublicKey,omitempty"`
+	SSHPublicKey      string `json:"sshPublicKey,omitempty"`
+	AdminPasswordHash string `json:"adminPasswordHash,omitempty"`
+	LicenseData       string `json:"licenseData,omitempty"`
 }
 
 // VersaConfig represents the configuration for a Versa MVE.
