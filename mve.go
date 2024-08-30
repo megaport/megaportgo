@@ -209,6 +209,7 @@ func createMVEOrder(req *BuyMVERequest) []*MVEOrderConfig {
 			ProductSize:       c.ProductSize,
 			MVELabel:          c.MVELabel,
 			AdminSSHPublicKey: c.AdminSSHPublicKey,
+			SSHPublicKey:      c.SSHPublicKey,
 			AdminPasswordHash: c.AdminPasswordHash,
 			LicenseData:       c.LicenseData,
 		}
