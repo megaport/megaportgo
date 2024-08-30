@@ -515,6 +515,12 @@ type CSPConnectionVirtualRouterInterface struct {
 	BFD            BfdConfig             `json:"bfd"`
 }
 
+type CSPConnectionOracle struct {
+	CSPConnectionConfig
+	ConnectType      string `json:"connectType"`
+	VirtualCircuitId string `json:"virtualCircuitId"`
+}
+
 // CSPConnectionTransit represents the configuration of a CSP connection for a Transit VXC.
 type CSPConnectionTransit struct {
 	CSPConnectionConfig
@@ -685,6 +691,16 @@ func (c *CSPConnection) UnmarshalJSON(data []byte) error {
 					return err
 				}
 				c.CSPConnection = append(c.CSPConnection, transit)
+			case "ORACLE":
+				marshaled, err := json.Marshal(cn)
+				if err != nil {
+					return err
+				}
+				oracle := CSPConnectionOracle{}
+				if err := json.Unmarshal(marshaled, &oracle); err != nil {
+					return err
+				}
+				c.CSPConnection = append(c.CSPConnection, oracle)
 			default: // Any other cases will be marshaled into a map[string]interface{}
 				marshaled, err := json.Marshal(cn)
 				if err != nil {
