@@ -59,7 +59,6 @@ type BuyVXCRequest struct {
 
 	WaitForProvision bool          // Wait until the VXC provisions before returning
 	WaitForTime      time.Duration // How long to wait for the VXC to provision if WaitForProvision is true (default is 5 minutes)
-
 }
 
 // BuyVXCResponse represents a response from buying a VXC from the Megaport VXC API.
