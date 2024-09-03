@@ -55,9 +55,11 @@ type BuyVXCRequest struct {
 	CostCentre        string
 	AEndConfiguration VXCOrderEndpointConfiguration
 	BEndConfiguration VXCOrderEndpointConfiguration
+	ConnectType       string
 
 	WaitForProvision bool          // Wait until the VXC provisions before returning
 	WaitForTime      time.Duration // How long to wait for the VXC to provision if WaitForProvision is true (default is 5 minutes)
+
 }
 
 // BuyVXCResponse represents a response from buying a VXC from the Megaport VXC API.
@@ -214,15 +216,16 @@ func createVXCOrder(req *BuyVXCRequest) []VXCOrder {
 		PortID: req.PortUID,
 		AssociatedVXCs: []VXCOrderConfiguration{
 			{
-				Name:       req.VXCName,
-				RateLimit:  req.RateLimit,
-				Term:       req.Term,
-				Shutdown:   req.Shutdown,
-				PromoCode:  req.PromoCode,
-				ServiceKey: req.ServiceKey,
-				CostCentre: req.CostCentre,
-				AEnd:       req.AEndConfiguration,
-				BEnd:       req.BEndConfiguration,
+				Name:        req.VXCName,
+				RateLimit:   req.RateLimit,
+				Term:        req.Term,
+				Shutdown:    req.Shutdown,
+				PromoCode:   req.PromoCode,
+				ServiceKey:  req.ServiceKey,
+				CostCentre:  req.CostCentre,
+				AEnd:        req.AEndConfiguration,
+				BEnd:        req.BEndConfiguration,
+				ConnectType: req.ConnectType,
 			},
 		},
 	}}

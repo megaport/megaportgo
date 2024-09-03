@@ -213,15 +213,16 @@ type VXCOrder struct {
 
 // VXCOrderConfiguration represents the configuration of a VXC to be ordered from the Megaport Products API.
 type VXCOrderConfiguration struct {
-	Name       string                        `json:"productName"`
-	ServiceKey string                        `json:"serviceKey,omitempty"`
-	PromoCode  string                        `json:"promoCode,omitempty"`
-	RateLimit  int                           `json:"rateLimit"`
-	Term       int                           `json:"term"`
-	Shutdown   bool                          `json:"shutdown"`
-	CostCentre string                        `json:"costCentre,omitempty"`
-	AEnd       VXCOrderEndpointConfiguration `json:"aEnd"`
-	BEnd       VXCOrderEndpointConfiguration `json:"bEnd"`
+	Name        string                        `json:"productName"`
+	ServiceKey  string                        `json:"serviceKey,omitempty"`
+	PromoCode   string                        `json:"promoCode,omitempty"`
+	RateLimit   int                           `json:"rateLimit"`
+	Term        int                           `json:"term"`
+	Shutdown    bool                          `json:"shutdown"`
+	CostCentre  string                        `json:"costCentre,omitempty"`
+	AEnd        VXCOrderEndpointConfiguration `json:"aEnd"`
+	BEnd        VXCOrderEndpointConfiguration `json:"bEnd"`
+	ConnectType string                        `json:"connectType,omitempty"`
 }
 
 // VXCOrderEndpointConfiguration represents the configuration of an endpoint of a VXC to be ordered from the Megaport Products API.
