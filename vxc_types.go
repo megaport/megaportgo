@@ -529,8 +529,25 @@ type CSPConnectionVirtualRouterInterface struct {
 
 type CSPConnectionOracle struct {
 	CSPConnectionConfig
-	ConnectType      string `json:"connectType"`
-	VirtualCircuitId string `json:"virtualCircuitId"`
+	ConnectType      string                        `json:"connectType"`
+	ResourceName     string                        `json:"resource_name"`
+	ResourceType     string                        `json:"resource_type"`
+	CSPName          string                        `json:"csp_name"`
+	Bandwidth        int                           `json:"bandwidth"`
+	Megaports        []CSPConnectionOracleMegaport `json:"megaports"`
+	Ports            []CSPConnectionOraclePort     `json:"ports"`
+	VirtualCircuitId string                        `json:"virtualCircuitId"`
+}
+
+type CSPConnectionOracleMegaport struct {
+	Port int `json:"port"`
+	VXC  int `json:"vxc"`
+}
+
+type CSPConnectionOraclePort struct {
+	ServiceID         int   `json:"service_id"`
+	VXCServiceIDs     []int `json:"vxc_service_ids"`
+	FirstVXCServiceID int   `json:"firstVxcServiceId,omitempty"`
 }
 
 // CSPConnectionTransit represents the configuration of a CSP connection for a Transit VXC.
