@@ -8,6 +8,7 @@ type MVEOrderConfig struct {
 	ProductType       string                `json:"productType"`
 	PromoCode         string                `json:"promoCode,omitempty"`
 	CostCentre        string                `json:"costCentre,omitempty"`
+	ResourceTags      []ResourceTag         `json:"resourceTags"`
 	NetworkInterfaces []MVENetworkInterface `json:"vnics"`
 	VendorConfig      VendorConfig          `json:"vendorConfig"`
 	Config            MVEConfig             `json:"config"`
@@ -171,6 +172,7 @@ type MVE struct {
 	DiversityZone         string                  `json:"diversityZone"`
 	NetworkInterfaces     []*MVENetworkInterface  `json:"vnics"`
 	LocationDetails       *ProductLocationDetails `json:"locationDetail"`
+	ResourceTags          []ResourceTag           `json:"resourceTags"`
 }
 
 // MVEResources represents the resources associated with an MVE.

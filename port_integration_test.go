@@ -84,6 +84,7 @@ func (suite *PortIntegrationTestSuite) TestSinglePort() {
 	for _, p := range portsListPostCreate {
 		if p.UID == portID {
 			foundNewPort = true
+			suite.Equal(p.ResourceTags, testResourceTags)
 		}
 	}
 
@@ -141,6 +142,7 @@ func (suite *PortIntegrationTestSuite) TestLAGPort() {
 	for _, p := range portsListPostCreate {
 		if slices.Contains(mainPortIDs, p.UID) {
 			foundNewPort = true
+			suite.Equal(p.ResourceTags, testResourceTags)
 		}
 	}
 
@@ -171,6 +173,7 @@ func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Con
 		MarketPlaceVisibility: true,
 		DiversityZone:         "red",
 		WaitForProvision:      true,
+		ResourceTags:          testResourceTags,
 		WaitForTime:           5 * time.Minute,
 	})
 

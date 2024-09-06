@@ -62,6 +62,7 @@ type BuyMCRRequest struct {
 	MCRAsn        int
 	CostCentre    string
 	PromoCode     string
+	ResourceTags  []ResourceTag
 
 	WaitForProvision bool          // Wait until the MCR provisions before returning
 	WaitForTime      time.Duration // How long to wait for the MCR to provision if WaitForProvision is true (default is 5 minutes)
@@ -201,13 +202,15 @@ func validateBuyMCRRequest(order *BuyMCRRequest) error {
 
 func createMCROrder(req *BuyMCRRequest) []MCROrder {
 	order := MCROrder{
-		LocationID: req.LocationID,
-		Name:       req.Name,
-		Term:       req.Term,
-		Type:       "MCR2",
-		PortSpeed:  req.PortSpeed,
-		PromoCode:  req.PromoCode,
-		Config:     MCROrderConfig{},
+		LocationID:   req.LocationID,
+		Name:         req.Name,
+		Term:         req.Term,
+		Type:         "MCR2",
+		PortSpeed:    req.PortSpeed,
+		PromoCode:    req.PromoCode,
+		ResourceTags: req.ResourceTags,
+		CostCentre:   req.CostCentre,
+		Config:       MCROrderConfig{},
 	}
 
 	if req.CostCentre != "" {

@@ -4,14 +4,15 @@ import "strconv"
 
 // MCROrder represents a request to buy an MCR from the Megaport Products API.
 type MCROrder struct {
-	LocationID int            `json:"locationId"`
-	Name       string         `json:"productName"`
-	Term       int            `json:"term"`
-	Type       string         `json:"productType"`
-	PortSpeed  int            `json:"portSpeed"`
-	CostCentre string         `json:"costCentre"`
-	PromoCode  string         `json:"promoCode,omitempty"`
-	Config     MCROrderConfig `json:"config"`
+	LocationID   int            `json:"locationId"`
+	Name         string         `json:"productName"`
+	Term         int            `json:"term"`
+	Type         string         `json:"productType"`
+	PortSpeed    int            `json:"portSpeed"`
+	CostCentre   string         `json:"costCentre"`
+	PromoCode    string         `json:"promoCode,omitempty"`
+	Config       MCROrderConfig `json:"config"`
+	ResourceTags []ResourceTag  `json:"resourceTags,omitempty"`
 }
 
 // MCROrderConfig represents the configuration for an MCR order.
@@ -61,6 +62,7 @@ type MCR struct {
 	Cancelable            bool                    `json:"cancelable"`
 	Resources             MCRResources            `json:"resources"`
 	LocationDetails       *ProductLocationDetails `json:"locationDetail"`
+	ResourceTags          []ResourceTag           `json:"resourceTags"`
 }
 
 // MCRResources represents the resources associated with an MCR.

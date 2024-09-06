@@ -197,6 +197,7 @@ func (suite *MCRIntegrationTestSuite) TestCreatePrefixFilterList() {
 		PortSpeed:        1000,
 		MCRAsn:           0,
 		WaitForProvision: true,
+		ResourceTags:     testResourceTags,
 		WaitForTime:      5 * time.Minute,
 	})
 	if portErr != nil {
@@ -241,6 +242,12 @@ func (suite *MCRIntegrationTestSuite) TestCreatePrefixFilterList() {
 	if prefixErr != nil {
 		suite.FailNowf("could not create prefix filter list", "could not create prefix filter list %v", prefixErr)
 	}
+
+	mcrDetails, err := mcrSvc.GetMCR(ctx, mcrId)
+	if err != nil {
+		suite.FailNowf("could not get mcr", "could not get mcr %v", err)
+	}
+	suite.EqualValues(mcrDetails.ResourceTags, testResourceTags)
 
 	logger.InfoContext(ctx, "Deleting MCR now.", slog.String("mcr_id", mcrId))
 	hardDeleteRes, deleteErr := mcrSvc.DeleteMCR(ctx, &DeleteMCRRequest{

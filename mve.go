@@ -51,6 +51,7 @@ type BuyMVERequest struct {
 	DiversityZone string
 	PromoCode     string
 	CostCentre    string
+	ResourceTags  []ResourceTag
 
 	WaitForProvision bool          // Wait until the MVE provisions before returning
 	WaitForTime      time.Duration // How long to wait for the MVE to provision if WaitForProvision is true (default is 5 minutes)
@@ -158,12 +159,13 @@ func (svc *MVEServiceOp) ValidateMVEOrder(ctx context.Context, req *BuyMVEReques
 
 func createMVEOrder(req *BuyMVERequest) []*MVEOrderConfig {
 	order := &MVEOrderConfig{
-		LocationID:  req.LocationID,
-		Name:        req.Name,
-		Term:        req.Term,
-		PromoCode:   req.PromoCode,
-		CostCentre:  req.CostCentre,
-		ProductType: strings.ToUpper(PRODUCT_MVE),
+		LocationID:   req.LocationID,
+		Name:         req.Name,
+		Term:         req.Term,
+		PromoCode:    req.PromoCode,
+		CostCentre:   req.CostCentre,
+		ResourceTags: req.ResourceTags,
+		ProductType:  strings.ToUpper(PRODUCT_MVE),
 		Config: MVEConfig{
 			DiversityZone: req.DiversityZone,
 		},

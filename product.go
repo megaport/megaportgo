@@ -83,6 +83,11 @@ type ParsedProductsResponse struct {
 	Data    []interface{} `json:"data"`
 }
 
+type ResourceTag struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
 // ExecuteOrder is responsible for executing an order for a product in the Megaport Products API.
 func (svc *ProductServiceOp) ExecuteOrder(ctx context.Context, requestBody interface{}) (*[]byte, error) {
 	path := "/v3/networkdesign/buy"

@@ -14,6 +14,7 @@ type PortOrder struct {
 	LagPortCount          int             `json:"lagPortCount,omitempty"`
 	MarketplaceVisibility bool            `json:"marketplaceVisibility"`
 	Config                PortOrderConfig `json:"config"`
+	ResourceTags          []ResourceTag   `json:"resourceTags"`
 	PromoCode             string          `json:"promoCode,omitempty"`
 }
 
@@ -63,6 +64,8 @@ type Port struct {
 	DiversityZone         string                  `json:"diversityZone"`
 	VXCResources          PortResources           `json:"resources"`
 	LocationDetails       *ProductLocationDetails `json:"locationDetail"`
+
+	ResourceTags []ResourceTag `json:"resourceTags"`
 }
 
 // PortResources represents the resources associated with a Megaport Port.

@@ -20,6 +20,21 @@ const (
 	MEGAPORTURL = "https://api-staging.megaport.com/"
 )
 
+var testResourceTags = []ResourceTag{
+	{
+		Key:   "test-key-1",
+		Value: "test-value-1",
+	},
+	{
+		Key:   "test-key-2",
+		Value: "test-value-2",
+	},
+	{
+		Key:   "test-key-3",
+		Value: "test-value-3",
+	},
+}
+
 // GetTime converts a timestamp to a time.Time object.
 func GetTime(timestamp int64) time.Time {
 	return time.Unix(timestamp/1000, 0)
