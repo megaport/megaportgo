@@ -30,6 +30,10 @@ type PortService interface {
 	LockPort(ctx context.Context, portId string) (*LockPortResponse, error)
 	// UnlockPort unlocks a port in the Megaport Port API.
 	UnlockPort(ctx context.Context, portId string) (*UnlockPortResponse, error)
+	// ListPortResourceTags lists the resource tags for a port in the Megaport Port API.
+	ListPortResourceTags(ctx context.Context, portID string) ([]ResourceTag, error)
+	// UpdatePortResourceTags updates the resource tags for a port in the Megaport Port API.
+	UpdatePortResourceTags(ctx context.Context, portID string, tags []ResourceTag) error
 }
 
 // NewPortService creates a new instance of the Port Service.
@@ -433,4 +437,19 @@ func (svc *PortServiceOp) UnlockPort(ctx context.Context, portId string) (*Unloc
 	} else {
 		return nil, ErrPortNotLocked
 	}
+}
+
+// ListPortResourceTags lists the resource tags for a port in the Megaport Port API.
+func (svc *PortServiceOp) ListPortResourceTags(ctx context.Context, portID string) ([]ResourceTag, error) {
+	tags, err := svc.Client.ProductService.ListProductResourceTags(ctx, portID)
+	if err != nil {
+		return nil, err
+	}
+	return tags, nil
+}
+
+func (svc *PortServiceOp) UpdatePortResourceTags(ctx context.Context, portID string, tags []ResourceTag) error {
+	return svc.Client.ProductService.UpdateProductResourceTags(ctx, portID, &UpdateProductResourceTagsRequest{
+		ResourceTags: tags,
+	})
 }

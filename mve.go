@@ -27,6 +27,10 @@ type MVEService interface {
 	ListMVEImages(ctx context.Context) ([]*MVEImage, error)
 	// ListAvailableMVESizes returns a list of currently available MVE sizes and details for each size. The instance size determines the MVE capabilities, such as how many concurrent connections it can support. The compute sizes are 2/8, 4/16, 8/32, and 12/48, where the first number is the CPU and the second number is the GB of available RAM. Each size has 4 GB of RAM for every vCPU allocated.
 	ListAvailableMVESizes(ctx context.Context) ([]*MVESize, error)
+	// ListMVEResourceTags returns a list of resource tags for an MVE in the Megaport MVE API.
+	ListMVEResourceTags(ctx context.Context, mveID string) ([]ResourceTag, error)
+	// UpdateMVEResourceTags updates the resource tags for an MVE in the Megaport MVE API.
+	UpdateMVEResourceTags(ctx context.Context, mveID string, tags []ResourceTag) error
 }
 
 // NewMVEService creates a new instance of the MVE Service.
@@ -402,4 +406,19 @@ func validateBuyMVERequest(req *BuyMVERequest) error {
 		return ErrInvalidTerm
 	}
 	return nil
+}
+
+func (svc *MVEServiceOp) ListMVEResourceTags(ctx context.Context, mveID string) ([]ResourceTag, error) {
+	tags, err := svc.Client.ProductService.ListProductResourceTags(ctx, mveID)
+	if err != nil {
+		return nil, err
+	}
+	return tags, nil
+}
+
+// UpdateMVEResourceTags updates the resource tags for an MVE in the Megaport MVE API.
+func (svc *MVEServiceOp) UpdateMVEResourceTags(ctx context.Context, mveID string, tags []ResourceTag) error {
+	return svc.Client.ProductService.UpdateProductResourceTags(ctx, mveID, &UpdateProductResourceTagsRequest{
+		ResourceTags: tags,
+	})
 }

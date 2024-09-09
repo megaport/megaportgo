@@ -243,11 +243,20 @@ func (suite *MCRIntegrationTestSuite) TestCreatePrefixFilterList() {
 		suite.FailNowf("could not create prefix filter list", "could not create prefix filter list %v", prefixErr)
 	}
 
-	mcrDetails, err := mcrSvc.GetMCR(ctx, mcrId)
+	tags, err := mcrSvc.ListMCRResourceTags(ctx, mcrId)
 	if err != nil {
-		suite.FailNowf("could not get mcr", "could not get mcr %v", err)
+		suite.FailNowf("could not list mcr resource tags", "could not list mcr resource tags %v", err)
 	}
-	suite.EqualValues(mcrDetails.ResourceTags, testResourceTags)
+	suite.EqualValues(testResourceTags, tags)
+	err = mcrSvc.UpdateMCRResourceTags(ctx, mcrId, testUpdatedResourceTags)
+	if err != nil {
+		suite.FailNowf("could not update mcr resource tags", "could not update mcr resource tags %v", err)
+	}
+	tags, err = mcrSvc.ListMCRResourceTags(ctx, mcrId)
+	if err != nil {
+		suite.FailNowf("could not list mcr resource tags", "could not list mcr resource tags %v", err)
+	}
+	suite.EqualValues(testUpdatedResourceTags, tags)
 
 	logger.InfoContext(ctx, "Deleting MCR now.", slog.String("mcr_id", mcrId))
 	hardDeleteRes, deleteErr := mcrSvc.DeleteMCR(ctx, &DeleteMCRRequest{

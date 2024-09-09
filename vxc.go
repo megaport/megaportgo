@@ -27,6 +27,10 @@ type VXCService interface {
 	LookupPartnerPorts(ctx context.Context, req *LookupPartnerPortsRequest) (*LookupPartnerPortsResponse, error)
 	// ListPartnerPorts lists available partner ports in the Megaport VXC API.
 	ListPartnerPorts(ctx context.Context, req *ListPartnerPortsRequest) (*ListPartnerPortsResponse, error)
+	// ListVXCResourceTags lists the resource tags for a VXC in the Megaport Products API.
+	ListVXCResourceTags(ctx context.Context, vxcID string) ([]ResourceTag, error)
+	// UpdateVXCResourceTags updates the resource tags for a VXC in the Megaport Products API.
+	UpdateVXCResourceTags(ctx context.Context, vxcID string, tags []ResourceTag) error
 }
 
 // NewVXCService creates a new instance of the VXC Service.
@@ -421,4 +425,20 @@ func (svc *VXCServiceOp) ListPartnerPorts(ctx context.Context, req *ListPartnerP
 	return &ListPartnerPortsResponse{
 		Data: lookupResponse.Data,
 	}, nil
+}
+
+// ListVXCResourceTags lists the resource tags for a VXC in the Megaport Products API.
+func (svc *VXCServiceOp) ListVXCResourceTags(ctx context.Context, vxcID string) ([]ResourceTag, error) {
+	tags, err := svc.Client.ProductService.ListProductResourceTags(ctx, vxcID)
+	if err != nil {
+		return nil, err
+	}
+	return tags, nil
+}
+
+// UpdateVXCResourceTags updates the resource tags for a VXC in the Megaport Products API.
+func (svc *VXCServiceOp) UpdateVXCResourceTags(ctx context.Context, vxcID string, tags []ResourceTag) error {
+	return svc.Client.ProductService.UpdateProductResourceTags(ctx, vxcID, &UpdateProductResourceTagsRequest{
+		ResourceTags: tags,
+	})
 }

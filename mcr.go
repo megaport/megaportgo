@@ -35,6 +35,10 @@ type MCRService interface {
 	DeleteMCR(ctx context.Context, req *DeleteMCRRequest) (*DeleteMCRResponse, error)
 	// RestoreMCR restores a deleted MCR in the Megaport MCR API.
 	RestoreMCR(ctx context.Context, mcrId string) (*RestoreMCRResponse, error)
+	// ListMCRResourceTags returns the resource tags for an MCR in the Megaport MCR API.
+	ListMCRResourceTags(ctx context.Context, mcrID string) ([]ResourceTag, error)
+	// UpdateMCRResourceTags updates the resource tags for an MCR in the Megaport MCR API.
+	UpdateMCRResourceTags(ctx context.Context, mcrID string, tags []ResourceTag) error
 
 	// DEPRECATED - Use ListMCRPrefixFilterLists instead
 	GetMCRPrefixFilterLists(ctx context.Context, mcrId string) ([]*PrefixFilterList, error)
@@ -480,4 +484,20 @@ func (svc *MCRServiceOp) RestoreMCR(ctx context.Context, mcrId string) (*Restore
 	return &RestoreMCRResponse{
 		IsRestored: true,
 	}, nil
+}
+
+// ListMCRResourceTags returns the resource tags for an MCR in the Megaport MCR API.
+func (svc *MCRServiceOp) ListMCRResourceTags(ctx context.Context, mcrID string) ([]ResourceTag, error) {
+	tags, err := svc.Client.ProductService.ListProductResourceTags(ctx, mcrID)
+	if err != nil {
+		return nil, err
+	}
+	return tags, nil
+}
+
+// UpdateMCRResourceTags updates the resource tags for an MCR in the Megaport MCR API.
+func (svc *MCRServiceOp) UpdateMCRResourceTags(ctx context.Context, mcrID string, tags []ResourceTag) error {
+	return svc.Client.ProductService.UpdateProductResourceTags(ctx, mcrID, &UpdateProductResourceTagsRequest{
+		ResourceTags: tags,
+	})
 }

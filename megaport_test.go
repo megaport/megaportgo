@@ -35,6 +35,33 @@ var testResourceTags = []ResourceTag{
 	},
 }
 
+var testUpdatedResourceTags = []ResourceTag{
+	{
+		Key:   "test-key-1-updated",
+		Value: "test-value-1-updated",
+	},
+	{
+		Key:   "test-key-2-updated",
+		Value: "test-value-2-updated",
+	},
+	{
+		Key:   "test-key-3-updated",
+		Value: "test-value-3-updated",
+	},
+}
+
+var resourceTagJSONBlob = `{
+	"message": "test-message",
+	"terms": "test-terms",
+	"data": {
+		"resourceTags": [
+		{"key": "test-key-1", "value": "test-value-1"},
+		{"key": "test-key-2", "value": "test-value-2"},
+		{"key": "test-key-3", "value": "test-value-3"}
+		]
+	}
+}`
+
 // GetTime converts a timestamp to a time.Time object.
 func GetTime(timestamp int64) time.Time {
 	return time.Unix(timestamp/1000, 0)

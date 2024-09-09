@@ -42,7 +42,6 @@ type VXC struct {
 	AdminLocked        bool                `json:"adminLocked"`
 	AttributeTags      map[string]string   `json:"attributeTags"`
 	Cancelable         bool                `json:"cancelable"`
-	ResourceTags       []ResourceTag       `json:"resourceTags"`
 }
 
 var emptyVLL = []byte(`[]`)
