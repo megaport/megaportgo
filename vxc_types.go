@@ -454,12 +454,15 @@ type CSPConnectionAzure struct {
 	Peers        []CSPConnectionAzurePeeringConfig `json:"peers"`
 }
 
+// CSPConnectionAzurePeeringConfig represents the configuration of an Azure peering partner.
 type CSPConnectionAzurePeeringConfig struct {
+	Type            string `json:"type"`
 	PeerASN         int    `json:"peer_asn"`
-	VLAN            int    `json:"vlan"`
 	PrimarySubnet   string `json:"primary_subnet"`
 	SecondarySubnet string `json:"secondary_subnet"`
-	Type            string `json:"type"`
+	Prefixes        string `json:"prefixes,omitempty"`
+	SharedKey       string `json:"shared_key,omitempty"`
+	VLAN            int    `json:"vlan"`
 }
 
 // CSPConnectionAzureMegaport represents the configuration of a CSP connection for Azure ExpressRoute megaport.
