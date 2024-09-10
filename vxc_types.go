@@ -442,16 +442,24 @@ type CSPConnectionAWSHC struct {
 // CSPConnectionAzure represents the configuration of a CSP connection for Azure ExpressRoute.
 type CSPConnectionAzure struct {
 	CSPConnectionConfig
-	ConnectType  string                           `json:"connectType"`
-	ResourceName string                           `json:"resource_name"`
-	ResourceType string                           `json:"resource_type"`
-	Bandwidth    int                              `json:"bandwidth"`
-	Managed      bool                             `json:"managed"`
-	Megaports    []CSPConnectionAzureMegaport     `json:"megaports"`
-	Ports        []CSPConnectionAzurePort         `json:"ports"`
-	ServiceKey   string                           `json:"service_key"`
-	VLAN         int                              `json:"vlan"`
-	Peers        []PartnerOrderAzurePeeringConfig `json:"peers"`
+	ConnectType  string                            `json:"connectType"`
+	ResourceName string                            `json:"resource_name"`
+	ResourceType string                            `json:"resource_type"`
+	Bandwidth    int                               `json:"bandwidth"`
+	Managed      bool                              `json:"managed"`
+	Megaports    []CSPConnectionAzureMegaport      `json:"megaports"`
+	Ports        []CSPConnectionAzurePort          `json:"ports"`
+	ServiceKey   string                            `json:"service_key"`
+	VLAN         int                               `json:"vlan"`
+	Peers        []CSPConnectionAzurePeeringConfig `json:"peers"`
+}
+
+type CSPConnectionAzurePeeringConfig struct {
+	PeerASN         int    `json:"peer_asn"`
+	VLAN            int    `json:"vlan"`
+	PrimarySubnet   string `json:"primary_subnet"`
+	SecondarySubnet string `json:"secondary_subnet"`
+	Type            string `json:"type"`
 }
 
 // CSPConnectionAzureMegaport represents the configuration of a CSP connection for Azure ExpressRoute megaport.
