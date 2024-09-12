@@ -228,6 +228,7 @@ type VXCOrderConfiguration struct {
 type VXCOrderEndpointConfiguration struct {
 	ProductUID    string                  `json:"productUid,omitempty"`
 	VLAN          int                     `json:"vlan,omitempty"`
+	DiversityZone string                  `json:"diversityZone,omitempty"`
 	PartnerConfig VXCPartnerConfiguration `json:"partnerConfig,omitempty"`
 	*VXCOrderMVEConfig
 }
@@ -442,16 +443,27 @@ type CSPConnectionAWSHC struct {
 // CSPConnectionAzure represents the configuration of a CSP connection for Azure ExpressRoute.
 type CSPConnectionAzure struct {
 	CSPConnectionConfig
-	ConnectType  string                           `json:"connectType"`
-	ResourceName string                           `json:"resource_name"`
-	ResourceType string                           `json:"resource_type"`
-	Bandwidth    int                              `json:"bandwidth"`
-	Managed      bool                             `json:"managed"`
-	Megaports    []CSPConnectionAzureMegaport     `json:"megaports"`
-	Ports        []CSPConnectionAzurePort         `json:"ports"`
-	ServiceKey   string                           `json:"service_key"`
-	VLAN         int                              `json:"vlan"`
-	Peers        []PartnerOrderAzurePeeringConfig `json:"peers"`
+	ConnectType  string                            `json:"connectType"`
+	ResourceName string                            `json:"resource_name"`
+	ResourceType string                            `json:"resource_type"`
+	Bandwidth    int                               `json:"bandwidth"`
+	Managed      bool                              `json:"managed"`
+	Megaports    []CSPConnectionAzureMegaport      `json:"megaports"`
+	Ports        []CSPConnectionAzurePort          `json:"ports"`
+	ServiceKey   string                            `json:"service_key"`
+	VLAN         int                               `json:"vlan"`
+	Peers        []CSPConnectionAzurePeeringConfig `json:"peers"`
+}
+
+// CSPConnectionAzurePeeringConfig represents the configuration of an Azure peering partner.
+type CSPConnectionAzurePeeringConfig struct {
+	Type            string `json:"type"`
+	PeerASN         int    `json:"peer_asn"`
+	PrimarySubnet   string `json:"primary_subnet"`
+	SecondarySubnet string `json:"secondary_subnet"`
+	Prefixes        string `json:"prefixes,omitempty"`
+	SharedKey       string `json:"shared_key,omitempty"`
+	VLAN            int    `json:"vlan"`
 }
 
 // CSPConnectionAzureMegaport represents the configuration of a CSP connection for Azure ExpressRoute megaport.
@@ -517,8 +529,25 @@ type CSPConnectionVirtualRouterInterface struct {
 
 type CSPConnectionOracle struct {
 	CSPConnectionConfig
-	ConnectType      string `json:"connectType"`
-	VirtualCircuitId string `json:"virtualCircuitId"`
+	ConnectType      string                        `json:"connectType"`
+	ResourceName     string                        `json:"resource_name"`
+	ResourceType     string                        `json:"resource_type"`
+	CSPName          string                        `json:"csp_name"`
+	Bandwidth        int                           `json:"bandwidth"`
+	Megaports        []CSPConnectionOracleMegaport `json:"megaports"`
+	Ports            []CSPConnectionOraclePort     `json:"ports"`
+	VirtualCircuitId string                        `json:"virtualCircuitId"`
+}
+
+type CSPConnectionOracleMegaport struct {
+	Port int `json:"port"`
+	VXC  int `json:"vxc"`
+}
+
+type CSPConnectionOraclePort struct {
+	ServiceID         int   `json:"service_id"`
+	VXCServiceIDs     []int `json:"vxc_service_ids"`
+	FirstVXCServiceID int   `json:"firstVxcServiceId,omitempty"`
 }
 
 // CSPConnectionTransit represents the configuration of a CSP connection for a Transit VXC.
