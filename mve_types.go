@@ -24,6 +24,16 @@ type VendorConfig interface {
 	IsVendorConfig()
 }
 
+// VSRConfig represents the configuration for a 6WIND VSR MVE.
+type SixwindVSRConfig struct {
+	VendorConfig
+	Vendor       string `json:"vendor"`
+	ImageID      int    `json:"imageId"`
+	ProductSize  string `json:"productSize"`
+	MVELabel     string `json:"mveLabel"`
+	SSHPublicKey string `json:"sshPublicKey"`
+}
+
 // ArubaConfig represents the configuration for an Aruba MVE.
 type ArubaConfig struct {
 	VendorConfig
@@ -34,6 +44,16 @@ type ArubaConfig struct {
 	AccountName string `json:"accountName"`
 	AccountKey  string `json:"accountKey"`
 	SystemTag   string `json:"systemTag"`
+}
+
+// AviatrixConfig represents the configuration for an Aviatrix Secure Edge MVE.
+type AviatrixConfig struct {
+	VendorConfig
+	Vendor      string `json:"vendor"`
+	ImageID     int    `json:"imageId"`
+	ProductSize string `json:"productSize"`
+	MVELabel    string `json:"mveLabel"`
+	CloudInit   string `json:"cloudInit"`
 }
 
 // CiscoConfig represents the configuration for a Cisco MVE.
@@ -75,6 +95,17 @@ type PaloAltoConfig struct {
 	SSHPublicKey      string `json:"sshPublicKey,omitempty"`
 	AdminPasswordHash string `json:"adminPasswordHash,omitempty"`
 	LicenseData       string `json:"licenseData,omitempty"`
+}
+
+// PrismaConfig represents the configuration for a Palo Alto Prisma MVE.
+type PrismaConfig struct {
+	VendorConfig
+	Vendor      string `json:"vendor"`
+	ImageID     int    `json:"imageId"`
+	ProductSize string `json:"productSize"`
+	MVELabel    string `json:"mveLabel"`
+	IONKey      string `json:"ionKey"`
+	SecretKey   string `json:"secretKey"`
 }
 
 // VersaConfig represents the configuration for a Versa MVE.
