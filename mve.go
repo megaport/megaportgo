@@ -158,92 +158,16 @@ func (svc *MVEServiceOp) ValidateMVEOrder(ctx context.Context, req *BuyMVEReques
 
 func createMVEOrder(req *BuyMVERequest) []*MVEOrderConfig {
 	order := &MVEOrderConfig{
-		LocationID:  req.LocationID,
-		Name:        req.Name,
-		Term:        req.Term,
-		PromoCode:   req.PromoCode,
-		CostCentre:  req.CostCentre,
-		ProductType: strings.ToUpper(PRODUCT_MVE),
+		LocationID:   req.LocationID,
+		Name:         req.Name,
+		Term:         req.Term,
+		PromoCode:    req.PromoCode,
+		CostCentre:   req.CostCentre,
+		VendorConfig: req.VendorConfig,
+		ProductType:  strings.ToUpper(PRODUCT_MVE),
 		Config: MVEConfig{
 			DiversityZone: req.DiversityZone,
 		},
-	}
-	switch c := req.VendorConfig.(type) {
-	case *ArubaConfig:
-		order.VendorConfig = &ArubaConfig{
-			Vendor:      c.Vendor,
-			ImageID:     c.ImageID,
-			ProductSize: c.ProductSize,
-			MVELabel:    c.MVELabel,
-			AccountName: c.AccountName,
-			AccountKey:  c.AccountKey,
-		}
-	case *CiscoConfig:
-		order.VendorConfig = &CiscoConfig{
-			Vendor:             c.Vendor,
-			ImageID:            c.ImageID,
-			ProductSize:        c.ProductSize,
-			MVELabel:           c.MVELabel,
-			AdminSSHPublicKey:  c.AdminSSHPublicKey,
-			SSHPublicKey:       c.SSHPublicKey,
-			ManageLocally:      c.ManageLocally,
-			CloudInit:          c.CloudInit,
-			FMCIPAddress:       c.FMCIPAddress,
-			FMCRegistrationKey: c.FMCRegistrationKey,
-			FMCNatID:           c.FMCNatID,
-		}
-	case *FortinetConfig:
-		order.VendorConfig = &FortinetConfig{
-			Vendor:            c.Vendor,
-			ImageID:           c.ImageID,
-			ProductSize:       c.ProductSize,
-			MVELabel:          c.MVELabel,
-			AdminSSHPublicKey: c.AdminSSHPublicKey,
-			SSHPublicKey:      c.SSHPublicKey,
-			LicenseData:       c.LicenseData,
-		}
-	case *PaloAltoConfig:
-		order.VendorConfig = &PaloAltoConfig{
-			Vendor:            c.Vendor,
-			ImageID:           c.ImageID,
-			ProductSize:       c.ProductSize,
-			MVELabel:          c.MVELabel,
-			AdminSSHPublicKey: c.AdminSSHPublicKey,
-			SSHPublicKey:      c.SSHPublicKey,
-			AdminPasswordHash: c.AdminPasswordHash,
-			LicenseData:       c.LicenseData,
-		}
-	case *VersaConfig:
-		order.VendorConfig = &VersaConfig{
-			Vendor:            c.Vendor,
-			ImageID:           c.ImageID,
-			ProductSize:       c.ProductSize,
-			MVELabel:          c.MVELabel,
-			DirectorAddress:   c.DirectorAddress,
-			ControllerAddress: c.ControllerAddress,
-			LocalAuth:         c.LocalAuth,
-			RemoteAuth:        c.RemoteAuth,
-			SerialNumber:      c.SerialNumber,
-		}
-	case *VmwareConfig:
-		order.VendorConfig = &VmwareConfig{
-			Vendor:            c.Vendor,
-			ImageID:           c.ImageID,
-			ProductSize:       c.ProductSize,
-			MVELabel:          c.MVELabel,
-			AdminSSHPublicKey: c.AdminSSHPublicKey,
-			SSHPublicKey:      c.SSHPublicKey,
-			VcoAddress:        c.VcoAddress,
-			VcoActivationCode: c.VcoActivationCode,
-		}
-	case *MerakiConfig:
-		order.VendorConfig = &MerakiConfig{
-			Vendor:      c.Vendor,
-			ImageID:     c.ImageID,
-			ProductSize: c.ProductSize,
-			MVELabel:    c.MVELabel,
-			Token:       c.Token,
-		}
 	}
 
 	if len(req.Vnics) == 0 {
