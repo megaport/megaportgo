@@ -42,16 +42,9 @@ func (suite *MVEClientTestSuite) TestBuyMVE() {
 	mveSvc := suite.client.MVEService
 	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
 	req := &BuyMVERequest{
-		Name:       "test-mve",
-		Term:       12,
-		LocationID: 1,
-		VendorConfig: PaloAltoConfig{
-			ImageID:           32,
-			ProductSize:       "SMALL",
-			Vendor:            "palo alto",
-			AdminSSHPublicKey: "test-key",
-			AdminPasswordHash: "test-hash",
-		},
+		Name:          "test-mve",
+		Term:          12,
+		LocationID:    1,
 		DiversityZone: "blue",
 	}
 	jblob := `{
@@ -132,17 +125,10 @@ func (suite *MVEClientTestSuite) TestBuyMVE() {
     ]
 }`
 	mveOrder := []MVEOrderConfig{{
-		LocationID:  req.LocationID,
-		Name:        req.Name,
-		Term:        req.Term,
-		ProductType: strings.ToUpper(PRODUCT_MVE),
-		VendorConfig: &PaloAltoConfig{
-			ImageID:           32,
-			ProductSize:       "SMALL",
-			Vendor:            "palo alto",
-			AdminSSHPublicKey: "test-key",
-			AdminPasswordHash: "test-hash",
-		},
+		LocationID:        req.LocationID,
+		Name:              req.Name,
+		Term:              req.Term,
+		ProductType:       strings.ToUpper(PRODUCT_MVE),
 		NetworkInterfaces: []MVENetworkInterface{{Description: "Data Plane", VLAN: 0}},
 		Config: MVEConfig{
 			DiversityZone: req.DiversityZone,
