@@ -155,6 +155,7 @@ func (suite *PortIntegrationTestSuite) TestLAGPort() {
 	for _, p := range portsListPostCreate {
 		if slices.Contains(mainPortIDs, p.UID) {
 			foundNewPort = true
+			suite.Equal(p.ResourceTags, testResourceTags)
 		}
 	}
 

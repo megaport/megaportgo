@@ -172,6 +172,7 @@ type MVE struct {
 	DiversityZone         string                  `json:"diversityZone"`
 	NetworkInterfaces     []*MVENetworkInterface  `json:"vnics"`
 	LocationDetails       *ProductLocationDetails `json:"locationDetail"`
+	ResourceTags          []ResourceTag           `json:"resourceTags"`
 }
 
 // MVEResources represents the resources associated with an MVE.

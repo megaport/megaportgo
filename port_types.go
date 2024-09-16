@@ -64,6 +64,8 @@ type Port struct {
 	DiversityZone         string                  `json:"diversityZone"`
 	VXCResources          PortResources           `json:"resources"`
 	LocationDetails       *ProductLocationDetails `json:"locationDetail"`
+
+	ResourceTags []ResourceTag `json:"resourceTags"`
 }
 
 // PortResources represents the resources associated with a Megaport Port.
