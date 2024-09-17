@@ -296,7 +296,7 @@ func (svc *VXCServiceOp) UpdateVXC(ctx context.Context, id string, req *UpdateVX
 		case *VXCOrderVrouterPartnerConfig:
 			update.BEndPartnerConfig = partnerConfig
 		default:
-			return nil, errors.New("a end partner config type not supported")
+			return nil, errors.New("a end partner config type not supported for VXC update")
 		}
 	}
 
@@ -306,7 +306,7 @@ func (svc *VXCServiceOp) UpdateVXC(ctx context.Context, id string, req *UpdateVX
 		case *VXCOrderVrouterPartnerConfig:
 			update.AEndPartnerConfig = partnerConfig
 		default:
-			return nil, errors.New("b end partner config type not supported")
+			return nil, errors.New("b end partner config type not supported for VXC update")
 		}
 	}
 
