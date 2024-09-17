@@ -3,6 +3,7 @@ package megaport
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -89,6 +90,9 @@ type UpdateVXCRequest struct {
 
 	AEndInnerVLAN *int
 	BEndInnerVLAN *int
+
+	AEndPartnerConfig VXCPartnerConfiguration
+	BEndPartnerConfig VXCPartnerConfiguration
 
 	WaitForUpdate bool          // Wait until the VXC updates before returning
 	WaitForTime   time.Duration // How long to wait for the VXC to update if WaitForUpdate is true (default is 5 minutes)
@@ -284,6 +288,26 @@ func (svc *VXCServiceOp) UpdateVXC(ctx context.Context, id string, req *UpdateVX
 	}
 	if req.BEndInnerVLAN != nil {
 		update.BEndInnerVLAN = req.BEndInnerVLAN
+	}
+
+	if req.AEndPartnerConfig != nil {
+		partnerConfig := req.AEndPartnerConfig
+		switch partnerConfig.(type) {
+		case *VXCOrderVrouterPartnerConfig:
+			update.BEndPartnerConfig = partnerConfig
+		default:
+			return nil, errors.New("b end partner config type not supported")
+		}
+	}
+
+	if req.BEndPartnerConfig != nil {
+		partnerConfig := req.BEndPartnerConfig
+		switch partnerConfig.(type) {
+		case *VXCOrderVrouterPartnerConfig:
+			update.AEndPartnerConfig = partnerConfig
+		default:
+			return nil, errors.New("b end partner config type not supported")
+		}
 	}
 
 	clientReq, err := svc.Client.NewRequest(ctx, http.MethodPut, url, update)

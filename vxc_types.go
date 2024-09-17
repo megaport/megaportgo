@@ -189,6 +189,9 @@ type VXCUpdate struct {
 	AEndProductUID string `json:"aEndProductUid,omitempty"`
 	BEndProductUID string `json:"bEndProductUid,omitempty"`
 	Term           *int   `json:"term,omitempty"`
+
+	AEndPartnerConfig VXCPartnerConfiguration `json:"aEndConfig,omitempty"`
+	BEndPartnerConfig VXCPartnerConfiguration `json:"bEndConfig,omitempty"`
 }
 
 // VXCOrderResponse represents the response from the VXC Order API.
