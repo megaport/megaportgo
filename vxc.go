@@ -3,7 +3,6 @@ package megaport
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -264,11 +263,13 @@ func (svc *VXCServiceOp) UpdateVXC(ctx context.Context, id string, req *UpdateVX
 	url := svc.Client.BaseURL.JoinPath(path).String()
 
 	update := &VXCUpdate{
-		RateLimit: req.RateLimit,
-		AEndVLAN:  req.AEndVLAN,
-		BEndVLAN:  req.BEndVLAN,
-		Term:      req.Term,
-		Shutdown:  req.Shutdown,
+		RateLimit:         req.RateLimit,
+		AEndVLAN:          req.AEndVLAN,
+		BEndVLAN:          req.BEndVLAN,
+		Term:              req.Term,
+		Shutdown:          req.Shutdown,
+		AEndPartnerConfig: req.AEndPartnerConfig,
+		BEndPartnerConfig: req.BEndPartnerConfig,
 	}
 
 	if req.Name != nil {
@@ -288,26 +289,6 @@ func (svc *VXCServiceOp) UpdateVXC(ctx context.Context, id string, req *UpdateVX
 	}
 	if req.BEndInnerVLAN != nil {
 		update.BEndInnerVLAN = req.BEndInnerVLAN
-	}
-
-	if req.AEndPartnerConfig != nil {
-		partnerConfig := req.AEndPartnerConfig
-		switch partnerConfig.(type) {
-		case *VXCOrderVrouterPartnerConfig:
-			update.BEndPartnerConfig = partnerConfig
-		default:
-			return nil, errors.New("a end partner config type not supported for VXC update")
-		}
-	}
-
-	if req.BEndPartnerConfig != nil {
-		partnerConfig := req.BEndPartnerConfig
-		switch partnerConfig.(type) {
-		case *VXCOrderVrouterPartnerConfig:
-			update.AEndPartnerConfig = partnerConfig
-		default:
-			return nil, errors.New("b end partner config type not supported for VXC update")
-		}
 	}
 
 	clientReq, err := svc.Client.NewRequest(ctx, http.MethodPut, url, update)
