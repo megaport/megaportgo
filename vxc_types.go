@@ -573,6 +573,14 @@ type CSPConnectionTransit struct {
 	IPv6GatewayAddress string `json:"ipv6_gateway_address"`
 }
 
+// CSPConnectionIBM represents the configuration of a CSP connection for IBM Cloud Direct Link.
+type CSPConnectionIBM struct {
+	CSPConnectionConfig
+	ConnectType  string `json:"connectType"`
+	ResourceName string `json:"resource_name"`
+	ResourceType string `json:"resource_type"`
+}
+
 // CSPConnectionOther represents the configuration of a CSP connection for any other CSP that is not presently defined.
 type CSPConnectionOther struct {
 	CSPConnectionConfig
@@ -741,6 +749,16 @@ func (c *CSPConnection) UnmarshalJSON(data []byte) error {
 					return err
 				}
 				c.CSPConnection = append(c.CSPConnection, oracle)
+			case "IBM":
+				marshaled, err := json.Marshal(cn)
+				if err != nil {
+					return err
+				}
+				ibm := CSPConnectionIBM{}
+				if err := json.Unmarshal(marshaled, &ibm); err != nil {
+					return err
+				}
+				c.CSPConnection = append(c.CSPConnection, ibm)
 			default: // Any other cases will be marshaled into a map[string]interface{}
 				marshaled, err := json.Marshal(cn)
 				if err != nil {
