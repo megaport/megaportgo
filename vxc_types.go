@@ -280,6 +280,17 @@ type VXCPartnerConfigTransit struct {
 	ConnectType             string `json:"connectType"`
 }
 
+// VXCPartnerConfigIBM represents the configuration of a VXC partner for IBM Cloud Direct Link.
+type VXCPartnerConfigIBM struct {
+	VXCPartnerConfiguration `json:"-"`
+	ConnectType             string `json:"connectType"`
+	AccountID               string `json:"account_id"`          // Customer's IBM Acount ID.  32 Hexadecimal Characters. REQUIRED
+	CustomerASN             int    `json:"customer_asn"`        // Customer's ASN. Valid ranges: 1-64495, 64999, 131072-4199999999, 4201000000-4201064511. Required unless the connection at the other end of the VXC is an MCR.
+	Name                    string `json:"name"`                // Description of this connection for identification purposes. Max 100 characters from 0-9 a-z A-Z / - _ , Defaults to "MEGAPORT".
+	CustomerIPAddress       string `json:"customer_ip_address"` // IPv4 network address including subnet mask. Default is /30 assigned from 169.254.0.0/16.
+	ProviderIPAddress       string `json:"provider_ip_address"` // IPv4 network address including subnet mask. Default is /30 assigned from 169.254.0.0/16. Must be in the same subnet as customer_ip_address.
+}
+
 // VXCOrderMVEConfig represents the configuration of a VXC endpoint for MVE.
 type VXCOrderMVEConfig struct {
 	InnerVLAN             int `json:"innerVlan,omitempty"`
