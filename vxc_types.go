@@ -576,9 +576,16 @@ type CSPConnectionTransit struct {
 // CSPConnectionIBM represents the configuration of a CSP connection for IBM Cloud Direct Link.
 type CSPConnectionIBM struct {
 	CSPConnectionConfig
-	ConnectType  string `json:"connectType"`
-	ResourceName string `json:"resource_name"`
-	ResourceType string `json:"resource_type"`
+	ConnectType       string `json:"connectType"`
+	ResourceName      string `json:"resource_name"`
+	ResourceType      string `json:"resource_type"`
+	CSPName           string `json:"csp_name"`
+	Bandwidth         int    `json:"bandwidth"`
+	AccountID         string `json:"account_id"`
+	CustomerASN       int    `json:"customer_asn"`
+	ProviderIPAddress string `json:"provider_ip_address"`
+	CustomerIPAddress string `json:"customer_ip_address"`
+	Bandwidths        []int  `json:"bandwidths"`
 }
 
 // CSPConnectionOther represents the configuration of a CSP connection for any other CSP that is not presently defined.
