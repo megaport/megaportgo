@@ -61,4 +61,8 @@ var ErrNoAvailableVxcPorts = errors.New("there are no available ports for you to
 // ErrCostCentreTooLong is returned when a cost centre is longer than 255 characters
 var ErrCostCentreTooLong = errors.New("cost centre must be less than 255 characters")
 
+// ErrInvalidVLAN is returned when a VLAN is invalid
 var ErrInvalidVLAN = errors.New("invalid VLAN, must be between 0 and 4094")
+
+// ErrManagedAccountNotFound is returned when a managed account can't be found
+var ErrManagedAccountNotFound = errors.New("managed account not found")
