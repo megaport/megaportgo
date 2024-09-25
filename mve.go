@@ -168,8 +168,9 @@ func createMVEOrder(req *BuyMVERequest) []*MVEOrderConfig {
 		Term:         req.Term,
 		PromoCode:    req.PromoCode,
 		CostCentre:   req.CostCentre,
-		ResourceTags: req.ResourceTags,
 		VendorConfig: req.VendorConfig,
+
+		ResourceTags: req.ResourceTags,
 		ProductType:  strings.ToUpper(PRODUCT_MVE),
 		Config: MVEConfig{
 			DiversityZone: req.DiversityZone,
