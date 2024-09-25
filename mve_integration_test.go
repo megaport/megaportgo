@@ -75,6 +75,7 @@ func (suite *MVEIntegrationTestSuite) TestArubaMVE() {
 		WaitForProvision: true,
 		WaitForTime:      5 * time.Minute,
 		DiversityZone:    "red",
+		ResourceTags:     testResourceTags,
 	})
 	if err != nil {
 		suite.FailNowf("error buying mve", "error buying mve %v", err)
@@ -86,6 +87,27 @@ func (suite *MVEIntegrationTestSuite) TestArubaMVE() {
 
 	logger.DebugContext(ctx, "MVE Purchased", slog.String("mve_id", mveUid))
 
+	tags, err := mveSvc.ListMVEResourceTags(ctx, mveUid)
+	if err != nil {
+		suite.FailNowf("could not list mve resource tags", "could not list mve resource tags %v", err)
+	}
+	suite.EqualValues(testResourceTags, tags)
+
+	err = mveSvc.UpdateMVEResourceTags(ctx, mveUid, testUpdatedResourceTags)
+	if err != nil {
+		suite.FailNowf("could not update mve resource tags", "could not update mve resource tags %v", err)
+	}
+	tags, err = mveSvc.ListMVEResourceTags(ctx, mveUid)
+	if err != nil {
+		suite.FailNowf("could not list mve resource tags", "could not list mve resource tags %v", err)
+	}
+	suite.EqualValues(testUpdatedResourceTags, tags)
+	mveDetails, err := mveSvc.GetMVE(ctx, mveUid)
+	if err != nil {
+		suite.FailNowf("could not get mve", "could not get mve %v", err)
+	}
+	suite.Equal(mveDetails.ResourceTags, testResourceTags)
+
 	logger.InfoContext(ctx, "Deleting MVE now", slog.String("mve_id", mveUid))
 
 	deleteRes, err := mveSvc.DeleteMVE(ctx, &DeleteMVERequest{
@@ -96,7 +118,7 @@ func (suite *MVEIntegrationTestSuite) TestArubaMVE() {
 	}
 	suite.True(deleteRes.IsDeleted)
 
-	mveDetails, err := mveSvc.GetMVE(ctx, mveUid)
+	mveDetails, err = mveSvc.GetMVE(ctx, mveUid)
 	if err != nil {
 		suite.FailNowf("could not get mve", "could not get mve %v", err)
 	}

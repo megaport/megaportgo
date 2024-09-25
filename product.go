@@ -2,6 +2,7 @@ package megaport
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -22,6 +23,10 @@ type ProductService interface {
 	ManageProductLock(ctx context.Context, req *ManageProductLockRequest) (*ManageProductLockResponse, error)
 	// ValidateProductOrder is responsible for validating an order for a product in the Megaport Products API.
 	ValidateProductOrder(ctx context.Context, requestBody interface{}) error
+	// ListProductResourceTags is responsible for retrieving the resource tags for a product in the Megaport Products API.
+	ListProductResourceTags(ctx context.Context, productID string) ([]map[string]string, error)
+	// UpdateProductResourceTags is responsible for updating the resource tags for a product in the Megaport Products API.
+	UpdateProductResourceTags(ctx context.Context, productUID string, tagsReq *UpdateProductResourceTagsRequest) error
 }
 
 // ProductServiceOp handles communication with Product methods of the Megaport API.
@@ -82,6 +87,21 @@ type ParsedProductsResponse struct {
 	Message string        `json:"message"`
 	Terms   string        `json:"terms"`
 	Data    []interface{} `json:"data"`
+}
+
+// ResourceTagsResponse represents a response from the Megaport Products API after retrieving the resource tags for a product.
+type ResourceTagsResponse struct {
+	Message string                    `json:"message"`
+	Terms   string                    `json:"terms"`
+	Data    *ResourceTagsResponseData `json:"data"`
+}
+
+type ResourceTagsResponseData struct {
+	ResourceTags []map[string]string `json:"resourceTags"`
+}
+
+type UpdateProductResourceTagsRequest struct {
+	ResourceTags []map[string]string `json:"resourceTags"`
 }
 
 // ExecuteOrder is responsible for executing an order for a product in the Megaport Products API.
@@ -213,6 +233,52 @@ func (svc *ProductServiceOp) ValidateProductOrder(ctx context.Context, requestBo
 	_, resErr := svc.Client.Do(ctx, req, nil)
 	if resErr != nil {
 		return resErr
+	}
+
+	return nil
+}
+
+// ListProductResourceTags is responsible for retrieving the resource tags for a product in the Megaport Products API.
+func (svc *ProductServiceOp) ListProductResourceTags(ctx context.Context, productUID string) ([]map[string]string, error) {
+	path := fmt.Sprintf("/v2/product/%s/tags", productUID)
+	url := svc.Client.BaseURL.JoinPath(path).String()
+	req, err := svc.Client.NewRequest(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := svc.Client.Do(ctx, req, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	defer response.Body.Close()
+	tagsResponse := &ResourceTagsResponse{}
+	body, fileErr := io.ReadAll(response.Body)
+	if fileErr != nil {
+		return nil, fileErr
+	}
+
+	err = json.Unmarshal(body, tagsResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	return tagsResponse.Data.ResourceTags, nil
+}
+
+// UpdateProductResourceTags is responsible for updating the resource tags for a product in the Megaport Products API.
+func (svc *ProductServiceOp) UpdateProductResourceTags(ctx context.Context, productUID string, tagsReq *UpdateProductResourceTagsRequest) error {
+	path := fmt.Sprintf("/v2/product/%s/tags", productUID)
+	url := svc.Client.BaseURL.JoinPath(path).String()
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodPut, url, tagsReq)
+	if err != nil {
+		return err
+	}
+
+	_, err = svc.Client.Do(ctx, clientReq, nil)
+	if err != nil {
+		return err
 	}
 
 	return nil

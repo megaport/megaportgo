@@ -2,19 +2,20 @@ package megaport
 
 // PortOrder represents a Megaport Port Order from the Megaport Products API.
 type PortOrder struct {
-	Name                  string          `json:"productName"`
-	Term                  int             `json:"term"`
-	ProductType           string          `json:"productType"`
-	PortSpeed             int             `json:"portSpeed"`
-	LocationID            int             `json:"locationId"`
-	CreateDate            int64           `json:"createDate"`
-	Virtual               bool            `json:"virtual"`
-	Market                string          `json:"market"`
-	CostCentre            string          `json:"costCentre,omitempty"`
-	LagPortCount          int             `json:"lagPortCount,omitempty"`
-	MarketplaceVisibility bool            `json:"marketplaceVisibility"`
-	Config                PortOrderConfig `json:"config"`
-	PromoCode             string          `json:"promoCode,omitempty"`
+	Name                  string              `json:"productName"`
+	Term                  int                 `json:"term"`
+	ProductType           string              `json:"productType"`
+	PortSpeed             int                 `json:"portSpeed"`
+	LocationID            int                 `json:"locationId"`
+	CreateDate            int64               `json:"createDate"`
+	Virtual               bool                `json:"virtual"`
+	Market                string              `json:"market"`
+	CostCentre            string              `json:"costCentre,omitempty"`
+	LagPortCount          int                 `json:"lagPortCount,omitempty"`
+	MarketplaceVisibility bool                `json:"marketplaceVisibility"`
+	Config                PortOrderConfig     `json:"config"`
+	PromoCode             string              `json:"promoCode,omitempty"`
+	ResourceTags          []map[string]string `json:"resourceTags,omitempty"`
 }
 
 type PortOrderConfig struct {
@@ -63,6 +64,7 @@ type Port struct {
 	DiversityZone         string                  `json:"diversityZone"`
 	VXCResources          PortResources           `json:"resources"`
 	LocationDetails       *ProductLocationDetails `json:"locationDetail"`
+	ResourceTags          map[string]string       `json:"resourceTags"`
 }
 
 // PortResources represents the resources associated with a Megaport Port.

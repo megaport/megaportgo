@@ -27,6 +27,10 @@ type MVEService interface {
 	ListMVEImages(ctx context.Context) ([]*MVEImage, error)
 	// ListAvailableMVESizes returns a list of currently available MVE sizes and details for each size. The instance size determines the MVE capabilities, such as how many concurrent connections it can support. The compute sizes are 2/8, 4/16, 8/32, and 12/48, where the first number is the CPU and the second number is the GB of available RAM. Each size has 4 GB of RAM for every vCPU allocated.
 	ListAvailableMVESizes(ctx context.Context) ([]*MVESize, error)
+	// ListMVEResourceTags returns a list of resource tags for an MVE in the Megaport MVE API.
+	ListMVEResourceTags(ctx context.Context, mveID string) ([]map[string]string, error)
+	// UpdateMVEResourceTags updates the resource tags for an MVE in the Megaport MVE API.
+	UpdateMVEResourceTags(ctx context.Context, mveID string, tags []map[string]string) error
 }
 
 // NewMVEService creates a new instance of the MVE Service.
@@ -51,6 +55,8 @@ type BuyMVERequest struct {
 	DiversityZone string
 	PromoCode     string
 	CostCentre    string
+
+	ResourceTags []map[string]string `json:"resourceTags,omitempty"`
 
 	WaitForProvision bool          // Wait until the MVE provisions before returning
 	WaitForTime      time.Duration // How long to wait for the MVE to provision if WaitForProvision is true (default is 5 minutes)
@@ -165,6 +171,7 @@ func createMVEOrder(req *BuyMVERequest) []*MVEOrderConfig {
 		PromoCode:    req.PromoCode,
 		CostCentre:   req.CostCentre,
 		VendorConfig: req.VendorConfig,
+		ResourceTags: req.ResourceTags,
 		ProductType:  strings.ToUpper(PRODUCT_MVE),
 		Config: MVEConfig{
 			DiversityZone: req.DiversityZone,
@@ -328,4 +335,19 @@ func validateBuyMVERequest(req *BuyMVERequest) error {
 		return ErrInvalidTerm
 	}
 	return nil
+}
+
+func (svc *MVEServiceOp) ListMVEResourceTags(ctx context.Context, mveID string) ([]map[string]string, error) {
+	tags, err := svc.Client.ProductService.ListProductResourceTags(ctx, mveID)
+	if err != nil {
+		return nil, err
+	}
+	return tags, nil
+}
+
+// UpdateMVEResourceTags updates the resource tags for an MVE in the Megaport MVE API.
+func (svc *MVEServiceOp) UpdateMVEResourceTags(ctx context.Context, mveID string, tags []map[string]string) error {
+	return svc.Client.ProductService.UpdateProductResourceTags(ctx, mveID, &UpdateProductResourceTagsRequest{
+		ResourceTags: tags,
+	})
 }

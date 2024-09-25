@@ -84,6 +84,21 @@ func (suite *PortIntegrationTestSuite) TestSinglePort() {
 	for _, p := range portsListPostCreate {
 		if p.UID == portID {
 			foundNewPort = true
+			tags, err := suite.client.PortService.ListPortResourceTags(ctx, p.UID)
+			if err != nil {
+				suite.FailNowf("could not list port resource tags", "could not list port resource tags %v", err)
+			}
+			suite.EqualValues(testResourceTags, tags)
+			err = suite.client.PortService.UpdatePortResourceTags(ctx, p.UID, testUpdatedResourceTags)
+			if err != nil {
+				suite.FailNowf("could not update port resource tags", "could not update port resource tags %v", err)
+			}
+			tags, err = suite.client.PortService.ListPortResourceTags(ctx, p.UID)
+			if err != nil {
+				suite.FailNowf("could not list port resource tags", "could not list port resource tags %v", err)
+			}
+			suite.EqualValues(testUpdatedResourceTags, tags)
+			suite.Equal(p.ResourceTags, testResourceTags)
 		}
 	}
 

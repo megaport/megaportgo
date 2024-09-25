@@ -11,6 +11,8 @@ type MVEOrderConfig struct {
 	NetworkInterfaces []MVENetworkInterface `json:"vnics"`
 	VendorConfig      VendorConfig          `json:"vendorConfig"`
 	Config            MVEConfig             `json:"config"`
+
+	ResourceTags []map[string]string `json:"resourceTags,omitempty"`
 }
 
 // Nested configuration Fields for the MVE Order
@@ -202,6 +204,8 @@ type MVE struct {
 	DiversityZone         string                  `json:"diversityZone"`
 	NetworkInterfaces     []*MVENetworkInterface  `json:"vnics"`
 	LocationDetails       *ProductLocationDetails `json:"locationDetail"`
+
+	ResourceTags []map[string]string `json:"resourceTags,omitempty"`
 }
 
 // MVEResources represents the resources associated with an MVE.
