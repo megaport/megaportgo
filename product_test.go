@@ -280,3 +280,16 @@ func (suite *ProductClientTestSuite) TestManageProductLuck() {
 	suite.NoError(err)
 	suite.Equal(wantRes, gotRes)
 }
+
+func (suite *ProductClientTestSuite) TestListProductResourceTags() {
+	ctx := context.Background()
+	productSvc := suite.client.ProductService
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/%s/tags", productUid), func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, resourceTagJSONBlob)
+	})
+	res, err := productSvc.ListProductResourceTags(ctx, productUid)
+	suite.NoError(err)
+	suite.EqualValues(testResourceTags, res)
+}
