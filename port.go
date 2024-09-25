@@ -475,9 +475,8 @@ func (svc *PortServiceOp) CheckPortVLANAvailability(ctx context.Context, portId 
 		return false, unmarshalErr
 	}
 
-	var isAvailable bool
 	if slices.Contains(vlanResponse.Data, vlan) {
-		isAvailable = true
+		return true, nil
 	}
-	return isAvailable, nil
+	return false, nil
 }
