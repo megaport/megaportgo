@@ -437,11 +437,7 @@ func (svc *PortServiceOp) UnlockPort(ctx context.Context, portId string) (*Unloc
 }
 
 func (svc *PortServiceOp) CheckPortVLANAvailability(ctx context.Context, portId string, vlan int) (bool, error) {
-<<<<<<< HEAD
-	if vlan < 0 || vlan > 4094 {
-=======
 	if vlan < 0 || vlan > 4095 {
->>>>>>> 2320acb (feat: endpoint to check vlan availability for port)
 		return false, ErrInvalidVLAN
 	}
 
