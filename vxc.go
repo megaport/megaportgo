@@ -270,20 +270,24 @@ func (svc *VXCServiceOp) UpdateVXC(ctx context.Context, id string, req *UpdateVX
 		Shutdown:  req.Shutdown,
 	}
 
-	// Only allow AENdPartnerConfig or VROUTER Partner Config for AEndPartnerConfig in VXC Updates
-	switch req.AEndPartnerConfig.(type) {
-	case VXCPartnerConfiguration, VXCOrderVrouterPartnerConfig:
-		update.AEndPartnerConfig = req.AEndPartnerConfig
-	default:
-		return nil, ErrInvalidVXCAEndPartnerConfig
+	if req.AEndPartnerConfig != nil {
+		// Only allow AENdPartnerConfig or VROUTER Partner Config for AEndPartnerConfig in VXC Updates
+		switch req.AEndPartnerConfig.(type) {
+		case VXCPartnerConfiguration, VXCOrderVrouterPartnerConfig:
+			update.AEndPartnerConfig = req.AEndPartnerConfig
+		default:
+			return nil, ErrInvalidVXCAEndPartnerConfig
+		}
 	}
 
-	// Only allow Vrouter Partner Config for BEndPartnerConfig in VXC Updates
-	switch req.BEndPartnerConfig.(type) {
-	case VXCOrderVrouterPartnerConfig:
-		update.BEndPartnerConfig = req.BEndPartnerConfig
-	default:
-		return nil, ErrInvalidVXCBEndPartnerConfig
+	if req.BEndPartnerConfig != nil {
+		// Only allow Vrouter Partner Config for BEndPartnerConfig in VXC Updates
+		switch req.BEndPartnerConfig.(type) {
+		case VXCOrderVrouterPartnerConfig:
+			update.BEndPartnerConfig = req.BEndPartnerConfig
+		default:
+			return nil, ErrInvalidVXCBEndPartnerConfig
+		}
 	}
 
 	if req.Name != nil {
