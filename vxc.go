@@ -263,13 +263,27 @@ func (svc *VXCServiceOp) UpdateVXC(ctx context.Context, id string, req *UpdateVX
 	url := svc.Client.BaseURL.JoinPath(path).String()
 
 	update := &VXCUpdate{
-		RateLimit:         req.RateLimit,
-		AEndVLAN:          req.AEndVLAN,
-		BEndVLAN:          req.BEndVLAN,
-		Term:              req.Term,
-		Shutdown:          req.Shutdown,
-		AEndPartnerConfig: req.AEndPartnerConfig,
-		BEndPartnerConfig: req.BEndPartnerConfig,
+		RateLimit: req.RateLimit,
+		AEndVLAN:  req.AEndVLAN,
+		BEndVLAN:  req.BEndVLAN,
+		Term:      req.Term,
+		Shutdown:  req.Shutdown,
+	}
+
+	// Only allow AENdPartnerConfig or VROUTER Partner Config for AEndPartnerConfig in VXC Updates
+	switch req.AEndPartnerConfig.(type) {
+	case VXCPartnerConfiguration, VXCOrderVrouterPartnerConfig:
+		update.AEndPartnerConfig = req.AEndPartnerConfig
+	default:
+		return nil, ErrInvalidVXCAEndPartnerConfig
+	}
+
+	// Only allow Vrouter Partner Config for BEndPartnerConfig in VXC Updates
+	switch req.BEndPartnerConfig.(type) {
+	case VXCOrderVrouterPartnerConfig:
+		update.BEndPartnerConfig = req.BEndPartnerConfig
+	default:
+		return nil, ErrInvalidVXCBEndPartnerConfig
 	}
 
 	if req.Name != nil {
