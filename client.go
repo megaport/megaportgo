@@ -310,6 +310,16 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*htt
 	return resp, nil
 }
 
+func (c *Client) LogJSONUnmarshalError(ctx context.Context, responseBody string, responseType string, respSchema interface{}, err error) {
+	expectedJSON, _ := json.Marshal(respSchema)
+	c.Logger.DebugContext(ctx, "error unmarshaling response body",
+		slog.String("response_body", responseBody),
+		slog.String("response_type", responseType),
+		slog.String("expected_json_schema", fmt.Sprintf("%+v", expectedJSON)),
+		slog.String("error", err.Error()),
+	)
+}
+
 type AuthInfo struct {
 	Expiration  time.Time
 	AccessToken string

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"log/slog"
 )
 
 type ManagedAccountService interface {
@@ -74,8 +73,8 @@ func (svc *ManagedAccountServiceOp) ListManagedAccounts(ctx context.Context) ([]
 	var apiResponse *ManagedAccountListAPIResponse
 
 	if err := json.Unmarshal(body, &apiResponse); err != nil {
-		expectedJSON, _ := json.Marshal(apiResponse)
-		svc.Client.Logger.DebugContext(ctx, "error unmarshaling response body", slog.String("response_body", string(body)), slog.String("response_type", "list_managed_accounts_response"), slog.String("expected_json_schema", string(expectedJSON)), slog.String("error", err.Error()))
+		managedAccountsAPIRes := ManagedAccountListAPIResponse{}
+		svc.Client.LogJSONUnmarshalError(ctx, string(body), "list_managed_accounts_response", managedAccountsAPIRes, err)
 		return nil, err
 	}
 
@@ -99,8 +98,8 @@ func (svc *ManagedAccountServiceOp) CreateManagedAccount(ctx context.Context, re
 	}
 	var createManagedAccountResponse *ManagedAccountAPIResponse
 	if err := json.Unmarshal(body, &createManagedAccountResponse); err != nil {
-		expectedJSON, _ := json.Marshal(createManagedAccountResponse)
-		svc.Client.Logger.DebugContext(ctx, "error unmarshaling response body", slog.String("response_body", string(body)), slog.String("response_type", "create_managed_account_response"), slog.String("expected_json_schema", string(expectedJSON)), slog.String("error", err.Error()))
+		managedAccountResponse := ManagedAccountAPIResponse{}
+		svc.Client.LogJSONUnmarshalError(ctx, string(body), "create_managed_account_response", managedAccountResponse, err)
 		return nil, err
 	}
 	return createManagedAccountResponse.Data, nil
@@ -123,8 +122,8 @@ func (svc *ManagedAccountServiceOp) UpdateManagedAccount(ctx context.Context, co
 	}
 	var updateManagedAccountResponse *ManagedAccountAPIResponse
 	if err := json.Unmarshal(body, &updateManagedAccountResponse); err != nil {
-		expectedJSON, _ := json.Marshal(updateManagedAccountResponse)
-		svc.Client.Logger.DebugContext(ctx, "error unmarshaling response body", slog.String("response_body", string(body)), slog.String("response_type", "update_managed_account_response"), slog.String("expected_json_schema", string(expectedJSON)), slog.String("error", err.Error()))
+		updateManagedAccountResponse := ManagedAccountAPIResponse{}
+		svc.Client.LogJSONUnmarshalError(ctx, string(body), "update_managed_account_response", updateManagedAccountResponse, err)
 		return nil, err
 	}
 	return updateManagedAccountResponse.Data, nil

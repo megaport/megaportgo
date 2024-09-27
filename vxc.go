@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"slices"
 	"strings"
@@ -140,8 +139,8 @@ func (svc *VXCServiceOp) BuyVXC(ctx context.Context, req *BuyVXCRequest) (*BuyVX
 
 	orderInfo := VXCOrderResponse{}
 	if err := json.Unmarshal(*responseBody, &orderInfo); err != nil {
-		expectedJSON, _ := json.Marshal(orderInfo)
-		svc.Client.Logger.DebugContext(ctx, "error unmarshaling response body", slog.String("response_body", string(*responseBody)), slog.String("response_type", "vxc_order_response"), slog.String("expected_json_schema", string(expectedJSON)), slog.String("error", err.Error()))
+		orderRes := VXCOrderResponse{}
+		svc.Client.LogJSONUnmarshalError(ctx, string(*responseBody), "order_vxc_response", orderRes, err)
 		return nil, err
 	}
 	serviceUID := orderInfo.Data[0].TechnicalServiceUID
@@ -209,8 +208,8 @@ func (svc *VXCServiceOp) GetVXC(ctx context.Context, id string) (*VXC, error) {
 
 	vxcDetails := VXCResponse{}
 	if err = json.Unmarshal(body, &vxcDetails); err != nil {
-		expectedJSON, _ := json.Marshal(vxcDetails)
-		svc.Client.Logger.DebugContext(ctx, "error unmarshaling response body", slog.String("response_body", string(body)), slog.String("response_type", "get_vxc_response"), slog.String("expected_json_schema", string(expectedJSON)), slog.String("error", err.Error()))
+		vxcResponse := &VXCResponse{}
+		svc.Client.LogJSONUnmarshalError(ctx, string(body), "get_vxc_response", vxcResponse, err)
 		return nil, err
 	}
 
@@ -332,8 +331,8 @@ func (svc *VXCServiceOp) UpdateVXC(ctx context.Context, id string, req *UpdateVX
 
 	vxcDetails := VXCResponse{}
 	if err = json.Unmarshal(body, &vxcDetails); err != nil {
-		expectedJSON, _ := json.Marshal(vxcDetails)
-		svc.Client.Logger.DebugContext(ctx, "error unmarshaling response body", slog.String("response_body", string(body)), slog.String("response_type", "get_vxc_response"), slog.String("expected_json_schema", string(expectedJSON)), slog.String("error", err.Error()))
+		getVXCRes := VXCResponse{}
+		svc.Client.LogJSONUnmarshalError(ctx, string(body), "update_vxc_response", getVXCRes, err)
 		return nil, err
 	}
 
@@ -398,8 +397,8 @@ func (svc *VXCServiceOp) LookupPartnerPorts(ctx context.Context, req *LookupPart
 	lookupResponse := PartnerLookupResponse{}
 	parseErr := json.Unmarshal(body, &lookupResponse)
 	if parseErr != nil {
-		expectedJSON, _ := json.Marshal(lookupResponse)
-		svc.Client.Logger.DebugContext(ctx, "error unmarshaling response body", slog.String("response_body", string(body)), slog.String("response_type", "partner_lookup"), slog.String("expected_json_schema", string(expectedJSON)), slog.String("error", parseErr.Error()))
+		partnerLookupRes := PartnerLookupResponse{}
+		svc.Client.LogJSONUnmarshalError(ctx, string(body), "partner_lookup_response", partnerLookupRes, parseErr)
 		return nil, parseErr
 	}
 
@@ -443,8 +442,8 @@ func (svc *VXCServiceOp) ListPartnerPorts(ctx context.Context, req *ListPartnerP
 	lookupResponse := PartnerLookupResponse{}
 	parseErr := json.Unmarshal(body, &lookupResponse)
 	if parseErr != nil {
-		expectedJSON, _ := json.Marshal(lookupResponse)
-		svc.Client.Logger.DebugContext(ctx, "error unmarshaling response body", slog.String("response_body", string(body)), slog.String("response_type", "partner_lookup"), slog.String("expected_json_schema", string(expectedJSON)), slog.String("error", parseErr.Error()))
+		partnerLookupResponxse := PartnerLookupResponse{}
+		svc.Client.LogJSONUnmarshalError(ctx, string(body), "partner_lookup_response", partnerLookupResponxse, parseErr)
 		return nil, parseErr
 	}
 

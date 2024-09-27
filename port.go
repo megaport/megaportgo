@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"net/url"
 	"slices"
@@ -147,8 +146,8 @@ func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*Bu
 	orderInfo := PortOrderResponse{}
 	unmarshalErr := json.Unmarshal(*responseBody, &orderInfo)
 	if unmarshalErr != nil {
-		expectedJSON, _ := json.Marshal(buyOrder)
-		svc.Client.Logger.DebugContext(ctx, "error unmarshaling response body", slog.String("response_body", string(*responseBody)), slog.String("response_type", "port_order_response"), slog.String("expected_json_schema", string(expectedJSON)), slog.String("error", unmarshalErr.Error()))
+		portOrderResp := PortOrderResponse{}
+		svc.Client.LogJSONUnmarshalError(ctx, string(*responseBody), "buy_port_response", portOrderResp, unmarshalErr)
 		return nil, unmarshalErr
 	}
 
@@ -261,8 +260,8 @@ func (svc *PortServiceOp) ListPorts(ctx context.Context) ([]*Port, error) {
 	unmarshalErr := json.Unmarshal(body, &parsed)
 
 	if unmarshalErr != nil {
-		expectedJSON, _ := json.Marshal(parsed)
-		svc.Client.Logger.DebugContext(ctx, "error unmarshaling response body", slog.String("response_body", string(body)), slog.String("response_type", "list_products"), slog.String("expected_json_schema", string(expectedJSON)), slog.String("error", unmarshalErr.Error()))
+		listProductsAPIRes := ParsedProductsResponse{}
+		svc.Client.LogJSONUnmarshalError(ctx, string(body), "list_products_response", listProductsAPIRes, unmarshalErr)
 		return nil, unmarshalErr
 	}
 
@@ -317,8 +316,8 @@ func (svc *PortServiceOp) GetPort(ctx context.Context, portId string) (*Port, er
 	portDetails := PortResponse{}
 	unmarshalErr := json.Unmarshal(body, &portDetails)
 	if unmarshalErr != nil {
-		expectedJSON, _ := json.Marshal(portDetails)
-		svc.Client.Logger.DebugContext(ctx, "error unmarshaling response body", slog.String("response_body", string(body)), slog.String("response_type", "get_port_response"), slog.String("expected_json_schema", string(expectedJSON)), slog.String("error", unmarshalErr.Error()))
+		portDetailsRes := PortResponse{}
+		svc.Client.LogJSONUnmarshalError(ctx, string(body), "get_port_response", portDetailsRes, unmarshalErr)
 		return nil, unmarshalErr
 	}
 	return &portDetails.Data, nil

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"log/slog"
 	"net/http"
 
 	"github.com/lithammer/fuzzysearch/fuzzy"
@@ -154,8 +153,8 @@ func (svc *LocationServiceOp) ListLocations(ctx context.Context) ([]*Location, e
 
 	unmarshalErr := json.Unmarshal(body, locationResponse)
 	if unmarshalErr != nil {
-		expectedJSON, _ := json.Marshal(locationResponse)
-		svc.Client.Logger.DebugContext(ctx, "error unmarshaling response body", slog.String("response_body", string(body)), slog.String("response_type", "list_locations_response"), slog.String("expected_json_schema", string(expectedJSON)), slog.String("error", unmarshalErr.Error()))
+		locationRes := LocationResponse{}
+		svc.Client.LogJSONUnmarshalError(ctx, string(body), "list_locations_response", locationRes, unmarshalErr)
 		return nil, unmarshalErr
 	}
 
@@ -235,8 +234,8 @@ func (svc *LocationServiceOp) ListCountries(ctx context.Context) ([]*Country, er
 	unmarshalErr := json.Unmarshal(body, &countryResponse)
 
 	if unmarshalErr != nil {
-		expectedJSON, _ := json.Marshal(countryResponse)
-		svc.Client.Logger.DebugContext(ctx, "error unmarshaling response body", slog.String("response_body", string(body)), slog.String("response_type", "list_countries_response"), slog.String("expected_json_schema", string(expectedJSON)), slog.String("error", unmarshalErr.Error()))
+		countryResp := CountryResponse{}
+		svc.Client.LogJSONUnmarshalError(ctx, string(body), "list_countries_response", countryResp, unmarshalErr)
 		return nil, unmarshalErr
 	}
 

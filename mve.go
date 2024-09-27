@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"slices"
 	"strings"
@@ -105,8 +104,8 @@ func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMV
 	orderInfo := MVEOrderResponse{}
 
 	if err := json.Unmarshal(*resp, &orderInfo); err != nil {
-		expectedJSON, _ := json.Marshal(orderInfo)
-		svc.Client.Logger.DebugContext(ctx, "error unmarshaling response body", slog.String("response_body", string(*resp)), slog.String("response_type", "order_mve_response"), slog.String("expected_json_schema", string(expectedJSON)), slog.String("error", err.Error()))
+		mveResp := MVEOrderResponse{}
+		svc.Client.LogJSONUnmarshalError(ctx, string(*resp), "buy_mve_response", mveResp, err)
 		return nil, err
 	}
 
@@ -201,8 +200,8 @@ func (svc *MVEServiceOp) GetMVE(ctx context.Context, mveId string) (*MVE, error)
 	}
 	mveResp := MVEResponse{}
 	if err := json.Unmarshal(body, &mveResp); err != nil {
-		expectedJSON, _ := json.Marshal(mveResp)
-		svc.Client.Logger.DebugContext(ctx, "error unmarshaling response body", slog.String("response_body", string(body)), slog.String("response_type", "get_mve_response"), slog.String("expected_json_schema", string(expectedJSON)), slog.String("error", err.Error()))
+		getMVERes := MVEResponse{}
+		svc.Client.LogJSONUnmarshalError(ctx, string(body), "get_mve_response", getMVERes, err)
 		return nil, err
 	}
 
@@ -295,8 +294,8 @@ func (svc *MVEServiceOp) ListMVEImages(ctx context.Context) ([]*MVEImage, error)
 	}
 	imageResp := MVEImageAPIResponse{}
 	if err := json.Unmarshal(body, &imageResp); err != nil {
-		expectedJSON, _ := json.Marshal(imageResp)
-		svc.Client.Logger.DebugContext(ctx, "error unmarshaling response body", slog.String("response_body", string(body)), slog.String("response_type", "list_mve_images_response"), slog.String("expected_json_schema", string(expectedJSON)), slog.String("error", err.Error()))
+		listImageRes := MVEImageAPIResponse{}
+		svc.Client.LogJSONUnmarshalError(ctx, string(body), "list_mve_images_response", listImageRes, err)
 		return nil, err
 	}
 	return imageResp.Data.Images, nil
@@ -320,8 +319,8 @@ func (svc *MVEServiceOp) ListAvailableMVESizes(ctx context.Context) ([]*MVESize,
 	}
 	sizeResp := MVESizeAPIResponse{}
 	if err := json.Unmarshal(body, &sizeResp); err != nil {
-		expectedJSON, _ := json.Marshal(sizeResp)
-		svc.Client.Logger.DebugContext(ctx, "error unmarshaling response body", slog.String("response_body", string(body)), slog.String("response_type", "list_mve_sizes_response"), slog.String("expected_json_schema", string(expectedJSON)), slog.String("error", err.Error()))
+		listSizesResp := MVESizeAPIResponse{}
+		svc.Client.LogJSONUnmarshalError(ctx, string(body), "list_mve_sizes_response", listSizesResp, err)
 		return nil, err
 	}
 	return sizeResp.Data, nil
