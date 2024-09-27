@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 
 	"github.com/lithammer/fuzzysearch/fuzzy"
@@ -58,6 +59,8 @@ func (svc *PartnerServiceOp) ListPartnerMegaports(ctx context.Context) ([]*Partn
 	partnerMegaportResponse := PartnerMegaportResponse{}
 	unmarshalErr := json.Unmarshal(body, &partnerMegaportResponse)
 	if unmarshalErr != nil {
+		expectedJSON, _ := json.Marshal(partnerMegaportResponse)
+		svc.Client.Logger.DebugContext(ctx, "error unmarshaling response body", slog.String("response_body", string(body)), slog.String("response_type", "list_partner_ports_response"), slog.String("expected_json_schema", string(expectedJSON)), slog.String("error", unmarshalErr.Error()))
 		return nil, unmarshalErr
 	}
 

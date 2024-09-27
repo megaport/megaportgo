@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"slices"
 	"strconv"
 	"time"
@@ -145,6 +146,8 @@ func (svc *MCRServiceOp) BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMC
 	unmarshalErr := json.Unmarshal(*body, &orderInfo)
 
 	if unmarshalErr != nil {
+		expectedJSON, _ := json.Marshal(orderInfo)
+		svc.Client.Logger.DebugContext(ctx, "error unmarshaling response body", slog.String("response_body", string(*body)), slog.String("response_type", "mcr_order_response"), slog.String("expected_json_schema", string(expectedJSON)), slog.String("error", unmarshalErr.Error()))
 		return nil, unmarshalErr
 	}
 
@@ -255,6 +258,8 @@ func (svc *MCRServiceOp) GetMCR(ctx context.Context, mcrId string) (*MCR, error)
 	unmarshalErr := json.Unmarshal(body, mcrRes)
 
 	if unmarshalErr != nil {
+		expectedJSON, _ := json.Marshal(mcrRes)
+		svc.Client.Logger.DebugContext(ctx, "error unmarshaling response body", slog.String("response_body", string(body)), slog.String("response_type", "get_mcr_response"), slog.String("expected_json_schema", string(expectedJSON)), slog.String("error", unmarshalErr.Error()))
 		return nil, unmarshalErr
 	}
 
@@ -286,6 +291,8 @@ func (svc *MCRServiceOp) CreatePrefixFilterList(ctx context.Context, req *Create
 	createRes := &APIMCRPrefixFilterListResponse{}
 	unmarshalErr := json.Unmarshal(body, createRes)
 	if unmarshalErr != nil {
+		expectedJSON, _ := json.Marshal(createRes)
+		svc.Client.Logger.DebugContext(ctx, "error unmarshaling response body", slog.String("response_body", string(body)), slog.String("response_type", "create_mcr_prefix_filter_list_response"), slog.String("expected_json_schema", string(expectedJSON)), slog.String("error", unmarshalErr.Error()))
 		return nil, unmarshalErr
 	}
 
@@ -328,6 +335,8 @@ func (svc *MCRServiceOp) ListMCRPrefixFilterLists(ctx context.Context, mcrId str
 	unmarshalErr := json.Unmarshal(body, prefixFilterList)
 
 	if unmarshalErr != nil {
+		expectedJSON, _ := json.Marshal(prefixFilterList)
+		svc.Client.Logger.DebugContext(ctx, "error unmarshaling response body", slog.String("response_body", string(body)), slog.String("response_type", "list_mcr_prefix_filter_list_response"), slog.String("expected_json_schema", string(expectedJSON)), slog.String("error", unmarshalErr.Error()))
 		return nil, unmarshalErr
 	}
 
@@ -358,6 +367,8 @@ func (svc *MCRServiceOp) GetMCRPrefixFilterList(ctx context.Context, mcrID strin
 	apiPrefixFilterList := &APIMCRPrefixFilterListResponse{}
 	unmarshalErr := json.Unmarshal(body, apiPrefixFilterList)
 	if unmarshalErr != nil {
+		expectedJSON, _ := json.Marshal(apiPrefixFilterList)
+		svc.Client.Logger.DebugContext(ctx, "error unmarshaling response body", slog.String("response_body", string(body)), slog.String("response_type", "get_mcr_prefix_filter_list_response"), slog.String("expected_json_schema", string(expectedJSON)), slog.String("error", unmarshalErr.Error()))
 		return nil, unmarshalErr
 	}
 

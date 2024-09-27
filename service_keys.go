@@ -169,6 +169,8 @@ func (svc *ServiceKeyServiceOp) CreateServiceKey(ctx context.Context, req *Creat
 	}
 	var createServiceKeyAPIResponse CreateServiceKeyAPIResponse
 	if err = json.Unmarshal(body, &createServiceKeyAPIResponse); err != nil {
+		expectedJSON, _ := json.Marshal(createServiceKeyAPIResponse)
+		svc.Client.Logger.DebugContext(ctx, "error unmarshaling response body", slog.String("response_body", string(body)), slog.String("response_type", "create_service_key_response"), slog.String("expected_json_schema", string(expectedJSON)), slog.String("error", err.Error()))
 		return nil, err
 	}
 	toReturn := &CreateServiceKeyResponse{
@@ -204,6 +206,8 @@ func (svc *ServiceKeyServiceOp) ListServiceKeys(ctx context.Context, req *ListSe
 	}
 	listServiceKeysAPIResponse := ListServiceKeysAPIResponse{}
 	if err = json.Unmarshal(body, &listServiceKeysAPIResponse); err != nil {
+		expectedJSON, _ := json.Marshal(listServiceKeysAPIResponse)
+		svc.Client.Logger.DebugContext(ctx, "error unmarshaling response body", slog.String("response_body", string(body)), slog.String("response_type", "list_service_keys_response"), slog.String("expected_json_schema", string(expectedJSON)), slog.String("error", err.Error()))
 		return nil, err
 	}
 	toReturn := &ListServiceKeysResponse{}
@@ -250,6 +254,8 @@ func (svc *ServiceKeyServiceOp) GetServiceKey(ctx context.Context, keyId string)
 	}
 	parsedAPIResponse := GetServiceKeyAPIResponse{}
 	if err = json.Unmarshal(body, &parsedAPIResponse); err != nil {
+		expectedJSON, _ := json.Marshal(parsedAPIResponse)
+		svc.Client.Logger.DebugContext(ctx, "error unmarshaling response body", slog.String("response_body", string(body)), slog.String("response_type", "get_service_key_response"), slog.String("expected_json_schema", string(expectedJSON)), slog.String("error", err.Error()))
 		return nil, err
 	}
 	return parsedAPIResponse.Data, nil
