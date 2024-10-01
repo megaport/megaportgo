@@ -90,6 +90,9 @@ type UpdateVXCRequest struct {
 	AEndInnerVLAN *int
 	BEndInnerVLAN *int
 
+	AEndPartnerConfig VXCPartnerConfiguration
+	BEndPartnerConfig VXCPartnerConfiguration
+
 	WaitForUpdate bool          // Wait until the VXC updates before returning
 	WaitForTime   time.Duration // How long to wait for the VXC to update if WaitForUpdate is true (default is 5 minutes)
 }
@@ -265,6 +268,26 @@ func (svc *VXCServiceOp) UpdateVXC(ctx context.Context, id string, req *UpdateVX
 		BEndVLAN:  req.BEndVLAN,
 		Term:      req.Term,
 		Shutdown:  req.Shutdown,
+	}
+
+	if req.AEndPartnerConfig != nil {
+		// Only allow AENdPartnerConfig or VROUTER Partner Config for AEndPartnerConfig in VXC Updates
+		switch req.AEndPartnerConfig.(type) {
+		case VXCPartnerConfiguration, VXCOrderVrouterPartnerConfig:
+			update.AEndPartnerConfig = req.AEndPartnerConfig
+		default:
+			return nil, ErrInvalidVXCAEndPartnerConfig
+		}
+	}
+
+	if req.BEndPartnerConfig != nil {
+		// Only allow Vrouter Partner Config for BEndPartnerConfig in VXC Updates
+		switch req.BEndPartnerConfig.(type) {
+		case VXCOrderVrouterPartnerConfig:
+			update.BEndPartnerConfig = req.BEndPartnerConfig
+		default:
+			return nil, ErrInvalidVXCBEndPartnerConfig
+		}
 	}
 
 	if req.Name != nil {

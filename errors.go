@@ -66,3 +66,9 @@ var ErrManagedAccountNotFound = errors.New("managed account not found")
 
 // ErrInvalidVLAN is returned when a VLAN is invalid
 var ErrInvalidVLAN = errors.New("invalid VLAN, must be between 0 and 4094")
+
+// ErrInvalidVXCAEndPartnerConfig is returned when an invalid VXC A-End partner config is provided
+var ErrInvalidVXCAEndPartnerConfig = errors.New("invalid vxc a-end partner config")
+
+// ErrInvalidVXCBEndPartnerConfig is returned when an invalid VXC B-End partner config is provided
+var ErrInvalidVXCBEndPartnerConfig = errors.New("invalid vxc b-end partner config")
