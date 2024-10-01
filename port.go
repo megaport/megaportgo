@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"slices"
 	"time"
 )
@@ -30,6 +31,8 @@ type PortService interface {
 	LockPort(ctx context.Context, portId string) (*LockPortResponse, error)
 	// UnlockPort unlocks a port in the Megaport Port API.
 	UnlockPort(ctx context.Context, portId string) (*UnlockPortResponse, error)
+	// CheckPortVLANAvailability checks if a VLAN is available on a port in the Megaport Products API.
+	CheckPortVLANAvailability(ctx context.Context, portId string, vlan int) (bool, error)
 }
 
 // NewPortService creates a new instance of the Port Service.
@@ -431,4 +434,49 @@ func (svc *PortServiceOp) UnlockPort(ctx context.Context, portId string) (*Unloc
 	} else {
 		return nil, ErrPortNotLocked
 	}
+}
+
+func (svc *PortServiceOp) CheckPortVLANAvailability(ctx context.Context, portId string, vlan int) (bool, error) {
+	if vlan < 0 || vlan > 4094 {
+		return false, ErrInvalidVLAN
+	}
+
+	_, err := svc.GetPort(ctx, portId)
+	if err != nil {
+		return false, err
+	}
+
+	path := "/v2/product/port/" + portId + "/vlan"
+	params := url.Values{}
+	params.Add("vlan", fmt.Sprintf("%d", vlan))
+	url := svc.Client.BaseURL.JoinPath(path)
+	url.RawQuery = params.Encode()
+	urlStr := url.String()
+
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, urlStr, nil)
+	if err != nil {
+		return false, err
+	}
+
+	response, err := svc.Client.Do(ctx, clientReq, nil)
+	if err != nil {
+		return false, err
+	}
+	defer response.Body.Close()
+
+	body, fileErr := io.ReadAll(response.Body)
+	if fileErr != nil {
+		return false, err
+	}
+
+	vlanResponse := PortVLANAvailabilityAPIResponse{}
+	unmarshalErr := json.Unmarshal(body, &vlanResponse)
+	if unmarshalErr != nil {
+		return false, unmarshalErr
+	}
+
+	if slices.Contains(vlanResponse.Data, vlan) {
+		return true, nil
+	}
+	return false, nil
 }

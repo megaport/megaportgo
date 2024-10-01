@@ -122,6 +122,39 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 	}
 	serviceKeyID := serviceKeyRes.ServiceKeyUID
 
+	var aEndVLAN, bEndVLAN int
+	var aEndAvailable, bEndAvailable bool
+	var err error
+
+	for i := 0; i < 10; i++ {
+		aEndVLAN = GenerateRandomVLAN()
+		aEndAvailable, err = portSvc.CheckPortVLANAvailability(ctx, aEndUid, aEndVLAN)
+		if err != nil {
+			suite.FailNowf("cannot check a end vlan availability", "cannot check a end vlan availability %v", err)
+		}
+		if aEndAvailable {
+			break
+		}
+	}
+
+	if !aEndAvailable {
+		suite.FailNowf("a end vlan not available after 10 attempts", "a end vlan %d is not available after 10 attempts", aEndVLAN)
+	}
+
+	for i := 0; i < 10; i++ {
+		bEndVLAN = GenerateRandomVLAN()
+		bEndAvailable, err = portSvc.CheckPortVLANAvailability(ctx, bEndUid, bEndVLAN)
+		if err != nil {
+			suite.FailNowf("cannot check b end vlan availability", "cannot check b end vlan availability %v", err)
+		}
+		if bEndAvailable {
+			break
+		}
+	}
+	if !bEndAvailable {
+		suite.FailNowf("b end vlan not available after 10 attempts", "b end vlan %d is not available after 10 attempts", bEndVLAN)
+	}
+
 	logger.InfoContext(ctx, "buying vxc")
 
 	buyVxcRes, vxcErr := vxcSvc.BuyVXC(ctx, &BuyVXCRequest{
@@ -132,10 +165,10 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 		Shutdown:   false,
 		ServiceKey: serviceKeyID,
 		AEndConfiguration: VXCOrderEndpointConfiguration{
-			VLAN: GenerateRandomVLAN(),
+			VLAN: aEndVLAN,
 		},
 		BEndConfiguration: VXCOrderEndpointConfiguration{
-			VLAN:       GenerateRandomVLAN(),
+			VLAN:       bEndVLAN,
 			ProductUID: bEndUid,
 		},
 		WaitForProvision: true,
@@ -147,10 +180,40 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 	vxcUid := buyVxcRes.TechnicalServiceUID
 	suite.True(IsGuid(vxcUid), "invalid guid for vxc uid")
 
-	newAVLAN := GenerateRandomVLAN()
-	newBVLAN := GenerateRandomVLAN()
+	var newAEndAvailable, newBEndAvailable bool
+	var newAVLAN, newBVLAN int
+
 	newCostCentre := "Test Cost Centre 2"
 	newTerm := 24
+
+	for i := 0; i < 10; i++ {
+		newAVLAN = GenerateRandomVLAN()
+		newAEndAvailable, err = portSvc.CheckPortVLANAvailability(ctx, aEndUid, newAVLAN)
+		if err != nil {
+			suite.FailNowf("cannot check new a end vlan availability", "cannot check new a end vlan availability %v", err)
+		}
+		if newAEndAvailable {
+			break
+		}
+	}
+	if !newAEndAvailable {
+		suite.FailNowf("new a end vlan not available after 10 attempts", "new a end vlan %d is not available after 10 attempts", newAVLAN)
+	}
+
+	for i := 0; i < 10; i++ {
+		newBVLAN = GenerateRandomVLAN()
+		newBEndAvailable, err = portSvc.CheckPortVLANAvailability(ctx, bEndUid, newBVLAN)
+		if err != nil {
+			suite.FailNowf("cannot check new b end vlan availability", "cannot check new b end vlan availability %v", err)
+		}
+		if newBEndAvailable {
+			break
+		}
+	}
+
+	if !newBEndAvailable {
+		suite.FailNowf("new b end vlan not available after 10 attempts", "new b end vlan %d is not available after 10 attempts", newBVLAN)
+	}
 
 	updateRes, updateErr := vxcSvc.UpdateVXC(ctx, vxcUid, &UpdateVXCRequest{
 		AEndVLAN:      &newAVLAN,
@@ -409,6 +472,23 @@ func (suite *VXCIntegrationTestSuite) TestAWSVIFConnectionBuy() {
 
 	logger.InfoContext(ctx, "buying aws vif connection (b-end)")
 
+	var aEndVLAN int
+	var vlanAvailable bool
+	var err error
+	for i := 0; i < 10; i++ {
+		aEndVLAN = GenerateRandomVLAN()
+		vlanAvailable, err = portSvc.CheckPortVLANAvailability(ctx, portUid, aEndVLAN)
+		if err != nil {
+			suite.FailNowf("cannot check vlan availability", "cannot check vlan availability %v", err)
+		}
+		if vlanAvailable {
+			break
+		}
+	}
+	if !vlanAvailable {
+		suite.FailNowf("vlan not available after 10 attempts", "vlan %d is not available after 10 attempts", aEndVLAN)
+	}
+
 	buyVxcRes, vxcErr := vxcSvc.BuyVXC(ctx, &BuyVXCRequest{
 		PortUID:   portUid,
 		VXCName:   "Hosted AWS VIF Test Connection",
@@ -416,7 +496,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSVIFConnectionBuy() {
 		Term:      1,
 		Shutdown:  false,
 		AEndConfiguration: VXCOrderEndpointConfiguration{
-			VLAN: GenerateRandomVLAN(),
+			VLAN: aEndVLAN,
 		},
 		BEndConfiguration: VXCOrderEndpointConfiguration{
 			ProductUID: "87860c28-81ef-4e79-8cc7-cfc5a4c4bc86",
