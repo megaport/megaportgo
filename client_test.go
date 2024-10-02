@@ -182,7 +182,7 @@ func (suite *ClientTestSuite) TestNewRequest_withResponseLogging() {
 
 	// Log the response body
 	encodedBody := base64.StdEncoding.EncodeToString(body)
-	c.Logger.DebugContext(ctx, "response_body", slog.String("response_body_base_64", encodedBody))
+	c.Logger.DebugContext(ctx, "response_body", slog.String("response_body", encodedBody))
 
 	// Check the response
 	var result map[string]interface{}
