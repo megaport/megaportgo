@@ -291,7 +291,10 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*htt
 
 	respBody := resp.Body
 	if c.LogResponseBody {
-		b, _ := io.ReadAll(resp.Body)
+		b, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
 
 		// Base64 encode the response body
 		encodedBody := base64.StdEncoding.EncodeToString(b)

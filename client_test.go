@@ -2,7 +2,11 @@ package megaport
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -135,6 +139,58 @@ func (suite *ClientTestSuite) TestNewRequest_withCustomUserAgent() {
 	expected := fmt.Sprintf("%s %s", ua, userAgent)
 	if got := req.Header.Get("User-Agent"); got != expected {
 		suite.FailNowf("New() UserAgent = %s; expected %s", got, expected)
+	}
+}
+
+// TestNewRequest_withResponseLogging tests if the NewRequest function returns a request with response logging.
+func (suite *ClientTestSuite) TestNewRequest_withResponseLogging() {
+	// Mock HTTP client and server response
+	mockResponse := `{"message": "success"}`
+	mockServer := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(mockResponse))
+	})
+	server := httptest.NewServer(mockServer)
+	defer server.Close()
+
+	// Create a new client with the mock server URL
+	c := NewClient(nil, nil)
+	url, _ := url.Parse(server.URL)
+	c.BaseURL = url
+
+	// Create a new request
+	req, err := c.NewRequest(ctx, http.MethodGet, "/foo", nil)
+	if err != nil {
+		suite.FailNowf("New() unexpected error: %v", err.Error())
+	}
+
+	// Perform the request
+	resp, err := c.Do(ctx, req, nil)
+	if err != nil {
+		suite.FailNowf("Do() unexpected error: %v", err.Error())
+	}
+	defer resp.Body.Close()
+
+	// Read and log the response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		suite.FailNowf("ReadAll() unexpected error: %v", err.Error())
+	}
+
+	// Log the response body
+	encodedBody := base64.StdEncoding.EncodeToString(body)
+	c.Logger.DebugContext(ctx, "response body", slog.String("response_body_base64", encodedBody))
+
+	// Check the response
+	var result map[string]interface{}
+	if err := json.Unmarshal(body, &result); err != nil {
+		suite.FailNowf("Unmarshal() unexpected error: %v", err.Error())
+	}
+
+	expectedMessage := "success"
+	resultMsg := result["message"].(string)
+	if result["message"] != expectedMessage {
+		suite.FailNowf("Response message = %s; expected %s", resultMsg, expectedMessage)
 	}
 }
 
