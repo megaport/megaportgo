@@ -291,7 +291,7 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*htt
 
 	respBody := resp.Body
 
-	attrs := []any{slog.Duration("duration", reqTime),
+	attrs := []slog.Attr{slog.Duration("duration", reqTime),
 		slog.Int("status_code", resp.StatusCode),
 		slog.String("path", req.URL.EscapedPath()),
 		slog.String("api_host", c.BaseURL.Host),
@@ -313,7 +313,7 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*htt
 		attrs = append(attrs, slog.String("response_body_base_64", encodedBody))
 	}
 
-	c.Logger.DebugContext(ctx, "completed api request", attrs...)
+	c.Logger.DebugContext(ctx, "completed apirequest", slog.Any("api_request", attrs))
 
 	err = CheckResponse(resp)
 	if err != nil {
