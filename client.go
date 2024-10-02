@@ -75,6 +75,8 @@ type Client struct {
 	accessToken string    // Access Token for client
 	tokenExpiry time.Time // Token Expiration
 
+	LogResponseBody bool // Log Response Body of HTTP Requests
+
 	// Optional function called after every successful request made to the API
 	onRequestCompleted RequestCompletionCallback
 
@@ -211,6 +213,14 @@ func WithEnvironment(e Environment) ClientOpt {
 	}
 }
 
+// WithLogResponseBody is a client option for setting the log response body flag
+func WithLogResponseBody() ClientOpt {
+	return func(c *Client) error {
+		c.LogResponseBody = true
+		return nil
+	}
+}
+
 // NewRequest creates an API request. A relative URL can be provided in urlStr, which will be resolved to the
 // BaseURL of the Client. Relative URLS should always be specified without a preceding slash. If specified, the
 // value pointed to by body is JSON encoded and included in as the request body.
@@ -279,14 +289,35 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*htt
 	}
 	reqTime := time.Since(reqStart)
 
-	c.Logger.DebugContext(ctx, "completed API request",
-		slog.Duration("duration", reqTime),
-		slog.Int("status_code", resp.StatusCode),
-		slog.String("path", req.URL.EscapedPath()),
-		slog.String("api_host", c.BaseURL.Host),
-		slog.String("method", req.Method),
-		slog.String("trace_id", resp.Header.Get(headerTraceId)),
-	)
+	respBody := resp.Body
+	if c.LogResponseBody {
+		b, _ := io.ReadAll(resp.Body)
+
+		// Base64 encode the response body
+		encodedBody := base64.StdEncoding.EncodeToString(b)
+
+		// Create new reader for the later code
+		respBody = io.NopCloser(bytes.NewReader(b))
+
+		// Log With Response Body
+		c.Logger.DebugContext(ctx, "completed API request",
+			slog.Duration("duration", reqTime),
+			slog.Int("status_code", resp.StatusCode),
+			slog.String("path", req.URL.EscapedPath()),
+			slog.String("api_host", c.BaseURL.Host),
+			slog.String("method", req.Method),
+			slog.String("trace_id", resp.Header.Get(headerTraceId)),
+			slog.String("response_body_base64", encodedBody))
+	} else { // Log Without Response Body
+		c.Logger.DebugContext(ctx, "completed API request",
+			slog.Duration("duration", reqTime),
+			slog.Int("status_code", resp.StatusCode),
+			slog.String("path", req.URL.EscapedPath()),
+			slog.String("api_host", c.BaseURL.Host),
+			slog.String("method", req.Method),
+			slog.String("trace_id", resp.Header.Get(headerTraceId)),
+		)
+	}
 
 	err = CheckResponse(resp)
 	if err != nil {
@@ -295,7 +326,7 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*htt
 
 	if resp.StatusCode != http.StatusNoContent && v != nil {
 		if w, ok := v.(io.Writer); ok {
-			_, err = io.Copy(w, resp.Body)
+			_, err = io.Copy(w, respBody)
 			if err != nil {
 				return nil, err
 			}
