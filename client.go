@@ -307,7 +307,7 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*htt
 			slog.String("api_host", c.BaseURL.Host),
 			slog.String("method", req.Method),
 			slog.String("trace_id", resp.Header.Get(headerTraceId)),
-			slog.String("response_body_base64", encodedBody))
+			slog.String("response_body_base64", encodedBody)) // Response Body is Base64 Encoded
 	} else { // Log Without Response Body
 		c.Logger.DebugContext(ctx, "completed API request",
 			slog.Duration("duration", reqTime),
