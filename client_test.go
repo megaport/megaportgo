@@ -148,7 +148,10 @@ func (suite *ClientTestSuite) TestNewRequest_withResponseLogging() {
 	mockResponse := `{"message": "success"}`
 	mockServer := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(mockResponse))
+		_, err := w.Write([]byte(mockResponse))
+		if err != nil {
+			suite.FailNowf("Write() unexpected error: %v", err.Error())
+		}
 	})
 	server := httptest.NewServer(mockServer)
 	defer server.Close()
@@ -179,7 +182,7 @@ func (suite *ClientTestSuite) TestNewRequest_withResponseLogging() {
 
 	// Log the response body
 	encodedBody := base64.StdEncoding.EncodeToString(body)
-	c.Logger.DebugContext(ctx, "response body", slog.String("response_body_base64", encodedBody))
+	c.Logger.DebugContext(ctx, "response body", slog.String("response_body_base_64", encodedBody))
 
 	// Check the response
 	var result map[string]interface{}
@@ -188,7 +191,11 @@ func (suite *ClientTestSuite) TestNewRequest_withResponseLogging() {
 	}
 
 	expectedMessage := "success"
-	resultMsg := result["message"].(string)
+	resultMsg, ok := result["message"].(string)
+	if !ok {
+		suite.FailNow("Response message is not a string")
+	}
+
 	if result["message"] != expectedMessage {
 		suite.FailNowf("Response message = %s; expected %s", resultMsg, expectedMessage)
 	}

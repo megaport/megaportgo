@@ -290,6 +290,14 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*htt
 	reqTime := time.Since(reqStart)
 
 	respBody := resp.Body
+
+	attrs := []slog.Attr{slog.Duration("duration", reqTime),
+		slog.Int("status_code", resp.StatusCode),
+		slog.String("path", req.URL.EscapedPath()),
+		slog.String("api_host", c.BaseURL.Host),
+		slog.String("method", req.Method),
+		slog.String("trace_id", resp.Header.Get(headerTraceId))}
+
 	if c.LogResponseBody {
 		b, err := io.ReadAll(resp.Body)
 		if err != nil {
@@ -302,25 +310,10 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*htt
 		// Create new reader for the later code
 		respBody = io.NopCloser(bytes.NewReader(b))
 
-		// Log With Response Body
-		c.Logger.DebugContext(ctx, "completed API request", //nolint:sloglint
-			slog.Duration("duration", reqTime),
-			slog.Int("status_code", resp.StatusCode),
-			slog.String("path", req.URL.EscapedPath()),
-			slog.String("api_host", c.BaseURL.Host),
-			slog.String("method", req.Method),
-			slog.String("trace_id", resp.Header.Get(headerTraceId)),
-			slog.String("response_body_base64", encodedBody)) // Response Body is Base64 Encoded
-	} else { // Log Without Response Body
-		c.Logger.DebugContext(ctx, "completed API request", //nolint:sloglint
-			slog.Duration("duration", reqTime),
-			slog.Int("status_code", resp.StatusCode),
-			slog.String("path", req.URL.EscapedPath()),
-			slog.String("api_host", c.BaseURL.Host),
-			slog.String("method", req.Method),
-			slog.String("trace_id", resp.Header.Get(headerTraceId)),
-		)
+		attrs = append(attrs, slog.String("response_body_base_64", encodedBody))
 	}
+
+	c.Logger.DebugContext(ctx, "completed api request", slog.Any("api_request", attrs))
 
 	err = CheckResponse(resp)
 	if err != nil {
