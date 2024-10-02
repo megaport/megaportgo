@@ -300,7 +300,7 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*htt
 		respBody = io.NopCloser(bytes.NewReader(b))
 
 		// Log With Response Body
-		c.Logger.DebugContext(ctx, "completed_api_request",
+		c.Logger.DebugContext(ctx, "completed API request", //nolint:sloglint
 			slog.Duration("duration", reqTime),
 			slog.Int("status_code", resp.StatusCode),
 			slog.String("path", req.URL.EscapedPath()),
@@ -309,7 +309,7 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*htt
 			slog.String("trace_id", resp.Header.Get(headerTraceId)),
 			slog.String("response_body_base64", encodedBody)) // Response Body is Base64 Encoded
 	} else { // Log Without Response Body
-		c.Logger.DebugContext(ctx, "completed_api_request",
+		c.Logger.DebugContext(ctx, "completed API request", //nolint:sloglint
 			slog.Duration("duration", reqTime),
 			slog.Int("status_code", resp.StatusCode),
 			slog.String("path", req.URL.EscapedPath()),
