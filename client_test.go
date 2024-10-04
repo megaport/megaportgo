@@ -151,7 +151,7 @@ func (suite *ClientTestSuite) TestNewRequest_withResponseLogging() {
 
 	suite.mux.HandleFunc("/a", func(w http.ResponseWriter, r *http.Request) {
 		if m := http.MethodGet; m != r.Method {
-			suite.FailNowf("Request method = %v, expected %v", r.Method, m)
+			suite.FailNowf("Incorrect request method", "Request method = %v, expected %v", r.Method, m)
 		}
 		fmt.Fprint(w, `{"A":"a"}`)
 	})
@@ -159,7 +159,7 @@ func (suite *ClientTestSuite) TestNewRequest_withResponseLogging() {
 	req, _ := suite.client.NewRequest(ctx, http.MethodGet, "/a", nil)
 	_, err = suite.client.Do(ctx, req, nil)
 	if err != nil {
-		suite.FailNowf("", "Do(): %v", err.Error())
+		suite.FailNowf("Unexpected error: Do()", "Unexpected error: Do(): %v", err.Error())
 	}
 
 	// Check the log output for the expected base64 encoded response body
