@@ -141,7 +141,7 @@ func (h *LevelFilterHandler) WithGroup(name string) slog.Handler {
 	}
 }
 
-func (h *LevelFilterHandler) Enabled(context context.Context, level slog.Level) bool {
+func (h *LevelFilterHandler) Enabled(ctx context.Context, level slog.Level) bool {
 	return level >= h.level
 }
 
