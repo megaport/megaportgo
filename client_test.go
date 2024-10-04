@@ -2,10 +2,7 @@ package megaport
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -144,60 +141,33 @@ func (suite *ClientTestSuite) TestNewRequest_withCustomUserAgent() {
 
 // TestNewRequest_withResponseLogging tests if the NewRequest function returns a request with response logging.
 func (suite *ClientTestSuite) TestNewRequest_withResponseLogging() {
-	// Mock HTTP client and server response
-	mockResponse := `{"message": "success"}`
-	mockServer := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, err := w.Write([]byte(mockResponse))
-		if err != nil {
-			suite.FailNowf("Write() unexpected error: %v", err.Error())
+	c, err := New(nil, WithLogResponseBody(), WithLogLevel(slog.LevelDebug))
+	if err != nil {
+		suite.FailNowf("unexpected error", "New() unexpected error: %v", err.Error())
+	}
+	suite.client = c
+	url, _ := url.Parse(suite.server.URL)
+	suite.client.BaseURL = url
+
+	suite.mux.HandleFunc("/a", func(w http.ResponseWriter, r *http.Request) {
+		if m := http.MethodGet; m != r.Method {
+			suite.FailNowf("Request method = %v, expected %v", r.Method, m)
 		}
+		fmt.Fprint(w, `{"A":"a"}`)
 	})
-	server := httptest.NewServer(mockServer)
-	defer server.Close()
 
-	// Create a new client with the mock server URL
-	c := NewClient(nil, nil)
-	url, _ := url.Parse(server.URL)
-	c.BaseURL = url
-
-	// Create a new request
-	req, err := c.NewRequest(ctx, http.MethodGet, "/foo", nil)
+	req, _ := suite.client.NewRequest(ctx, http.MethodGet, "/a", nil)
+	_, err = suite.client.Do(ctx, req, nil)
 	if err != nil {
-		suite.FailNowf("New() unexpected error: %v", err.Error())
+		suite.FailNowf("", "Do(): %v", err.Error())
 	}
 
-	// Perform the request
-	resp, err := c.Do(ctx, req, nil)
-	if err != nil {
-		suite.FailNowf("Do() unexpected error: %v", err.Error())
-	}
-	defer resp.Body.Close()
+	// Check the log output for the expected base64 encoded response body
+	expectedBase64 := "eyJBIjoiYSJ9" // base64 encoded {"A":"a"}
 
-	// Read and log the response body
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		suite.FailNowf("ReadAll() unexpected error: %v", err.Error())
-	}
-
-	// Log the response body
-	encodedBody := base64.StdEncoding.EncodeToString(body)
-	c.Logger.DebugContext(ctx, "response_body", slog.String("response_body", encodedBody))
-
-	// Check the response
-	var result map[string]interface{}
-	if err := json.Unmarshal(body, &result); err != nil {
-		suite.FailNowf("Unmarshal() unexpected error: %v", err.Error())
-	}
-
-	expectedMessage := "success"
-	resultMsg, ok := result["message"].(string)
-	if !ok {
-		suite.FailNow("Response message is not a string")
-	}
-
-	if result["message"] != expectedMessage {
-		suite.FailNowf("Response message = %s; expected %s", resultMsg, expectedMessage)
+	logOutput := suite.client.LogCapture.String()
+	if !strings.Contains(suite.client.LogCapture.String(), expectedBase64) {
+		suite.FailNowf("Unexpected log output", "Expected log output to contain %s, but got %s", expectedBase64, logOutput)
 	}
 }
 
