@@ -1,8 +1,11 @@
 package megaport
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -135,6 +138,41 @@ func (suite *ClientTestSuite) TestNewRequest_withCustomUserAgent() {
 	expected := fmt.Sprintf("%s %s", ua, userAgent)
 	if got := req.Header.Get("User-Agent"); got != expected {
 		suite.FailNowf("New() UserAgent = %s; expected %s", got, expected)
+	}
+}
+
+// TestNewRequest_withResponseLogging tests if the NewRequest function returns a request with response logging.
+func (suite *ClientTestSuite) TestNewRequest_withResponseLogging() {
+	// for debugging - capture logs
+	logCapture := &bytes.Buffer{}
+	levelFilterHandler := NewLevelFilterHandler(slog.LevelDebug, slog.NewJSONHandler(io.Writer(logCapture), nil))
+
+	c, err := New(nil, WithLogResponseBody(), WithLogHandler(levelFilterHandler))
+	if err != nil {
+		suite.FailNowf("unexpected error", "New() unexpected error: %v", err.Error())
+	}
+	suite.client = c
+	url, _ := url.Parse(suite.server.URL)
+	suite.client.BaseURL = url
+
+	suite.mux.HandleFunc("/a", func(w http.ResponseWriter, r *http.Request) {
+		if m := http.MethodGet; m != r.Method {
+			suite.FailNowf("Incorrect request method", "Request method = %v, expected %v", r.Method, m)
+		}
+		fmt.Fprint(w, `{"A":"a"}`)
+	})
+
+	req, _ := suite.client.NewRequest(ctx, http.MethodGet, "/a", nil)
+	_, err = suite.client.Do(ctx, req, nil)
+	if err != nil {
+		suite.FailNowf("Unexpected error: Do()", "Unexpected error: Do(): %v", err.Error())
+	}
+
+	// Check the log output for the expected base64 encoded response body
+	expectedBase64 := "eyJBIjoiYSJ9" // base64 encoded {"A":"a"}
+	logOutput := logCapture.String()
+	if !strings.Contains(logOutput, expectedBase64) {
+		suite.FailNowf("Log output does not contain expected base64", "Log output: %s", logOutput)
 	}
 }
 
