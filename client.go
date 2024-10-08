@@ -348,7 +348,7 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*htt
 		attrs = append(attrs, slog.String("response_body_base_64", encodedBody))
 	}
 
-	c.Logger.DebugContext(ctx, "completed apirequest", slog.Any("api_request", attrs))
+	c.Logger.DebugContext(ctx, "completed api request", slog.Any("api_request", attrs))
 
 	err = CheckResponse(resp)
 	if err != nil {
