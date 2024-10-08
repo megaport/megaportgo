@@ -76,7 +76,6 @@ type Client struct {
 	tokenExpiry time.Time // Token Expiration
 
 	LogResponseBody bool // Log Response Body of HTTP Requests
-	LogCapture      *LogCapture
 
 	// Optional function called after every successful request made to the API
 	onRequestCompleted RequestCompletionCallback
@@ -96,21 +95,7 @@ type AccessTokenResponse struct {
 	Error        string `json:"error"`
 }
 
-// LogCapture is a simple struct to capture logs
-type LogCapture struct {
-	Buffer bytes.Buffer
-}
-
-// Write writes to the buffer
-func (lc *LogCapture) Write(p []byte) (n int, err error) {
-	return lc.Buffer.Write(p)
-}
-
-// String returns the buffer as a string
-func (lc *LogCapture) String() string {
-	return lc.Buffer.String()
-}
-
+// Custom Handler with Log Filtering
 type LevelFilterHandler struct {
 	level   slog.Level
 	handler slog.Handler
@@ -169,7 +154,6 @@ func NewClient(httpClient *http.Client, base *url.URL) *Client {
 		BaseURL:    baseURL,
 		UserAgent:  userAgent,
 		Logger:     logger,
-		LogCapture: &LogCapture{},
 	}
 
 	c.ProductService = NewProductService(c)
@@ -264,23 +248,9 @@ func WithEnvironment(e Environment) ClientOpt {
 	}
 }
 
-func WithLogLevel(level slog.Level) ClientOpt {
-	return func(c *Client) error {
-		handler := NewLevelFilterHandler(level, slog.NewJSONHandler(io.MultiWriter(os.Stdout, c.LogCapture), nil))
-		c.Logger = slog.New(handler)
-		return nil
-	}
-}
-
 // WithLogResponseBody is a client option for setting the log response body flag
 func WithLogResponseBody() ClientOpt {
 	return func(c *Client) error {
-		// for debugging - capture logs
-		logCapture := &LogCapture{}
-		multiWriter := io.MultiWriter(os.Stdout, logCapture)
-		logger := slog.New(slog.NewJSONHandler(multiWriter, nil))
-		c.Logger = logger
-		c.LogCapture = logCapture
 		c.LogResponseBody = true
 		return nil
 	}

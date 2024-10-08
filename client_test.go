@@ -1,13 +1,16 @@
 package megaport
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -141,7 +144,13 @@ func (suite *ClientTestSuite) TestNewRequest_withCustomUserAgent() {
 
 // TestNewRequest_withResponseLogging tests if the NewRequest function returns a request with response logging.
 func (suite *ClientTestSuite) TestNewRequest_withResponseLogging() {
-	c, err := New(nil, WithLogResponseBody(), WithLogLevel(slog.LevelDebug))
+	// for debugging - capture logs
+	logCapture := &bytes.Buffer{}
+	multiWriter := io.MultiWriter(os.Stdout, logCapture)
+	handler := slog.NewJSONHandler(multiWriter, nil)
+	levelFilterHandler := NewLevelFilterHandler(slog.LevelDebug, handler)
+
+	c, err := New(nil, WithLogResponseBody(), WithLogHandler(levelFilterHandler))
 	if err != nil {
 		suite.FailNowf("unexpected error", "New() unexpected error: %v", err.Error())
 	}
@@ -164,10 +173,9 @@ func (suite *ClientTestSuite) TestNewRequest_withResponseLogging() {
 
 	// Check the log output for the expected base64 encoded response body
 	expectedBase64 := "eyJBIjoiYSJ9" // base64 encoded {"A":"a"}
-
-	logOutput := suite.client.LogCapture.String()
-	if !strings.Contains(suite.client.LogCapture.String(), expectedBase64) {
-		suite.FailNowf("Unexpected log output", "Expected log output to contain %s, but got %s", expectedBase64, logOutput)
+	logOutput := logCapture.String()
+	if !strings.Contains(logOutput, expectedBase64) {
+		suite.FailNowf("Log output does not contain expected base64", "Log output: %s", logOutput)
 	}
 }
 
