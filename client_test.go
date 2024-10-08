@@ -10,7 +10,6 @@ import (
 	"net/http/httptest"
 	"net/http/httputil"
 	"net/url"
-	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -146,9 +145,7 @@ func (suite *ClientTestSuite) TestNewRequest_withCustomUserAgent() {
 func (suite *ClientTestSuite) TestNewRequest_withResponseLogging() {
 	// for debugging - capture logs
 	logCapture := &bytes.Buffer{}
-	multiWriter := io.MultiWriter(os.Stdout, logCapture)
-	handler := slog.NewJSONHandler(multiWriter, nil)
-	levelFilterHandler := NewLevelFilterHandler(slog.LevelDebug, handler)
+	levelFilterHandler := NewLevelFilterHandler(slog.LevelDebug, slog.NewJSONHandler(io.Writer(logCapture), nil))
 
 	c, err := New(nil, WithLogResponseBody(), WithLogHandler(levelFilterHandler))
 	if err != nil {
