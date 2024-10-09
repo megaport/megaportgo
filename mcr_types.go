@@ -12,6 +12,8 @@ type MCROrder struct {
 	CostCentre string         `json:"costCentre"`
 	PromoCode  string         `json:"promoCode,omitempty"`
 	Config     MCROrderConfig `json:"config"`
+
+	ResourceTags []ResourceTag `json:"resourceTags,omitempty"`
 }
 
 // MCROrderConfig represents the configuration for an MCR order.
