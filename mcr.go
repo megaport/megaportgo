@@ -36,9 +36,9 @@ type MCRService interface {
 	// RestoreMCR restores a deleted MCR in the Megaport MCR API.
 	RestoreMCR(ctx context.Context, mcrId string) (*RestoreMCRResponse, error)
 	// ListMCRResourceTags returns the resource tags for an MCR in the Megaport MCR API.
-	ListMCRResourceTags(ctx context.Context, mcrID string) ([]map[string]string, error)
+	ListMCRResourceTags(ctx context.Context, mcrID string) (map[string]string, error)
 	// UpdateMCRResourceTags updates the resource tags for an MCR in the Megaport MCR API.
-	UpdateMCRResourceTags(ctx context.Context, mcrID string, tags []map[string]string) error
+	UpdateMCRResourceTags(ctx context.Context, mcrID string, tags map[string]string) error
 
 	// DEPRECATED - Use ListMCRPrefixFilterLists instead
 	GetMCRPrefixFilterLists(ctx context.Context, mcrId string) ([]*PrefixFilterList, error)
@@ -66,7 +66,7 @@ type BuyMCRRequest struct {
 	MCRAsn        int
 	CostCentre    string
 	PromoCode     string
-	ResourceTags  []map[string]string `json:"resourceTags,omitempty"`
+	ResourceTags  map[string]string `json:"resourceTags,omitempty"`
 
 	WaitForProvision bool          // Wait until the MCR provisions before returning
 	WaitForTime      time.Duration // How long to wait for the MCR to provision if WaitForProvision is true (default is 5 minutes)
@@ -213,7 +213,7 @@ func createMCROrder(req *BuyMCRRequest) []MCROrder {
 		Type:         "MCR2",
 		PortSpeed:    req.PortSpeed,
 		PromoCode:    req.PromoCode,
-		ResourceTags: req.ResourceTags,
+		ResourceTags: toProductResourceTags(req.ResourceTags),
 		Config:       MCROrderConfig{},
 	}
 
@@ -490,17 +490,17 @@ func (svc *MCRServiceOp) RestoreMCR(ctx context.Context, mcrId string) (*Restore
 }
 
 // ListMCRResourceTags returns the resource tags for an MCR in the Megaport MCR API.
-func (svc *MCRServiceOp) ListMCRResourceTags(ctx context.Context, mcrID string) ([]map[string]string, error) {
+func (svc *MCRServiceOp) ListMCRResourceTags(ctx context.Context, mcrID string) (map[string]string, error) {
 	tags, err := svc.Client.ProductService.ListProductResourceTags(ctx, mcrID)
 	if err != nil {
 		return nil, err
 	}
-	return tags, nil
+	return fromProductResourceTags(tags), nil
 }
 
 // UpdateMCRResourceTags updates the resource tags for an MCR in the Megaport MCR API.
-func (svc *MCRServiceOp) UpdateMCRResourceTags(ctx context.Context, mcrID string, tags []map[string]string) error {
+func (svc *MCRServiceOp) UpdateMCRResourceTags(ctx context.Context, mcrID string, tags map[string]string) error {
 	return svc.Client.ProductService.UpdateProductResourceTags(ctx, mcrID, &UpdateProductResourceTagsRequest{
-		ResourceTags: tags,
+		ResourceTags: toProductResourceTags(tags),
 	})
 }

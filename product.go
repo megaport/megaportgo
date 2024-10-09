@@ -24,7 +24,7 @@ type ProductService interface {
 	// ValidateProductOrder is responsible for validating an order for a product in the Megaport Products API.
 	ValidateProductOrder(ctx context.Context, requestBody interface{}) error
 	// ListProductResourceTags is responsible for retrieving the resource tags for a product in the Megaport Products API.
-	ListProductResourceTags(ctx context.Context, productID string) ([]map[string]string, error)
+	ListProductResourceTags(ctx context.Context, productID string) ([]ResourceTag, error)
 	// UpdateProductResourceTags is responsible for updating the resource tags for a product in the Megaport Products API.
 	UpdateProductResourceTags(ctx context.Context, productUID string, tagsReq *UpdateProductResourceTagsRequest) error
 }
@@ -97,11 +97,16 @@ type ResourceTagsResponse struct {
 }
 
 type ResourceTagsResponseData struct {
-	ResourceTags []map[string]string `json:"resourceTags"`
+	ResourceTags []ResourceTag `json:"resourceTags"`
 }
 
 type UpdateProductResourceTagsRequest struct {
-	ResourceTags []map[string]string `json:"resourceTags"`
+	ResourceTags []ResourceTag `json:"resourceTags"`
+}
+
+type ResourceTag struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
 }
 
 // ExecuteOrder is responsible for executing an order for a product in the Megaport Products API.
@@ -239,7 +244,7 @@ func (svc *ProductServiceOp) ValidateProductOrder(ctx context.Context, requestBo
 }
 
 // ListProductResourceTags is responsible for retrieving the resource tags for a product in the Megaport Products API.
-func (svc *ProductServiceOp) ListProductResourceTags(ctx context.Context, productUID string) ([]map[string]string, error) {
+func (svc *ProductServiceOp) ListProductResourceTags(ctx context.Context, productUID string) ([]ResourceTag, error) {
 	path := fmt.Sprintf("/v2/product/%s/tags", productUID)
 	url := svc.Client.BaseURL.JoinPath(path).String()
 	req, err := svc.Client.NewRequest(ctx, http.MethodGet, url, nil)
@@ -282,4 +287,20 @@ func (svc *ProductServiceOp) UpdateProductResourceTags(ctx context.Context, prod
 	}
 
 	return nil
+}
+
+func toProductResourceTags(in map[string]string) []ResourceTag {
+	tags := make([]ResourceTag, 0, len(in))
+	for key, value := range in {
+		tags = append(tags, ResourceTag{Key: key, Value: value})
+	}
+	return tags
+}
+
+func fromProductResourceTags(in []ResourceTag) map[string]string {
+	tags := make(map[string]string, len(in))
+	for _, tag := range in {
+		tags[tag.Key] = tag.Value
+	}
+	return tags
 }

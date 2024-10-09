@@ -34,9 +34,9 @@ type PortService interface {
 	// CheckPortVLANAvailability checks if a VLAN is available on a port in the Megaport Products API.
 	CheckPortVLANAvailability(ctx context.Context, portId string, vlan int) (bool, error)
 	// ListPortResourceTags lists the resource tags for a port in the Megaport Port API.
-	ListPortResourceTags(ctx context.Context, portID string) ([]map[string]string, error)
+	ListPortResourceTags(ctx context.Context, portID string) (map[string]string, error)
 	// UpdatePortResourceTags updates the resource tags for a port in the Megaport Port API.
-	UpdatePortResourceTags(ctx context.Context, portID string, tags []map[string]string) error
+	UpdatePortResourceTags(ctx context.Context, portID string, tags map[string]string) error
 }
 
 // NewPortService creates a new instance of the Port Service.
@@ -64,7 +64,7 @@ type BuyPortRequest struct {
 	CostCentre            string `json:"costCentre"`
 	PromoCode             string `json:"promoCode"`
 
-	ResourceTags []map[string]string `json:"resourceTags"`
+	ResourceTags map[string]string `json:"resourceTags"`
 
 	WaitForProvision bool          // Wait until the VXC provisions before returning
 	WaitForTime      time.Duration // How long to wait for the VXC to provision if WaitForProvision is true (default is 5 minutes)
@@ -226,7 +226,7 @@ func createPortOrder(req *BuyPortRequest) []PortOrder {
 		MarketplaceVisibility: req.MarketPlaceVisibility,
 		CostCentre:            req.CostCentre,
 		PromoCode:             req.PromoCode,
-		ResourceTags:          req.ResourceTags,
+		ResourceTags:          toProductResourceTags(req.ResourceTags),
 	}}
 }
 
@@ -495,16 +495,17 @@ func (svc *PortServiceOp) CheckPortVLANAvailability(ctx context.Context, portId 
 }
 
 // ListPortResourceTags lists the resource tags for a port in the Megaport Port API.
-func (svc *PortServiceOp) ListPortResourceTags(ctx context.Context, portID string) ([]map[string]string, error) {
+func (svc *PortServiceOp) ListPortResourceTags(ctx context.Context, portID string) (map[string]string, error) {
 	tags, err := svc.Client.ProductService.ListProductResourceTags(ctx, portID)
 	if err != nil {
 		return nil, err
 	}
-	return tags, nil
+	return fromProductResourceTags(tags), nil
 }
 
-func (svc *PortServiceOp) UpdatePortResourceTags(ctx context.Context, portID string, tags []map[string]string) error {
+func (svc *PortServiceOp) UpdatePortResourceTags(ctx context.Context, portID string, tags map[string]string) error {
+	productTags := toProductResourceTags(tags)
 	return svc.Client.ProductService.UpdateProductResourceTags(ctx, portID, &UpdateProductResourceTagsRequest{
-		ResourceTags: tags,
+		ResourceTags: productTags,
 	})
 }
