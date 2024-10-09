@@ -28,9 +28,9 @@ type VXCService interface {
 	// ListPartnerPorts lists available partner ports in the Megaport VXC API.
 	ListPartnerPorts(ctx context.Context, req *ListPartnerPortsRequest) (*ListPartnerPortsResponse, error)
 	// ListVXCResourceTags lists the resource tags for a VXC in the Megaport Products API.
-	ListVXCResourceTags(ctx context.Context, vxcID string) ([]map[string]string, error)
+	ListVXCResourceTags(ctx context.Context, vxcID string) (map[string]string, error)
 	// UpdateVXCResourceTags updates the resource tags for a VXC in the Megaport Products API.
-	UpdateVXCResourceTags(ctx context.Context, vxcID string, tags []map[string]string) error
+	UpdateVXCResourceTags(ctx context.Context, vxcID string, tags map[string]string) error
 }
 
 // NewVXCService creates a new instance of the VXC Service.
@@ -63,7 +63,7 @@ type BuyVXCRequest struct {
 	WaitForProvision bool          // Wait until the VXC provisions before returning
 	WaitForTime      time.Duration // How long to wait for the VXC to provision if WaitForProvision is true (default is 5 minutes)
 
-	ResourceTags []map[string]string `json:"resourceTags,omitempty"`
+	ResourceTags map[string]string `json:"resourceTags,omitempty"`
 }
 
 // BuyVXCResponse represents a response from buying a VXC from the Megaport VXC API.
@@ -219,18 +219,18 @@ func (svc *VXCServiceOp) GetVXC(ctx context.Context, id string) (*VXC, error) {
 }
 
 // ListVXCResourceTags lists the resource tags for a VXC in the Megaport Products API.
-func (svc *VXCServiceOp) ListVXCResourceTags(ctx context.Context, vxcID string) ([]map[string]string, error) {
+func (svc *VXCServiceOp) ListVXCResourceTags(ctx context.Context, vxcID string) (map[string]string, error) {
 	tags, err := svc.Client.ProductService.ListProductResourceTags(ctx, vxcID)
 	if err != nil {
 		return nil, err
 	}
-	return tags, nil
+	return fromProductResourceTags(tags), nil
 }
 
 // UpdateVXCResourceTags updates the resource tags for a VXC in the Megaport Products API.
-func (svc *VXCServiceOp) UpdateVXCResourceTags(ctx context.Context, vxcID string, tags []map[string]string) error {
+func (svc *VXCServiceOp) UpdateVXCResourceTags(ctx context.Context, vxcID string, tags map[string]string) error {
 	return svc.Client.ProductService.UpdateProductResourceTags(ctx, vxcID, &UpdateProductResourceTagsRequest{
-		ResourceTags: tags,
+		ResourceTags: toProductResourceTags(tags),
 	})
 }
 
@@ -248,7 +248,7 @@ func createVXCOrder(req *BuyVXCRequest) []VXCOrder {
 				CostCentre:   req.CostCentre,
 				AEnd:         req.AEndConfiguration,
 				BEnd:         req.BEndConfiguration,
-				ResourceTags: req.ResourceTags,
+				ResourceTags: toProductResourceTags(req.ResourceTags),
 			},
 		},
 	}}

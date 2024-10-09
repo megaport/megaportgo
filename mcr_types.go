@@ -13,7 +13,7 @@ type MCROrder struct {
 	PromoCode  string         `json:"promoCode,omitempty"`
 	Config     MCROrderConfig `json:"config"`
 
-	ResourceTags []map[string]string `json:"resourceTags,omitempty"`
+	ResourceTags []ResourceTag `json:"resourceTags,omitempty"`
 }
 
 // MCROrderConfig represents the configuration for an MCR order.
@@ -63,8 +63,6 @@ type MCR struct {
 	Cancelable            bool                    `json:"cancelable"`
 	Resources             MCRResources            `json:"resources"`
 	LocationDetails       *ProductLocationDetails `json:"locationDetail"`
-
-	ResourceTags []map[string]string `json:"resourceTags,omitempty"`
 }
 
 // MCRResources represents the resources associated with an MCR.

@@ -42,8 +42,6 @@ type VXC struct {
 	AdminLocked        bool                `json:"adminLocked"`
 	AttributeTags      map[string]string   `json:"attributeTags"`
 	Cancelable         bool                `json:"cancelable"`
-
-	ResourceTags []map[string]string `json:"resourceTags,omitempty"`
 }
 
 var emptyVLL = []byte(`[]`)
@@ -228,7 +226,7 @@ type VXCOrderConfiguration struct {
 	AEnd       VXCOrderEndpointConfiguration `json:"aEnd"`
 	BEnd       VXCOrderEndpointConfiguration `json:"bEnd"`
 
-	ResourceTags []map[string]string `json:"resourceTags,omitempty"`
+	ResourceTags []ResourceTag `json:"resourceTags,omitempty"`
 }
 
 // VXCOrderEndpointConfiguration represents the configuration of an endpoint of a VXC to be ordered from the Megaport Products API.

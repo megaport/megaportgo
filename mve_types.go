@@ -12,7 +12,7 @@ type MVEOrderConfig struct {
 	VendorConfig      VendorConfig          `json:"vendorConfig"`
 	Config            MVEConfig             `json:"config"`
 
-	ResourceTags []map[string]string `json:"resourceTags,omitempty"`
+	ResourceTags []ResourceTag `json:"resourceTags,omitempty"`
 }
 
 // Nested configuration Fields for the MVE Order
