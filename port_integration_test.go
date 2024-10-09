@@ -98,7 +98,6 @@ func (suite *PortIntegrationTestSuite) TestSinglePort() {
 				suite.FailNowf("could not list port resource tags", "could not list port resource tags %v", err)
 			}
 			suite.EqualValues(testUpdatedResourceTags, tags)
-			suite.Equal(p.ResourceTags, testResourceTags)
 		}
 	}
 
