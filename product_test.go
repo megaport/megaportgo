@@ -291,5 +291,5 @@ func (suite *ProductClientTestSuite) TestListProductResourceTags() {
 	})
 	res, err := productSvc.ListProductResourceTags(ctx, productUid)
 	suite.NoError(err)
-	suite.EqualValues(testResourceTags, res)
+	suite.EqualValues(testProductResourceTags, res)
 }
