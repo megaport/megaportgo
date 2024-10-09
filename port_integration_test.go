@@ -187,6 +187,7 @@ func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Con
 		DiversityZone:         "red",
 		WaitForProvision:      true,
 		WaitForTime:           5 * time.Minute,
+		ResourceTags:          testResourceTags,
 	})
 
 	if err != nil {
