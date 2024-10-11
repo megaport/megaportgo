@@ -80,6 +80,7 @@ type ModifyPortRequest struct {
 	Name                  string
 	MarketplaceVisibility *bool
 	CostCentre            string
+	ContractTermMonths    *int
 
 	WaitForUpdate bool          // Wait until the Port updates before returning
 	WaitForTime   time.Duration // How long to wait for the Port to update if WaitForUpdate is true (default is 5 minutes)
@@ -323,13 +324,18 @@ func (svc *PortServiceOp) ModifyPort(ctx context.Context, req *ModifyPortRequest
 		return nil, ErrCostCentreTooLong
 	}
 
-	modifyRes, err := svc.Client.ProductService.ModifyProduct(ctx, &ModifyProductRequest{
+	modifyReq := &ModifyProductRequest{
 		ProductID:             req.PortID,
 		ProductType:           PRODUCT_MEGAPORT,
 		Name:                  req.Name,
 		CostCentre:            req.CostCentre,
 		MarketplaceVisibility: req.MarketplaceVisibility,
-	})
+	}
+	if req.ContractTermMonths != nil {
+		modifyReq.ContractTermMonths = *req.ContractTermMonths
+	}
+
+	modifyRes, err := svc.Client.ProductService.ModifyProduct(ctx, modifyReq)
 	if err != nil {
 		return nil, err
 	}

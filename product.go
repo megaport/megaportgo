@@ -43,6 +43,7 @@ type ModifyProductRequest struct {
 	Name                  string `json:"name,omitempty"`
 	CostCentre            string `json:"costCentre,omitempty"`
 	MarketplaceVisibility *bool  `json:"marketplaceVisibility,omitempty"`
+	ContractTermMonths    int    `json:"term,omitempty"`
 }
 
 // ModifyProductResponse represents a response from the Megaport Products API after modifying a product.
