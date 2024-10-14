@@ -67,6 +67,7 @@ type ModifyMVERequest struct {
 	Name                  string
 	MarketplaceVisibility *bool
 	CostCentre            string
+	ContractTermMonths    *int // Contract term in months
 
 	WaitForUpdate bool          // Wait until the MCVEupdates before returning
 	WaitForTime   time.Duration // How long to wait for the MVE to update if WaitForUpdate is true (default is 5 minutes)
@@ -216,6 +217,9 @@ func (svc *MVEServiceOp) ModifyMVE(ctx context.Context, req *ModifyMVERequest) (
 	}
 	if req.CostCentre != "" {
 		modifyProductReq.CostCentre = req.CostCentre
+	}
+	if req.ContractTermMonths != nil {
+		modifyProductReq.ContractTermMonths = *req.ContractTermMonths
 	}
 
 	_, err := svc.Client.ProductService.ModifyProduct(ctx, modifyProductReq)

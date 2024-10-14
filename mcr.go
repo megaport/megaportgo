@@ -90,6 +90,7 @@ type ModifyMCRRequest struct {
 	Name                  string
 	CostCentre            string
 	MarketplaceVisibility *bool
+	ContractTermMonths    *int
 
 	WaitForUpdate bool          // Wait until the MCR updates before returning
 	WaitForTime   time.Duration // How long to wait for the MCR to update if WaitForUpdate is true (default is 5 minutes)
@@ -379,6 +380,9 @@ func (svc *MCRServiceOp) ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (
 		Name:                  req.Name,
 		CostCentre:            req.CostCentre,
 		MarketplaceVisibility: req.MarketplaceVisibility,
+	}
+	if req.ContractTermMonths != nil {
+		modifyReq.ContractTermMonths = *req.ContractTermMonths
 	}
 	_, err := svc.Client.ProductService.ModifyProduct(ctx, modifyReq)
 	if err != nil {
