@@ -173,6 +173,7 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 		},
 		WaitForProvision: true,
 		WaitForTime:      8 * time.Minute,
+		ResourceTags:     testResourceTags,
 	})
 	if vxcErr != nil {
 		suite.FailNowf("cannot buy vxc", "cannot buy vxc %v", vxcErr)
@@ -182,6 +183,22 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 
 	var newAEndAvailable, newBEndAvailable bool
 	var newAVLAN, newBVLAN int
+
+	tags, err := vxcSvc.ListVXCResourceTags(ctx, vxcUid)
+	if err != nil {
+		suite.FailNowf("cannot list vxc resource tags", "cannot list vxc resource tags %v", err)
+	}
+	suite.EqualValues(testResourceTags, tags, "resource tags are not equal")
+
+	err = vxcSvc.UpdateVXCResourceTags(ctx, vxcUid, testUpdatedResourceTags)
+	if err != nil {
+		suite.FailNowf("cannot update vxc resource tags", "cannot update vxc resource tags %v", err)
+	}
+	tags, err = vxcSvc.ListVXCResourceTags(ctx, vxcUid)
+	if err != nil {
+		suite.FailNowf("cannot list vxc resource tags", "cannot list vxc resource tags %v", err)
+	}
+	suite.EqualValues(testUpdatedResourceTags, tags, "updated resource tags are not equal")
 
 	newCostCentre := "Test Cost Centre 2"
 	newTerm := 24
@@ -373,12 +390,29 @@ func (suite *VXCIntegrationTestSuite) TestVXCMove() {
 		},
 		WaitForProvision: true,
 		WaitForTime:      8 * time.Minute,
+		ResourceTags:     testResourceTags,
 	})
 	if vxcErr != nil {
 		suite.FailNowf("cannot buy vxc", "cannot buy vxc %v", vxcErr)
 	}
 	vxcUid := buyVxcRes.TechnicalServiceUID
 	suite.True(IsGuid(vxcUid), "invalid guid for vxc uid")
+
+	tags, err := vxcSvc.ListVXCResourceTags(ctx, vxcUid)
+	if err != nil {
+		suite.FailNowf("cannot list vxc resource tags", "cannot list vxc resource tags %v", err)
+	}
+	suite.EqualValues(testResourceTags, tags, "resource tags are not equal")
+
+	err = vxcSvc.UpdateVXCResourceTags(ctx, vxcUid, testUpdatedResourceTags)
+	if err != nil {
+		suite.FailNowf("cannot update vxc resource tags", "cannot update vxc resource tags %v", err)
+	}
+	tags, err = vxcSvc.ListVXCResourceTags(ctx, vxcUid)
+	if err != nil {
+		suite.FailNowf("cannot list vxc resource tags", "cannot list vxc resource tags %v", err)
+	}
+	suite.EqualValues(testUpdatedResourceTags, tags, "updated resource tags are not equal")
 
 	logger.InfoContext(ctx, "updating vxc to second a and b end ports")
 
@@ -510,6 +544,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSVIFConnectionBuy() {
 				Prefixes:     "10.0.1.0/24",
 			},
 		},
+		ResourceTags:     testResourceTags,
 		WaitForProvision: true,
 		WaitForTime:      8 * time.Minute,
 	})
@@ -518,6 +553,22 @@ func (suite *VXCIntegrationTestSuite) TestAWSVIFConnectionBuy() {
 	}
 	vxcUid := buyVxcRes.TechnicalServiceUID
 	suite.True(IsGuid(vxcUid), "invalid guid for vxc uid")
+
+	tags, err := vxcSvc.ListVXCResourceTags(ctx, vxcUid)
+	if err != nil {
+		suite.FailNowf("cannot list vxc resource tags", "cannot list vxc resource tags %v", err)
+	}
+	suite.EqualValues(testResourceTags, tags, "resource tags are not equal")
+
+	err = vxcSvc.UpdateVXCResourceTags(ctx, vxcUid, testUpdatedResourceTags)
+	if err != nil {
+		suite.FailNowf("cannot update vxc resource tags", "cannot update vxc resource tags %v", err)
+	}
+	tags, err = vxcSvc.ListVXCResourceTags(ctx, vxcUid)
+	if err != nil {
+		suite.FailNowf("cannot list vxc resource tags", "cannot list vxc resource tags %v", err)
+	}
+	suite.EqualValues(testUpdatedResourceTags, tags, "updated resource tags are not equal")
 
 	logger.InfoContext(ctx, "deleting vxc", slog.String("vxc_uid", vxcUid))
 
@@ -569,11 +620,12 @@ func (suite *VXCIntegrationTestSuite) TestAWSHostedConnectionBuy() {
 	logger.InfoContext(ctx, "buying aws hosted connection (b-end)")
 
 	hcRes, hcErr := vxcSvc.BuyVXC(ctx, &BuyVXCRequest{
-		PortUID:   mcrUid,
-		VXCName:   "Hosted Connection AWS Test Connection",
-		Term:      1,
-		RateLimit: 500,
-		Shutdown:  false,
+		PortUID:      mcrUid,
+		VXCName:      "Hosted Connection AWS Test Connection",
+		Term:         1,
+		RateLimit:    500,
+		Shutdown:     false,
+		ResourceTags: testResourceTags,
 		AEndConfiguration: VXCOrderEndpointConfiguration{
 			VLAN: GenerateRandomVLAN(),
 			PartnerConfig: VXCOrderVrouterPartnerConfig{
@@ -626,6 +678,25 @@ func (suite *VXCIntegrationTestSuite) TestAWSHostedConnectionBuy() {
 		suite.FailNowf("cannot buy vxc", "cannot buy vxc %v", hcErr)
 	}
 
+	suite.True(IsGuid(hcRes.TechnicalServiceUID), "invalid guid for vxc uid")
+
+	vxcUid := hcRes.TechnicalServiceUID
+	tags, err := vxcSvc.ListVXCResourceTags(ctx, vxcUid)
+	if err != nil {
+		suite.FailNowf("cannot list vxc resource tags", "cannot list vxc resource tags %v", err)
+	}
+	suite.EqualValues(testResourceTags, tags, "resource tags are not equal")
+
+	err = vxcSvc.UpdateVXCResourceTags(ctx, vxcUid, testUpdatedResourceTags)
+	if err != nil {
+		suite.FailNowf("cannot update vxc resource tags", "cannot update vxc resource tags %v", err)
+	}
+	tags, err = vxcSvc.ListVXCResourceTags(ctx, vxcUid)
+	if err != nil {
+		suite.FailNowf("cannot list vxc resource tags", "cannot list vxc resource tags %v", err)
+	}
+	suite.EqualValues(testUpdatedResourceTags, tags, "updated resource tags are not equal")
+
 	logger.InfoContext(ctx, "deleting vxc", slog.String("vxc_uid", hcRes.TechnicalServiceUID))
 	deleteErr := vxcSvc.DeleteVXC(ctx, hcRes.TechnicalServiceUID, &DeleteVXCRequest{DeleteNow: true})
 	if deleteErr != nil {
@@ -668,6 +739,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSConnectionBuyDefaults() {
 	if portErr != nil {
 		suite.FailNowf("cannot buy port", "cannot buy port %v", portErr)
 	}
+
 	portUid := portRes.TechnicalServiceUIDs[0]
 	suite.True(IsGuid(portUid), "invalid guid for port uid")
 	logger.InfoContext(ctx, "buying aws vif connection (b-end)")
@@ -691,6 +763,8 @@ func (suite *VXCIntegrationTestSuite) TestAWSConnectionBuyDefaults() {
 				OwnerAccount: "684021030471",
 			},
 		},
+
+		ResourceTags:     testResourceTags,
 		WaitForProvision: true,
 		WaitForTime:      8 * time.Minute,
 	})
@@ -701,6 +775,22 @@ func (suite *VXCIntegrationTestSuite) TestAWSConnectionBuyDefaults() {
 
 	vifUid := vifRes.TechnicalServiceUID
 	suite.True(IsGuid(vifUid), "invalid guid for vif uid")
+
+	tags, err := vxcSvc.ListVXCResourceTags(ctx, vifUid)
+	if err != nil {
+		suite.FailNowf("cannot list vxc resource tags", "cannot list vxc resource tags %v", err)
+	}
+	suite.EqualValues(testResourceTags, tags, "resource tags are not equal")
+
+	err = vxcSvc.UpdateVXCResourceTags(ctx, vifUid, testUpdatedResourceTags)
+	if err != nil {
+		suite.FailNowf("cannot update vxc resource tags", "cannot update vxc resource tags %v", err)
+	}
+	tags, err = vxcSvc.ListVXCResourceTags(ctx, vifUid)
+	if err != nil {
+		suite.FailNowf("cannot list vxc resource tags", "cannot list vxc resource tags %v", err)
+	}
+	suite.EqualValues(testUpdatedResourceTags, tags, "updated resource tags are not equal")
 
 	logger.InfoContext(ctx, "deleting vxc", slog.String("vxc_uid", vifUid))
 
@@ -810,6 +900,7 @@ func (suite *VXCIntegrationTestSuite) TestBuyAzureExpressRoute() {
 			ProductUID:    partnerPortId,
 			PartnerConfig: azurePartnerConfig,
 		},
+		ResourceTags:     testResourceTags,
 		WaitForProvision: true,
 		WaitForTime:      10 * time.Minute,
 	})
@@ -819,6 +910,22 @@ func (suite *VXCIntegrationTestSuite) TestBuyAzureExpressRoute() {
 
 	vxcUid := vxcRes.TechnicalServiceUID
 	suite.True(IsGuid(vxcUid), "invalid guid for vxc uid")
+
+	tags, err := vxcSvc.ListVXCResourceTags(ctx, vxcUid)
+	if err != nil {
+		suite.FailNowf("cannot list vxc resource tags", "cannot list vxc resource tags %v", err)
+	}
+	suite.EqualValues(testResourceTags, tags, "resource tags are not equal")
+
+	err = vxcSvc.UpdateVXCResourceTags(ctx, vxcUid, testUpdatedResourceTags)
+	if err != nil {
+		suite.FailNowf("cannot update vxc resource tags", "cannot update vxc resource tags %v", err)
+	}
+	tags, err = vxcSvc.ListVXCResourceTags(ctx, vxcUid)
+	if err != nil {
+		suite.FailNowf("cannot list vxc resource tags", "cannot list vxc resource tags %v", err)
+	}
+	suite.EqualValues(testUpdatedResourceTags, tags, "updated resource tags are not equal")
 
 	logger.InfoContext(ctx, "deleting vxc")
 	deleteErr := vxcSvc.DeleteVXC(ctx, vxcUid, &DeleteVXCRequest{DeleteNow: true})
@@ -903,6 +1010,7 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnect() {
 			ProductUID:    partnerPortId,
 			PartnerConfig: partnerConfig,
 		},
+		ResourceTags:     testResourceTags,
 		WaitForProvision: true,
 		WaitForTime:      10 * time.Minute,
 	})
@@ -910,6 +1018,14 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnect() {
 	if vxcErr != nil {
 		suite.FailNowf("cannot buy vxc", "cannot buy vxc %v", vxcErr)
 	}
+
+	vxcId := vxcRes.TechnicalServiceUID
+	suite.True(IsGuid(vxcId), "invalid guid for vxc id")
+	tags, err := vxcSvc.ListVXCResourceTags(ctx, vxcId)
+	if err != nil {
+		suite.FailNowf("cannot list vxc resource tags", "cannot list vxc resource tags %v", err)
+	}
+	suite.EqualValues(testResourceTags, tags, "resource tags are not equal")
 
 	logger.InfoContext(ctx, "deleting vxc", slog.String("vxc_uid", vxcRes.TechnicalServiceUID))
 
@@ -995,6 +1111,7 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnectLocation() {
 			ProductUID:    partnerPortId,
 			PartnerConfig: partnerConfig,
 		},
+		ResourceTags:     testResourceTags,
 		WaitForProvision: true,
 		WaitForTime:      10 * time.Minute,
 	})
@@ -1005,6 +1122,12 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnectLocation() {
 
 	vxcId := vxcRes.TechnicalServiceUID
 	suite.True(IsGuid(vxcId), "invalid guid for vxc id")
+
+	tags, err := vxcSvc.ListVXCResourceTags(ctx, vxcId)
+	if err != nil {
+		suite.FailNowf("cannot list vxc resource tags", "cannot list vxc resource tags %v", err)
+	}
+	suite.EqualValues(testResourceTags, tags, "resource tags are not equal")
 
 	logger.InfoContext(ctx, "deleting vxc", slog.String("vxc_uid", vxcId))
 

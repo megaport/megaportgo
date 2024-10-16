@@ -225,6 +225,8 @@ type VXCOrderConfiguration struct {
 	CostCentre string                        `json:"costCentre,omitempty"`
 	AEnd       VXCOrderEndpointConfiguration `json:"aEnd"`
 	BEnd       VXCOrderEndpointConfiguration `json:"bEnd"`
+
+	ResourceTags []ResourceTag `json:"resourceTags,omitempty"`
 }
 
 // VXCOrderEndpointConfiguration represents the configuration of an endpoint of a VXC to be ordered from the Megaport Products API.

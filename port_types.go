@@ -15,6 +15,7 @@ type PortOrder struct {
 	MarketplaceVisibility bool            `json:"marketplaceVisibility"`
 	Config                PortOrderConfig `json:"config"`
 	PromoCode             string          `json:"promoCode,omitempty"`
+	ResourceTags          []ResourceTag   `json:"resourceTags,omitempty"`
 }
 
 type PortOrderConfig struct {

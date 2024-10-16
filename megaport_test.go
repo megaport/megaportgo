@@ -15,6 +15,33 @@ var runIntegrationTests = flag.Bool("integration", false, "perform integration t
 // programLevel is the log level for the test suite
 var programLevel = new(slog.LevelVar)
 
+// testResourceTags is a list of resource tags for integration tests
+var testResourceTags = map[string]string{
+	"key1": "value1", "key2": "value2", "key3": "value3",
+}
+
+var testProductResourceTags = []ResourceTag{
+	{Key: "key1", Value: "value1"},
+	{Key: "key2", Value: "value2"},
+	{Key: "key3", Value: "value3"},
+}
+
+var testUpdatedResourceTags = map[string]string{
+	"key1updated": "value1updated", "key2updated": "value2updated", "key3updated": "value3updated", "key4updated": "value4updated",
+}
+
+var resourceTagJSONBlob = `{
+    "message": "test-message",
+    "terms": "test-terms",
+    "data": {
+        "resourceTags": [
+            {"key": "key1", "value": "value1"},
+            {"key": "key2", "value": "value2"},
+            {"key": "key3", "value": "value3"}
+        ]
+    }
+}`
+
 // Default Base URL for Integration Tests
 const (
 	MEGAPORTURL = "https://api-staging.megaport.com/"
