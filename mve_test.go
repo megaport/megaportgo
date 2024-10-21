@@ -274,6 +274,7 @@ func (suite *MVEClientTestSuite) TestGetMVE() {
 		MarketplaceVisibility: false,
 		VXCPermitted:          true,
 		VXCAutoApproval:       false,
+		MaxVXCSpeed:           10000,
 		CompanyUID:            companyUid,
 		CompanyName:           "test-company",
 		ContractStartDate:     startDate,
@@ -322,8 +323,9 @@ func (suite *MVEClientTestSuite) TestGetMVE() {
 				},
 			},
 		},
-		Vendor: "PALO_ALTO",
-		Size:   "SMALL",
+		Vendor:   "PALO_ALTO",
+		Size:     "SMALL",
+		MVELabel: "MVE 2/8",
 		NetworkInterfaces: []*MVENetworkInterface{
 			{
 				VLAN:        0,

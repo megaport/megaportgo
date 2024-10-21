@@ -43,6 +43,7 @@ type Port struct {
 	LocationID            int                     `json:"locationId"`
 	UsageAlgorithm        string                  `json:"usageAlgorithm"`
 	MarketplaceVisibility bool                    `json:"marketplaceVisibility"`
+	MaxVXCSpeed           int                     `json:"maxVxcSpeed"`
 	VXCPermitted          bool                    `json:"vxcpermitted"`
 	VXCAutoApproval       bool                    `json:"vxcAutoApproval"`
 	SecondaryName         string                  `json:"secondaryName"`

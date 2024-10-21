@@ -111,6 +111,7 @@ func (suite *MCRClientTestSuite) TestGetMCR() {
 		CreatedBy:          companyUid,
 		Market:             "US",
 		PortSpeed:          1000,
+		MaxVXCSpeed:        1000,
 		CompanyName:        "Test Company",
 		LocationDetails: &ProductLocationDetails{
 			Name:    "Test Location",
@@ -379,6 +380,7 @@ func (suite *MCRClientTestSuite) TestModifyMCR() {
 		Cancelable:         true,
 		VXCPermitted:       true,
 		Virtual:            true,
+		MaxVXCSpeed:        1000,
 		CompanyUID:         companyUid,
 		UsageAlgorithm:     "POST_PAID_HOURLY_SPEED_MCR2",
 		AttributeTags:      map[string]string{},
