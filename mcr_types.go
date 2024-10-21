@@ -46,6 +46,7 @@ type MCR struct {
 	MarketplaceVisibility bool                    `json:"marketplaceVisibility"`
 	VXCPermitted          bool                    `json:"vxcpermitted"`
 	VXCAutoApproval       bool                    `json:"vxcAutoApproval"`
+	MaxVXCSpeed           int                     `json:"maxVxcSpeed"`
 	SecondaryName         string                  `json:"secondaryName"`
 	LAGPrimary            bool                    `json:"lagPrimary"`
 	LAGID                 int                     `json:"lagId"`

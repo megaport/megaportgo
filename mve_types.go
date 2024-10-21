@@ -183,6 +183,7 @@ type MVE struct {
 	LocationID            int                     `json:"locationId"`
 	UsageAlgorithm        string                  `json:"usageAlgorithm"`
 	MarketplaceVisibility bool                    `json:"marketplaceVisibility"`
+	MaxVXCSpeed           int                     `json:"maxVxcSpeed"`
 	VXCPermitted          bool                    `json:"vxcpermitted"`
 	VXCAutoApproval       bool                    `json:"vxcAutoApproval"`
 	SecondaryName         string                  `json:"secondaryName"`
@@ -201,6 +202,7 @@ type MVE struct {
 	Resources             *MVEResources           `json:"resources"`
 	Vendor                string                  `json:"vendor"`
 	Size                  string                  `json:"mveSize"`
+	MVELabel              string                  `json:"mveLabel"`
 	DiversityZone         string                  `json:"diversityZone"`
 	NetworkInterfaces     []*MVENetworkInterface  `json:"vnics"`
 	LocationDetails       *ProductLocationDetails `json:"locationDetail"`
