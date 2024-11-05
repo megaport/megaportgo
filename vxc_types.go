@@ -403,12 +403,12 @@ type PartnerOrderContents struct {
 // PartnerOrderAzurePeeringConfig represents the configuration of an Azure peering partner.
 type PartnerOrderAzurePeeringConfig struct {
 	Type            string `json:"type"`
-	PeerASN         string `json:"peer_asn"`
-	PrimarySubnet   string `json:"primary_subnet"`
-	SecondarySubnet string `json:"secondary_subnet"`
+	PeerASN         string `json:"peer_asn,omitempty"`
+	PrimarySubnet   string `json:"primary_subnet,omitempty"`
+	SecondarySubnet string `json:"secondary_subnet,omitempty"`
 	Prefixes        string `json:"prefixes,omitempty"`
 	SharedKey       string `json:"shared_key,omitempty"`
-	VLAN            int    `json:"vlan"`
+	VLAN            int    `json:"vlan,omitempty"`
 }
 
 // CSPConnection represents the configuration of a CSP connection.
