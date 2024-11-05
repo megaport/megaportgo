@@ -670,6 +670,16 @@ func (c *CSPConnection) UnmarshalJSON(data []byte) error {
 				return err
 			}
 			c.CSPConnection = append(c.CSPConnection, transit)
+		case "ORACLE":
+			marshaled, err := json.Marshal(cn)
+			if err != nil {
+				return err
+			}
+			oracle := CSPConnectionOracle{}
+			if err := json.Unmarshal(marshaled, &oracle); err != nil {
+				return err
+			}
+			c.CSPConnection = append(c.CSPConnection, oracle)
 		default: // Any other cases will be marshaled into a map[string]interface{}
 			marshaled, err := json.Marshal(cn)
 			if err != nil {
