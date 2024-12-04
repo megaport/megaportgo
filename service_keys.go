@@ -3,6 +3,7 @@ package megaport
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -60,8 +61,9 @@ type ServiceKey struct {
 
 // CreateServiceKeyRequest represents a request to create a service key from the Megaport Service Key API.
 type CreateServiceKeyRequest struct {
-	ProductUID    string         `json:"productUid"` // The Port for the service key.
-	SingleUse     bool           `json:"singleUse"`  // Determines whether to create a single-use or multi-use service key. Valid values are true (single-use) and false (multi-use). With a multi-use key, the customer that you share the key with can request multiple connections using that key. For single-use keys only, specify a VLAN ID (vlan).
+	ProductUID    string         `json:"productUid,omitempty"` // The Port ID for the service key. API can take either UID or ID.
+	ProductID     int            `json:"productId,omitempty"`  // The Port UID for the service key. API can take either UID or ID.
+	SingleUse     bool           `json:"singleUse"`            // Determines whether to create a single-use or multi-use service key. Valid values are true (single-use) and false (multi-use). With a multi-use key, the customer that you share the key with can request multiple connections using that key. For single-use keys only, specify a VLAN ID (vlan).
 	MaxSpeed      int            `json:"maxSpeed"`
 	Active        bool           `json:"active,omitempty"`      // Determines whether the service key is available for use. Valid values are true if you want the key to be available right away and false if you don’t want the key to be available right away.
 	PreApproved   bool           `json:"preApproved,omitempty"` // Whether the service key is pre-approved for use.
@@ -127,10 +129,11 @@ type ListServiceKeysResponse struct {
 // UpdateServiceKeyRequest represents a request to update a service key in the Megaport Service Key API.
 type UpdateServiceKeyRequest struct {
 	Key           string         `json:"key"`
-	ProductID     int            `json:"productId"`          // The Port for the service key.
-	SingleUse     bool           `json:"singleUse"`          // Determines whether the service key is single-use or multi-use. Valid values are true (single-use) and false (multi-use). With a multi-use key, the customer that you share the key with can request multiple connections using that key.
-	Active        bool           `json:"active"`             // Determines whether the service key is available for use. Valid values are true if you want the key to be available right away and false if you don’t want the key to be available right away.
-	OrderValidFor *OrderValidFor `json:"validFor,omitempty"` // The range of dates for which the service key is valid.
+	ProductUID    string         `json:"productUid,omitempty"` // The Product UID for the service key. API can take either UID or ID.
+	ProductID     int            `json:"productId,omitempty"`  // The Product ID for the service key. API can take either UID or ID.
+	SingleUse     bool           `json:"singleUse"`            // Determines whether the service key is single-use or multi-use. Valid values are true (single-use) and false (multi-use). With a multi-use key, the customer that you share the key with can request multiple connections using that key.
+	Active        bool           `json:"active"`               // Determines whether the service key is available for use. Valid values are true if you want the key to be available right away and false if you don’t want the key to be available right away.
+	OrderValidFor *OrderValidFor `json:"validFor,omitempty"`   // The range of dates for which the service key is valid.
 	ValidFor      *ValidFor
 }
 
@@ -141,6 +144,9 @@ type UpdateServiceKeyResponse struct {
 
 // CreateServiceKey creates a service key in the Megaport Service Key API.
 func (svc *ServiceKeyServiceOp) CreateServiceKey(ctx context.Context, req *CreateServiceKeyRequest) (*CreateServiceKeyResponse, error) {
+	if req.ProductID != 0 && req.ProductUID != "" {
+		return nil, errors.New("ProductID and ProductUID cannot both be set")
+	}
 	if req.ValidFor != nil {
 		req.OrderValidFor = &OrderValidFor{
 			Start: req.ValidFor.StartTime.Unix() * 1000,
@@ -256,6 +262,9 @@ func (svc *ServiceKeyServiceOp) GetServiceKey(ctx context.Context, keyId string)
 }
 
 func (svc *ServiceKeyServiceOp) UpdateServiceKey(ctx context.Context, req *UpdateServiceKeyRequest) (*UpdateServiceKeyResponse, error) {
+	if req.ProductID != 0 && req.ProductUID != "" {
+		return nil, errors.New("ProductID and ProductUID cannot both be set")
+	}
 	path := "/v2/service/key"
 	url := svc.Client.BaseURL.JoinPath(path).String()
 	if req.ValidFor != nil {
