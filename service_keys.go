@@ -3,6 +3,7 @@ package megaport
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -143,6 +144,9 @@ type UpdateServiceKeyResponse struct {
 
 // CreateServiceKey creates a service key in the Megaport Service Key API.
 func (svc *ServiceKeyServiceOp) CreateServiceKey(ctx context.Context, req *CreateServiceKeyRequest) (*CreateServiceKeyResponse, error) {
+	if req.ProductID != 0 && req.ProductUID != "" {
+		return nil, errors.New("ProductID and ProductUID cannot both be set")
+	}
 	if req.ValidFor != nil {
 		req.OrderValidFor = &OrderValidFor{
 			Start: req.ValidFor.StartTime.Unix() * 1000,
@@ -258,6 +262,9 @@ func (svc *ServiceKeyServiceOp) GetServiceKey(ctx context.Context, keyId string)
 }
 
 func (svc *ServiceKeyServiceOp) UpdateServiceKey(ctx context.Context, req *UpdateServiceKeyRequest) (*UpdateServiceKeyResponse, error) {
+	if req.ProductID != 0 && req.ProductUID != "" {
+		return nil, errors.New("ProductID and ProductUID cannot both be set")
+	}
 	path := "/v2/service/key"
 	url := svc.Client.BaseURL.JoinPath(path).String()
 	if req.ValidFor != nil {
