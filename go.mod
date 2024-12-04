@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/lithammer/fuzzysearch v1.1.5
-	github.com/stretchr/testify v1.7.2
+	github.com/stretchr/testify v1.10.0
 )
 
 require (
