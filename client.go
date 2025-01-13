@@ -403,7 +403,7 @@ func (c *Client) Authorize(ctx context.Context) (*AuthInfo, error) {
 	if c.BaseURL.Host == "api.megaport.com" {
 		tokenURL = "https://auth-m2m.megaport.com/oauth2/token"
 	} else if c.BaseURL.Host == "api-staging.megaport.com" {
-		tokenURL = "https://oauth-m2m-staging.auth.ap-southeast-2.amazoncognito.com/oauth2/token"
+		tokenURL = "https://auth-m2m-staging.megaport.com/oauth2/token"
 	} else {
 		return nil, errors.New("unknown API environment")
 	}
