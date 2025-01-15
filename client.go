@@ -19,8 +19,9 @@ import (
 type Environment string
 
 const (
-	EnvironmentStaging    Environment = "https://api-staging.megaport.com/"
-	EnvironmentProduction Environment = "https://api.megaport.com/"
+	EnvironmentStaging     Environment = "https://api-staging.megaport.com/"
+	EnvironmentProduction  Environment = "https://api.megaport.com/"
+	EnvironmentDevelopment Environment = "https://api-mpone-dev.megaport.com"
 )
 
 const (
@@ -404,6 +405,8 @@ func (c *Client) Authorize(ctx context.Context) (*AuthInfo, error) {
 		tokenURL = "https://auth-m2m.megaport.com/oauth2/token"
 	} else if c.BaseURL.Host == "api-staging.megaport.com" {
 		tokenURL = "https://auth-m2m-staging.megaport.com/oauth2/token"
+	} else if c.BaseURL.Host == "" {
+		tokenURL = "https://auth-m2m-mpone-dev.megaport.com/oauth2/token"
 	} else {
 		return nil, errors.New("unknown API environment")
 	}
