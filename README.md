@@ -84,7 +84,7 @@ The [Megaport Contributor Licence Agreement](CLA.md) is
 the authoritative document over these conditions and any other communications unless explicitly stated otherwise.
 
 When you open a Pull Request, all authors of the contributions are required to comment on the Pull Request confirming
-acceptance of the CLA terms. Pull Requests can not be mMegaport_Contributor_Licence_Agreementerged until this is complete.
+acceptance of the CLA terms. Pull Requests can not be merged until this is complete.
 
 The [Megaport Contributor Licence Agreement](CLA.md) applies to contributions. 
 All users are free to use the `megaportgo` project under the [MPL-2.0 Open Source Licence](LICENSE).
