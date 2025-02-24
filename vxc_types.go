@@ -349,7 +349,7 @@ type BfdConfig struct {
 // BgpConnectionConfig represents the configuration of a BGP connection.
 type BgpConnectionConfig struct {
 	PeerAsn            int      `json:"peerAsn"`
-	LocalAsn           int      `json:"localAsn"`
+	LocalAsn           int      `json:"localAsn,omitempty"`
 	LocalIpAddress     string   `json:"localIpAddress"`
 	PeerIpAddress      string   `json:"peerIpAddress"`
 	Password           string   `json:"password,omitempty"`
