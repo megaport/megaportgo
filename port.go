@@ -312,7 +312,6 @@ func (svc *PortServiceOp) GetPort(ctx context.Context, portId string) (*Port, er
 	defer response.Body.Close()
 
 	body, fileErr := io.ReadAll(response.Body)
-
 	if fileErr != nil {
 		return nil, fileErr
 	}
@@ -322,7 +321,28 @@ func (svc *PortServiceOp) GetPort(ctx context.Context, portId string) (*Port, er
 	if unmarshalErr != nil {
 		return nil, unmarshalErr
 	}
-	return &portDetails.Data, nil
+
+	port := &portDetails.Data
+	// If the port is part of a LAG, we need to fetch the LAG details
+	if port.AggregationID != 0 {
+		// Fetch all ports to find those with the same AggregationID
+		allPorts, err := svc.ListPorts(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		lagPortUIDs := []string{}
+		for _, p := range allPorts {
+			if p.AggregationID == port.AggregationID {
+				lagPortUIDs = append(lagPortUIDs, p.UID)
+			}
+		}
+
+		port.LagPortUIDs = lagPortUIDs
+		port.LagCount = len(lagPortUIDs)
+	}
+
+	return port, nil
 }
 
 // ModifyPort modifies a port in the Megaport Port API.

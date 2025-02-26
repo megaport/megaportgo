@@ -123,7 +123,6 @@ func (suite *PortIntegrationTestSuite) TestLAGPort() {
 	ctx := context.Background()
 
 	testLocation, err := suite.client.LocationService.GetLocationByID(ctx, TEST_LOCATION_ID_A)
-
 	suite.NoError(err)
 
 	portsListInitial, err := suite.client.PortService.ListPorts(ctx)
@@ -155,6 +154,12 @@ func (suite *PortIntegrationTestSuite) TestLAGPort() {
 	for _, p := range portsListPostCreate {
 		if slices.Contains(mainPortIDs, p.UID) {
 			foundNewPort = true
+			if p.AggregationID != 0 {
+				lagPort, err := suite.client.PortService.GetPort(ctx, p.UID)
+				suite.NoError(err)
+				suite.Equal(2, lagPort.LagCount)
+				suite.ElementsMatch(mainPortIDs, lagPort.LagPortUIDs)
+			}
 		}
 	}
 
