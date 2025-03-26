@@ -72,6 +72,8 @@ type Client struct {
 	ServiceKeyService ServiceKeyService
 	// ManagedAccountService provides methods for interacting with the Managed Accounts API
 	ManagedAccountService ManagedAccountService
+	// IXService provides methods for interacting with the IX API
+	IXService IXService
 
 	accessToken string    // Access Token for client
 	tokenExpiry time.Time // Token Expiration
@@ -163,6 +165,7 @@ func NewClient(httpClient *http.Client, base *url.URL) *Client {
 	c.MCRService = NewMCRService(c)
 	c.MVEService = NewMVEService(c)
 	c.VXCService = NewVXCService(c)
+	c.IXService = NewIXService(c)
 	c.PartnerService = NewPartnerService(c)
 	c.ServiceKeyService = NewServiceKeyService(c)
 	c.ManagedAccountService = NewManagedAccountService(c)
