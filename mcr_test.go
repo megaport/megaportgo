@@ -237,6 +237,160 @@ func (suite *MCRClientTestSuite) TestCreatePrefixFilterList() {
 	suite.NoError(prefixErr)
 }
 
+// TestListMCRs tests the ListMCRs method
+func (suite *MCRClientTestSuite) TestListMCRs() {
+	ctx := context.Background()
+	mcrSvc := suite.client.MCRService
+
+	// Define test data
+	startDate := &Time{GetTime(1706104800000)}
+	endDate := &Time{GetTime(1737727200000)}
+
+	// Mock API response
+	jblob := `{
+        "message": "Products retrieved successfully",
+        "terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+        "data": [
+            {
+                "productId": 1,
+                "productUid": "36b3f68e-2f54-4331-bf94-f8984449365f",
+                "productName": "test-mcr-1",
+                "productType": "MCR2",
+                "provisioningStatus": "LIVE",
+                "locationId": 1,
+                "portSpeed": 1000,
+                "createDate": 1706104800000,
+                "createdBy": "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
+                "terminateDate": 1737727200000,
+                "contractStartDate": 1706104800000,
+                "contractEndDate": 1737727200000,
+                "contractTermMonths": 12,
+                "market": "US",
+                "companyUid": "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
+                "companyName": "Test Company",
+                "locationDetail": {"name":"Test Location","city":"Atlanta","metro":"Atlanta","country":"USA"},
+                "vxcPermitted": true,
+                "virtual": true,
+                "attributeTags": {}
+            },
+            {
+                "productId": 2,
+                "productUid": "46c3f68e-3f54-5331-cf94-g9984449365g",
+                "productName": "test-mcr-2",
+                "productType": "MCR2",
+                "provisioningStatus": "DECOMMISSIONED",
+                "locationId": 2,
+                "portSpeed": 500,
+                "createDate": 1706104800000,
+                "createdBy": "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
+                "terminateDate": 1737727200000,
+                "contractStartDate": 1706104800000,
+                "contractEndDate": 1737727200000,
+                "contractTermMonths": 12,
+                "market": "EU",
+                "companyUid": "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
+                "companyName": "Test Company",
+                "locationDetail": {"name":"Test Location 2","city":"London","metro":"London","country":"UK"},
+                "vxcPermitted": true,
+                "virtual": true,
+                "attributeTags": {}
+            },
+            {
+                "productId": 3,
+                "productUid": "56d3f68e-4f54-6331-df94-h9984449365h",
+                "productName": "test-port",
+                "productType": "MEGAPORT"
+            }
+        ]
+    }`
+
+	// Expected MCRs after filtering
+	want := []*MCR{
+		{
+			ID:                 1,
+			UID:                "36b3f68e-2f54-4331-bf94-f8984449365f",
+			Name:               "test-mcr-1",
+			Type:               "MCR2",
+			ProvisioningStatus: "LIVE",
+			LocationID:         1,
+			PortSpeed:          1000,
+			CreateDate:         startDate,
+			CreatedBy:          "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
+			Market:             "US",
+			CompanyUID:         "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
+			CompanyName:        "Test Company",
+			ContractStartDate:  startDate,
+			ContractEndDate:    endDate,
+			TerminateDate:      endDate,
+			ContractTermMonths: 12,
+			VXCPermitted:       true,
+			Virtual:            true,
+			AttributeTags:      map[string]string{},
+			LocationDetails: &ProductLocationDetails{
+				Name:    "Test Location",
+				City:    "Atlanta",
+				Metro:   "Atlanta",
+				Country: "USA",
+			},
+		},
+	}
+
+	// Set up handler for the /v2/products endpoint
+	suite.mux.HandleFunc("/v2/products", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, jblob)
+	})
+
+	// Test with default behavior (exclude inactive)
+	req := &ListMCRsRequest{
+		IncludeInactive: false,
+	}
+
+	got, err := mcrSvc.ListMCRs(ctx, req)
+	suite.NoError(err)
+	suite.Equal(1, len(got), "Should only return 1 active MCR")
+	suite.Equal(want, got)
+
+	// Test with includeInactive=true
+	reqWithInactive := &ListMCRsRequest{
+		IncludeInactive: true,
+	}
+
+	// Update expectations for including inactive MCRs
+	wantWithInactive := append(want, &MCR{
+		ID:                 2,
+		UID:                "46c3f68e-3f54-5331-cf94-g9984449365g",
+		Name:               "test-mcr-2",
+		Type:               "MCR2",
+		ProvisioningStatus: "DECOMMISSIONED",
+		LocationID:         2,
+		PortSpeed:          500,
+		CreateDate:         startDate,
+		CreatedBy:          "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
+		Market:             "EU",
+		CompanyUID:         "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
+		CompanyName:        "Test Company",
+		ContractStartDate:  startDate,
+		ContractEndDate:    endDate,
+		TerminateDate:      endDate,
+		ContractTermMonths: 12,
+		VXCPermitted:       true,
+		Virtual:            true,
+		AttributeTags:      map[string]string{},
+		LocationDetails: &ProductLocationDetails{
+			Name:    "Test Location 2",
+			City:    "London",
+			Metro:   "London",
+			Country: "UK",
+		},
+	})
+
+	gotWithInactive, err := mcrSvc.ListMCRs(ctx, reqWithInactive)
+	suite.NoError(err)
+	suite.Equal(2, len(gotWithInactive), "Should return both active and inactive MCRs")
+	suite.Equal(wantWithInactive, gotWithInactive)
+}
+
 // TestModifyMCR tests the ModifyMCR method.
 func (suite *MCRClientTestSuite) TestModifyMCR() {
 	ctx := context.Background()
