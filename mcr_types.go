@@ -65,6 +65,18 @@ type MCR struct {
 	LocationDetails       *ProductLocationDetails `json:"locationDetail"`
 }
 
+func (m *MCR) GetType() string {
+	return m.Type
+}
+
+func (m *MCR) GetUID() string {
+	return m.UID
+}
+
+func (m *MCR) GetProvisioningStatus() string {
+	return m.ProvisioningStatus
+}
+
 // MCRResources represents the resources associated with an MCR.
 type MCRResources struct {
 	Interface     PortInterface    `json:"interface"`

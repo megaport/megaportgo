@@ -17,6 +17,8 @@ type MVEService interface {
 	BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMVEResponse, error)
 	// ValidateMVEOrder validates an MVE order in the Megaport Products API.
 	ValidateMVEOrder(ctx context.Context, req *BuyMVERequest) error
+	// ListMVEs lists all MVEs in the Megaport API.
+	ListMVEs(ctx context.Context, req *ListMVEsRequest) ([]*MVE, error)
 	// GetMVE gets details about a single MVE from the Megaport MVE API.
 	GetMVE(ctx context.Context, mveId string) (*MVE, error)
 	// ModifyMVE modifies an MVE in the Megaport MVE API.
@@ -65,6 +67,11 @@ type BuyMVERequest struct {
 // BuyMVEResponse represents a response from buying an MVE
 type BuyMVEResponse struct {
 	TechnicalServiceUID string
+}
+
+// ListMVEsRequest represents a request to list MVEs. It allows you to determine whether to include inactive MVEs in the response. The default is to include only active MVEs.
+type ListMVEsRequest struct {
+	IncludeInactive bool
 }
 
 // ModifyMVERequest represents a request to modify an MVE
@@ -186,6 +193,35 @@ func createMVEOrder(req *BuyMVERequest) []*MVEOrderConfig {
 
 	mveOrder := []*MVEOrderConfig{order}
 	return mveOrder
+}
+
+// ListMVEs lists all MVEs in the Megaport API.
+func (svc *MVEServiceOp) ListMVEs(ctx context.Context, req *ListMVEsRequest) ([]*MVE, error) {
+	allProducts, err := svc.Client.ProductService.ListProducts(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	mves := []*MVE{}
+
+	for _, product := range allProducts {
+		if strings.ToLower(product.GetType()) == PRODUCT_MVE {
+			mve, ok := product.(*MVE)
+			if !ok {
+				svc.Client.Logger.WarnContext(ctx, "Found MVE product type but couldn't cast to MVE struct")
+				continue
+			}
+
+			// Filter inactive MVEs if requested
+			if !req.IncludeInactive && (mve.ProvisioningStatus == STATUS_DECOMMISSIONED || mve.ProvisioningStatus == STATUS_CANCELLED) {
+				continue
+			}
+
+			mves = append(mves, mve)
+		}
+	}
+
+	return mves, nil
 }
 
 // GetMVE retrieves a single MVE from the Megaport MVE API.

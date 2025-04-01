@@ -7,12 +7,15 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 )
 
 // ProductService is an interface for interfacing with the Product endpoints of the Megaport API.
 type ProductService interface {
 	// ExecuteOrder is responsible for executing an order for a product in the Megaport Products API.
 	ExecuteOrder(ctx context.Context, requestBody interface{}) (*[]byte, error)
+	// ListProducts retrieves a list of products from the Megaport Products API. It returns a slice of Product interfaces, which can be of different types (Port, MCR, MVE). The function handles the parsing of the response and unmarshals it into the appropriate product type based on the product type field.
+	ListProducts(ctx context.Context) ([]Product, error)
 	// ModifyProduct modifies a product in the Megaport Products API. The available fields to modify are Name, Cost Centre, and Marketplace Visibility.
 	ModifyProduct(ctx context.Context, req *ModifyProductRequest) (*ModifyProductResponse, error)
 	// DeleteProduct is responsible for either scheduling a product for deletion "CANCEL" or deleting a product immediately "CANCEL_NOW" in the Megaport Products API.
@@ -84,9 +87,20 @@ type ManageProductLockResponse struct{}
 
 // ParsedProductsResponse represents a response from the Megaport Products API prior to parsing the response.
 type ParsedProductsResponse struct {
-	Message string        `json:"message"`
-	Terms   string        `json:"terms"`
-	Data    []interface{} `json:"data"`
+	Message string            `json:"message"`
+	Terms   string            `json:"terms"`
+	Data    []json.RawMessage `json:"data"`
+}
+
+// Product defines the common interface for all Megaport products
+type Product interface {
+	GetType() string
+	GetUID() string
+	GetProvisioningStatus() string
+}
+
+type ParsedProduct struct {
+	Type string `json:"productType"`
 }
 
 // ResourceTagsResponse represents a response from the Megaport Products API after retrieving the resource tags for a product.
@@ -136,6 +150,70 @@ func (svc *ProductServiceOp) ExecuteOrder(ctx context.Context, requestBody inter
 	}
 
 	return &body, nil
+}
+
+// ListProducts retrieves a list of products from the Megaport Products API.
+// It returns a slice of Product interfaces, which can be of different types (Port, MCR, MVE).
+// The function handles the parsing of the response and unmarshals it into the appropriate product type based on the product type field.
+// It also logs any errors encountered during the unmarshalling process.
+func (svc *ProductServiceOp) ListProducts(ctx context.Context) ([]Product, error) {
+	path := "/v2/products"
+	url := svc.Client.BaseURL.JoinPath(path).String()
+	req, err := svc.Client.NewRequest(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := svc.Client.Do(ctx, req, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	// Parse response into a structure with raw JSON messages
+	var parsed ParsedProductsResponse
+
+	if err := json.NewDecoder(response.Body).Decode(&parsed); err != nil {
+		return nil, err
+	}
+
+	products := []Product{}
+
+	for i, rawProduct := range parsed.Data {
+		// First extract just the type field
+		var parsedProduct ParsedProduct
+
+		if err := json.Unmarshal(rawProduct, &parsedProduct); err != nil {
+			svc.Client.Logger.WarnContext(ctx, fmt.Sprintf("Item %d: Could not extract product type: %v", i, err))
+			continue
+		}
+
+		// Then unmarshal into the appropriate struct based on type
+		switch strings.ToLower(parsedProduct.Type) {
+		case PRODUCT_MEGAPORT:
+			var port Port
+			if err := json.Unmarshal(rawProduct, &port); err != nil {
+				svc.Client.Logger.WarnContext(ctx, fmt.Sprintf("Item %d: Could not unmarshal as PORT: %v", i, err))
+				continue
+			}
+			products = append(products, &port)
+		case PRODUCT_MCR:
+			var mcr MCR
+			if err := json.Unmarshal(rawProduct, &mcr); err != nil {
+				svc.Client.Logger.WarnContext(ctx, fmt.Sprintf("Item %d: Could not unmarshal as MCR: %v", i, err))
+				continue
+			}
+			products = append(products, &mcr)
+		case PRODUCT_MVE:
+			var mve MVE
+			if err := json.Unmarshal(rawProduct, &mve); err != nil {
+				svc.Client.Logger.WarnContext(ctx, fmt.Sprintf("Item %d: Could not unmarshal as MVE: %v", i, err))
+				continue
+			}
+			products = append(products, &mve)
+		}
+	}
+	return products, nil
 }
 
 // ModifyProduct modifies a product in the Megaport Products API. The available fields to modify are Name, Cost Centre, and Marketplace Visibility.
