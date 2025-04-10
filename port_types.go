@@ -68,6 +68,18 @@ type Port struct {
 	LagPortUIDs           []string
 }
 
+func (p *Port) GetType() string {
+	return p.Type
+}
+
+func (p *Port) GetUID() string {
+	return p.UID
+}
+
+func (p *Port) GetProvisioningStatus() string {
+	return p.ProvisioningStatus
+}
+
 // PortResources represents the resources associated with a Megaport Port.
 type PortResources struct {
 	Interface PortInterface `json:"interface"`

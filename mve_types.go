@@ -208,6 +208,18 @@ type MVE struct {
 	ResourceTags []map[string]string `json:"resourceTags,omitempty"`
 }
 
+func (m *MVE) GetType() string {
+	return m.Type
+}
+
+func (m *MVE) GetUID() string {
+	return m.UID
+}
+
+func (m *MVE) GetProvisioningStatus() string {
+	return m.ProvisioningStatus
+}
+
 // MVEResources represents the resources associated with an MVE.
 type MVEResources struct {
 	Interface       *PortInterface       `json:"interface"`

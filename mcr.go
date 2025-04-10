@@ -7,6 +7,7 @@ import (
 	"io"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -17,6 +18,8 @@ type MCRService interface {
 	BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMCRResponse, error)
 	// ValidateMCROrder validates an MCR order in the Megaport Products API.
 	ValidateMCROrder(ctx context.Context, req *BuyMCRRequest) error
+	// ListMCRs lists all MCRs in the Megaport API. It allows you to filter by whether the provisioning status is active.
+	ListMCRs(ctx context.Context, req *ListMCRsRequest) ([]*MCR, error)
 	// GetMCR gets details about a single MCR from the Megaport MCR API.
 	GetMCR(ctx context.Context, mcrId string) (*MCR, error)
 	// CreatePrefixFilterList creates a Prefix Filter List on an MCR from the Megaport MCR API.
@@ -75,6 +78,11 @@ type BuyMCRRequest struct {
 // BuyMCRResponse represents a response from buying an MCR
 type BuyMCRResponse struct {
 	TechnicalServiceUID string
+}
+
+// ListMCRsRequest represents a request to list MCRs. It allows you to filter by whether the provisioning status is active.
+type ListMCRsRequest struct {
+	IncludeInactive bool
 }
 
 // CreateMCRPrefixFilterListRequest represents a request to create a prefix filter list on an MCR
@@ -238,6 +246,35 @@ func (svc *MCRServiceOp) ValidateMCROrder(ctx context.Context, req *BuyMCRReques
 	mcrOrders := createMCROrder(req)
 
 	return svc.Client.ProductService.ValidateProductOrder(ctx, mcrOrders)
+}
+
+// ListMCRs lists all MCRs in the Megaport API.
+func (svc *MCRServiceOp) ListMCRs(ctx context.Context, req *ListMCRsRequest) ([]*MCR, error) {
+	allProducts, err := svc.Client.ProductService.ListProducts(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	mcrs := []*MCR{}
+
+	for _, product := range allProducts {
+		if strings.ToLower(product.GetType()) == PRODUCT_MCR {
+			mcr, ok := product.(*MCR)
+			if !ok {
+				svc.Client.Logger.WarnContext(ctx, "Found MCR product type but couldn't cast to MCR struct")
+				continue
+			}
+
+			// Filter inactive MCRs if requested
+			if !req.IncludeInactive && (mcr.ProvisioningStatus == STATUS_DECOMMISSIONED || mcr.ProvisioningStatus == STATUS_CANCELLED) {
+				continue
+			}
+
+			mcrs = append(mcrs, mcr)
+		}
+	}
+
+	return mcrs, nil
 }
 
 // GetMCR returns the details of a single MCR in the Megaport MCR API.

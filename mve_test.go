@@ -160,6 +160,138 @@ func (suite *MVEClientTestSuite) TestBuyMVE() {
 	suite.Equal(want, got)
 }
 
+// TestListMVEProducts tests the ListMVEs method
+func (suite *MVEClientTestSuite) TestListMVEProducts() {
+	mveSvc := suite.client.MVEService
+	ctx := context.Background()
+
+	// Define test data
+	startDate := &Time{GetTime(1706104800000)}
+	endDate := &Time{GetTime(1737727200000)}
+
+	// Mock API response
+	jblob := `{
+        "message": "Products retrieved successfully",
+        "terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+        "data": [
+            {
+                "productId": 1,
+                "productUid": "36b3f68e-2f54-4331-bf94-f8984449365f",
+                "productName": "test-mve-1",
+                "productType": "MVE",
+                "provisioningStatus": "LIVE",
+                "locationId": 1,
+                "createDate": 1706104800000,
+                "createdBy": "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
+                "terminateDate": 1737727200000,
+                "contractStartDate": 1706104800000,
+                "contractEndDate": 1737727200000,
+                "contractTermMonths": 12,
+                "market": "US",
+                "companyUid": "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
+                "companyName": "test-company",
+                "vendor": "PALO_ALTO",
+                "mveSize": "SMALL"
+            },
+            {
+                "productId": 2,
+                "productUid": "46c3f68e-3f54-5331-cf94-g9984449365g",
+                "productName": "test-mve-2",
+                "productType": "MVE",
+                "provisioningStatus": "DECOMMISSIONED",
+                "locationId": 2,
+                "createDate": 1706104800000,
+                "createdBy": "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
+                "terminateDate": 1737727200000,
+                "contractStartDate": 1706104800000,
+                "contractEndDate": 1737727200000,
+                "contractTermMonths": 12,
+                "market": "EU",
+                "companyUid": "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
+                "companyName": "test-company",
+                "vendor": "CISCO",
+                "mveSize": "MEDIUM"
+            },
+            {
+                "productId": 3,
+                "productUid": "56d3f68e-4f54-6331-df94-h9984449365h",
+                "productName": "test-port",
+                "productType": "MEGAPORT"
+            }
+        ]
+    }`
+
+	// Expected MVEs after filtering
+	want := []*MVE{
+		{
+			ID:                 1,
+			UID:                "36b3f68e-2f54-4331-bf94-f8984449365f",
+			Name:               "test-mve-1",
+			Type:               "MVE",
+			ProvisioningStatus: "LIVE",
+			CreateDate:         startDate,
+			CreatedBy:          "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
+			Market:             "US",
+			LocationID:         1,
+			CompanyUID:         "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
+			CompanyName:        "test-company",
+			ContractStartDate:  startDate,
+			ContractEndDate:    endDate,
+			TerminateDate:      endDate,
+			ContractTermMonths: 12,
+			Vendor:             "PALO_ALTO",
+			Size:               "SMALL",
+		},
+	}
+
+	// Set up handler for the /v2/products endpoint
+	suite.mux.HandleFunc("/v2/products", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, jblob)
+	})
+
+	// Test with default behavior (exclude inactive)
+	req := &ListMVEsRequest{
+		IncludeInactive: false,
+	}
+
+	got, err := mveSvc.ListMVEs(ctx, req)
+	suite.NoError(err)
+	suite.Equal(1, len(got), "Should only return 1 active MVE")
+	suite.Equal(want, got)
+
+	// Test with includeInactive=true
+	reqWithInactive := &ListMVEsRequest{
+		IncludeInactive: true,
+	}
+
+	// Update expectations for including inactive MVEs
+	wantWithInactive := append(want, &MVE{
+		ID:                 2,
+		UID:                "46c3f68e-3f54-5331-cf94-g9984449365g",
+		Name:               "test-mve-2",
+		Type:               "MVE",
+		ProvisioningStatus: "DECOMMISSIONED",
+		CreateDate:         startDate,
+		CreatedBy:          "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
+		Market:             "EU",
+		LocationID:         2,
+		CompanyUID:         "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
+		CompanyName:        "test-company",
+		ContractStartDate:  startDate,
+		ContractEndDate:    endDate,
+		TerminateDate:      endDate,
+		ContractTermMonths: 12,
+		Vendor:             "CISCO",
+		Size:               "MEDIUM",
+	})
+
+	gotWithInactive, err := mveSvc.ListMVEs(ctx, reqWithInactive)
+	suite.NoError(err)
+	suite.Equal(2, len(gotWithInactive), "Should return both active and inactive MVEs")
+	suite.Equal(wantWithInactive, gotWithInactive)
+}
+
 // TestGetMVE tests the GetMVE method
 func (suite *MVEClientTestSuite) TestGetMVE() {
 	mveSvc := suite.client.MVEService

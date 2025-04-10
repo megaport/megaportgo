@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strings"
 	"time"
 )
 
@@ -240,58 +241,26 @@ func (svc *PortServiceOp) ValidatePortOrder(ctx context.Context, req *BuyPortReq
 	return svc.Client.ProductService.ValidateProductOrder(ctx, buyOrder)
 }
 
-// ListPorts lists all ports in the Megaport Port API.
 func (svc *PortServiceOp) ListPorts(ctx context.Context) ([]*Port, error) {
-	path := "/v2/products"
-	url := svc.Client.BaseURL.JoinPath(path).String()
-	req, err := svc.Client.NewRequest(ctx, http.MethodGet, url, nil)
+	allProducts, err := svc.Client.ProductService.ListProducts(ctx)
 	if err != nil {
 		return nil, err
-	}
-	response, err := svc.Client.Do(ctx, req, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	defer response.Body.Close()
-
-	body, fileErr := io.ReadAll(response.Body)
-
-	if fileErr != nil {
-		return nil, fileErr
-	}
-
-	parsed := ParsedProductsResponse{}
-
-	unmarshalErr := json.Unmarshal(body, &parsed)
-
-	if unmarshalErr != nil {
-		return nil, unmarshalErr
 	}
 
 	ports := []*Port{}
 
-	for _, unmarshaledData := range parsed.Data {
-		// The products query response will likely contain non-port objects.  As a result
-		// we need to initially Unmarshal as ParsedProductsResponse so that we may iterate
-		// over the entries in Data then re-Marshal those entries so that we may Unmarshal
-		// them as Port (and `continue` where that doesn't work).  We could write a custom
-		// deserializer to avoid this but that is a lot of work for a performance
-		// optimization which is likely irrelevant in practice.
-		// Unfortunately I know of no better (maintainable) method of making this work.
-		remarshaled, err := json.Marshal(unmarshaledData)
-		if err != nil {
-			svc.Client.Logger.WarnContext(ctx, fmt.Sprintf("Could not remarshal %v as port.", err.Error()))
-			continue
+	for _, product := range allProducts {
+		if strings.ToLower(product.GetType()) == PRODUCT_MEGAPORT {
+			port, ok := product.(*Port)
+			if !ok {
+				svc.Client.Logger.WarnContext(ctx, "Found Port product type but couldn't cast to Port struct")
+				continue
+			}
+
+			ports = append(ports, port)
 		}
-		port := Port{}
-		unmarshalErr = json.Unmarshal(remarshaled, &port)
-		if unmarshalErr != nil {
-			svc.Client.Logger.WarnContext(ctx, fmt.Sprintf("Could not unmarshal %v as port.", unmarshalErr.Error()))
-			continue
-		}
-		ports = append(ports, &port)
 	}
+
 	return ports, nil
 }
 
