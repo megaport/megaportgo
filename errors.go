@@ -34,7 +34,7 @@ func (r *ErrorResponse) Error() string {
 // ErrWrongProductModify is returned when a user attempts to modify a product that can't be modified
 var ErrWrongProductModify = errors.New("you can only update Ports, MCR, and MVE using this method")
 
-// ErrInvalidTerm creates an error indicating an invalid contract term,dynamically listing the valid terms.
+// ErrInvalidTerm creates an error indicating an invalid contract term, dynamically listing the valid terms.
 var ErrInvalidTerm = fmt.Errorf("invalid term, valid terms are %s months", intSliceToString(VALID_CONTRACT_TERMS))
 
 // ErrMCRInvalidPortSpeed creates an error indicating an invalid MCR port speed, dynamically listing the valid speeds.
