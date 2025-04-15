@@ -132,7 +132,7 @@ type ListPartnerPortsResponse struct {
 
 // BuyVXC buys a VXC from the Megaport VXC API.
 func (svc *VXCServiceOp) BuyVXC(ctx context.Context, req *BuyVXCRequest) (*BuyVXCResponse, error) {
-	if req.Term != 1 && req.Term != 12 && req.Term != 24 && req.Term != 36 {
+	if !slices.Contains(VALID_CONTRACT_TERMS, req.Term) {
 		return nil, ErrInvalidTerm
 	}
 

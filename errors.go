@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 )
 
 // An ErrorResponse reports the error caused by an API request
@@ -34,17 +36,26 @@ func (r *ErrorResponse) Error() string {
 // ErrWrongProductModify is returned when a user attempts to modify a product that can't be modified
 var ErrWrongProductModify = errors.New("you can only update Ports, MCR, and MVE using this method")
 
-// ErrInvalidTerm is returned for an invalid product term
-var ErrInvalidTerm = errors.New("invalid term, valid values are 1, 12, 24, and 36")
+// ErrInvalidTerm creates an error indicating an invalid contract term, dynamically listing the valid terms.
+var ErrInvalidTerm = fmt.Errorf("invalid term, valid terms are %s months", intSliceToString(VALID_CONTRACT_TERMS))
+
+// ErrMCRInvalidPortSpeed creates an error indicating an invalid MCR port speed, dynamically listing the valid speeds.
+var ErrMCRInvalidPortSpeed = fmt.Errorf("invalid mcr port speed, valid speeds are %s", intSliceToString(VALID_MCR_PORT_SPEEDS))
+
+// intSliceToString converts a slice of integers to a comma-separated string.
+func intSliceToString(slice []int) string {
+	strSlice := make([]string, len(slice))
+	for i, v := range slice {
+		strSlice[i] = strconv.Itoa(v)
+	}
+	return strings.Join(strSlice, ", ")
+}
 
 // ErrPortAlreadyLocked is returned when a port is already locked
 var ErrPortAlreadyLocked = errors.New("that port is already locked, cannot lock")
 
 // ErrPortNotLocked is returned when a port is not locked
 var ErrPortNotLocked = errors.New("that port not locked, cannot unlock")
-
-// ErrMCRInvalidPortSpeed is returned for an invalid MCR port speed
-var ErrMCRInvalidPortSpeed = errors.New("invalid port speed, valid speeds are 1000, 2500, 5000, and 10000")
 
 // ErrLocationNotFound is returned when a location can't be found
 var ErrLocationNotFound = errors.New("unable to find location")
