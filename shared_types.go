@@ -2,8 +2,6 @@ package megaport
 
 import (
 	"encoding/json"
-	"strconv"
-	"strings"
 	"time"
 )
 
@@ -40,15 +38,6 @@ var (
 	// SERVICE_STATE_READY is a list of service states that are considered ready for use.
 	SERVICE_STATE_READY = []string{SERVICE_CONFIGURED, SERVICE_LIVE}
 )
-
-// intSliceToString converts a slice of integers to a comma-separated string.
-func intSliceToString(slice []int) string {
-	strSlice := make([]string, len(slice))
-	for i, v := range slice {
-		strSlice[i] = strconv.Itoa(v)
-	}
-	return strings.Join(strSlice, ", ")
-}
 
 // Time is a custom time type that allows for unmarshalling of Unix timestamps.
 type Time struct {
