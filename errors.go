@@ -34,17 +34,21 @@ func (r *ErrorResponse) Error() string {
 // ErrWrongProductModify is returned when a user attempts to modify a product that can't be modified
 var ErrWrongProductModify = errors.New("you can only update Ports, MCR, and MVE using this method")
 
-// ErrInvalidTerm is returned for an invalid product term
-var ErrInvalidTerm = errors.New("invalid term, valid values are 1, 12, 24, and 36")
+// ErrInvalidTerm creates an error indicating an invalid contract term,dynamically listing the valid terms.
+var ErrInvalidTerm = func(provided int) error {
+	return fmt.Errorf("invalid term %d, valid terms are %s months", provided, intSliceToString(VALID_CONTRACT_TERMS))
+}
+
+// ErrMCRInvalidPortSpeed creates an error indicating an invalid MCR port speed, dynamically listing the valid speeds.
+var ErrMCRInvalidPortSpeed = func(provided int) error {
+	return fmt.Errorf("invalid port speed %d, valid speeds are %s", provided, intSliceToString(VALID_MCR_PORT_SPEEDS))
+}
 
 // ErrPortAlreadyLocked is returned when a port is already locked
 var ErrPortAlreadyLocked = errors.New("that port is already locked, cannot lock")
 
 // ErrPortNotLocked is returned when a port is not locked
 var ErrPortNotLocked = errors.New("that port not locked, cannot unlock")
-
-// ErrMCRInvalidPortSpeed is returned for an invalid MCR port speed
-var ErrMCRInvalidPortSpeed = errors.New("invalid port speed, valid speeds are 1000, 2500, 5000, and 10000")
 
 // ErrLocationNotFound is returned when a location can't be found
 var ErrLocationNotFound = errors.New("unable to find location")

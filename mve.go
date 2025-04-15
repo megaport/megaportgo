@@ -368,7 +368,7 @@ func (svc *MVEServiceOp) ListAvailableMVESizes(ctx context.Context) ([]*MVESize,
 // validateBuyMVERequest validates a BuyMVERequest for proper term length.
 func validateBuyMVERequest(req *BuyMVERequest) error {
 	if !slices.Contains(VALID_CONTRACT_TERMS, req.Term) {
-		return ErrInvalidTerm
+		return ErrInvalidTerm(req.Term)
 	}
 	return nil
 }
