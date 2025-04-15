@@ -30,6 +30,11 @@ const (
 )
 
 var (
+	// VALID_CONTRACT_TERMS lists the valid contract terms in months.
+	VALID_CONTRACT_TERMS = []int{1, 12, 24, 36}
+
+	VALID_MCR_PORT_SPEEDS = []int{1000, 2500, 5000, 10000, 25000, 50000, 100000}
+
 	// SERVICE_STATE_READY is a list of service states that are considered ready for use.
 	SERVICE_STATE_READY = []string{SERVICE_CONFIGURED, SERVICE_LIVE}
 )

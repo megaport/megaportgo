@@ -232,7 +232,8 @@ func createPortOrder(req *BuyPortRequest) []PortOrder {
 }
 
 func (svc *PortServiceOp) ValidatePortOrder(ctx context.Context, req *BuyPortRequest) error {
-	if req.Term != 1 && req.Term != 12 && req.Term != 24 && req.Term != 36 {
+	if !slices.Contains(VALID_CONTRACT_TERMS, req.Term) {
+		// Validate that term is one of the allowed values
 		return ErrInvalidTerm
 	}
 
