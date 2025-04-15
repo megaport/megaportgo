@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 )
 
 // An ErrorResponse reports the error caused by an API request
@@ -39,6 +41,15 @@ var ErrInvalidTerm = fmt.Errorf("invalid term, valid terms are %s months", intSl
 
 // ErrMCRInvalidPortSpeed creates an error indicating an invalid MCR port speed, dynamically listing the valid speeds.
 var ErrMCRInvalidPortSpeed = fmt.Errorf("invalid mcr port speed, valid speeds are %s", intSliceToString(VALID_MCR_PORT_SPEEDS))
+
+// intSliceToString converts a slice of integers to a comma-separated string.
+func intSliceToString(slice []int) string {
+	strSlice := make([]string, len(slice))
+	for i, v := range slice {
+		strSlice[i] = strconv.Itoa(v)
+	}
+	return strings.Join(strSlice, ", ")
+}
 
 // ErrPortAlreadyLocked is returned when a port is already locked
 var ErrPortAlreadyLocked = errors.New("that port is already locked, cannot lock")
