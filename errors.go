@@ -35,10 +35,10 @@ func (r *ErrorResponse) Error() string {
 var ErrWrongProductModify = errors.New("you can only update Ports, MCR, and MVE using this method")
 
 // ErrInvalidTerm creates an error indicating an invalid contract term,dynamically listing the valid terms.
-var ErrInvalidTerm = errors.New(fmt.Sprintf("invalid term, valid terms are %s months", intSliceToString(VALID_CONTRACT_TERMS)))
+var ErrInvalidTerm = fmt.Errorf("invalid term, valid terms are %s months", intSliceToString(VALID_CONTRACT_TERMS))
 
 // ErrMCRInvalidPortSpeed creates an error indicating an invalid MCR port speed, dynamically listing the valid speeds.
-var ErrMCRInvalidPortSpeed = errors.New(fmt.Sprintf("invalid mcr port speed, valid speeds are %s", intSliceToString(VALID_MCR_PORT_SPEEDS)))
+var ErrMCRInvalidPortSpeed = fmt.Errorf("invalid mcr port speed, valid speeds are %s", intSliceToString(VALID_MCR_PORT_SPEEDS))
 
 // ErrPortAlreadyLocked is returned when a port is already locked
 var ErrPortAlreadyLocked = errors.New("that port is already locked, cannot lock")
