@@ -205,10 +205,10 @@ func (svc *MCRServiceOp) BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMC
 // validateBuyMCRRequest validates the BuyMCRRequest for a valid term and port speed.
 func validateBuyMCRRequest(order *BuyMCRRequest) error {
 	if !slices.Contains(VALID_CONTRACT_TERMS, order.Term) {
-		return ErrInvalidTerm(order.Term)
+		return ErrInvalidTerm
 	}
 	if !slices.Contains(VALID_MCR_PORT_SPEEDS, order.PortSpeed) {
-		return ErrMCRInvalidPortSpeed(order.PortSpeed)
+		return ErrMCRInvalidPortSpeed
 	}
 	return nil
 }
