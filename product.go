@@ -407,7 +407,7 @@ func (svc *ProductServiceOp) GetProductType(ctx context.Context, productUID stri
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("failed to get product type: %s", response.Status)
+		return "", fmt.Errorf("failed to get product %s type: %s", productUID, response.Status)
 	}
 
 	// Parse the response to get the product type
@@ -423,7 +423,7 @@ func (svc *ProductServiceOp) GetProductType(ctx context.Context, productUID stri
 	parsedProduct := getProductResponse.Data
 
 	if parsedProduct.Type == "" {
-		return "", fmt.Errorf("product type not found in response")
+		return "", fmt.Errorf("product %s type not found in response", productUID)
 	}
 
 	return parsedProduct.Type, nil
