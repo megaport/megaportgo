@@ -299,7 +299,7 @@ type VXCPartnerConfigIBM struct {
 // VXCOrderMVEConfig represents the configuration of a VXC endpoint for MVE.
 type VXCOrderMVEConfig struct {
 	InnerVLAN             int `json:"innerVlan,omitempty"`
-	NetworkInterfaceIndex int `json:"vNicIndex"`
+	NetworkInterfaceIndex int `json:"vNicIndex,omitempty"`
 }
 
 // VXCOrderVrouterPartnerConfig represents the configuration of a VXC Vrouter Configuration partner.
