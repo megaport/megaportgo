@@ -30,6 +30,8 @@ type ProductService interface {
 	ListProductResourceTags(ctx context.Context, productID string) ([]ResourceTag, error)
 	// UpdateProductResourceTags is responsible for updating the resource tags for a product in the Megaport Products API.
 	UpdateProductResourceTags(ctx context.Context, productUID string, tagsReq *UpdateProductResourceTagsRequest) error
+	// GetProductType returns the type of the product based on the Product UID. If no product is found, it returns an error.
+	GetProductType(ctx context.Context, productUID string) (string, error)
 }
 
 // ProductServiceOp handles communication with Product methods of the Megaport API.
@@ -97,6 +99,12 @@ type Product interface {
 	GetType() string
 	GetUID() string
 	GetProvisioningStatus() string
+}
+
+type GetProductResponse struct {
+	Message string        `json:"message"`
+	Terms   string        `json:"terms"`
+	Data    ParsedProduct `json:"data"`
 }
 
 type ParsedProduct struct {
@@ -381,4 +389,42 @@ func fromProductResourceTags(in []ResourceTag) map[string]string {
 		tags[tag.Key] = tag.Value
 	}
 	return tags
+}
+
+// GetProductType returns the type of the product based on the Product UID. If no product is found, it returns an error.
+func (svc *ProductServiceOp) GetProductType(ctx context.Context, productUID string) (string, error) {
+	path := fmt.Sprintf("/v2/product/%s", productUID)
+	url := svc.Client.BaseURL.JoinPath(path).String()
+	req, err := svc.Client.NewRequest(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return "", err
+	}
+
+	response, err := svc.Client.Do(ctx, req, nil)
+	if err != nil {
+		return "", err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("failed to get product %s type: %s", productUID, response.Status)
+	}
+
+	// Parse the response to get the product type
+	// We need to decode the response body into a struct that contains the product type
+	// and then return that type.
+	// The response body is expected to be in JSON format.
+
+	var getProductResponse GetProductResponse
+	err = json.NewDecoder(response.Body).Decode(&getProductResponse)
+	if err != nil {
+		return "", fmt.Errorf("failed to decode response: %w", err)
+	}
+	parsedProduct := getProductResponse.Data
+
+	if parsedProduct.Type == "" {
+		return "", fmt.Errorf("product %s type not found in response", productUID)
+	}
+
+	return parsedProduct.Type, nil
 }
