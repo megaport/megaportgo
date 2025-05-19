@@ -100,8 +100,9 @@ type ModifyPortResponse struct {
 
 // DeletePortRequest represents a request to delete a port.
 type DeletePortRequest struct {
-	PortID    string
-	DeleteNow bool
+	PortID     string
+	DeleteNow  bool
+	SafeDelete bool // If true, the API will return an error if the port is in use by a VXC or other product
 }
 
 // DeletePortResponse represents a response from deleting a port.
@@ -377,8 +378,9 @@ func (svc *PortServiceOp) ModifyPort(ctx context.Context, req *ModifyPortRequest
 // DeletePort deletes a port in the Megaport Port API.
 func (svc *PortServiceOp) DeletePort(ctx context.Context, req *DeletePortRequest) (*DeletePortResponse, error) {
 	_, err := svc.Client.ProductService.DeleteProduct(ctx, &DeleteProductRequest{
-		ProductID: req.PortID,
-		DeleteNow: req.DeleteNow,
+		ProductID:  req.PortID,
+		DeleteNow:  req.DeleteNow,
+		SafeDelete: req.SafeDelete,
 	})
 	if err != nil {
 		return nil, err
