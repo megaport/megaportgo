@@ -204,8 +204,6 @@ type MVE struct {
 	DiversityZone         string                  `json:"diversityZone"`
 	NetworkInterfaces     []*MVENetworkInterface  `json:"vnics"`
 	LocationDetails       *ProductLocationDetails `json:"locationDetail"`
-
-	ResourceTags []map[string]string `json:"resourceTags,omitempty"`
 }
 
 func (m *MVE) GetType() string {
