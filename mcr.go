@@ -116,8 +116,9 @@ type ModifyMCRResponse struct {
 
 // DeleteMCRRequest represents a request to delete an MCR
 type DeleteMCRRequest struct {
-	MCRID     string
-	DeleteNow bool
+	MCRID      string
+	DeleteNow  bool
+	SafeDelete bool // If true, the API will check whether the MCR has any attached resources before deleting it. If the MCR has attached resources, the API will return an error.
 }
 
 // DeleteMCRResponse represents a response from deleting an MCR
@@ -504,8 +505,9 @@ func (svc *MCRServiceOp) ModifyMCRPrefixFilterList(ctx context.Context, mcrID st
 // DeleteMCR deletes an MCR in the Megaport MCR API.
 func (svc *MCRServiceOp) DeleteMCR(ctx context.Context, req *DeleteMCRRequest) (*DeleteMCRResponse, error) {
 	_, err := svc.Client.ProductService.DeleteProduct(ctx, &DeleteProductRequest{
-		ProductID: req.MCRID,
-		DeleteNow: req.DeleteNow,
+		ProductID:  req.MCRID,
+		DeleteNow:  req.DeleteNow,
+		SafeDelete: req.SafeDelete,
 	})
 	if err != nil {
 		return nil, err

@@ -63,8 +63,9 @@ type ModifyProductResponse struct {
 
 // DeleteProductRequest represents a request to delete a product in the Megaport Products API.
 type DeleteProductRequest struct {
-	ProductID string
-	DeleteNow bool
+	ProductID  string
+	DeleteNow  bool
+	SafeDelete bool // If true, the call will check if the product has any attached resources. If it does, the API will return an error and the product will not be deleted.
 }
 
 // DeleteProductResponse represents a response from the Megaport Products API after deleting a product.
@@ -257,7 +258,16 @@ func (svc *ProductServiceOp) DeleteProduct(ctx context.Context, req *DeleteProdu
 	}
 
 	path := "/v3/product/" + req.ProductID + "/action/" + action
-	url := svc.Client.BaseURL.JoinPath(path).String()
+	urlObj := svc.Client.BaseURL.JoinPath(path)
+
+	// Add safe_delete query parameter if specified - this is used to check if the product has any attached resources before deletion. If the product has attached resources, the API will return an error and the product will not be deleted.
+	if req.SafeDelete {
+		q := urlObj.Query()
+		q.Add("safeDelete", "true")
+		urlObj.RawQuery = q.Encode()
+	}
+
+	url := urlObj.String()
 
 	clientReq, err := svc.Client.NewRequest(ctx, http.MethodPost, url, nil)
 	if err != nil {

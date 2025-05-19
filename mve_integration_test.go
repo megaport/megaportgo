@@ -102,11 +102,6 @@ func (suite *MVEIntegrationTestSuite) TestArubaMVE() {
 		suite.FailNowf("could not list mve resource tags", "could not list mve resource tags %v", err)
 	}
 	suite.EqualValues(testUpdatedResourceTags, tags)
-	mveDetails, err := mveSvc.GetMVE(ctx, mveUid)
-	if err != nil {
-		suite.FailNowf("could not get mve", "could not get mve %v", err)
-	}
-	suite.Equal(mveDetails.ResourceTags, testResourceTags)
 
 	logger.InfoContext(ctx, "Deleting MVE now", slog.String("mve_id", mveUid))
 
@@ -118,7 +113,7 @@ func (suite *MVEIntegrationTestSuite) TestArubaMVE() {
 	}
 	suite.True(deleteRes.IsDeleted)
 
-	mveDetails, err = mveSvc.GetMVE(ctx, mveUid)
+	mveDetails, err := mveSvc.GetMVE(ctx, mveUid)
 	if err != nil {
 		suite.FailNowf("could not get mve", "could not get mve %v", err)
 	}

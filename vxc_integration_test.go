@@ -257,9 +257,24 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 	suite.EqualValues(newCostCentre, vxcInfo.CostCentre, "vxc cost centre is not updated")
 	suite.EqualValues(newTerm, vxcInfo.ContractTermMonths, "vxc terms are not updated")
 
+	// Test Safe Delete functionality
+	// Attempting to delete attached ports prior to deleting VXC. This should result in an error.
+	_, deleteErr := portSvc.DeletePort(ctx, &DeletePortRequest{
+		PortID:     aEndUid,
+		DeleteNow:  true,
+		SafeDelete: true,
+	})
+	suite.NotNil(deleteErr, "delete should fail with safe delete")
+	_, deleteErr = portSvc.DeletePort(ctx, &DeletePortRequest{
+		PortID:     bEndUid,
+		DeleteNow:  true,
+		SafeDelete: true,
+	})
+	suite.NotNil(deleteErr, "delete should fail with safe delete")
+
 	logger.InfoContext(ctx, "deleting vxc")
 
-	deleteErr := vxcSvc.DeleteVXC(ctx, vxcUid, &DeleteVXCRequest{
+	deleteErr = vxcSvc.DeleteVXC(ctx, vxcUid, &DeleteVXCRequest{
 		DeleteNow: true,
 	})
 	if deleteErr != nil {
@@ -570,9 +585,17 @@ func (suite *VXCIntegrationTestSuite) TestAWSVIFConnectionBuy() {
 	}
 	suite.EqualValues(testUpdatedResourceTags, tags, "updated resource tags are not equal")
 
+	// Attempt to delete attached ports prior to deleting VXC. This should result in an error.
+	_, deleteErr := portSvc.DeletePort(ctx, &DeletePortRequest{
+		PortID:     portUid,
+		DeleteNow:  true,
+		SafeDelete: true,
+	})
+	suite.NotNil(deleteErr, "delete should fail with safe delete")
+
 	logger.InfoContext(ctx, "deleting vxc", slog.String("vxc_uid", vxcUid))
 
-	deleteErr := vxcSvc.DeleteVXC(ctx, vxcUid, &DeleteVXCRequest{DeleteNow: true})
+	deleteErr = vxcSvc.DeleteVXC(ctx, vxcUid, &DeleteVXCRequest{DeleteNow: true})
 	if deleteErr != nil {
 		suite.FailNowf("cannot delete vxc", "cannot delete vxc %v", deleteErr)
 	}
@@ -1027,6 +1050,14 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnect() {
 	}
 	suite.EqualValues(testResourceTags, tags, "resource tags are not equal")
 
+	// Attempt to prematurely delete the ports with safe delete enabled. This should fail.
+	_, err = portSvc.DeletePort(ctx, &DeletePortRequest{
+		PortID:     portUid,
+		DeleteNow:  false,
+		SafeDelete: true,
+	})
+	suite.Error(err, "expected error when deleting port with safe delete enabled")
+
 	logger.InfoContext(ctx, "deleting vxc", slog.String("vxc_uid", vxcRes.TechnicalServiceUID))
 
 	deleteErr := vxcSvc.DeleteVXC(ctx, vxcRes.TechnicalServiceUID, &DeleteVXCRequest{DeleteNow: true})
@@ -1128,6 +1159,14 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnectLocation() {
 		suite.FailNowf("cannot list vxc resource tags", "cannot list vxc resource tags %v", err)
 	}
 	suite.EqualValues(testResourceTags, tags, "resource tags are not equal")
+
+	// Attempt to prematurely delete the ports with safe delete enabled. This should fail.
+	_, err = portSvc.DeletePort(ctx, &DeletePortRequest{
+		PortID:     portUid,
+		DeleteNow:  false,
+		SafeDelete: true,
+	})
+	suite.Error(err, "expected error when deleting port with safe delete enabled")
 
 	logger.InfoContext(ctx, "deleting vxc", slog.String("vxc_uid", vxcId))
 

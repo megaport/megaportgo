@@ -93,7 +93,8 @@ type ModifyMVEResponse struct {
 
 // DeleteMVERequest represents a request to delete an MVE
 type DeleteMVERequest struct {
-	MVEID string
+	MVEID      string
+	SafeDelete bool // If true, the API will check whether the MVE has any attached resources before deleting it. If the MVE has attached resources, the API will return an error.
 }
 
 // DeleteMVEResponse represents a response from deleting an MVE
@@ -310,8 +311,9 @@ func (svc *MVEServiceOp) ModifyMVE(ctx context.Context, req *ModifyMVERequest) (
 // DeleteMVE deletes an MVE in the Megaport MVE API.
 func (svc *MVEServiceOp) DeleteMVE(ctx context.Context, req *DeleteMVERequest) (*DeleteMVEResponse, error) {
 	_, err := svc.Client.ProductService.DeleteProduct(ctx, &DeleteProductRequest{
-		ProductID: req.MVEID,
-		DeleteNow: true,
+		ProductID:  req.MVEID,
+		DeleteNow:  true,
+		SafeDelete: req.SafeDelete,
 	})
 	if err != nil {
 		return nil, err
