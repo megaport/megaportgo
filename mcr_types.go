@@ -62,6 +62,7 @@ type MCR struct {
 	AdminLocked           bool                    `json:"adminLocked"`
 	Cancelable            bool                    `json:"cancelable"`
 	Resources             MCRResources            `json:"resources"`
+	DiversityZone         string                  `json:"diversityZone"`
 	LocationDetails       *ProductLocationDetails `json:"locationDetail"`
 }
 
