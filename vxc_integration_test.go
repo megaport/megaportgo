@@ -963,6 +963,7 @@ func (suite *VXCIntegrationTestSuite) TestBuyAzureExpressRoute() {
 		PortID:    aEndUid,
 		DeleteNow: true,
 	})
+
 	if deleteErr != nil {
 		suite.FailNowf("cannot delete port", "cannot delete port %v", deleteErr)
 	}
@@ -1081,117 +1082,6 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnect() {
 }
 
 // TestMVEtoMVEVXC tests the MVE VXC buy and update process. This test will test an MVE to MVE VXC.
-
-// TestBuyGoogleInterconnectLocation tests the Google Interconnect location buy process.
-func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnectLocation() {
-	vxcSvc := suite.client.VXCService
-	ctx := context.Background()
-	logger := suite.client.Logger
-	locSvc := suite.client.LocationService
-	portSvc := suite.client.PortService
-
-	testLocation, locErr := locSvc.GetLocationByName(ctx, TEST_LOCATION_B)
-	if locErr != nil {
-		suite.FailNowf("cannot find location", "cannot find location %v", locErr)
-	}
-
-	logger.InfoContext(ctx, "buying google interconect port a end")
-
-	portRes, portErr := portSvc.BuyPort(ctx, &BuyPortRequest{
-		Name:                  "Google Interconnect Test Port",
-		Term:                  1,
-		LocationId:            testLocation.ID,
-		PortSpeed:             1000,
-		Market:                "AU",
-		MarketPlaceVisibility: true,
-		WaitForProvision:      true,
-		WaitForTime:           5 * time.Minute,
-	})
-	if portErr != nil {
-		suite.FailNowf("cannot buy port", "cannot buy port %v", portErr)
-	}
-	portUid := portRes.TechnicalServiceUIDs[0]
-	suite.True(IsGuid(portUid), "invalid guid for port uid")
-
-	pairingKey := "7e51371e-72a3-40b5-b844-2e3efefaee59/australia-southeast1/2"
-
-	logger.InfoContext(ctx, "buying google interconnect vxc (b-end)")
-
-	partnerPortRes, partnerPortErr := vxcSvc.LookupPartnerPorts(ctx, &LookupPartnerPortsRequest{
-		Key:       pairingKey,
-		PortSpeed: 1000,
-		Partner:   PARTNER_GOOGLE,
-		ProductID: "",
-	})
-	if partnerPortErr != nil {
-		suite.FailNowf("cannot lookup partner ports", "cannot lookup partner ports %v", partnerPortErr)
-	}
-	partnerPortId := partnerPortRes.ProductUID
-
-	partnerConfig := VXCPartnerConfigGoogle{
-		ConnectType: "GOOGLE",
-		PairingKey:  pairingKey,
-	}
-
-	vxcRes, vxcErr := vxcSvc.BuyVXC(ctx, &BuyVXCRequest{
-		PortUID:   portUid,
-		VXCName:   "Test Google Interconnect VXC",
-		RateLimit: 1000,
-		AEndConfiguration: VXCOrderEndpointConfiguration{
-			VLAN: 0,
-		},
-		Term:     1,
-		Shutdown: false,
-		BEndConfiguration: VXCOrderEndpointConfiguration{
-			ProductUID:    partnerPortId,
-			PartnerConfig: partnerConfig,
-		},
-		ResourceTags:     testResourceTags,
-		WaitForProvision: true,
-		WaitForTime:      10 * time.Minute,
-	})
-
-	if vxcErr != nil {
-		suite.FailNowf("cannot buy vxc", "cannot buy vxc %v", vxcErr)
-	}
-
-	vxcId := vxcRes.TechnicalServiceUID
-	suite.True(IsGuid(vxcId), "invalid guid for vxc id")
-
-	tags, err := vxcSvc.ListVXCResourceTags(ctx, vxcId)
-	if err != nil {
-		suite.FailNowf("cannot list vxc resource tags", "cannot list vxc resource tags %v", err)
-	}
-	suite.EqualValues(testResourceTags, tags, "resource tags are not equal")
-
-	// Attempt to prematurely delete the ports with safe delete enabled. This should fail.
-	_, err = portSvc.DeletePort(ctx, &DeletePortRequest{
-		PortID:     portUid,
-		DeleteNow:  false,
-		SafeDelete: true,
-	})
-	suite.Error(err, "expected error when deleting port with safe delete enabled")
-
-	logger.InfoContext(ctx, "deleting vxc", slog.String("vxc_uid", vxcId))
-
-	deleteErr := vxcSvc.DeleteVXC(ctx, vxcId, &DeleteVXCRequest{DeleteNow: true})
-	if deleteErr != nil {
-		suite.FailNowf("cannot delete vxc", "cannot delete vxc %v", deleteErr)
-	}
-
-	logger.InfoContext(ctx, "deleting port", slog.String("port_uid", portUid))
-
-	_, deleteErr = portSvc.DeletePort(ctx, &DeletePortRequest{
-		PortID:    portUid,
-		DeleteNow: true,
-	})
-
-	if deleteErr != nil {
-		suite.FailNowf("cannot delete port", "cannot delete port %v", deleteErr)
-	}
-}
-
-// TestMVEtoMVEVXC tests the MVE VXC buy and update process. This test will test an MVE to MVE VXC.
 func (suite *VXCIntegrationTestSuite) TestMVEtoMVEVXC() {
 	vxcSvc := suite.client.VXCService
 	mveSvc := suite.client.MVEService
@@ -1241,7 +1131,10 @@ func (suite *VXCIntegrationTestSuite) TestMVEtoMVEVXC() {
 		if err != nil {
 			// Clean up any MVEs already created before failing
 			for _, uid := range mveUids {
-				mveSvc.DeleteMVE(ctx, &DeleteMVERequest{MVEID: uid})
+				_, cleanupErr := mveSvc.DeleteMVE(ctx, &DeleteMVERequest{MVEID: uid})
+				if cleanupErr != nil {
+					logger.ErrorContext(ctx, "Error cleaning up MVE", slog.String("uid", uid), slog.String("error", cleanupErr.Error()))
+				}
 			}
 			suite.FailNowf("error buying MVE", "error buying MVE %d (%s): %v", i, mveName, err)
 		}
@@ -1250,7 +1143,10 @@ func (suite *VXCIntegrationTestSuite) TestMVEtoMVEVXC() {
 		if !IsGuid(mveUid) {
 			// Clean up any MVEs already created before failing
 			for _, uid := range mveUids {
-				mveSvc.DeleteMVE(ctx, &DeleteMVERequest{MVEID: uid})
+				_, cleanupErr := mveSvc.DeleteMVE(ctx, &DeleteMVERequest{MVEID: uid})
+				if cleanupErr != nil {
+					logger.ErrorContext(ctx, "Error cleaning up MVE", slog.String("uid", uid), slog.String("error", cleanupErr.Error()))
+				}
 			}
 			suite.FailNowf("invalid MVE uid", "invalid MVE uid for %s: %s", mveName, mveUid)
 		}
@@ -1292,7 +1188,10 @@ func (suite *VXCIntegrationTestSuite) TestMVEtoMVEVXC() {
 	if vxcErr != nil {
 		// Clean up the MVEs before failing
 		for _, uid := range mveUids {
-			mveSvc.DeleteMVE(ctx, &DeleteMVERequest{MVEID: uid})
+			_, cleanupErr := mveSvc.DeleteMVE(ctx, &DeleteMVERequest{MVEID: uid})
+			if cleanupErr != nil {
+				logger.ErrorContext(ctx, "Error cleaning up MVE", slog.String("uid", uid), slog.String("error", cleanupErr.Error()))
+			}
 		}
 		suite.FailNowf("cannot buy VXC", "cannot buy VXC between MVEs: %v", vxcErr)
 	}
@@ -1305,9 +1204,15 @@ func (suite *VXCIntegrationTestSuite) TestMVEtoMVEVXC() {
 	vxcInfo, getErr := vxcSvc.GetVXC(ctx, vxcUid)
 	if getErr != nil {
 		// Clean up resources before failing
-		vxcSvc.DeleteVXC(ctx, vxcUid, &DeleteVXCRequest{DeleteNow: true})
+		cleanupErr := vxcSvc.DeleteVXC(ctx, vxcUid, &DeleteVXCRequest{DeleteNow: true})
+		if cleanupErr != nil {
+			logger.ErrorContext(ctx, "Error cleaning up VXC", slog.String("uid", vxcUid), slog.String("error", cleanupErr.Error()))
+		}
 		for _, uid := range mveUids {
-			mveSvc.DeleteMVE(ctx, &DeleteMVERequest{MVEID: uid})
+			_, mveCleanupErr := mveSvc.DeleteMVE(ctx, &DeleteMVERequest{MVEID: uid})
+			if mveCleanupErr != nil {
+				logger.ErrorContext(ctx, "Error cleaning up MVE", slog.String("uid", uid), slog.String("error", mveCleanupErr.Error()))
+			}
 		}
 		suite.FailNowf("cannot get VXC", "cannot get VXC: %v", getErr)
 	}
@@ -1334,9 +1239,15 @@ func (suite *VXCIntegrationTestSuite) TestMVEtoMVEVXC() {
 
 	if updateErr != nil {
 		// Clean up resources before failing
-		vxcSvc.DeleteVXC(ctx, vxcUid, &DeleteVXCRequest{DeleteNow: true})
+		cleanupErr := vxcSvc.DeleteVXC(ctx, vxcUid, &DeleteVXCRequest{DeleteNow: true})
+		if cleanupErr != nil {
+			logger.ErrorContext(ctx, "Error cleaning up VXC", slog.String("uid", vxcUid), slog.String("error", cleanupErr.Error()))
+		}
 		for _, uid := range mveUids {
-			mveSvc.DeleteMVE(ctx, &DeleteMVERequest{MVEID: uid})
+			_, mveCleanupErr := mveSvc.DeleteMVE(ctx, &DeleteMVERequest{MVEID: uid})
+			if mveCleanupErr != nil {
+				logger.ErrorContext(ctx, "Error cleaning up MVE", slog.String("uid", uid), slog.String("error", mveCleanupErr.Error()))
+			}
 		}
 		suite.FailNowf("cannot update VXC", "cannot update VXC: %v", updateErr)
 	}
@@ -1347,9 +1258,15 @@ func (suite *VXCIntegrationTestSuite) TestMVEtoMVEVXC() {
 	vxcInfo, getErr = vxcSvc.GetVXC(ctx, vxcUid)
 	if getErr != nil {
 		// Clean up resources before failing
-		vxcSvc.DeleteVXC(ctx, vxcUid, &DeleteVXCRequest{DeleteNow: true})
+		cleanupErr := vxcSvc.DeleteVXC(ctx, vxcUid, &DeleteVXCRequest{DeleteNow: true})
+		if cleanupErr != nil {
+			logger.ErrorContext(ctx, "Error cleaning up VXC", slog.String("uid", vxcUid), slog.String("error", cleanupErr.Error()))
+		}
 		for _, uid := range mveUids {
-			mveSvc.DeleteMVE(ctx, &DeleteMVERequest{MVEID: uid})
+			_, mveCleanupErr := mveSvc.DeleteMVE(ctx, &DeleteMVERequest{MVEID: uid})
+			if mveCleanupErr != nil {
+				logger.ErrorContext(ctx, "Error cleaning up MVE", slog.String("uid", uid), slog.String("error", mveCleanupErr.Error()))
+			}
 		}
 		suite.FailNowf("cannot get VXC", "cannot get VXC after update: %v", getErr)
 	}
@@ -1373,9 +1290,15 @@ func (suite *VXCIntegrationTestSuite) TestMVEtoMVEVXC() {
 
 	if updateErr != nil {
 		// Clean up resources before failing
-		vxcSvc.DeleteVXC(ctx, vxcUid, &DeleteVXCRequest{DeleteNow: true})
+		cleanupErr := vxcSvc.DeleteVXC(ctx, vxcUid, &DeleteVXCRequest{DeleteNow: true})
+		if cleanupErr != nil {
+			logger.ErrorContext(ctx, "Error cleaning up VXC", slog.String("uid", vxcUid), slog.String("error", cleanupErr.Error()))
+		}
 		for _, uid := range mveUids {
-			mveSvc.DeleteMVE(ctx, &DeleteMVERequest{MVEID: uid})
+			_, mveCleanupErr := mveSvc.DeleteMVE(ctx, &DeleteMVERequest{MVEID: uid})
+			if mveCleanupErr != nil {
+				logger.ErrorContext(ctx, "Error cleaning up MVE", slog.String("uid", uid), slog.String("error", mveCleanupErr.Error()))
+			}
 		}
 		suite.FailNowf("cannot move VXC", "cannot move VXC: %v", updateErr)
 	}
@@ -1388,9 +1311,15 @@ func (suite *VXCIntegrationTestSuite) TestMVEtoMVEVXC() {
 	vxcInfo, getErr = vxcSvc.GetVXC(ctx, vxcUid)
 	if getErr != nil {
 		// Clean up resources before failing
-		vxcSvc.DeleteVXC(ctx, vxcUid, &DeleteVXCRequest{DeleteNow: true})
+		cleanupErr := vxcSvc.DeleteVXC(ctx, vxcUid, &DeleteVXCRequest{DeleteNow: true})
+		if cleanupErr != nil {
+			logger.ErrorContext(ctx, "Error cleaning up VXC", slog.String("uid", vxcUid), slog.String("error", cleanupErr.Error()))
+		}
 		for _, uid := range mveUids {
-			mveSvc.DeleteMVE(ctx, &DeleteMVERequest{MVEID: uid})
+			_, mveCleanupErr := mveSvc.DeleteMVE(ctx, &DeleteMVERequest{MVEID: uid})
+			if mveCleanupErr != nil {
+				logger.ErrorContext(ctx, "Error cleaning up MVE", slog.String("uid", uid), slog.String("error", mveCleanupErr.Error()))
+			}
 		}
 		suite.FailNowf("cannot get VXC", "cannot get VXC after move: %v", getErr)
 	}
