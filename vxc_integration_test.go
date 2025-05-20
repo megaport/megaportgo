@@ -15,6 +15,8 @@ const (
 	TEST_LOCATION_B = "Equinix SY3"
 	TEST_LOCATION_C = "90558833-e14f-49cf-84ba-bce1c2c40f2d"
 	MCR_LOCATION    = "AU"
+
+	VXC_MVE_TEST_LOCATION = 65
 )
 
 // VXCIntegrationTestSuite tests the VXC Service.
@@ -1078,6 +1080,8 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnect() {
 	}
 }
 
+// TestMVEtoMVEVXC tests the MVE VXC buy and update process. This test will test an MVE to MVE VXC.
+
 // TestBuyGoogleInterconnectLocation tests the Google Interconnect location buy process.
 func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnectLocation() {
 	vxcSvc := suite.client.VXCService
@@ -1185,4 +1189,252 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnectLocation() {
 	if deleteErr != nil {
 		suite.FailNowf("cannot delete port", "cannot delete port %v", deleteErr)
 	}
+}
+
+// TestMVEtoMVEVXC tests the MVE VXC buy and update process. This test will test an MVE to MVE VXC.
+func (suite *VXCIntegrationTestSuite) TestMVEtoMVEVXC() {
+	vxcSvc := suite.client.VXCService
+	mveSvc := suite.client.MVEService
+	ctx := context.Background()
+	logger := suite.client.Logger
+
+	logger.InfoContext(ctx, "Starting MVE to MVE VXC test")
+
+	// Setup base Aruba config
+	mveConfig := &ArubaConfig{
+		Vendor:      "aruba",
+		ProductSize: "MEDIUM",
+		ImageID:     23,
+		AccountName: "test",
+		AccountKey:  "test",
+		SystemTag:   "test",
+	}
+
+	// Create 4 MVEs - we'll connect 1->2 initially, then move to 3->4
+	var mveUids []string
+	mveNames := []string{"MVE A-End Initial", "MVE B-End Initial", "MVE A-End New", "MVE B-End New"}
+
+	logger.InfoContext(ctx, "Creating 4 MVEs for VXC test")
+
+	for i, mveName := range mveNames {
+		buyMVERes, err := mveSvc.BuyMVE(ctx, &BuyMVERequest{
+			LocationID:   VXC_MVE_TEST_LOCATION,
+			Name:         mveName,
+			Term:         12,
+			VendorConfig: mveConfig,
+			Vnics: []MVENetworkInterface{
+				{
+					Description: "Test VNIC Index 0",
+				},
+				{
+					Description: "Test VNIC Index 1",
+				},
+				{
+					Description: "Test VNIC Index 2",
+				},
+			},
+			WaitForProvision: true,
+			WaitForTime:      5 * time.Minute,
+			DiversityZone:    "red",
+			ResourceTags:     testResourceTags,
+		})
+		if err != nil {
+			// Clean up any MVEs already created before failing
+			for _, uid := range mveUids {
+				mveSvc.DeleteMVE(ctx, &DeleteMVERequest{MVEID: uid})
+			}
+			suite.FailNowf("error buying MVE", "error buying MVE %d (%s): %v", i, mveName, err)
+		}
+
+		mveUid := buyMVERes.TechnicalServiceUID
+		if !IsGuid(mveUid) {
+			// Clean up any MVEs already created before failing
+			for _, uid := range mveUids {
+				mveSvc.DeleteMVE(ctx, &DeleteMVERequest{MVEID: uid})
+			}
+			suite.FailNowf("invalid MVE uid", "invalid MVE uid for %s: %s", mveName, mveUid)
+		}
+
+		mveUids = append(mveUids, mveUid)
+		logger.InfoContext(ctx, "MVE created", slog.String("name", mveName), slog.String("uid", mveUid))
+	}
+
+	// Now create a VXC between the first two MVEs
+	logger.InfoContext(ctx, "Creating VXC between first two MVEs",
+		slog.String("a_end", mveUids[0]),
+		slog.String("b_end", mveUids[1]))
+
+	initialVXCName := "MVE to MVE Test VXC"
+	initialRateLimit := 200
+
+	buyVxcRes, vxcErr := vxcSvc.BuyVXC(ctx, &BuyVXCRequest{
+		PortUID:   mveUids[0],
+		VXCName:   initialVXCName,
+		RateLimit: initialRateLimit,
+		Term:      12,
+		Shutdown:  false,
+		AEndConfiguration: VXCOrderEndpointConfiguration{
+			VXCOrderMVEConfig: &VXCOrderMVEConfig{
+				NetworkInterfaceIndex: 1,
+			},
+		},
+		BEndConfiguration: VXCOrderEndpointConfiguration{
+			ProductUID: mveUids[1],
+			VXCOrderMVEConfig: &VXCOrderMVEConfig{
+				NetworkInterfaceIndex: 1,
+			},
+		},
+		WaitForProvision: true,
+		WaitForTime:      5 * time.Minute,
+		ResourceTags:     testResourceTags,
+	})
+
+	if vxcErr != nil {
+		// Clean up the MVEs before failing
+		for _, uid := range mveUids {
+			mveSvc.DeleteMVE(ctx, &DeleteMVERequest{MVEID: uid})
+		}
+		suite.FailNowf("cannot buy VXC", "cannot buy VXC between MVEs: %v", vxcErr)
+	}
+
+	vxcUid := buyVxcRes.TechnicalServiceUID
+	suite.True(IsGuid(vxcUid), "invalid guid for VXC uid")
+	logger.InfoContext(ctx, "VXC created", slog.String("uid", vxcUid))
+
+	// Verify initial VXC configuration
+	vxcInfo, getErr := vxcSvc.GetVXC(ctx, vxcUid)
+	if getErr != nil {
+		// Clean up resources before failing
+		vxcSvc.DeleteVXC(ctx, vxcUid, &DeleteVXCRequest{DeleteNow: true})
+		for _, uid := range mveUids {
+			mveSvc.DeleteMVE(ctx, &DeleteMVERequest{MVEID: uid})
+		}
+		suite.FailNowf("cannot get VXC", "cannot get VXC: %v", getErr)
+	}
+
+	suite.Equal(initialVXCName, vxcInfo.Name, "VXC name mismatch")
+	suite.Equal(initialRateLimit, vxcInfo.RateLimit, "VXC rate limit mismatch")
+	suite.Equal(mveUids[0], vxcInfo.AEndConfiguration.UID, "VXC A-End UID mismatch")
+	suite.Equal(mveUids[1], vxcInfo.BEndConfiguration.UID, "VXC B-End UID mismatch")
+
+	// Update VXC fields
+	updatedVXCName := "Updated MVE to MVE Test VXC"
+	updatedRateLimit := 500
+
+	logger.InfoContext(ctx, "Updating VXC fields",
+		slog.String("name", updatedVXCName),
+		slog.Int("rate_limit", updatedRateLimit))
+
+	updateRes, updateErr := vxcSvc.UpdateVXC(ctx, vxcUid, &UpdateVXCRequest{
+		Name:          PtrTo(updatedVXCName),
+		RateLimit:     PtrTo(updatedRateLimit),
+		WaitForUpdate: true,
+		WaitForTime:   5 * time.Minute,
+	})
+
+	if updateErr != nil {
+		// Clean up resources before failing
+		vxcSvc.DeleteVXC(ctx, vxcUid, &DeleteVXCRequest{DeleteNow: true})
+		for _, uid := range mveUids {
+			mveSvc.DeleteMVE(ctx, &DeleteMVERequest{MVEID: uid})
+		}
+		suite.FailNowf("cannot update VXC", "cannot update VXC: %v", updateErr)
+	}
+
+	suite.Equal(updatedVXCName, updateRes.Name, "Updated VXC name mismatch")
+
+	// Verify updated fields
+	vxcInfo, getErr = vxcSvc.GetVXC(ctx, vxcUid)
+	if getErr != nil {
+		// Clean up resources before failing
+		vxcSvc.DeleteVXC(ctx, vxcUid, &DeleteVXCRequest{DeleteNow: true})
+		for _, uid := range mveUids {
+			mveSvc.DeleteMVE(ctx, &DeleteMVERequest{MVEID: uid})
+		}
+		suite.FailNowf("cannot get VXC", "cannot get VXC after update: %v", getErr)
+	}
+
+	suite.Equal(updatedVXCName, vxcInfo.Name, "Updated VXC name mismatch")
+	suite.Equal(updatedRateLimit, vxcInfo.RateLimit, "Updated VXC rate limit mismatch")
+
+	// Move the VXC to connect MVE 3 and 4
+	logger.InfoContext(ctx, "Moving VXC to connect different MVEs",
+		slog.String("new_a_end", mveUids[2]),
+		slog.String("new_b_end", mveUids[3]))
+
+	updateRes, updateErr = vxcSvc.UpdateVXC(ctx, vxcUid, &UpdateVXCRequest{
+		AEndProductUID: &mveUids[2], // Use MVE 3 for A-End
+		BEndProductUID: &mveUids[3], // Use MVE 4 for B-End
+		AVnicIndex:     PtrTo(2),    // Use VNIC index 2 for A-End
+		BVnicIndex:     PtrTo(2),    // Use VNIC index 2 for B-End
+		WaitForUpdate:  true,
+		WaitForTime:    10 * time.Minute,
+	})
+
+	if updateErr != nil {
+		// Clean up resources before failing
+		vxcSvc.DeleteVXC(ctx, vxcUid, &DeleteVXCRequest{DeleteNow: true})
+		for _, uid := range mveUids {
+			mveSvc.DeleteMVE(ctx, &DeleteMVERequest{MVEID: uid})
+		}
+		suite.FailNowf("cannot move VXC", "cannot move VXC: %v", updateErr)
+	}
+
+	// Verify that VXC is now connected to MVE 3 and 4
+	suite.Equal(mveUids[2], updateRes.AEndConfiguration.UID, "Moved VXC A-End UID mismatch")
+	suite.Equal(mveUids[3], updateRes.BEndConfiguration.UID, "Moved VXC B-End UID mismatch")
+
+	// Double check the move by getting the VXC again
+	vxcInfo, getErr = vxcSvc.GetVXC(ctx, vxcUid)
+	if getErr != nil {
+		// Clean up resources before failing
+		vxcSvc.DeleteVXC(ctx, vxcUid, &DeleteVXCRequest{DeleteNow: true})
+		for _, uid := range mveUids {
+			mveSvc.DeleteMVE(ctx, &DeleteMVERequest{MVEID: uid})
+		}
+		suite.FailNowf("cannot get VXC", "cannot get VXC after move: %v", getErr)
+	}
+
+	suite.Equal(mveUids[2], vxcInfo.AEndConfiguration.UID, "Moved VXC GET A-End UID mismatch")
+	suite.Equal(mveUids[3], vxcInfo.BEndConfiguration.UID, "Moved VXC GET B-End UID mismatch")
+
+	// Attempt to delete the MVEs 3 and 4 with safe delete enabled. This should fail.
+	_, err := mveSvc.DeleteMVE(ctx, &DeleteMVERequest{
+		MVEID:      mveUids[2],
+		SafeDelete: true,
+	})
+	suite.Error(err, "expected error when deleting MVE with safe delete enabled")
+	_, err = mveSvc.DeleteMVE(ctx, &DeleteMVERequest{
+		MVEID:      mveUids[3],
+		SafeDelete: true,
+	})
+	suite.Error(err, "expected error when deleting MVE with safe delete enabled")
+
+	// Clean up resources - first delete the VXC
+	logger.InfoContext(ctx, "Test complete, cleaning up resources")
+
+	deleteErr := vxcSvc.DeleteVXC(ctx, vxcUid, &DeleteVXCRequest{DeleteNow: true})
+	if deleteErr != nil {
+		logger.ErrorContext(ctx, "Error deleting VXC", slog.String("error", deleteErr.Error()))
+	}
+
+	// Then delete all MVEs
+	for i, uid := range mveUids {
+		logger.InfoContext(ctx, "Deleting MVE",
+			slog.String("name", mveNames[i]),
+			slog.String("uid", uid))
+
+		deleteRes, err := mveSvc.DeleteMVE(ctx, &DeleteMVERequest{
+			MVEID: uid,
+		})
+		if err != nil {
+			logger.ErrorContext(ctx, "Error deleting MVE",
+				slog.String("uid", uid),
+				slog.String("error", err.Error()))
+		} else if !deleteRes.IsDeleted {
+			logger.WarnContext(ctx, "MVE delete response indicates not deleted", slog.String("uid", uid))
+		}
+	}
+
+	logger.InfoContext(ctx, "MVE to MVE VXC test completed successfully")
 }

@@ -179,16 +179,19 @@ type Peer struct {
 // VXCUpdate represents the fields that can be updated on a VXC.
 type VXCUpdate struct {
 	Name           string `json:"name,omitempty"`
-	RateLimit      *int   `json:"rateLimit,omitempty"`
-	CostCentre     string `json:"costCentre,omitempty"`
-	Shutdown       *bool  `json:"shutdown,omitempty"`
+	RateLimit      *int   `json:"rateLimit,omitempty"`  // A new speed for the connection in MBPS.
+	CostCentre     string `json:"costCentre,omitempty"` // A customer reference number to be included in billing information and invoices. Also known as the Service Level Reference (SLR).
+	Shutdown       *bool  `json:"shutdown,omitempty"`   // Temporarily shut down and re-enable the VXC. Valid values are true (shut down) and false (enabled). If not provided, it defaults to false (enabled).
 	AEndVLAN       *int   `json:"aEndVlan,omitempty"`
 	BEndVLAN       *int   `json:"bEndVlan,omitempty"`
 	AEndInnerVLAN  *int   `json:"aEndInnerVlan,omitempty"`
 	BEndInnerVLAN  *int   `json:"bEndInnerVlan,omitempty"`
-	AEndProductUID string `json:"aEndProductUid,omitempty"`
-	BEndProductUID string `json:"bEndProductUid,omitempty"`
+	AEndProductUID string `json:"aEndProductUid,omitempty"` // When moving a VXC, this is the new A-End for the connection.
+	BEndProductUID string `json:"bEndProductUid,omitempty"` // When moving a VXC, this is the new B-End for the connection.
 	Term           *int   `json:"term,omitempty"`
+	IsApproved     *bool  `json:"isApproved,omitempty"` // Define whether the VXC is approved or rejected via the Megaport Marketplace. Set to true (Approved) or false (Rejected).
+	AVnicIndex     *int   `json:"aVnicIndex,omitempty"` // When moving a VXC for an MVE, this is the new A-End vNIC for the connection.
+	BVnicIndex     *int   `json:"bVnicIndex,omitempty"` // When moving a VXC for an MVE, this is the new B-End vNIC for the connection.
 
 	AEndPartnerConfig VXCPartnerConfiguration `json:"aEndConfig,omitempty"`
 	BEndPartnerConfig VXCPartnerConfiguration `json:"bEndConfig,omitempty"`
