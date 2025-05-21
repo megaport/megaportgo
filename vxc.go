@@ -83,18 +83,23 @@ type DeleteVXCResponse struct {
 
 // UpdateVXCRequest represents a request to update a VXC in the Megaport VXC API.
 type UpdateVXCRequest struct {
-	AEndVLAN       *int
-	BEndVLAN       *int
-	AEndProductUID *string
-	BEndProductUID *string
-	RateLimit      *int
-	Name           *string
-	CostCentre     *string
+	AEndVLAN       *int    // A unique VLAN ID for this connection. Values can range from 2 to 4093. If this value is 0, the system allocates a valid VLAN. If the value is -1, the system untags the VLAN and sets it to null.
+	BEndVLAN       *int    // A unique VLAN ID for this connection. Values can range from 2 to 4093. If this value is 0, the system allocates a valid VLAN. If the value is -1, the system untags the VLAN and sets it to null.
+	AEndProductUID *string // When moving a VXC, this is the new A-End for the connection.
+	BEndProductUID *string // When moving a VXC, this is the new B-End for the connection.
+	RateLimit      *int    // A new speed for the connection.
+	Name           *string // Customer name for the connection - this name appears in the Portal.
+	CostCentre     *string // A customer reference number to be included in billing information and invoices. Also known as the Service Level Reference (SLR).
 	Term           *int
-	Shutdown       *bool
+	Shutdown       *bool // Temporarily shut down and re-enable the VXC. Valid values are true (shut down) and false (enabled). If not provided, it defaults to false (enabled).
 
 	AEndInnerVLAN *int
 	BEndInnerVLAN *int
+
+	AVnicIndex *int // When moving a VXC for an MVE, this is the new A-End vNIC for the connection.
+	BVnicIndex *int // When moving a VXC for an MVE, this is the new B-End vNIC for the connection.
+
+	IsApproved *bool //  Define whether the VXC is approved or rejected via the Megaport Marketplace. Set to true (Approved) or false (Rejected).
 
 	AEndPartnerConfig VXCPartnerConfiguration
 	BEndPartnerConfig VXCPartnerConfiguration
@@ -286,11 +291,14 @@ func (svc *VXCServiceOp) UpdateVXC(ctx context.Context, id string, req *UpdateVX
 	url := svc.Client.BaseURL.JoinPath(path).String()
 
 	update := &VXCUpdate{
-		RateLimit: req.RateLimit,
-		AEndVLAN:  req.AEndVLAN,
-		BEndVLAN:  req.BEndVLAN,
-		Term:      req.Term,
-		Shutdown:  req.Shutdown,
+		RateLimit:  req.RateLimit,
+		AEndVLAN:   req.AEndVLAN,
+		BEndVLAN:   req.BEndVLAN,
+		Term:       req.Term,
+		Shutdown:   req.Shutdown,
+		IsApproved: req.IsApproved,
+		AVnicIndex: req.AVnicIndex,
+		BVnicIndex: req.BVnicIndex,
 	}
 
 	if req.AEndPartnerConfig != nil {
