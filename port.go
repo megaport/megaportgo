@@ -38,6 +38,12 @@ type PortService interface {
 	ListPortResourceTags(ctx context.Context, portID string) (map[string]string, error)
 	// UpdatePortResourceTags updates the resource tags for a port in the Megaport Port API.
 	UpdatePortResourceTags(ctx context.Context, portID string, tags map[string]string) error
+	// GetPortLOA retrieves the LOA (Letter of Authorization) for a specific port
+	GetPortLOA(ctx context.Context, portID string) ([]byte, error)
+	// SavePortLOAToFile retrieves the LOA for a port and saves it to the specified file path
+	SavePortLOAToFile(ctx context.Context, portID string, filePath string) error
+	// GetPortLOABase64 retrieves the LOA for a port and returns it as a base64-encoded string
+	GetPortLOABase64(ctx context.Context, portID string) (string, error)
 }
 
 // NewPortService creates a new instance of the Port Service.
@@ -500,4 +506,26 @@ func (svc *PortServiceOp) UpdatePortResourceTags(ctx context.Context, portID str
 	return svc.Client.ProductService.UpdateProductResourceTags(ctx, portID, &UpdateProductResourceTagsRequest{
 		ResourceTags: productTags,
 	})
+}
+
+// GetPortLOA retrieves the LOA (Letter of Authorization) for a specific port
+// The response is returned as bytes which can be used to:
+// - Save directly to a file
+// - Convert to base64 for storing in state
+// - Process in any other way needed
+func (svc *PortServiceOp) GetPortLOA(ctx context.Context, portID string) ([]byte, error) {
+	// Ports are products, so we can reuse the product LOA endpoint
+	return svc.Client.ProductService.GetProductLOA(ctx, portID)
+}
+
+// SavePortLOAToFile retrieves the LOA for a port and saves it to the specified file path
+func (svc *PortServiceOp) SavePortLOAToFile(ctx context.Context, portID string, filePath string) error {
+	// Reuse the product service implementation
+	return svc.Client.ProductService.SaveProductLOAToFile(ctx, portID, filePath)
+}
+
+// GetPortLOABase64 retrieves the LOA for a port and returns it as a base64-encoded string
+func (svc *PortServiceOp) GetPortLOABase64(ctx context.Context, portID string) (string, error) {
+	// Reuse the product service implementation
+	return svc.Client.ProductService.GetProductLOABase64(ctx, portID)
 }
