@@ -311,7 +311,10 @@ func (suite *ProductClientTestSuite) TestGetProductLOA() {
 		// Set appropriate headers for PDF content
 		w.Header().Set("Content-Type", "application/pdf")
 		w.Header().Set("Content-Disposition", "attachment; filename=\"LOA_"+productUID+".pdf\"")
-		w.Write(mockPDFContent)
+		_, err := w.Write(mockPDFContent)
+		if err != nil {
+			suite.FailNow("Failed to write response")
+		}
 	})
 
 	// Test the GetProductLOA function
@@ -333,7 +336,10 @@ func (suite *ProductClientTestSuite) TestSaveProductLOAToFile() {
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
 		w.Header().Set("Content-Type", "application/pdf")
-		w.Write(mockPDFContent)
+		_, err := w.Write(mockPDFContent)
+		if err != nil {
+			suite.FailNow("Failed to write response")
+		}
 	})
 
 	// Create a temporary file for testing
@@ -366,7 +372,10 @@ func (suite *ProductClientTestSuite) TestGetProductLOABase64() {
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
 		w.Header().Set("Content-Type", "application/pdf")
-		w.Write(mockPDFContent)
+		_, err := w.Write(mockPDFContent)
+		if err != nil {
+			suite.FailNow("Failed to write response")
+		}
 	})
 
 	// Test the base64 encoding function
