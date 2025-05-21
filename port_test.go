@@ -2,11 +2,13 @@ package megaport
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -578,4 +580,87 @@ func (suite *PortClientTestSuite) TestUnlockPort() {
 
 	suite.NoError(err)
 	suite.Equal(want, got)
+}
+
+// TestGetPortLOA tests the GetPortLOA method
+func (suite *PortClientTestSuite) TestGetPortLOA() {
+	ctx := context.Background()
+	portSvc := suite.client.PortService
+	portID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	// Mock PDF content for testing
+	mockPDFContent := []byte("%PDF-1.5\nMegaport Port LOA Test Content")
+
+	path := fmt.Sprintf("/v2/product/%s/loa", portID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		w.Header().Set("Content-Type", "application/pdf")
+		w.Header().Set("Content-Disposition", "attachment; filename=\"LOA_"+portID+".pdf\"")
+		w.Write(mockPDFContent)
+	})
+
+	// Test the GetPortLOA function
+	loaContent, err := portSvc.GetPortLOA(ctx, portID)
+	suite.NoError(err)
+	suite.Equal(mockPDFContent, loaContent)
+}
+
+// TestSavePortLOAToFile tests the SavePortLOAToFile method
+func (suite *PortClientTestSuite) TestSavePortLOAToFile() {
+	ctx := context.Background()
+	portSvc := suite.client.PortService
+	portID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	// Mock PDF content for testing
+	mockPDFContent := []byte("%PDF-1.5\nMegaport Port LOA Test Content")
+
+	path := fmt.Sprintf("/v2/product/%s/loa", portID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		w.Header().Set("Content-Type", "application/pdf")
+		w.Write(mockPDFContent)
+	})
+
+	// Create a temporary file for testing
+	tempFile, err := os.CreateTemp("", "port_loa_test_*.pdf")
+	suite.NoError(err)
+	defer os.Remove(tempFile.Name())
+	tempFile.Close()
+
+	// Test saving the LOA to a file
+	err = portSvc.SavePortLOAToFile(ctx, portID, tempFile.Name())
+	suite.NoError(err)
+
+	// Verify the file content matches the mock PDF
+	savedContent, err := os.ReadFile(tempFile.Name())
+	suite.NoError(err)
+	suite.Equal(mockPDFContent, savedContent)
+}
+
+// TestGetPortLOABase64 tests the GetPortLOABase64 method
+func (suite *PortClientTestSuite) TestGetPortLOABase64() {
+	ctx := context.Background()
+	portSvc := suite.client.PortService
+	portID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	// Mock PDF content for testing
+	mockPDFContent := []byte("%PDF-1.5\nMegaport Port LOA Test Content")
+	expectedBase64 := base64.StdEncoding.EncodeToString(mockPDFContent)
+
+	path := fmt.Sprintf("/v2/product/%s/loa", portID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		w.Header().Set("Content-Type", "application/pdf")
+		w.Write(mockPDFContent)
+	})
+
+	// Test the base64 encoding function
+	base64Content, err := portSvc.GetPortLOABase64(ctx, portID)
+	suite.NoError(err)
+	suite.Equal(expectedBase64, base64Content)
+
+	// Verify the decoded content matches the original
+	decodedContent, err := base64.StdEncoding.DecodeString(base64Content)
+	suite.NoError(err)
+	suite.Equal(mockPDFContent, decodedContent)
 }

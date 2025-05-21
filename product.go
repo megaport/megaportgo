@@ -2,11 +2,13 @@ package megaport
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -32,6 +34,12 @@ type ProductService interface {
 	UpdateProductResourceTags(ctx context.Context, productUID string, tagsReq *UpdateProductResourceTagsRequest) error
 	// GetProductType returns the type of the product based on the Product UID. If no product is found, it returns an error.
 	GetProductType(ctx context.Context, productUID string) (string, error)
+	// GetProductLOA retrieves the LOA (Letter of Authorization) for a specific product
+	GetProductLOA(ctx context.Context, productUID string) ([]byte, error)
+	// SaveProductLOAToFile retrieves the LOA for a product and saves it to the specified file path
+	SaveProductLOAToFile(ctx context.Context, productUID string, filePath string) error
+	// GetProductLOABase64 retrieves the LOA for a product and returns it as a base64-encoded string
+	GetProductLOABase64(ctx context.Context, productUID string) (string, error)
 }
 
 // ProductServiceOp handles communication with Product methods of the Megaport API.
@@ -437,4 +445,66 @@ func (svc *ProductServiceOp) GetProductType(ctx context.Context, productUID stri
 	}
 
 	return parsedProduct.Type, nil
+}
+
+// GetProductLOA retrieves the LOA (Letter of Authorization) for a specific product
+// The response is returned as bytes which can be used to:
+// - Save directly to a file
+// - Convert to base64 for storing in state
+// - Process in any other way needed
+func (svc *ProductServiceOp) GetProductLOA(ctx context.Context, productUID string) ([]byte, error) {
+	path := fmt.Sprintf("/v2/product/%s/loa", productUID)
+	url := svc.Client.BaseURL.JoinPath(path).String()
+
+	req, err := svc.Client.NewRequest(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// LOA returns PDF content, so we need to handle it as raw bytes
+	response, err := svc.Client.Do(ctx, req, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to get LOA for product %s: %s", productUID, response.Status)
+	}
+
+	// Read the PDF content from the response
+	loaContent, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read LOA content: %w", err)
+	}
+
+	return loaContent, nil
+}
+
+// SaveProductLOAToFile retrieves the LOA for a product and saves it to the specified file path
+func (svc *ProductServiceOp) SaveProductLOAToFile(ctx context.Context, productUID string, filePath string) error {
+	loaContent, err := svc.GetProductLOA(ctx, productUID)
+	if err != nil {
+		return err
+	}
+
+	// Write to file with appropriate permissions
+	err = os.WriteFile(filePath, loaContent, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to save LOA to file: %w", err)
+	}
+
+	return nil
+}
+
+// GetProductLOABase64 retrieves the LOA for a product and returns it as a base64-encoded string
+func (svc *ProductServiceOp) GetProductLOABase64(ctx context.Context, productUID string) (string, error) {
+	loaContent, err := svc.GetProductLOA(ctx, productUID)
+	if err != nil {
+		return "", err
+	}
+
+	// Encode as base64
+	encoded := base64.StdEncoding.EncodeToString(loaContent)
+	return encoded, nil
 }
