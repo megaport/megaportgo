@@ -1255,7 +1255,10 @@ func (suite *VXCClientTestSuite) TestListVXCs() {
 		suite.testMethod(r, http.MethodGet)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(productsResponse))
+		_, err := w.Write([]byte(productsResponse))
+		if err != nil {
+			suite.FailNowf("could not write response", "could not write response %v", err)
+		}
 	})
 
 	// Test cases for ListVXCs with different filters
@@ -1447,7 +1450,10 @@ func (suite *VXCClientTestSuite) TestListVXCsDeduplication() {
 		suite.testMethod(r, http.MethodGet)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(productsResponse))
+		_, err := w.Write([]byte(productsResponse))
+		if err != nil {
+			suite.FailNowf("Failed to write response", "Error: %v", err)
+		}
 	})
 
 	// Execute the test
@@ -1553,7 +1559,10 @@ func (suite *VXCClientTestSuite) TestListVXCsWithDifferentProductTypes() {
 		suite.testMethod(r, http.MethodGet)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(productsResponse))
+		_, err := w.Write([]byte(productsResponse))
+		if err != nil {
+			suite.FailNowf("Failed to write response", "Error: %v", err)
+		}
 	})
 
 	// Execute the test

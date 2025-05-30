@@ -556,7 +556,10 @@ func (suite *IXClientTestSuite) TestListIXs() {
 		suite.testMethod(r, http.MethodGet)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(productsResponse))
+		_, err := w.Write([]byte(productsResponse))
+		if err != nil {
+			suite.FailNowf("could not write response", "could not write response %v", err)
+		}
 	})
 
 	// Test cases for ListIXs with different filters
@@ -760,7 +763,10 @@ func (suite *IXClientTestSuite) TestListIXsDeduplication() {
 		suite.testMethod(r, http.MethodGet)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(productsResponse))
+		_, err := w.Write([]byte(productsResponse))
+		if err != nil {
+			suite.FailNowf("could not write response", "could not write response %v", err)
+		}
 	})
 
 	// Execute the test
