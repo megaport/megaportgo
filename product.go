@@ -100,6 +100,8 @@ type Product interface {
 	GetType() string
 	GetUID() string
 	GetProvisioningStatus() string
+	GetAssociatedVXCs() []*VXC
+	GetAssociatedIXs() []*IX
 }
 
 type GetProductResponse struct {
@@ -109,7 +111,8 @@ type GetProductResponse struct {
 }
 
 type ParsedProduct struct {
-	Type string `json:"productType"`
+	Type           string `json:"productType"`
+	AssociatedVXCs []*VXC `json:"associatedVxcs"`
 }
 
 // ResourceTagsResponse represents a response from the Megaport Products API after retrieving the resource tags for a product.

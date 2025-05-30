@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"slices"
+	"strings"
 	"time"
 )
 
@@ -26,6 +27,9 @@ type IXService interface {
 
 	// DeleteIX deletes an Internet Exchange
 	DeleteIX(ctx context.Context, id string, req *DeleteIXRequest) error
+
+	// ListIXs lists all Internet Exchanges with optional filters
+	ListIXs(ctx context.Context, req *ListIXsRequest) ([]*IX, error)
 }
 
 // IXServiceOp handles communication with the IX related methods of the Megaport API
@@ -77,6 +81,25 @@ type UpdateIXRequest struct {
 
 type DeleteIXRequest struct {
 	DeleteNow bool // If true, delete immediately; if false, cancel at end of term
+}
+
+type ListIXsRequest struct {
+	// Basic filters
+	Name         string // Filter by name (exact match)
+	NameContains string // Filter by partial name match
+
+	// Status filters
+	Status []string // Filter by specific provisioning statuses (e.g. "LIVE", "CONFIGURED")
+
+	// IX-specific filters
+	ASN                int    // Filter by specific ASN
+	VLAN               int    // Filter by specific VLAN
+	NetworkServiceType string // Filter by specific network service type
+	LocationID         int    // Filter by specific location ID
+
+	// Other common filters
+	RateLimit       int  // Filter by specific rate limit (in Mbps)
+	IncludeInactive bool // Include inactive IXs in the results
 }
 
 // BuyIX purchases a new Internet Exchange from the Megaport API
@@ -305,4 +328,97 @@ func (svc *IXServiceOp) DeleteIX(ctx context.Context, id string, req *DeleteIXRe
 	})
 
 	return err
+}
+
+// ListIXs lists all Internet Exchanges from the Products API
+func (svc *IXServiceOp) ListIXs(ctx context.Context, req *ListIXsRequest) ([]*IX, error) {
+	// Create a map to track unique IXs by their UID
+	uniqueIXs := make(map[string]*IX)
+
+	// Get all products with a single API call
+	allProducts, err := svc.Client.ProductService.ListProducts(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list products: %w", err)
+	}
+
+	// Process each product to extract associated IXs
+	for _, product := range allProducts {
+		// Check the associated IXs from other products
+		for _, ix := range product.GetAssociatedIXs() {
+			// If the IX is already in the map, skip it
+			if _, exists := uniqueIXs[ix.ProductUID]; exists {
+				continue
+			}
+
+			// Add the IX to the map
+			uniqueIXs[ix.ProductUID] = ix
+		}
+	}
+
+	// Create a filtered slice of IXs
+	ixs := make([]*IX, 0, len(uniqueIXs))
+	for _, ix := range uniqueIXs {
+		// Apply filters
+		if shouldIncludeIX(ix, req) {
+			ixs = append(ixs, ix)
+		}
+	}
+
+	return ixs, nil
+}
+
+// Helper function to determine if an IX matches the filter criteria
+func shouldIncludeIX(ix *IX, req *ListIXsRequest) bool {
+	if req == nil {
+		return true
+	}
+
+	// Name filter
+	if req.Name != "" && ix.ProductName != req.Name {
+		return false
+	}
+
+	// Name contains filter
+	if req.NameContains != "" && !strings.Contains(ix.ProductName, req.NameContains) {
+		return false
+	}
+
+	// Status filter
+	if len(req.Status) > 0 && !slices.Contains(req.Status, ix.ProvisioningStatus) {
+		return false
+	}
+
+	// ASN filter
+	if req.ASN > 0 && ix.ASN != req.ASN {
+		return false
+	}
+
+	// VLAN filter
+	if req.VLAN > 0 && ix.VLAN != req.VLAN {
+		return false
+	}
+
+	// Network Service Type filter
+	if req.NetworkServiceType != "" && ix.NetworkServiceType != req.NetworkServiceType {
+		return false
+	}
+
+	// Location ID filter
+	if req.LocationID > 0 && ix.LocationID != req.LocationID {
+		return false
+	}
+
+	// Rate limit filter
+	if req.RateLimit > 0 && ix.RateLimit != req.RateLimit {
+		return false
+	}
+
+	// Skip inactive IXs if IncludeInactive is false
+	if !req.IncludeInactive &&
+		(ix.ProvisioningStatus == STATUS_DECOMMISSIONED ||
+			ix.ProvisioningStatus == STATUS_CANCELLED) {
+		return false
+	}
+
+	return true
 }
