@@ -204,6 +204,8 @@ type MVE struct {
 	DiversityZone         string                  `json:"diversityZone"`
 	NetworkInterfaces     []*MVENetworkInterface  `json:"vnics"`
 	LocationDetails       *ProductLocationDetails `json:"locationDetail"`
+	AssociatedVXCs        []*VXC                  `json:"associatedVxcs"`
+	AssociatedIXs         []*IX                   `json:"associatedIxs"`
 }
 
 func (m *MVE) GetType() string {
@@ -216,6 +218,14 @@ func (m *MVE) GetUID() string {
 
 func (m *MVE) GetProvisioningStatus() string {
 	return m.ProvisioningStatus
+}
+
+func (m *MVE) GetAssociatedVXCs() []*VXC {
+	return m.AssociatedVXCs
+}
+
+func (m *MVE) GetAssociatedIXs() []*IX {
+	return m.AssociatedIXs
 }
 
 // MVEResources represents the resources associated with an MVE.

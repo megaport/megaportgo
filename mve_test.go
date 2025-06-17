@@ -339,6 +339,7 @@ func (suite *MVEClientTestSuite) TestGetMVE() {
 		"connectType": "MVE",
 		"companyUid": "32df7107-fdca-4c2a-8ccb-c6867813b3f2",
         "companyName": "test-company",
+		"associatedVxcs": [],
 		"associatedIxs": [],
 		"attributeTags": {},
 		"vnics": [
@@ -466,6 +467,8 @@ func (suite *MVEClientTestSuite) TestGetMVE() {
 				Description: "Data Plane",
 			},
 		},
+		AssociatedVXCs: []*VXC{},
+		AssociatedIXs:  []*IX{},
 	}
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)

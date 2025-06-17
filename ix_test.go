@@ -432,3 +432,353 @@ func (suite *IXClientTestSuite) TestUpdateIX() {
 	suite.Equal(wantIX.Resources, gotIX.Resources)
 	suite.Equal(wantIX.ASN, gotIX.ASN)
 }
+
+// TestListIXs tests the ListIXs method with various filters
+func (suite *IXClientTestSuite) TestListIXs() {
+	// Define mock response for products list API with associated IXs
+	productsResponse := `{
+        "message": "Found 3 Products",
+        "terms": "This data is subject to the Acceptable Use Policy",
+        "data": [
+            {
+                "productId": 8001,
+                "productUid": "port-test-ix-001",
+                "productName": "Test IX Port 1",
+                "productType": "MEGAPORT",
+                "provisioningStatus": "LIVE",
+                "companyUid": "company-test-123",
+                "companyName": "Test Company",
+                "associatedIxs": [
+                    {
+                        "productId": 9001,
+                        "productUid": "ix-test-123",
+                        "productName": "Test IX 1",
+                        "productType": "IX",
+                        "provisioningStatus": "LIVE",
+                        "rateLimit": 1000,
+                        "locationId": 42,
+                        "vlan": 100,
+                        "asn": 65001,
+                        "networkServiceType": "Los Angeles IX",
+                        "locationDetail": {
+                            "name": "Test Location LA",
+                            "city": "Los Angeles",
+                            "metro": "Los Angeles",
+                            "country": "USA"
+                        }
+                    },
+                    {
+                        "productId": 9002,
+                        "productUid": "ix-test-456",
+                        "productName": "Test EXAMPLE IX",
+                        "productType": "IX",
+                        "provisioningStatus": "CONFIGURED",
+                        "rateLimit": 500,
+                        "locationId": 42,
+                        "vlan": 200,
+                        "asn": 65002,
+                        "networkServiceType": "Chicago IX", 
+                        "locationDetail": {
+                            "name": "Test Location CHI",
+                            "city": "Chicago",
+                            "metro": "Chicago",
+                            "country": "USA"
+                        }
+                    }
+                ],
+                "associatedVxcs": []
+            },
+            {
+                "productId": 8002,
+                "productUid": "port-test-ix-002",
+                "productName": "Test IX Port 2",
+                "productType": "MEGAPORT",
+                "provisioningStatus": "LIVE",
+                "companyUid": "company-test-123",
+                "companyName": "Test Company",
+                "associatedIxs": [
+                    {
+                        "productId": 9002,
+                        "productUid": "ix-test-456",
+                        "productName": "Test EXAMPLE IX",
+                        "productType": "IX",
+                        "provisioningStatus": "CONFIGURED",
+                        "rateLimit": 500,
+                        "locationId": 42,
+                        "vlan": 200,
+                        "asn": 65002,
+                        "networkServiceType": "Chicago IX",
+                        "locationDetail": {
+                            "name": "Test Location CHI",
+                            "city": "Chicago",
+                            "metro": "Chicago",
+                            "country": "USA"
+                        }
+                    }
+                ],
+                "associatedVxcs": []
+            },
+            {
+                "productId": 8003,
+                "productUid": "port-test-ix-003",
+                "productName": "Test IX Port 3",
+                "productType": "MEGAPORT",
+                "provisioningStatus": "LIVE",
+                "companyUid": "company-test-123",
+                "companyName": "Test Company",
+                "associatedIxs": [
+                    {
+                        "productId": 9003,
+                        "productUid": "ix-test-789",
+                        "productName": "Inactive Test IX",
+                        "productType": "IX",
+                        "provisioningStatus": "CANCELLED",
+                        "rateLimit": 2000,
+                        "locationId": 44,
+                        "vlan": 300,
+                        "asn": 65003,
+                        "networkServiceType": "Sydney IX",
+                        "locationDetail": {
+                            "name": "Test Location SYD",
+                            "city": "Sydney",
+                            "metro": "Sydney",
+                            "country": "Australia"
+                        }
+                    }
+                ],
+                "associatedVxcs": []
+            }
+        ]
+    }`
+
+	// Set up mock handler for products list API
+	suite.mux.HandleFunc("/v2/products", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, err := w.Write([]byte(productsResponse))
+		if err != nil {
+			suite.FailNowf("could not write response", "could not write response %v", err)
+		}
+	})
+
+	// Test cases for ListIXs with different filters
+	tests := []struct {
+		name           string
+		request        *ListIXsRequest
+		expectedCount  int
+		expectedIXUIDs []string
+	}{
+		{
+			name:           "List all active IXs (default behavior)",
+			request:        &ListIXsRequest{},
+			expectedCount:  2,
+			expectedIXUIDs: []string{"ix-test-123", "ix-test-456"},
+		},
+		{
+			name:           "List all IXs including inactive",
+			request:        &ListIXsRequest{IncludeInactive: true},
+			expectedCount:  3,
+			expectedIXUIDs: []string{"ix-test-123", "ix-test-456", "ix-test-789"},
+		},
+		{
+			name:           "Filter by exact name",
+			request:        &ListIXsRequest{Name: "Test IX 1"},
+			expectedCount:  1,
+			expectedIXUIDs: []string{"ix-test-123"},
+		},
+		{
+			name:           "Filter by name contains",
+			request:        &ListIXsRequest{NameContains: "EXAMPLE"},
+			expectedCount:  1,
+			expectedIXUIDs: []string{"ix-test-456"},
+		},
+		{
+			name:           "Filter by status",
+			request:        &ListIXsRequest{Status: []string{"CONFIGURED"}},
+			expectedCount:  1,
+			expectedIXUIDs: []string{"ix-test-456"},
+		},
+		{
+			name:           "Filter by ASN",
+			request:        &ListIXsRequest{ASN: 65001},
+			expectedCount:  1,
+			expectedIXUIDs: []string{"ix-test-123"},
+		},
+		{
+			name:           "Filter by VLAN",
+			request:        &ListIXsRequest{VLAN: 200},
+			expectedCount:  1,
+			expectedIXUIDs: []string{"ix-test-456"},
+		},
+		{
+			name:           "Filter by network service type",
+			request:        &ListIXsRequest{NetworkServiceType: "Chicago IX"},
+			expectedCount:  1,
+			expectedIXUIDs: []string{"ix-test-456"},
+		},
+		{
+			name:           "Filter by location ID",
+			request:        &ListIXsRequest{LocationID: 42},
+			expectedCount:  2,
+			expectedIXUIDs: []string{"ix-test-123", "ix-test-456"},
+		},
+		{
+			name:           "Filter by rate limit",
+			request:        &ListIXsRequest{RateLimit: 1000},
+			expectedCount:  1,
+			expectedIXUIDs: []string{"ix-test-123"},
+		},
+		{
+			name:           "Multiple filters (LocationID and NetworkServiceType)",
+			request:        &ListIXsRequest{LocationID: 42, NetworkServiceType: "Chicago IX"},
+			expectedCount:  1,
+			expectedIXUIDs: []string{"ix-test-456"},
+		},
+		{
+			name:           "Filter with no matches",
+			request:        &ListIXsRequest{Name: "Non-existent IX"},
+			expectedCount:  0,
+			expectedIXUIDs: []string{},
+		},
+	}
+
+	// Run all test cases
+	for _, tc := range tests {
+		suite.Run(tc.name, func() {
+			// Execute the test
+			result, err := suite.client.IXService.ListIXs(context.Background(), tc.request)
+
+			// Assert success
+			suite.NoError(err, "Expected no error")
+			suite.Equal(tc.expectedCount, len(result), "Expected %d IXs, got %d", tc.expectedCount, len(result))
+
+			// Verify the correct IXs were returned
+			var actualUIDs []string
+			for _, ix := range result {
+				actualUIDs = append(actualUIDs, ix.ProductUID)
+			}
+
+			// Verify each expected UID is in the result
+			for _, expectedUID := range tc.expectedIXUIDs {
+				suite.Contains(actualUIDs, expectedUID, "Expected IX with UID %s in results", expectedUID)
+			}
+		})
+	}
+}
+
+// TestListIXsDeduplication tests that duplicate IXs are properly deduplicated
+func (suite *IXClientTestSuite) TestListIXsDeduplication() {
+	// Define mock response with duplicated IX
+	productsResponse := `{
+        "message": "Found 3 Products",
+        "terms": "This data is subject to the Acceptable Use Policy",
+        "data": [
+            {
+                "productId": 8101,
+                "productUid": "port-test-ix-101",
+                "productName": "Port With Duplicate IX 1",
+                "productType": "MEGAPORT",
+                "provisioningStatus": "LIVE",
+                "associatedIxs": [
+                    {
+                        "productId": 9101,
+                        "productUid": "ix-test-duplicate",
+                        "productName": "Duplicated IX",
+                        "productType": "IX",
+                        "provisioningStatus": "LIVE",
+                        "rateLimit": 1000,
+                        "locationId": 50,
+                        "vlan": 400,
+                        "asn": 65101,
+                        "networkServiceType": "Tokyo IX",
+                        "locationDetail": {
+                            "name": "Test Location TYO",
+                            "city": "Tokyo",
+                            "metro": "Tokyo",
+                            "country": "Japan"
+                        }
+                    }
+                ]
+            },
+            {
+                "productId": 8102,
+                "productUid": "port-test-ix-102",
+                "productName": "Port With Duplicate IX 2",
+                "productType": "MEGAPORT",
+                "provisioningStatus": "LIVE",
+                "associatedIxs": [
+                    {
+                        "productId": 9101,
+                        "productUid": "ix-test-duplicate",
+                        "productName": "Duplicated IX",
+                        "productType": "IX",
+                        "provisioningStatus": "LIVE",
+                        "rateLimit": 1000,
+                        "locationId": 50,
+                        "vlan": 400,
+                        "asn": 65101,
+                        "networkServiceType": "Tokyo IX",
+                        "locationDetail": {
+                            "name": "Test Location TYO",
+                            "city": "Tokyo",
+                            "metro": "Tokyo",
+                            "country": "Japan"
+                        }
+                    }
+                ]
+            },
+            {
+                "productId": 8103,
+                "productUid": "port-test-ix-103",
+                "productName": "Port With Duplicate IX 3",
+                "productType": "MEGAPORT",
+                "provisioningStatus": "LIVE",
+                "associatedIxs": [
+                    {
+                        "productId": 9101,
+                        "productUid": "ix-test-duplicate",
+                        "productName": "Duplicated IX",
+                        "productType": "IX",
+                        "provisioningStatus": "LIVE",
+                        "rateLimit": 1000,
+                        "locationId": 50,
+                        "vlan": 400,
+                        "asn": 65101,
+                        "networkServiceType": "Tokyo IX",
+                        "locationDetail": {
+                            "name": "Test Location TYO",
+                            "city": "Tokyo",
+                            "metro": "Tokyo",
+                            "country": "Japan"
+                        }
+                    }
+                ]
+            }
+        ]
+    }`
+
+	// Set up mock handler
+	suite.mux.HandleFunc("/v2/products", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, err := w.Write([]byte(productsResponse))
+		if err != nil {
+			suite.FailNowf("could not write response", "could not write response %v", err)
+		}
+	})
+
+	// Execute the test
+	result, err := suite.client.IXService.ListIXs(context.Background(), nil)
+
+	// Assert success and deduplication
+	suite.NoError(err, "Expected no error")
+	suite.Equal(1, len(result), "Expected exactly 1 IX after deduplication")
+
+	if len(result) == 1 {
+		suite.Equal("ix-test-duplicate", result[0].ProductUID, "Expected the duplicated IX")
+		suite.Equal("Duplicated IX", result[0].ProductName, "Expected correct IX name")
+		suite.Equal(65101, result[0].ASN, "Expected correct IX ASN")
+	}
+}

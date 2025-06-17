@@ -66,6 +66,8 @@ type Port struct {
 	LocationDetails       *ProductLocationDetails `json:"locationDetail"`
 	LagCount              int
 	LagPortUIDs           []string
+	AssociatedVXCs        []*VXC `json:"associatedVxcs"`
+	AssociatedIXs         []*IX  `json:"associatedIxs"`
 }
 
 func (p *Port) GetType() string {
@@ -78,6 +80,14 @@ func (p *Port) GetUID() string {
 
 func (p *Port) GetProvisioningStatus() string {
 	return p.ProvisioningStatus
+}
+
+func (p *Port) GetAssociatedVXCs() []*VXC {
+	return p.AssociatedVXCs
+}
+
+func (p *Port) GetAssociatedIXs() []*IX {
+	return p.AssociatedIXs
 }
 
 // PortResources represents the resources associated with a Megaport Port.

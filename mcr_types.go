@@ -64,6 +64,8 @@ type MCR struct {
 	Resources             MCRResources            `json:"resources"`
 	DiversityZone         string                  `json:"diversityZone"`
 	LocationDetails       *ProductLocationDetails `json:"locationDetail"`
+	AssociatedVXCs        []*VXC                  `json:"associatedVxcs"`
+	AssociatedIXs         []*IX                   `json:"associatedIxs"`
 }
 
 func (m *MCR) GetType() string {
@@ -76,6 +78,14 @@ func (m *MCR) GetUID() string {
 
 func (m *MCR) GetProvisioningStatus() string {
 	return m.ProvisioningStatus
+}
+
+func (m *MCR) GetAssociatedVXCs() []*VXC {
+	return m.AssociatedVXCs
+}
+
+func (m *MCR) GetAssociatedIXs() []*IX {
+	return m.AssociatedIXs
 }
 
 // MCRResources represents the resources associated with an MCR.

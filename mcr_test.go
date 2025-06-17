@@ -129,6 +129,8 @@ func (suite *MCRClientTestSuite) TestGetMCR() {
 		CompanyUID:         companyUid,
 		UsageAlgorithm:     "POST_PAID_HOURLY_SPEED_MCR2",
 		AttributeTags:      map[string]string{},
+		AssociatedVXCs:     []*VXC{},
+		AssociatedIXs:      []*IX{},
 	}
 	jblob := `{
 			"message": "test-message",
@@ -542,6 +544,8 @@ func (suite *MCRClientTestSuite) TestModifyMCR() {
 			Metro:   "Atlanta",
 			Country: "USA",
 		},
+		AssociatedVXCs: []*VXC{},
+		AssociatedIXs:  []*IX{},
 	}
 	got, err := mcrSvc.GetMCR(ctx, productUid)
 	suite.NoError(err)

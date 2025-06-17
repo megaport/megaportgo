@@ -17,6 +17,8 @@ type VXCService interface {
 	BuyVXC(ctx context.Context, req *BuyVXCRequest) (*BuyVXCResponse, error)
 	// ValidateVXCOrder validates a VXC order in the Megaport Products API.
 	ValidateVXCOrder(ctx context.Context, req *BuyVXCRequest) error
+	// ListVXCs lists all VXCs in the Megaport VXC API.
+	ListVXCs(ctx context.Context, req *ListVXCsRequest) ([]*VXC, error)
 	// GetVXC gets details about a single VXC from the Megaport VXC API.
 	GetVXC(ctx context.Context, id string) (*VXC, error)
 	// DeleteVXC deletes a VXC in the Megaport VXC API.
@@ -133,6 +135,24 @@ type ListPartnerPortsRequest struct {
 
 type ListPartnerPortsResponse struct {
 	Data PartnerLookup
+}
+
+// ListVXCsRequest represents a request to list VXCs in the Megaport VXC API.
+type ListVXCsRequest struct {
+	// Basic filters
+	Name         string // Filter by name (exact match)
+	NameContains string // Filter by partial name match
+
+	// Status filters
+	Status []string // Filter by specific provisioning statuses (e.g. "LIVE", "CONFIGURED")
+
+	// Connection filters
+	AEndProductUID string // Filter by A-End product UID
+	BEndProductUID string // Filter by B-End product UID
+
+	// Other common filters
+	RateLimit       int  // Filter by specific rate limit (in Mbps)
+	IncludeInactive bool // Include inactive VXCs in the results
 }
 
 // BuyVXC buys a VXC from the Megaport VXC API.
@@ -473,4 +493,87 @@ func (svc *VXCServiceOp) ListPartnerPorts(ctx context.Context, req *ListPartnerP
 	return &ListPartnerPortsResponse{
 		Data: lookupResponse.Data,
 	}, nil
+}
+
+// ListVXCs lists all VXCs in the Megaport VXC API.
+func (svc *VXCServiceOp) ListVXCs(ctx context.Context, req *ListVXCsRequest) ([]*VXC, error) {
+	// Create a map to track unique VXCs by their UID
+	uniqueVXCs := make(map[string]*VXC)
+
+	// Get all products with a single API call
+	allProducts, err := svc.Client.ProductService.ListProducts(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list products: %w", err)
+	}
+
+	// Process each product to extract associated VXCs
+	for _, product := range allProducts {
+		// Check the associated VXCs
+		for _, vxc := range product.GetAssociatedVXCs() {
+			// If the VXC is already in the map, skip it
+			if _, exists := uniqueVXCs[vxc.UID]; exists {
+				continue
+			}
+
+			// Add the VXC to the map
+			uniqueVXCs[vxc.UID] = vxc
+		}
+	}
+
+	// Create a filtered slice of VXCs
+	vxcs := make([]*VXC, 0, len(uniqueVXCs))
+	for _, vxc := range uniqueVXCs {
+		// Apply filters
+		if shouldIncludeVXC(vxc, req) {
+			vxcs = append(vxcs, vxc)
+		}
+	}
+
+	return vxcs, nil
+}
+
+// Helper function to determine if a VXC matches the filter criteria
+func shouldIncludeVXC(vxc *VXC, req *ListVXCsRequest) bool {
+	if req == nil {
+		return true
+	}
+
+	// Name filter
+	if req.Name != "" && vxc.Name != req.Name {
+		return false
+	}
+
+	// Name contains filter
+	if req.NameContains != "" && !strings.Contains(vxc.Name, req.NameContains) {
+		return false
+	}
+
+	// Status filter
+	if len(req.Status) > 0 && !slices.Contains(req.Status, vxc.ProvisioningStatus) {
+		return false
+	}
+
+	// A-End filter
+	if req.AEndProductUID != "" && vxc.AEndConfiguration.UID != req.AEndProductUID {
+		return false
+	}
+
+	// B-End filter
+	if req.BEndProductUID != "" && vxc.BEndConfiguration.UID != req.BEndProductUID {
+		return false
+	}
+
+	// Rate limit filter
+	if req.RateLimit > 0 && vxc.RateLimit != req.RateLimit {
+		return false
+	}
+
+	// Skip inactive VXCs if IncludeInactive is false
+	if !req.IncludeInactive &&
+		(vxc.ProvisioningStatus == STATUS_DECOMMISSIONED ||
+			vxc.ProvisioningStatus == STATUS_CANCELLED) {
+		return false
+	}
+
+	return true
 }
