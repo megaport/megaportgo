@@ -66,7 +66,10 @@ func (suite *EventsTestSuite) TestGetMaintenanceEvents() {
 	suite.mux.HandleFunc("/ens/v1/status/maintenance", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(sampleJSON))
+		_, err := w.Write([]byte(sampleJSON))
+		if err != nil {
+			suite.FailNowf("Failed to write response", "Error: %v", err)
+		}
 	})
 
 	svc := &EventsServiceOp{client: suite.client}
@@ -108,7 +111,10 @@ func (suite *EventsTestSuite) TestGetOutageEvents() {
 	suite.mux.HandleFunc("/ens/v1/status/outage", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(sampleJSON))
+		_, err := w.Write([]byte(sampleJSON))
+		if err != nil {
+			suite.FailNowf("Failed to write response", "Error: %v", err)
+		}
 	})
 
 	svc := &EventsServiceOp{client: suite.client}
