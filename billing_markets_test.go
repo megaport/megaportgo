@@ -202,7 +202,10 @@ func (suite *BillingMarketClientTestSuite) TestSetBillingMarket() {
 
 		// Decode the request body to verify it
 		var reqBody SetBillingMarketRequest
-		json.NewDecoder(r.Body).Decode(&reqBody)
+		err := json.NewDecoder(r.Body).Decode(&reqBody)
+		if err != nil {
+			suite.FailNowf("Failed to decode request body", "Error: %v", err)
+		}
 
 		// Verify request fields
 		suite.Equal(req.CurrencyEnum, reqBody.CurrencyEnum)
