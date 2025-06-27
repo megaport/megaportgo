@@ -70,6 +70,8 @@ type Client struct {
 	MVEService MVEService
 	// ServiceKeyService provides methods for interacting with the Service Keys API
 	ServiceKeyService ServiceKeyService
+	// UserManagementService provides methods for interacting with the User Management API
+	UserManagementService UserManagementService
 	// ManagedAccountService provides methods for interacting with the Managed Accounts API
 	ManagedAccountService ManagedAccountService
 	// IXService provides methods for interacting with the IX API
@@ -172,6 +174,7 @@ func NewClient(httpClient *http.Client, base *url.URL) *Client {
 	c.ServiceKeyService = NewServiceKeyService(c)
 	c.ManagedAccountService = NewManagedAccountService(c)
 	c.BillingMarketService = NewBillingMarketService(c)
+	c.UserManagementService = NewUserManagementService(c)
 
 	c.headers = make(map[string]string)
 
