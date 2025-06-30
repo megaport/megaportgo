@@ -333,6 +333,7 @@ type PartnerConfigInterface struct {
 	Bfd            BfdConfig             `json:"bfd,omitempty"`
 	BgpConnections []BgpConnectionConfig `json:"bgpConnections,omitempty"`
 	VLAN           int                   `json:"vlan,omitempty"`
+	IpMtu          int                   `json:"ipMtu,omitempty"`
 }
 
 // IpRoute represents an IP route.
