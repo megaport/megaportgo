@@ -74,6 +74,8 @@ type Client struct {
 	ManagedAccountService ManagedAccountService
 	// IXService provides methods for interacting with the IX API
 	IXService IXService
+	// EventsService provides methods for interacting with the Events API
+	EventsService EventsService
 
 	accessToken string    // Access Token for client
 	tokenExpiry time.Time // Token Expiration
@@ -169,6 +171,7 @@ func NewClient(httpClient *http.Client, base *url.URL) *Client {
 	c.PartnerService = NewPartnerService(c)
 	c.ServiceKeyService = NewServiceKeyService(c)
 	c.ManagedAccountService = NewManagedAccountService(c)
+	c.EventsService = NewEventsService(c)
 
 	c.headers = make(map[string]string)
 

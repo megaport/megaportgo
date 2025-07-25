@@ -83,3 +83,25 @@ var ErrInvalidVXCAEndPartnerConfig = errors.New("invalid vxc a-end partner confi
 
 // ErrInvalidVXCBEndPartnerConfig is returned when an invalid VXC B-End partner config is provided
 var ErrInvalidVXCBEndPartnerConfig = errors.New("invalid vxc b-end partner config")
+
+// maintenanceStatesToString converts a slice of MaintenanceState to a slice of string
+func maintenanceStatesToString(states []MaintenanceState) []string {
+	strs := make([]string, len(states))
+	for i, v := range states {
+		strs[i] = string(v)
+	}
+	return strs
+}
+
+var ErrInvalidMaintenanceState = fmt.Errorf("invalid maintenance state, valid states are %s", strings.Join(maintenanceStatesToString(VALID_MAINTENANCE_STATES), ", "))
+
+// outageStatesToString converts a slice of OutageState to a slice of string
+func outageStatesToString(states []OutageState) []string {
+	strs := make([]string, len(states))
+	for i, v := range states {
+		strs[i] = string(v)
+	}
+	return strs
+}
+
+var ErrInvalidOutageState = fmt.Errorf("invalid outage state, valid states are %s", strings.Join(outageStatesToString(VALID_OUTAGE_STATES), ", "))
