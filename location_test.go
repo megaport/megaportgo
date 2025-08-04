@@ -11,17 +11,17 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// LocationClientTestSuite tests the Location Service.
-type LocationClientTestSuite struct {
+// LocationV3ClientTestSuite tests the Location Service V3 endpoints.
+type LocationV3ClientTestSuite struct {
 	ClientTestSuite
 }
 
-func TestLocationClientTestSuite(t *testing.T) {
+func TestLocationV3ClientTestSuite(t *testing.T) {
 	t.Parallel()
-	suite.Run(t, new(LocationClientTestSuite))
+	suite.Run(t, new(LocationV3ClientTestSuite))
 }
 
-func (suite *LocationClientTestSuite) SetupTest() {
+func (suite *LocationV3ClientTestSuite) SetupTest() {
 	suite.mux = http.NewServeMux()
 	suite.server = httptest.NewServer(suite.mux)
 
@@ -30,1141 +30,1139 @@ func (suite *LocationClientTestSuite) SetupTest() {
 	suite.client.BaseURL = url
 }
 
-func (suite *LocationClientTestSuite) TearDownTest() {
+func (suite *LocationV3ClientTestSuite) TearDownTest() {
 	suite.server.Close()
 }
 
-// TestListLocations tests the ListLocations method
-func (suite *LocationClientTestSuite) TestListLocations() {
-	liveDate := &Time{GetTime(1595340000000)}
+// TestListLocationsV3 tests the ListLocationsV3 method
+func (suite *LocationV3ClientTestSuite) TestListLocationsV3() {
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
-	want := []*Location{
+	want := []*LocationV3{
 		{
-			Name:          "Test Data Center",
-			Country:       "USA",
-			LiveDate:      liveDate,
-			SiteCode:      "denverTest",
-			NetworkRegion: "MP1",
-			Address: map[string]string{
-				"street":   "Test Street Denver",
-				"suburb":   "Test Suburb Denver",
-				"city":     "Denver",
-				"state":    "CO",
-				"country":  "USA",
-				"postcode": "80011",
+			ID:     2,
+			Name:   "Equinix SY1",
+			Metro:  "Sydney",
+			Market: "AU",
+			Status: "Active",
+			Address: LocationV3Address{
+				Street:   "639 Gardeners Road",
+				Suburb:   "Mascot",
+				City:     "Sydney",
+				State:    "NSW",
+				Postcode: "2020",
+				Country:  "Australia",
 			},
-			Campus:    "campus_deprecated",
-			Latitude:  39.762714,
-			Longitude: -104.761925,
-			Products: &LocationProducts{
-				MCR:      false,
-				Megaport: []int{1, 10},
+			Latitude:  -33.921867,
+			Longitude: 151.18802,
+			DataCentre: LocationV3DataCentre{
+				ID:   5,
+				Name: "Equinix",
 			},
-			Market:           "US",
-			Metro:            "Denver",
-			VRouterAvailable: false,
-			ID:               111,
-			Status:           "Active",
+			DiversityZones: &LocationV3DiversityZones{
+				Red: &LocationV3DiversityZone{
+					McrSpeedMbps:       []int{1000, 2500, 5000, 10000},
+					MegaportSpeedMbps:  []int{1000, 10000, 100000},
+					MveMaxCpuCoreCount: nil,
+					MveAvailable:       true,
+				},
+				Blue: &LocationV3DiversityZone{
+					McrSpeedMbps:       []int{1000, 2500, 5000, 10000, 25000, 50000, 100000},
+					MegaportSpeedMbps:  []int{1000, 10000, 100000},
+					MveMaxCpuCoreCount: nil,
+					MveAvailable:       true,
+				},
+			},
+			ProductAddOns: &LocationV3ProductAddOns{
+				CrossConnect: &LocationV3CrossConnect{
+					Available: true,
+					Type:      stringPtr("STANDARD"),
+				},
+			},
+			OrderingMessage: nil,
 		},
 		{
-			ID:            112,
-			Name:          "Test Data Center 2",
-			Campus:        "campus_deprecated",
-			Metro:         "Ashburn",
-			Country:       "USA",
-			SiteCode:      "ashburnTest",
-			NetworkRegion: "MP1",
-			Address: map[string]string{
-				"street":   "Test Street Ashburn",
-				"suburb":   "Test Suburb Ashburn",
-				"city":     "Ashburn",
-				"state":    "VA",
-				"country":  "USA",
-				"postcode": "20146",
+			ID:     3,
+			Name:   "Global Switch Sydney West",
+			Metro:  "Sydney",
+			Market: "AU",
+			Status: "Active",
+			Address: LocationV3Address{
+				Street:   "400 Harris Street",
+				Suburb:   "Ultimo",
+				City:     "Sydney",
+				State:    "NSW",
+				Postcode: "2007",
+				Country:  "Australia",
 			},
-			Market:           "US",
-			VRouterAvailable: false,
-			LiveDate:         liveDate,
-			Status:           "Active",
-			Longitude:        -77.487442,
-			Latitude:         39.043757,
-			Products: &LocationProducts{
-				MCR:      false,
-				Megaport: []int{10},
+			Latitude:  -33.87555,
+			Longitude: 151.19783,
+			DataCentre: LocationV3DataCentre{
+				ID:   6,
+				Name: "Global Switch",
 			},
+			DiversityZones: &LocationV3DiversityZones{
+				Red: &LocationV3DiversityZone{
+					McrSpeedMbps:       []int{1000, 2500, 5000, 10000},
+					MegaportSpeedMbps:  []int{1000, 10000, 100000},
+					MveMaxCpuCoreCount: nil,
+					MveAvailable:       false,
+				},
+				Blue: &LocationV3DiversityZone{
+					McrSpeedMbps:       []int{1000, 2500, 5000, 10000},
+					MegaportSpeedMbps:  []int{1000, 10000, 100000},
+					MveMaxCpuCoreCount: nil,
+					MveAvailable:       true,
+				},
+			},
+			ProductAddOns: &LocationV3ProductAddOns{
+				CrossConnect: &LocationV3CrossConnect{
+					Available: false,
+					Type:      nil,
+				},
+			},
+			OrderingMessage: nil,
 		},
 	}
-	path := "/v2/locations"
+	path := "/v3/locations"
 	jblob := `{
-    "message": "List all public locations",
-	"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
-    "data": [{
-			"id": 111,
-			"name": "Test Data Center",
-			"campus": "campus_deprecated",
-			"metro": "Denver",
-			"country": "USA",
-			"siteCode": "denverTest",
-			"networkRegion": "MP1",
-			"address": {
-				"street": "Test Street Denver",
-				"suburb": "Test Suburb Denver",
-				"city": "Denver",
-				"state": "CO",
-				"country": "USA",
-				"postcode": "80011"
-			},
-			"dc": {
-				"id": 111,
-				"name": "Test Data Center"
-			},
-			"market": "US",
-			"vRouterAvailable": false,
-			"liveDate": 1595340000000,
-			"status": "Active",
-			"longitude": -104.761925,
-			"latitude": 39.762714,
-			"products": {
-				"mcr": false,
-				"megaport": [
-					1,
-					10
-				]
-			},
-			"ordering_message": null,
-			"diversityZones": {}
-		},
-		{
-			"id": 112,
-			"name": "Test Data Center 2",
-			"campus": "campus_deprecated",
-			"metro": "Ashburn",
-			"country": "USA",
-			"siteCode": "ashburnTest",
-			"networkRegion": "MP1",
-			"address": {
-				"street": "Test Street Ashburn",
-				"suburb": "Test Suburb Ashburn",
-				"city": "Ashburn",
-				"state": "VA",
-				"country": "USA",
-				"postcode": "20146"
-			},
-			"dc": {
-				"id": 112,
-				"name": "Test Data Center 2"
-			},
-			"market": "US",
-			"vRouterAvailable": false,
-			"liveDate": 1595340000000,
-			"status": "Active",
-			"longitude": -77.487442,
-			"latitude": 39.043757,
-			"products": {
-				"mcr": false,
-				"megaport": [
-					10
-				]
-			},
-			"ordering_message": null,
-			"diversityZones": {}
-		}]
-	}`
+    "message": "List public locations",
+    "terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+    "data": [
+        {
+            "id": 2,
+            "name": "Equinix SY1",
+            "address": {
+                "street": "639 Gardeners Road",
+                "suburb": "Mascot",
+                "city": "Sydney",
+                "state": "NSW",
+                "postcode": "2020",
+                "country": "Australia"
+            },
+            "dataCentre": {
+                "id": 5,
+                "name": "Equinix"
+            },
+            "metro": "Sydney",
+            "market": "AU",
+            "status": "Active",
+            "longitude": 151.18802,
+            "latitude": -33.921867,
+            "orderingMessage": null,
+            "diversityZones": {
+                "red": {
+                    "mcrSpeedMbps": [1000, 2500, 5000, 10000],
+                    "megaportSpeedMbps": [1000, 10000, 100000],
+                    "mveMaxCpuCoreCount": null,
+                    "mveAvailable": true
+                },
+                "blue": {
+                    "mcrSpeedMbps": [1000, 2500, 5000, 10000, 25000, 50000, 100000],
+                    "megaportSpeedMbps": [1000, 10000, 100000],
+                    "mveMaxCpuCoreCount": null,
+                    "mveAvailable": true
+                }
+            },
+            "productAddOns": {
+                "crossConnect": {
+                    "available": true,
+                    "type": "STANDARD"
+                }
+            }
+        },
+        {
+            "id": 3,
+            "name": "Global Switch Sydney West",
+            "address": {
+                "street": "400 Harris Street",
+                "suburb": "Ultimo",
+                "city": "Sydney",
+                "state": "NSW",
+                "postcode": "2007",
+                "country": "Australia"
+            },
+            "dataCentre": {
+                "id": 6,
+                "name": "Global Switch"
+            },
+            "metro": "Sydney",
+            "market": "AU",
+            "status": "Active",
+            "longitude": 151.19783,
+            "latitude": -33.87555,
+            "orderingMessage": null,
+            "diversityZones": {
+                "red": {
+                    "mcrSpeedMbps": [1000, 2500, 5000, 10000],
+                    "megaportSpeedMbps": [1000, 10000, 100000],
+                    "mveMaxCpuCoreCount": null,
+                    "mveAvailable": false
+                },
+                "blue": {
+                    "mcrSpeedMbps": [1000, 2500, 5000, 10000],
+                    "megaportSpeedMbps": [1000, 10000, 100000],
+                    "mveMaxCpuCoreCount": null,
+                    "mveAvailable": true
+                }
+            },
+            "productAddOns": {
+                "crossConnect": {
+                    "available": false,
+                    "type": null
+                }
+            }
+        }
+    ]
+}`
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
 	})
-	got, err := locSvc.ListLocations(ctx)
+	got, err := locSvc.ListLocationsV3(ctx)
 	suite.NoError(err)
 	suite.Equal(want, got)
 }
 
-// TestGetLocationByID tests the GetLocationByID method
-func (suite *LocationClientTestSuite) TestGetLocationByID() {
+// TestGetLocationByIDV3 tests the GetLocationByIDV3 method
+func (suite *LocationV3ClientTestSuite) TestGetLocationByIDV3() {
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
-	liveDate := &Time{GetTime(1595340000000)}
-	want := &Location{
-		Name:          "Test Data Center",
-		Country:       "USA",
-		LiveDate:      liveDate,
-		SiteCode:      "denverTest",
-		NetworkRegion: "MP1",
-		Address: map[string]string{
-			"street":   "Test Street Denver",
-			"suburb":   "Test Suburb Denver",
-			"city":     "Denver",
-			"state":    "CO",
-			"country":  "USA",
-			"postcode": "80011",
+	want := &LocationV3{
+		ID:     2,
+		Name:   "Equinix SY1",
+		Metro:  "Sydney",
+		Market: "AU",
+		Status: "Active",
+		Address: LocationV3Address{
+			Street:   "639 Gardeners Road",
+			Suburb:   "Mascot",
+			City:     "Sydney",
+			State:    "NSW",
+			Postcode: "2020",
+			Country:  "Australia",
 		},
-		Campus:    "campus_deprecated",
-		Latitude:  39.762714,
-		Longitude: -104.761925,
-		Products: &LocationProducts{
-			MCR:      false,
-			Megaport: []int{1, 10},
+		Latitude:  -33.921867,
+		Longitude: 151.18802,
+		DataCentre: LocationV3DataCentre{
+			ID:   5,
+			Name: "Equinix",
 		},
-		Market:           "US",
-		Metro:            "Denver",
-		VRouterAvailable: false,
-		ID:               111,
-		Status:           "Active",
+		DiversityZones: &LocationV3DiversityZones{
+			Red: &LocationV3DiversityZone{
+				McrSpeedMbps:       []int{1000, 2500, 5000, 10000},
+				MegaportSpeedMbps:  []int{1000, 10000, 100000},
+				MveMaxCpuCoreCount: nil,
+				MveAvailable:       true,
+			},
+			Blue: &LocationV3DiversityZone{
+				McrSpeedMbps:       []int{1000, 2500, 5000, 10000, 25000, 50000, 100000},
+				MegaportSpeedMbps:  []int{1000, 10000, 100000},
+				MveMaxCpuCoreCount: nil,
+				MveAvailable:       true,
+			},
+		},
+		ProductAddOns: &LocationV3ProductAddOns{
+			CrossConnect: &LocationV3CrossConnect{
+				Available: true,
+				Type:      stringPtr("STANDARD"),
+			},
+		},
+		OrderingMessage: nil,
 	}
-	path := "/v2/locations"
+	path := "/v3/locations"
 	jblob := `{
-    "message": "List all public locations",
-	"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
-    "data": [{
-			"id": 111,
-			"name": "Test Data Center",
-			"campus": "campus_deprecated",
-			"metro": "Denver",
-			"country": "USA",
-			"siteCode": "denverTest",
-			"networkRegion": "MP1",
-			"address": {
-				"street": "Test Street Denver",
-				"suburb": "Test Suburb Denver",
-				"city": "Denver",
-				"state": "CO",
-				"country": "USA",
-				"postcode": "80011"
-			},
-			"dc": {
-				"id": 111,
-				"name": "Test Data Center"
-			},
-			"market": "US",
-			"vRouterAvailable": false,
-			"liveDate": 1595340000000,
-			"status": "Active",
-			"longitude": -104.761925,
-			"latitude": 39.762714,
-			"products": {
-				"mcr": false,
-				"megaport": [
-					1,
-					10
-				]
-			},
-			"ordering_message": null,
-			"diversityZones": {}
-		},
-		{
-			"id": 112,
-			"name": "Test Data Center 2",
-			"campus": "campus_deprecated",
-			"metro": "Ashburn",
-			"country": "USA",
-			"siteCode": "ashburnTest",
-			"networkRegion": "MP1",
-			"address": {
-				"street": "Test Street Ashburn",
-				"suburb": "Test Suburb Ashburn",
-				"city": "Ashburn",
-				"state": "VA",
-				"country": "USA",
-				"postcode": "20146"
-			},
-			"dc": {
-				"id": 112,
-				"name": "Test Data Center 2"
-			},
-			"market": "US",
-			"vRouterAvailable": false,
-			"liveDate": 1595340000000,
-			"status": "Active",
-			"longitude": -77.487442,
-			"latitude": 39.043757,
-			"products": {
-				"mcr": false,
-				"megaport": [
-					10
-				]
-			},
-			"ordering_message": null,
-			"diversityZones": {}
-		}]
-	}`
+    "message": "List public locations",
+    "terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+    "data": [
+        {
+            "id": 2,
+            "name": "Equinix SY1",
+            "address": {
+                "street": "639 Gardeners Road",
+                "suburb": "Mascot",
+                "city": "Sydney",
+                "state": "NSW",
+                "postcode": "2020",
+                "country": "Australia"
+            },
+            "dataCentre": {
+                "id": 5,
+                "name": "Equinix"
+            },
+            "metro": "Sydney",
+            "market": "AU",
+            "status": "Active",
+            "longitude": 151.18802,
+            "latitude": -33.921867,
+            "orderingMessage": null,
+            "diversityZones": {
+                "red": {
+                    "mcrSpeedMbps": [1000, 2500, 5000, 10000],
+                    "megaportSpeedMbps": [1000, 10000, 100000],
+                    "mveMaxCpuCoreCount": null,
+                    "mveAvailable": true
+                },
+                "blue": {
+                    "mcrSpeedMbps": [1000, 2500, 5000, 10000, 25000, 50000, 100000],
+                    "megaportSpeedMbps": [1000, 10000, 100000],
+                    "mveMaxCpuCoreCount": null,
+                    "mveAvailable": true
+                }
+            },
+            "productAddOns": {
+                "crossConnect": {
+                    "available": true,
+                    "type": "STANDARD"
+                }
+            }
+        },
+        {
+            "id": 3,
+            "name": "Global Switch Sydney West",
+            "address": {
+                "street": "400 Harris Street",
+                "suburb": "Ultimo",
+                "city": "Sydney",
+                "state": "NSW",
+                "postcode": "2007",
+                "country": "Australia"
+            },
+            "dataCentre": {
+                "id": 6,
+                "name": "Global Switch"
+            },
+            "metro": "Sydney",
+            "market": "AU",
+            "status": "Active",
+            "longitude": 151.19783,
+            "latitude": -33.87555,
+            "orderingMessage": null,
+            "diversityZones": {
+                "red": {
+                    "mcrSpeedMbps": [1000, 2500, 5000, 10000],
+                    "megaportSpeedMbps": [1000, 10000, 100000],
+                    "mveMaxCpuCoreCount": null,
+                    "mveAvailable": false
+                },
+                "blue": {
+                    "mcrSpeedMbps": [1000, 2500, 5000, 10000],
+                    "megaportSpeedMbps": [1000, 10000, 100000],
+                    "mveMaxCpuCoreCount": null,
+                    "mveAvailable": true
+                }
+            },
+            "productAddOns": {
+                "crossConnect": {
+                    "available": false,
+                    "type": null
+                }
+            }
+        }
+    ]
+}`
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
 	})
-	got, err := locSvc.GetLocationByID(ctx, 111)
+	got, err := locSvc.GetLocationByIDV3(ctx, 2)
 	suite.NoError(err)
 	suite.Equal(want, got)
 }
 
-// TestGetLocationByName tests the GetLocationByName method.
-func (suite *LocationClientTestSuite) TestGetLocationByName() {
-	liveDate := &Time{GetTime(1595340000000)}
+// TestGetLocationByNameV3 tests the GetLocationByNameV3 method.
+func (suite *LocationV3ClientTestSuite) TestGetLocationByNameV3() {
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
-	want := &Location{
-
-		ID:            112,
-		Name:          "Test Data Center 2",
-		Campus:        "campus_deprecated",
-		Metro:         "Ashburn",
-		Country:       "USA",
-		SiteCode:      "ashburnTest",
-		NetworkRegion: "MP1",
-		Address: map[string]string{
-			"street":   "Test Street Ashburn",
-			"suburb":   "Test Suburb Ashburn",
-			"city":     "Ashburn",
-			"state":    "VA",
-			"country":  "USA",
-			"postcode": "20146",
+	want := &LocationV3{
+		ID:     3,
+		Name:   "Global Switch Sydney West",
+		Metro:  "Sydney",
+		Market: "AU",
+		Status: "Active",
+		Address: LocationV3Address{
+			Street:   "400 Harris Street",
+			Suburb:   "Ultimo",
+			City:     "Sydney",
+			State:    "NSW",
+			Postcode: "2007",
+			Country:  "Australia",
 		},
-		Market:           "US",
-		VRouterAvailable: false,
-		LiveDate:         liveDate,
-		Status:           "Active",
-		Longitude:        -77.487442,
-		Latitude:         39.043757,
-		Products: &LocationProducts{
-			MCR:      false,
-			Megaport: []int{10},
+		Latitude:  -33.87555,
+		Longitude: 151.19783,
+		DataCentre: LocationV3DataCentre{
+			ID:   6,
+			Name: "Global Switch",
 		},
+		DiversityZones: &LocationV3DiversityZones{
+			Red: &LocationV3DiversityZone{
+				McrSpeedMbps:       []int{1000, 2500, 5000, 10000},
+				MegaportSpeedMbps:  []int{1000, 10000, 100000},
+				MveMaxCpuCoreCount: nil,
+				MveAvailable:       false,
+			},
+			Blue: &LocationV3DiversityZone{
+				McrSpeedMbps:       []int{1000, 2500, 5000, 10000},
+				MegaportSpeedMbps:  []int{1000, 10000, 100000},
+				MveMaxCpuCoreCount: nil,
+				MveAvailable:       true,
+			},
+		},
+		ProductAddOns: &LocationV3ProductAddOns{
+			CrossConnect: &LocationV3CrossConnect{
+				Available: false,
+				Type:      nil,
+			},
+		},
+		OrderingMessage: nil,
 	}
-	path := "/v2/locations"
+	path := "/v3/locations"
 	jblob := `{
-    "message": "List all public locations",
-	"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
-    "data": [{
-			"id": 111,
-			"name": "Test Data Center",
-			"campus": "campus_deprecated",
-			"metro": "Denver",
-			"country": "USA",
-			"siteCode": "denverTest",
-			"networkRegion": "MP1",
-			"address": {
-				"street": "Test Street Denver",
-				"suburb": "Test Suburb Denver",
-				"city": "Denver",
-				"state": "CO",
-				"country": "USA",
-				"postcode": "80011"
-			},
-			"dc": {
-				"id": 111,
-				"name": "Test Data Center"
-			},
-			"market": "US",
-			"vRouterAvailable": false,
-			"liveDate": 1595340000000,
-			"status": "Active",
-			"longitude": -104.761925,
-			"latitude": 39.762714,
-			"products": {
-				"mcr": false,
-				"megaport": [
-					1,
-					10
-				]
-			},
-			"ordering_message": null,
-			"diversityZones": {}
-		},
-		{
-			"id": 112,
-			"name": "Test Data Center 2",
-			"campus": "campus_deprecated",
-			"metro": "Ashburn",
-			"country": "USA",
-			"siteCode": "ashburnTest",
-			"networkRegion": "MP1",
-			"address": {
-				"street": "Test Street Ashburn",
-				"suburb": "Test Suburb Ashburn",
-				"city": "Ashburn",
-				"state": "VA",
-				"country": "USA",
-				"postcode": "20146"
-			},
-			"dc": {
-				"id": 112,
-				"name": "Test Data Center 2"
-			},
-			"market": "US",
-			"vRouterAvailable": false,
-			"liveDate": 1595340000000,
-			"status": "Active",
-			"longitude": -77.487442,
-			"latitude": 39.043757,
-			"products": {
-				"mcr": false,
-				"megaport": [
-					10
-				]
-			},
-			"ordering_message": null,
-			"diversityZones": {}
-		}]
-	}`
+    "message": "List public locations",
+    "terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+    "data": [
+        {
+            "id": 2,
+            "name": "Equinix SY1",
+            "address": {
+                "street": "639 Gardeners Road",
+                "suburb": "Mascot",
+                "city": "Sydney",
+                "state": "NSW",
+                "postcode": "2020",
+                "country": "Australia"
+            },
+            "dataCentre": {
+                "id": 5,
+                "name": "Equinix"
+            },
+            "metro": "Sydney",
+            "market": "AU",
+            "status": "Active",
+            "longitude": 151.18802,
+            "latitude": -33.921867,
+            "orderingMessage": null,
+            "diversityZones": {
+                "red": {
+                    "mcrSpeedMbps": [1000, 2500, 5000, 10000],
+                    "megaportSpeedMbps": [1000, 10000, 100000],
+                    "mveMaxCpuCoreCount": null,
+                    "mveAvailable": true
+                },
+                "blue": {
+                    "mcrSpeedMbps": [1000, 2500, 5000, 10000, 25000, 50000, 100000],
+                    "megaportSpeedMbps": [1000, 10000, 100000],
+                    "mveMaxCpuCoreCount": null,
+                    "mveAvailable": true
+                }
+            },
+            "productAddOns": {
+                "crossConnect": {
+                    "available": true,
+                    "type": "STANDARD"
+                }
+            }
+        },
+        {
+            "id": 3,
+            "name": "Global Switch Sydney West",
+            "address": {
+                "street": "400 Harris Street",
+                "suburb": "Ultimo",
+                "city": "Sydney",
+                "state": "NSW",
+                "postcode": "2007",
+                "country": "Australia"
+            },
+            "dataCentre": {
+                "id": 6,
+                "name": "Global Switch"
+            },
+            "metro": "Sydney",
+            "market": "AU",
+            "status": "Active",
+            "longitude": 151.19783,
+            "latitude": -33.87555,
+            "orderingMessage": null,
+            "diversityZones": {
+                "red": {
+                    "mcrSpeedMbps": [1000, 2500, 5000, 10000],
+                    "megaportSpeedMbps": [1000, 10000, 100000],
+                    "mveMaxCpuCoreCount": null,
+                    "mveAvailable": false
+                },
+                "blue": {
+                    "mcrSpeedMbps": [1000, 2500, 5000, 10000],
+                    "megaportSpeedMbps": [1000, 10000, 100000],
+                    "mveMaxCpuCoreCount": null,
+                    "mveAvailable": true
+                }
+            },
+            "productAddOns": {
+                "crossConnect": {
+                    "available": false,
+                    "type": null
+                }
+            }
+        }
+    ]
+}`
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
 	})
-	got, err := locSvc.GetLocationByName(ctx, "Test Data Center 2")
+	got, err := locSvc.GetLocationByNameV3(ctx, "Global Switch Sydney West")
 	suite.NoError(err)
 	suite.Equal(want, got)
 }
 
-// TestGetLocationByNameFuzzy tests the GetLocationByNameFuzzy method.
-func (suite *LocationClientTestSuite) TestGetLocationByNameFuzzy() {
+// TestGetLocationByNameFuzzyV3 tests the GetLocationByNameFuzzyV3 method.
+func (suite *LocationV3ClientTestSuite) TestGetLocationByNameFuzzyV3() {
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
-	liveDate := &Time{GetTime(1595340000000)}
-	want := []*Location{
+	want := []*LocationV3{
 		{
-			Name:          "Test Data Center",
-			Country:       "USA",
-			LiveDate:      liveDate,
-			SiteCode:      "denverTest",
-			NetworkRegion: "MP1",
-			Address: map[string]string{
-				"street":   "Test Street Denver",
-				"suburb":   "Test Suburb Denver",
-				"city":     "Denver",
-				"state":    "CO",
-				"country":  "USA",
-				"postcode": "80011",
+			ID:     3,
+			Name:   "Global Switch Sydney West",
+			Metro:  "Sydney",
+			Market: "AU",
+			Status: "Active",
+			Address: LocationV3Address{
+				Street:   "400 Harris Street",
+				Suburb:   "Ultimo",
+				City:     "Sydney",
+				State:    "NSW",
+				Postcode: "2007",
+				Country:  "Australia",
 			},
-			Campus:    "campus_deprecated",
-			Latitude:  39.762714,
-			Longitude: -104.761925,
-			Products: &LocationProducts{
-				MCR:      true,
-				Megaport: []int{1, 10},
+			Latitude:  -33.87555,
+			Longitude: 151.19783,
+			DataCentre: LocationV3DataCentre{
+				ID:   6,
+				Name: "Global Switch",
 			},
-			Market:           "US",
-			Metro:            "Denver",
-			VRouterAvailable: false,
-			ID:               111,
-			Status:           "Active",
-		},
-		{
-			ID:            112,
-			Name:          "Test Data Center 2",
-			Campus:        "campus_deprecated",
-			Metro:         "Ashburn",
-			Country:       "USA",
-			SiteCode:      "ashburnTest",
-			NetworkRegion: "MP1",
-			Address: map[string]string{
-				"street":   "Test Street Ashburn",
-				"suburb":   "Test Suburb Ashburn",
-				"city":     "Ashburn",
-				"state":    "VA",
-				"country":  "USA",
-				"postcode": "20146",
+			DiversityZones: &LocationV3DiversityZones{
+				Red: &LocationV3DiversityZone{
+					McrSpeedMbps:       []int{1000, 2500, 5000, 10000},
+					MegaportSpeedMbps:  []int{1000, 10000, 100000},
+					MveMaxCpuCoreCount: nil,
+					MveAvailable:       false,
+				},
+				Blue: &LocationV3DiversityZone{
+					McrSpeedMbps:       []int{1000, 2500, 5000, 10000},
+					MegaportSpeedMbps:  []int{1000, 10000, 100000},
+					MveMaxCpuCoreCount: nil,
+					MveAvailable:       true,
+				},
 			},
-			Market:           "US",
-			VRouterAvailable: false,
-			LiveDate:         liveDate,
-			Status:           "Active",
-			Longitude:        -77.487442,
-			Latitude:         39.043757,
-			Products: &LocationProducts{
-				MCR:      true,
-				Megaport: []int{10},
+			ProductAddOns: &LocationV3ProductAddOns{
+				CrossConnect: &LocationV3CrossConnect{
+					Available: false,
+					Type:      nil,
+				},
 			},
+			OrderingMessage: nil,
 		},
 	}
-	path := "/v2/locations"
-	jblob := `
-{
-    "message": "List all public locations",
-	"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
-    "data": [{
-			"id": 111,
-			"name": "Test Data Center",
-			"campus": "campus_deprecated",
-			"metro": "Denver",
-			"country": "USA",
-			"siteCode": "denverTest",
-			"networkRegion": "MP1",
-			"address": {
-				"street": "Test Street Denver",
-				"suburb": "Test Suburb Denver",
-				"city": "Denver",
-				"state": "CO",
-				"country": "USA",
-				"postcode": "80011"
-			},
-			"dc": {
-				"id": 111,
-				"name": "Test Data Center"
-			},
-			"market": "US",
-			"vRouterAvailable": false,
-			"liveDate": 1595340000000,
-			"status": "Active",
-			"longitude": -104.761925,
-			"latitude": 39.762714,
-			"products": {
-				"mcr": true,
-				"megaport": [
-					1,
-					10
-				]
-			},
-			"ordering_message": null,
-			"diversityZones": {}
-		},
-		{
-			"id": 112,
-			"name": "Test Data Center 2",
-			"campus": "campus_deprecated",
-			"metro": "Ashburn",
-			"country": "USA",
-			"siteCode": "ashburnTest",
-			"networkRegion": "MP1",
-			"address": {
-				"street": "Test Street Ashburn",
-				"suburb": "Test Suburb Ashburn",
-				"city": "Ashburn",
-				"state": "VA",
-				"country": "USA",
-				"postcode": "20146"
-			},
-			"dc": {
-				"id": 112,
-				"name": "Test Data Center 2"
-			},
-			"market": "US",
-			"vRouterAvailable": false,
-			"liveDate": 1595340000000,
-			"status": "Active",
-			"longitude": -77.487442,
-			"latitude": 39.043757,
-			"products": {
-				"mcr": true,
-				"megaport": [
-					10
-				]
-			},
-			"ordering_message": null,
-			"diversityZones": {}
-		},
-		{
-			"id": 113,
-			"name": "New York Data Center",
-			"campus": "campus_deprecated",
-			"metro": "New York",
-			"country": "USA",
-			"siteCode": "nycTest",
-			"networkRegion": "MP1",
-			"address": {
-				"street": "Test Street New York",
-				"suburb": "Test Suburb New York",
-				"city": "New York",
-				"state": "NY",
-				"country": "USA",
-				"postcode": "10016"
-			},
-			"dc": {
-				"id": 113,
-				"name": "New York Data Center"
-			},
-			"market": "US",
-			"vRouterAvailable": false,
-			"liveDate": 1595340000000,
-			"status": "Active",
-			"longitude": -73.971321,
-			"latitude": 40.776676,
-			"products": {
-				"mcr": true,
-				"megaport": [
-					10
-				]
-			},
-			"ordering_message": null,
-			"diversityZones": {}
-		}
-	]
-	}`
+	path := "/v3/locations"
+	jblob := `{
+    "message": "List public locations",
+    "terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+    "data": [
+        {
+            "id": 2,
+            "name": "Equinix SY1",
+            "address": {
+                "street": "639 Gardeners Road",
+                "suburb": "Mascot",
+                "city": "Sydney",
+                "state": "NSW",
+                "postcode": "2020",
+                "country": "Australia"
+            },
+            "dataCentre": {
+                "id": 5,
+                "name": "Equinix"
+            },
+            "metro": "Sydney",
+            "market": "AU",
+            "status": "Active",
+            "longitude": 151.18802,
+            "latitude": -33.921867,
+            "orderingMessage": null,
+            "diversityZones": {
+                "red": {
+                    "mcrSpeedMbps": [1000, 2500, 5000, 10000],
+                    "megaportSpeedMbps": [1000, 10000, 100000],
+                    "mveMaxCpuCoreCount": null,
+                    "mveAvailable": true
+                },
+                "blue": {
+                    "mcrSpeedMbps": [1000, 2500, 5000, 10000, 25000, 50000, 100000],
+                    "megaportSpeedMbps": [1000, 10000, 100000],
+                    "mveMaxCpuCoreCount": null,
+                    "mveAvailable": true
+                }
+            },
+            "productAddOns": {
+                "crossConnect": {
+                    "available": true,
+                    "type": "STANDARD"
+                }
+            }
+        },
+        {
+            "id": 3,
+            "name": "Global Switch Sydney West",
+            "address": {
+                "street": "400 Harris Street",
+                "suburb": "Ultimo",
+                "city": "Sydney",
+                "state": "NSW",
+                "postcode": "2007",
+                "country": "Australia"
+            },
+            "dataCentre": {
+                "id": 6,
+                "name": "Global Switch"
+            },
+            "metro": "Sydney",
+            "market": "AU",
+            "status": "Active",
+            "longitude": 151.19783,
+            "latitude": -33.87555,
+            "orderingMessage": null,
+            "diversityZones": {
+                "red": {
+                    "mcrSpeedMbps": [1000, 2500, 5000, 10000],
+                    "megaportSpeedMbps": [1000, 10000, 100000],
+                    "mveMaxCpuCoreCount": null,
+                    "mveAvailable": false
+                },
+                "blue": {
+                    "mcrSpeedMbps": [1000, 2500, 5000, 10000],
+                    "megaportSpeedMbps": [1000, 10000, 100000],
+                    "mveMaxCpuCoreCount": null,
+                    "mveAvailable": true
+                }
+            },
+            "productAddOns": {
+                "crossConnect": {
+                    "available": false,
+                    "type": null
+                }
+            }
+        }
+    ]
+}`
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
 	})
-	got, err := locSvc.GetLocationByNameFuzzy(ctx, "Test")
+	got, err := locSvc.GetLocationByNameFuzzyV3(ctx, "Global Switch")
 	suite.NoError(err)
 	suite.Equal(want, got)
 }
 
-// TestListCountries tests the ListCountries method.
-func (suite *LocationClientTestSuite) TestListCountries() {
+// TestFilterLocationsByMarketCodeV3 tests the FilterLocationsByMarketCodeV3 method.
+func (suite *LocationV3ClientTestSuite) TestFilterLocationsByMarketCodeV3() {
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
-	want := []*Country{
-		{
-			Code:      "AUS",
-			Name:      "Australia",
-			Prefix:    "AU",
-			SiteCount: 54,
-		},
-		{
-			Code:      "GBR",
-			Name:      "United Kingdom",
-			Prefix:    "GB",
-			SiteCount: 21,
-		},
-		{
-			Code:      "USA",
-			Name:      "USA",
-			Prefix:    "US",
-			SiteCount: 191,
-		},
-	}
-	jblob := `
-	{
-	"message": "List all public network regions",
-	"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
-	"data": [
-		{
-			"networkRegion": "MP1",
-			"countries": [
-				{
-					"siteCount": 54,
-					"code": "AUS",
-					"prefix": "AU",
-					"name": "Australia"
-				},
-				{
-					"siteCount": 21,
-					"code": "GBR",
-					"prefix": "GB",
-					"name": "United Kingdom"
-				},
-				{
-					"siteCount": 191,
-					"code": "USA",
-					"prefix": "US",
-					"name": "USA"
-				}
-			]
-		}
-	]
-	}`
+
+	// Mock the /v2/networkRegions endpoint that IsValidMarketCode depends on
 	path := "/v2/networkRegions"
+	jblob := `{
+		"message": "Network Regions",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": [
+			{
+				"networkRegion": "MP1",
+				"countries": [
+					{
+						"country": "Australia",
+						"countryPrefix": "AU",
+						"prefix": "AU"
+					},
+					{
+						"country": "United States",
+						"countryPrefix": "US", 
+						"prefix": "US"
+					}
+				]
+			}
+		]
+	}`
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
 	})
-	got, err := locSvc.ListCountries(ctx)
+
+	locations := []*LocationV3{
+		{
+			ID:     2,
+			Name:   "Equinix SY1",
+			Metro:  "Sydney",
+			Market: "AU",
+			Status: "Active",
+		},
+		{
+			ID:     3,
+			Name:   "Global Switch Sydney West",
+			Metro:  "Sydney",
+			Market: "AU",
+			Status: "Active",
+		},
+		{
+			ID:     100,
+			Name:   "Test US Location",
+			Metro:  "Denver",
+			Market: "US",
+			Status: "Active",
+		},
+	}
+
+	want := []*LocationV3{
+		{
+			ID:     2,
+			Name:   "Equinix SY1",
+			Metro:  "Sydney",
+			Market: "AU",
+			Status: "Active",
+		},
+		{
+			ID:     3,
+			Name:   "Global Switch Sydney West",
+			Metro:  "Sydney",
+			Market: "AU",
+			Status: "Active",
+		},
+	}
+
+	got, err := locSvc.FilterLocationsByMarketCodeV3(ctx, "AU", locations)
 	suite.NoError(err)
 	suite.Equal(want, got)
 }
 
-// TestListMarketCodes tests the ListMarketCodes method.
-func (suite *LocationClientTestSuite) TestListMarketCodes() {
+// TestFilterLocationsByMcrAvailabilityV3 tests the FilterLocationsByMcrAvailabilityV3 method.
+func (suite *LocationV3ClientTestSuite) TestFilterLocationsByMcrAvailabilityV3() {
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
-	want := []string{"AU", "GB", "US"}
-	jblob := `
-	{
-	"message": "List all public network regions",
-	"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
-	"data": [
-		{
-			"networkRegion": "MP1",
-			"countries": [
-				{
-					"siteCount": 54,
-					"code": "AUS",
-					"prefix": "AU",
-					"name": "Australia"
-				},
-				{
-					"siteCount": 21,
-					"code": "GBR",
-					"prefix": "GB",
-					"name": "United Kingdom"
-				},
-				{
-					"siteCount": 191,
-					"code": "USA",
-					"prefix": "US",
-					"name": "USA"
-				}
-			]
-		}
-	]
-	}`
-	path := "/v2/networkRegions"
-	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		suite.testMethod(r, http.MethodGet)
-		fmt.Fprint(w, jblob)
-	})
-	got, err := locSvc.ListMarketCodes(ctx)
-	suite.NoError(err)
-	suite.Equal(want, got)
-}
 
-// TestIsValidMarketCode tests the IsValidMarketCode method.
-func (suite *ClientTestSuite) TestIsValidMarketCode() {
-	ctx := context.Background()
-	locSvc := suite.client.LocationService
-	want1 := true
-	want2 := false
-	jblob := `
-	{
-	"message": "List all public network regions",
-	"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
-	"data": [
+	locations := []*LocationV3{
 		{
-			"networkRegion": "MP1",
-			"countries": [
-				{
-					"siteCount": 54,
-					"code": "AUS",
-					"prefix": "AU",
-					"name": "Australia"
+			ID:     2,
+			Name:   "Equinix SY1",
+			Metro:  "Sydney",
+			Market: "AU",
+			Status: "Active",
+			DiversityZones: &LocationV3DiversityZones{
+				Red: &LocationV3DiversityZone{
+					McrSpeedMbps: []int{1000, 2500, 5000, 10000},
 				},
-				{
-					"siteCount": 21,
-					"code": "GBR",
-					"prefix": "GB",
-					"name": "United Kingdom"
-				},
-				{
-					"siteCount": 191,
-					"code": "USA",
-					"prefix": "US",
-					"name": "USA"
-				}
-			]
-		}
-	]
-	}`
-	path := "/v2/networkRegions"
-	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		suite.testMethod(r, http.MethodGet)
-		fmt.Fprint(w, jblob)
-	})
-	got1, err := locSvc.IsValidMarketCode(ctx, "US")
-	suite.NoError(err)
-	suite.Equal(want1, got1)
-	got2, err := locSvc.IsValidMarketCode(ctx, "BADCODE")
-	suite.NoError(err)
-	suite.Equal(want2, got2)
-}
-
-// TestFilterLocationsByMcrAvailability tests the FilterLocationsByMcrAvailability method.
-func (suite *LocationClientTestSuite) TestFilterLocationsByMcrAvailability() {
-	ctx := context.Background()
-	locSvc := suite.client.LocationService
-	liveDate := &Time{GetTime(1595340000000)}
-	in := []*Location{
-		{
-			Name:          "Test Data Center",
-			Country:       "USA",
-			LiveDate:      liveDate,
-			SiteCode:      "denverTest",
-			NetworkRegion: "MP1",
-			Address: map[string]string{
-				"street":   "Test Street Denver",
-				"suburb":   "Test Suburb Denver",
-				"city":     "Denver",
-				"state":    "CO",
-				"country":  "USA",
-				"postcode": "80011",
-			},
-			Campus:    "campus_deprecated",
-			Latitude:  39.762714,
-			Longitude: -104.761925,
-			Products: &LocationProducts{
-				MCR:        true,
-				MCRVersion: 2,
-				MCR2:       []int{1000, 2500, 5000, 10000},
-				Megaport:   []int{1, 10},
-			},
-			Market:           "US",
-			Metro:            "Denver",
-			VRouterAvailable: false,
-			ID:               111,
-			Status:           "Active",
-		},
-		{
-			ID:            112,
-			Name:          "Test Data Center 2",
-			Campus:        "campus_deprecated",
-			Metro:         "Ashburn",
-			Country:       "USA",
-			SiteCode:      "ashburnTest",
-			NetworkRegion: "MP1",
-			Address: map[string]string{
-				"street":   "Test Street Ashburn",
-				"suburb":   "Test Suburb Ashburn",
-				"city":     "Ashburn",
-				"state":    "VA",
-				"country":  "USA",
-				"postcode": "20146",
-			},
-			Market:           "US",
-			VRouterAvailable: false,
-			LiveDate:         liveDate,
-			Status:           "Active",
-			Longitude:        -73.971321,
-			Latitude:         39.043757,
-			Products: &LocationProducts{
-				MCR:        true,
-				MCRVersion: 2,
-				MCR2:       []int{1000, 2500, 5000, 10000},
-				Megaport:   []int{1, 10},
 			},
 		},
 		{
-			ID:            113,
-			Name:          "NYC Data Center",
-			Campus:        "campus_deprecated",
-			Metro:         "New York",
-			Country:       "USA",
-			SiteCode:      "nyc",
-			NetworkRegion: "MP1",
-			Address: map[string]string{
-				"street":   "Test Street New York",
-				"suburb":   "Test Suburb New York",
-				"city":     "New York",
-				"state":    "NY",
-				"country":  "USA",
-				"postcode": "10016",
+			ID:     3,
+			Name:   "Global Switch Sydney West",
+			Metro:  "Sydney",
+			Market: "AU",
+			Status: "Active",
+			DiversityZones: &LocationV3DiversityZones{
+				Red: &LocationV3DiversityZone{
+					McrSpeedMbps: []int{},
+				},
 			},
-			Market:           "US",
-			VRouterAvailable: false,
-			LiveDate:         liveDate,
-			Status:           "Active",
-			Longitude:        -73.971321,
-			Latitude:         40.776676,
-			Products: &LocationProducts{
-				MCR:      false,
-				Megaport: []int{10},
+		},
+		{
+			ID:             4,
+			Name:           "Location with no MCR",
+			Metro:          "Melbourne",
+			Market:         "AU",
+			Status:         "Active",
+			DiversityZones: &LocationV3DiversityZones{},
+		},
+	}
+
+	want := []*LocationV3{
+		{
+			ID:     2,
+			Name:   "Equinix SY1",
+			Metro:  "Sydney",
+			Market: "AU",
+			Status: "Active",
+			DiversityZones: &LocationV3DiversityZones{
+				Red: &LocationV3DiversityZone{
+					McrSpeedMbps: []int{1000, 2500, 5000, 10000},
+				},
 			},
 		},
 	}
-	want := []*Location{
-		{
-			Name:          "Test Data Center",
-			Country:       "USA",
-			LiveDate:      liveDate,
-			SiteCode:      "denverTest",
-			NetworkRegion: "MP1",
-			Address: map[string]string{
-				"street":   "Test Street Denver",
-				"suburb":   "Test Suburb Denver",
-				"city":     "Denver",
-				"state":    "CO",
-				"country":  "USA",
-				"postcode": "80011",
+
+	got := locSvc.FilterLocationsByMcrAvailabilityV3(ctx, true, locations)
+	suite.Equal(want, got)
+}
+
+// TestLocationV3HelperMethods tests the helper methods for LocationV3 struct.
+func (suite *LocationV3ClientTestSuite) TestLocationV3HelperMethods() {
+	// Test location with MCR support
+	locationWithMCR := &LocationV3{
+		ID:   2,
+		Name: "Equinix SY1",
+		DiversityZones: &LocationV3DiversityZones{
+			Red: &LocationV3DiversityZone{
+				McrSpeedMbps:      []int{1000, 2500, 5000, 10000},
+				MegaportSpeedMbps: []int{1000, 10000, 100000},
+				MveAvailable:      true,
 			},
-			Campus:    "campus_deprecated",
-			Latitude:  39.762714,
-			Longitude: -104.761925,
-			Products: &LocationProducts{
-				MCR:        true,
-				MCRVersion: 2,
-				MCR2:       []int{1000, 2500, 5000, 10000},
-				Megaport:   []int{1, 10},
+			Blue: &LocationV3DiversityZone{
+				McrSpeedMbps:       []int{1000, 2500, 5000, 10000, 25000, 50000, 100000},
+				MegaportSpeedMbps:  []int{1000, 10000, 100000},
+				MveMaxCpuCoreCount: intPtr(16),
+				MveAvailable:       true,
 			},
-			Market:           "US",
-			Metro:            "Denver",
-			VRouterAvailable: false,
-			ID:               111,
-			Status:           "Active",
 		},
-		{
-			ID:            112,
-			Name:          "Test Data Center 2",
-			Campus:        "campus_deprecated",
-			Metro:         "Ashburn",
-			Country:       "USA",
-			SiteCode:      "ashburnTest",
-			NetworkRegion: "MP1",
-			Address: map[string]string{
-				"street":   "Test Street Ashburn",
-				"suburb":   "Test Suburb Ashburn",
-				"city":     "Ashburn",
-				"state":    "VA",
-				"country":  "USA",
-				"postcode": "20146",
+		ProductAddOns: &LocationV3ProductAddOns{
+			CrossConnect: &LocationV3CrossConnect{
+				Available: true,
+				Type:      stringPtr("STANDARD"),
 			},
-			Market:           "US",
-			VRouterAvailable: false,
-			LiveDate:         liveDate,
-			Status:           "Active",
-			Longitude:        -73.971321,
-			Latitude:         39.043757,
-			Products: &LocationProducts{
-				MCR:        true,
-				MCRVersion: 2,
-				MCR2:       []int{1000, 2500, 5000, 10000},
-				Megaport:   []int{1, 10},
+		},
+		DataCentre: LocationV3DataCentre{
+			ID:   5,
+			Name: "Equinix",
+		},
+		Address: LocationV3Address{
+			Country: "Australia",
+		},
+	}
+
+	// Test HasMCRSupport
+	suite.True(locationWithMCR.HasMCRSupport())
+
+	// Test GetMCRSpeeds
+	expectedMCRSpeeds := []int{1000, 2500, 5000, 10000, 25000, 50000, 100000}
+	suite.Equal(expectedMCRSpeeds, locationWithMCR.GetMCRSpeeds())
+
+	// Test GetMegaportSpeeds
+	expectedMegaportSpeeds := []int{1000, 10000, 100000}
+	suite.Equal(expectedMegaportSpeeds, locationWithMCR.GetMegaportSpeeds())
+
+	// Test HasMVESupport
+	suite.True(locationWithMCR.HasMVESupport())
+
+	// Test GetMVEMaxCpuCores
+	suite.Equal(intPtr(16), locationWithMCR.GetMVEMaxCpuCores())
+
+	// Test HasCrossConnectSupport
+	suite.True(locationWithMCR.HasCrossConnectSupport())
+
+	// Test GetCrossConnectType
+	suite.Equal("STANDARD", locationWithMCR.GetCrossConnectType())
+
+	// Test GetDataCenterName
+	suite.Equal("Equinix", locationWithMCR.GetDataCenterName())
+
+	// Test GetDataCenterID
+	suite.Equal(5, locationWithMCR.GetDataCenterID())
+
+	// Test GetCountry
+	suite.Equal("Australia", locationWithMCR.GetCountry())
+
+	// Test location without MCR support
+	locationWithoutMCR := &LocationV3{
+		ID:   4,
+		Name: "Location without MCR",
+		DiversityZones: &LocationV3DiversityZones{
+			Red: &LocationV3DiversityZone{
+				McrSpeedMbps: []int{},
+				MveAvailable: false,
+			},
+		},
+		ProductAddOns: &LocationV3ProductAddOns{
+			CrossConnect: &LocationV3CrossConnect{
+				Available: false,
+				Type:      nil,
 			},
 		},
 	}
-	got := locSvc.FilterLocationsByMcrAvailability(ctx, true, in)
-	suite.Equal(want, got)
+
+	// Test HasMCRSupport returns false
+	suite.False(locationWithoutMCR.HasMCRSupport())
+
+	// Test HasMVESupport returns false
+	suite.False(locationWithoutMCR.HasMVESupport())
+
+	// Test HasCrossConnectSupport returns false
+	suite.False(locationWithoutMCR.HasCrossConnectSupport())
+
+	// Test GetCrossConnectType returns empty string
+	suite.Equal("", locationWithoutMCR.GetCrossConnectType())
+}
+
+// Helper functions for creating pointers
+func stringPtr(s string) *string {
+	return &s
+}
+
+func intPtr(i int) *int {
+	return &i
 }
 
 // TestGetRandom tests the GetRandom method.
-func (suite *LocationClientTestSuite) TestGetRandom() {
+func (suite *LocationV3ClientTestSuite) TestGetRandom() {
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
-	liveDate := &Time{GetTime(1595340000000)}
-	want := []*Location{
+	want := []*LocationV3{
 		{
-			Name:          "Test Data Center",
-			Country:       "USA",
-			LiveDate:      liveDate,
-			SiteCode:      "denverTest",
-			NetworkRegion: "MP1",
-			Address: map[string]string{
-				"street":   "Test Street Denver",
-				"suburb":   "Test Suburb Denver",
-				"city":     "Denver",
-				"state":    "CO",
-				"country":  "USA",
-				"postcode": "80011",
+			ID:     111,
+			Name:   "Test Data Center",
+			Metro:  "Denver",
+			Market: "US",
+			Status: "Active",
+			Address: LocationV3Address{
+				Street:   "Test Street Denver",
+				Suburb:   "Test Suburb Denver",
+				City:     "Denver",
+				State:    "CO",
+				Postcode: "80011",
+				Country:  "USA",
 			},
-			Campus:    "campus_deprecated",
 			Latitude:  39.762714,
 			Longitude: -104.761925,
-			Products: &LocationProducts{
-				MCR:        true,
-				MCRVersion: 2,
-				MCR2:       []int{1000, 2500, 5000, 10000},
-				Megaport:   []int{1, 10},
+			DataCentre: LocationV3DataCentre{
+				ID:   111,
+				Name: "Test Data Center",
 			},
-			Market:           "US",
-			Metro:            "Denver",
-			VRouterAvailable: false,
-			ID:               111,
-			Status:           "Active",
+			DiversityZones: &LocationV3DiversityZones{
+				Red: &LocationV3DiversityZone{
+					McrSpeedMbps:      []int{1000, 2500, 5000, 10000},
+					MegaportSpeedMbps: []int{1000, 10000},
+					MveAvailable:      true,
+				},
+			},
+			ProductAddOns: &LocationV3ProductAddOns{
+				CrossConnect: &LocationV3CrossConnect{
+					Available: true,
+					Type:      stringPtr("STANDARD"),
+				},
+			},
+			OrderingMessage: nil,
 		},
 		{
-			ID:            112,
-			Name:          "Test Data Center 2",
-			Campus:        "campus_deprecated",
-			Metro:         "Ashburn",
-			Country:       "USA",
-			SiteCode:      "ashburnTest",
-			NetworkRegion: "MP1",
-			Address: map[string]string{
-				"street":   "Test Street Ashburn",
-				"suburb":   "Test Suburb Ashburn",
-				"city":     "Ashburn",
-				"state":    "VA",
-				"country":  "USA",
-				"postcode": "20146",
+			ID:     112,
+			Name:   "Test Data Center 2",
+			Metro:  "Ashburn",
+			Market: "US",
+			Status: "Active",
+			Address: LocationV3Address{
+				Street:   "Test Street Ashburn",
+				Suburb:   "Test Suburb Ashburn",
+				City:     "Ashburn",
+				State:    "VA",
+				Postcode: "20146",
+				Country:  "USA",
 			},
-			Market:           "US",
-			VRouterAvailable: false,
-			LiveDate:         liveDate,
-			Status:           "Active",
-			Longitude:        -77.487442,
-			Latitude:         39.043757,
-			Products: &LocationProducts{
-				MCR:        true,
-				MCRVersion: 2,
-				MCR2:       []int{1000, 2500, 5000, 10000},
-				Megaport:   []int{1, 10},
+			Latitude:  39.043757,
+			Longitude: -77.487442,
+			DataCentre: LocationV3DataCentre{
+				ID:   112,
+				Name: "Test Data Center 2",
 			},
+			DiversityZones: &LocationV3DiversityZones{
+				Red: &LocationV3DiversityZone{
+					McrSpeedMbps:      []int{1000, 2500, 5000, 10000},
+					MegaportSpeedMbps: []int{1000, 10000},
+					MveAvailable:      true,
+				},
+			},
+			ProductAddOns: &LocationV3ProductAddOns{
+				CrossConnect: &LocationV3CrossConnect{
+					Available: true,
+					Type:      stringPtr("STANDARD"),
+				},
+			},
+			OrderingMessage: nil,
 		},
 	}
-	path := "/v2/locations"
-	jblob := `
-{
-    "message": "List all public locations",
-	"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
-    "data": [{
-			"id": 111,
-			"name": "Test Data Center",
-			"campus": "campus_deprecated",
-			"metro": "Denver",
-			"country": "USA",
-			"siteCode": "denverTest",
-			"networkRegion": "MP1",
-			"address": {
-				"street": "Test Street Denver",
-				"suburb": "Test Suburb Denver",
-				"city": "Denver",
-				"state": "CO",
-				"country": "USA",
-				"postcode": "80011"
-			},
-			"dc": {
+	path := "/v3/locations"
+	jblob := `{
+		"message": "List public locations",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": [
+			{
 				"id": 111,
-				"name": "Test Data Center"
-			},
-			"market": "US",
-			"vRouterAvailable": false,
-			"liveDate": 1595340000000,
-			"status": "Active",
-			"longitude": -104.761925,
-			"latitude": 39.762714,
-			"products": {
-				"mcrVersion": 2,
-				"mcr": true,
-				"mcr2": [
-					1000,
-					2500,
-					5000,
-					10000
-				],
-				"megaport": [
-					1, 10
-				]
-			},
-			"ordering_message": null,
-			"diversityZones": {}
-		},
-		{
-			"id": 112,
-			"name": "Test Data Center 2",
-			"campus": "campus_deprecated",
-			"metro": "Ashburn",
-			"country": "USA",
-			"siteCode": "ashburnTest",
-			"networkRegion": "MP1",
-			"address": {
-				"street": "Test Street Ashburn",
-				"suburb": "Test Suburb Ashburn",
-				"city": "Ashburn",
-				"state": "VA",
-				"country": "USA",
-				"postcode": "20146"
-			},
-			"dc": {
-				"id": 112,
-				"name": "Test Data Center 2"
-			},
-			"market": "US",
-			"vRouterAvailable": false,
-			"liveDate": 1595340000000,
-			"status": "Active",
-			"longitude": -77.487442,
-			"latitude": 39.043757,
-			"products": {
-				"mcrVersion": 2,
-				"mcr": true,
-				"mcr2": [
-					1000,
-					2500,
-					5000,
-					10000
-				],
-				"megaport": [
-					1, 10
-				]
-			},
-			"ordering_message": null,
-			"diversityZones": {}
-		},
-		{
-			"id": 113,
-			"name": "New York Data Center",
-			"campus": "campus_deprecated",
-			"metro": "New York",
-			"country": "USA",
-			"siteCode": "nycTest",
-			"networkRegion": "MP1",
-			"address": {
-				"street": "Test Street New York",
-				"suburb": "Test Suburb New York",
-				"city": "New York",
-				"state": "NY",
-				"country": "USA",
-				"postcode": "10016"
-			},
-			"dc": {
-				"id": 113,
-				"name": "New York Data Center"
-			},
-			"market": "US",
-			"vRouterAvailable": false,
-			"liveDate": 1595340000000,
-			"status": "Active",
-			"longitude": -73.971321,
-			"latitude": 40.776676,
-			"products": {
-				"mcr": false,
-				"megaport": [
-					10
-				]
-			},
-			"ordering_message": null,
-			"diversityZones": {}
-		},
-		{
-			"id": 114,
-			"name": "London Data Center",
-			"campus": "campus_deprecated",
-			"metro": "London",
-			"country": "UK",
-			"siteCode": "londonTest",
-			"networkRegion": "MP1",
-			"address": {
-				"street": "Test Street London",
-				"city": "London",
-				"country": "United Kingdom",
-				"postcode": "SL1 4AX"
-			},
-			"dc": {
-				"id": 114,
-				"name": "London Data Center"
-			},
-			"market": "UK",
-			"vRouterAvailable": false,
-			"liveDate": 1595340000000,
-			"status": "Active",
-			"longitude": -0.628975,
-			"latitude": 51.522484,
-			"products": {
-				"mcr": false,
-				"megaport": [
-					10
-				]
-			},
-			"ordering_message": null,
-			"diversityZones": {}
-		}
-	]
-	}`
-	jblob2 := `
-	{
-	"message": "List all public network regions",
-	"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
-	"data": [
-		{
-			"networkRegion": "MP1",
-			"countries": [
-				{
-					"siteCount": 54,
-					"code": "AUS",
-					"prefix": "AU",
-					"name": "Australia"
+				"name": "Test Data Center",
+				"address": {
+					"street": "Test Street Denver",
+					"suburb": "Test Suburb Denver",
+					"city": "Denver",
+					"state": "CO",
+					"postcode": "80011",
+					"country": "USA"
 				},
-				{
-					"siteCount": 21,
-					"code": "GBR",
-					"prefix": "GB",
-					"name": "United Kingdom"
+				"dataCentre": {
+					"id": 111,
+					"name": "Test Data Center"
 				},
-				{
-					"siteCount": 191,
-					"code": "USA",
-					"prefix": "US",
-					"name": "USA"
+				"metro": "Denver",
+				"market": "US",
+				"status": "Active",
+				"longitude": -104.761925,
+				"latitude": 39.762714,
+				"orderingMessage": null,
+				"diversityZones": {
+					"red": {
+						"mcrSpeedMbps": [1000, 2500, 5000, 10000],
+						"megaportSpeedMbps": [1000, 10000],
+						"mveMaxCpuCoreCount": null,
+						"mveAvailable": true
+					}
+				},
+				"productAddOns": {
+					"crossConnect": {
+						"available": true,
+						"type": "STANDARD"
+					}
 				}
-			]
-		}
-	]
+			},
+			{
+				"id": 112,
+				"name": "Test Data Center 2",
+				"address": {
+					"street": "Test Street Ashburn",
+					"suburb": "Test Suburb Ashburn",
+					"city": "Ashburn",
+					"state": "VA",
+					"postcode": "20146",
+					"country": "USA"
+				},
+				"dataCentre": {
+					"id": 112,
+					"name": "Test Data Center 2"
+				},
+				"metro": "Ashburn",
+				"market": "US",
+				"status": "Active",
+				"longitude": -77.487442,
+				"latitude": 39.043757,
+				"orderingMessage": null,
+				"diversityZones": {
+					"red": {
+						"mcrSpeedMbps": [1000, 2500, 5000, 10000],
+						"megaportSpeedMbps": [1000, 10000],
+						"mveMaxCpuCoreCount": null,
+						"mveAvailable": true
+					}
+				},
+				"productAddOns": {
+					"crossConnect": {
+						"available": true,
+						"type": "STANDARD"
+					}
+				}
+			},
+			{
+				"id": 113,
+				"name": "New York Data Center",
+				"address": {
+					"street": "Test Street New York",
+					"suburb": "Test Suburb New York",
+					"city": "New York",
+					"state": "NY",
+					"postcode": "10016",
+					"country": "USA"
+				},
+				"dataCentre": {
+					"id": 113,
+					"name": "New York Data Center"
+				},
+				"metro": "New York",
+				"market": "US",
+				"status": "Active",
+				"longitude": -73.971321,
+				"latitude": 40.776676,
+				"orderingMessage": null,
+				"diversityZones": {
+					"red": {
+						"mcrSpeedMbps": [],
+						"megaportSpeedMbps": [10000],
+						"mveMaxCpuCoreCount": null,
+						"mveAvailable": false
+					}
+				},
+				"productAddOns": {
+					"crossConnect": {
+						"available": false,
+						"type": null
+					}
+				}
+			},
+			{
+				"id": 114,
+				"name": "London Data Center",
+				"address": {
+					"street": "Test Street London",
+					"suburb": "",
+					"city": "London",
+					"state": "",
+					"postcode": "SL1 4AX",
+					"country": "United Kingdom"
+				},
+				"dataCentre": {
+					"id": 114,
+					"name": "London Data Center"
+				},
+				"metro": "London",
+				"market": "UK",
+				"status": "Active",
+				"longitude": -0.628975,
+				"latitude": 51.522484,
+				"orderingMessage": null,
+				"diversityZones": {
+					"red": {
+						"mcrSpeedMbps": [],
+						"megaportSpeedMbps": [10000],
+						"mveMaxCpuCoreCount": null,
+						"mveAvailable": false
+					}
+				},
+				"productAddOns": {
+					"crossConnect": {
+						"available": false,
+						"type": null
+					}
+				}
+			}
+		]
+	}`
+	jblob2 := `{
+		"message": "List all public network regions",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": [
+			{
+				"networkRegion": "MP1",
+				"countries": [
+					{
+						"siteCount": 54,
+						"code": "AUS",
+						"prefix": "AU",
+						"name": "Australia"
+					},
+					{
+						"siteCount": 21,
+						"code": "GBR",
+						"prefix": "GB",
+						"name": "United Kingdom"
+					},
+					{
+						"siteCount": 191,
+						"code": "USA",
+						"prefix": "US",
+						"name": "USA"
+					}
+				]
+			}
+		]
 	}`
 	path2 := "/v2/networkRegions"
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {

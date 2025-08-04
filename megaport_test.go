@@ -77,16 +77,16 @@ func IsGuid(guids ...string) bool {
 	return true
 }
 
-func GetRandomLocation(ctx context.Context, svc LocationService, marketCode string) (*Location, error) {
-	testLocations, err := svc.ListLocations(ctx)
+func GetRandomLocation(ctx context.Context, svc LocationService, marketCode string) (*LocationV3, error) {
+	testLocations, err := svc.ListLocationsV3(ctx)
 	if err != nil {
 		return nil, err
 	}
-	filtered, err := svc.FilterLocationsByMarketCode(ctx, marketCode, testLocations)
+	filtered, err := svc.FilterLocationsByMarketCodeV3(ctx, marketCode, testLocations)
 	if err != nil {
 		return nil, err
 	}
-	filteredByMCR := svc.FilterLocationsByMcrAvailability(ctx, true, filtered)
+	filteredByMCR := svc.FilterLocationsByMcrAvailabilityV3(ctx, true, filtered)
 	testLocation := filteredByMCR[GenerateRandomNumber(0, len(filteredByMCR)-1)]
 	return testLocation, nil
 }
