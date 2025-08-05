@@ -162,7 +162,7 @@ func (svc *UserManagementServiceOp) CreateUser(ctx context.Context, req *CreateU
 }
 
 func (svc *UserManagementServiceOp) GetUser(ctx context.Context, employeeID int) (*User, error) {
-	path := "/v2/employment/" + strconv.Itoa(employeeID)
+	path := "/v2/employee/" + strconv.Itoa(employeeID)
 	clientReq, err := svc.client.NewRequest(ctx, "GET", path, nil)
 	if err != nil {
 		return nil, err
@@ -214,7 +214,7 @@ func (svc *UserManagementServiceOp) ListCompanyUsers(ctx context.Context) ([]*Us
 }
 
 func (svc *UserManagementServiceOp) UpdateUser(ctx context.Context, employeeID int, req *UpdateUserRequest) error {
-	path := "/v2/employment/" + strconv.Itoa(employeeID)
+	path := "/v2/employee/" + strconv.Itoa(employeeID)
 	clientReq, err := svc.client.NewRequest(ctx, "PUT", path, req)
 	if err != nil {
 		return err
@@ -234,7 +234,7 @@ func (svc *UserManagementServiceOp) UpdateUser(ctx context.Context, employeeID i
 }
 
 func (svc *UserManagementServiceOp) DeleteUser(ctx context.Context, employeeID int) error {
-	path := "/v2/employment/" + strconv.Itoa(employeeID)
+	path := "/v2/employee/" + strconv.Itoa(employeeID)
 	clientReq, err := svc.client.NewRequest(ctx, "DELETE", path, nil)
 	if err != nil {
 		return err
