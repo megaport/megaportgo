@@ -83,7 +83,7 @@ func (suite *UserManagementClientTestSuite) TestGetUser() {
         "active": true
     }`
 
-	suite.mux.HandleFunc(fmt.Sprintf("/v2/employment/%d", employeeID), func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc(fmt.Sprintf("/v2/employee/%d", employeeID), func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
 	})
@@ -146,7 +146,7 @@ func (suite *UserManagementClientTestSuite) TestUpdateUser() {
 		FirstName: &firstName,
 	}
 
-	suite.mux.HandleFunc(fmt.Sprintf("/v2/employment/%d", employeeID), func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc(fmt.Sprintf("/v2/employee/%d", employeeID), func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodPut)
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, `{"message": "User updated successfully"}`)
@@ -161,7 +161,7 @@ func (suite *UserManagementClientTestSuite) TestDeleteUser() {
 	ctx := context.Background()
 	employeeID := 9012
 
-	suite.mux.HandleFunc(fmt.Sprintf("/v2/employment/%d", employeeID), func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc(fmt.Sprintf("/v2/employee/%d", employeeID), func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodDelete)
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, `{"message": "User deleted successfully"}`)
