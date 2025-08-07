@@ -4,8 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
+	"net/mail"
+	"regexp"
 	"strconv"
+	"strings"
 )
 
 // UserManagementService is an interface that defines methods for managing users in the Megaport API.
@@ -43,6 +47,48 @@ type CreateUserRequest struct {
 	Position  UserPosition `json:"position"`
 }
 
+// Validate validates the CreateUserRequest according to the Megaport API requirements
+func (req *CreateUserRequest) Validate() error {
+	// Email validation - required, valid email format, minimum 5 characters
+	if req.Email == "" {
+		return errors.New("email is required")
+	}
+	if len(req.Email) < 5 {
+		return errors.New("email must be at least 5 characters long")
+	}
+	if _, err := mail.ParseAddress(req.Email); err != nil {
+		return fmt.Errorf("invalid email format: %w", err)
+	}
+
+	// FirstName validation - required, non-empty
+	if strings.TrimSpace(req.FirstName) == "" {
+		return errors.New("firstName is required and cannot be empty")
+	}
+
+	// LastName validation - required, non-empty
+	if strings.TrimSpace(req.LastName) == "" {
+		return errors.New("lastName is required and cannot be empty")
+	}
+
+	// Phone validation - optional, but if provided must match international format
+	if req.Phone != "" {
+		phoneRegex := regexp.MustCompile(`^\+?[1-9]\d{1,14}$`)
+		if !phoneRegex.MatchString(req.Phone) {
+			return errors.New("phone number must be in valid international format (e.g., +1234567890)")
+		}
+	}
+
+	// Position validation - required, must be one of the valid roles
+	if req.Position == "" {
+		return errors.New("position is required")
+	}
+	if !req.Position.IsValid() {
+		return fmt.Errorf("invalid position: %s. Must be one of: %s", req.Position, req.Position.ValidPositions())
+	}
+
+	return nil
+}
+
 // CreateUserAPIResponse represents the API response when creating a new user.
 type CreateUserAPIResponse struct {
 	Message string              `json:"message"`
@@ -64,7 +110,12 @@ type UpdateUserRequest struct {
 
 	// Position defines the role of the user within the organization.
 	// Use the UserPosition type constants for standard roles (e.g., USER_POSITION_COMPANY_ADMIN).
-	Position *UserPosition `json:"position,omitempty"`
+	// For more information on roles, see Add / invite user to company.
+	Position *string `json:"position,omitempty"`
+
+	// CompanyId is the unique identifier of the company to which the user belongs.
+	// This ID is used to associate the user with a specific company.
+	CompanyId *int `json:"companyId,omitempty"`
 
 	// Newsletter indicates whether the user has opted into receiving the newsletter.
 	Newsletter *bool `json:"newsletter,omitempty"`
@@ -81,48 +132,69 @@ type UpdateUserRequest struct {
 	// Phone is the user's primary phone number.
 	Phone *string `json:"phone,omitempty"`
 
-	// RequireTotp indicates whether multi-factor authentication using
-	// time-based one-time passwords is required for this user.
-	RequireTotp *bool `json:"requireTotp,omitempty"`
+	// ChannelManager indicates whether the user is a channel manager.
+	// This field is used to specify the channel manager associated with the user.
+	ChannelManager *bool `json:"channelManager,omitempty"`
 
 	// Active indicates whether the user account is active.
-	// Set to false to deactivate a user without deleting their account.
+	// Set to true if the user is active or false to define the user as inactive.
 	Active *bool `json:"active,omitempty"`
 
 	// SecurityRoles defines the array of security roles assigned to the user.
 	// Examples include "companyAdmin", "technicalContact".
 	SecurityRoles *[]string `json:"securityRoles,omitempty"`
 
-	// Mobile is the user's mobile phone number.
-	Mobile *string `json:"mobile,omitempty"`
-
-	// Email is the primary email address for the user.
+	// Email is the email address of the user.
 	Email *string `json:"email,omitempty"`
+}
 
-	// PartyId is the employee ID of the user, equivalent to the personId.
-	PartyId *string `json:"partyId,omitempty"`
+// Validate validates the UpdateUserRequest according to the Megaport API requirements
+func (req *UpdateUserRequest) Validate() error {
+	// FirstName validation - if provided, must be non-empty
+	if req.FirstName != nil && strings.TrimSpace(*req.FirstName) == "" {
+		return errors.New("firstName cannot be empty if provided")
+	}
 
-	// AltId is the Google ID associated with the user.
-	AltId *string `json:"altId,omitempty"`
+	// LastName validation - if provided, must be non-empty
+	if req.LastName != nil && strings.TrimSpace(*req.LastName) == "" {
+		return errors.New("lastName cannot be empty if provided")
+	}
 
-	// Username is the login username for the user.
-	Username *string `json:"username,omitempty"`
+	// Phone validation - if provided, must match international format
+	if req.Phone != nil && *req.Phone != "" {
+		phoneRegex := regexp.MustCompile(`^\+?[1-9]\d{1,14}$`)
+		if !phoneRegex.MatchString(*req.Phone) {
+			return errors.New("phone number must be in valid international format (e.g., +1234567890)")
+		}
+	}
 
-	// UID is the unique identifier for the user.
-	UID *string `json:"uid,omitempty"`
+	// Email validation - if provided, must be valid email format with minimum 5 characters
+	if req.Email != nil {
+		if *req.Email != "" {
+			if len(*req.Email) < 5 {
+				return errors.New("email must be at least 5 characters long")
+			}
+			if _, err := mail.ParseAddress(*req.Email); err != nil {
+				return fmt.Errorf("invalid email format: %w", err)
+			}
+		}
+	}
 
-	// GooglePlus is the Google social profile link for the user.
-	GooglePlus *string `json:"googlePlus,omitempty"`
+	// Position validation - if provided, must be one of the valid roles
+	if req.Position != nil && *req.Position != "" {
+		// Convert string to UserPosition for validation
+		pos := UserPosition(*req.Position)
+		if !pos.IsValid() {
+			return fmt.Errorf("invalid position: %s. Must be one of: %s", *req.Position, pos.ValidPositions())
+		}
+	}
 
-	// SalesforceId is the ID of the user in Salesforce CRM.
-	SalesforceId *string `json:"salesforceId,omitempty"`
+	// CompanyId validation - if provided, must be positive
+	if req.CompanyId != nil && *req.CompanyId <= 0 {
+		return errors.New("companyId must be a positive integer")
+	}
 
-	// Name is the full name of the user.
-	Name *string `json:"name,omitempty"`
-
-	// Emails is an array of email objects associated with the user.
-	// The first email in the array is considered the primary email.
-	Emails *[]UserEmail `json:"emails,omitempty"`
+	return nil
 }
 
 // GetUserActivityRequest represents the query parameters for retrieving user activity.
@@ -136,6 +208,11 @@ type GetUserActivityRequest struct {
 
 // CreateUser creates a new user in the Megaport system.
 func (svc *UserManagementServiceOp) CreateUser(ctx context.Context, req *CreateUserRequest) (*CreateUserResponse, error) {
+	// Validate the request according to API requirements
+	if err := req.Validate(); err != nil {
+		return nil, fmt.Errorf("validation failed: %w", err)
+	}
+
 	path := "/v2/employment"
 	clientReq, err := svc.client.NewRequest(ctx, "POST", path, req)
 	if err != nil {
@@ -153,10 +230,17 @@ func (svc *UserManagementServiceOp) CreateUser(ctx context.Context, req *CreateU
 		return nil, err
 	}
 
+	if response.StatusCode != 201 {
+		svc.client.Logger.ErrorContext(ctx, "CreateUser failed", "statusCode", response.StatusCode, "response", string(body))
+		return nil, fmt.Errorf("failed to create user: HTTP %d - %s", response.StatusCode, string(body))
+	}
+
 	var apiResponse *CreateUserAPIResponse
 	if err := json.Unmarshal(body, &apiResponse); err != nil {
 		return nil, err
 	}
+
+	svc.client.Logger.InfoContext(ctx, "CreateUser API response", "response", string(body))
 
 	return apiResponse.Data, nil
 }
@@ -179,12 +263,28 @@ func (svc *UserManagementServiceOp) GetUser(ctx context.Context, employeeID int)
 		return nil, err
 	}
 
-	var user User
-	if err := json.Unmarshal(body, &user); err != nil {
+	if response.StatusCode != 200 {
+		svc.client.Logger.ErrorContext(ctx, "GetUser failed", "employeeID", employeeID, "statusCode", response.StatusCode, "response", string(body))
+		return nil, fmt.Errorf("failed to get user %d: HTTP %d - %s", employeeID, response.StatusCode, string(body))
+	}
+
+	svc.client.Logger.InfoContext(ctx, "GetUser API response", "employeeID", employeeID, "response", string(body))
+
+	// The API response is wrapped in an object with message, terms, and data fields
+	var apiResponse struct {
+		Message string `json:"message"`
+		Terms   string `json:"terms"`
+		Data    User   `json:"data"`
+	}
+	if err := json.Unmarshal(body, &apiResponse); err != nil {
+		svc.client.Logger.ErrorContext(ctx, "Failed to unmarshal GetUser response", "employeeID", employeeID, "error", err, "body", string(body))
 		return nil, err
 	}
 
-	return &user, nil
+	user := &apiResponse.Data
+	svc.client.Logger.InfoContext(ctx, "GetUser parsed user", "employeeID", employeeID, "active", user.Active, "firstName", user.FirstName, "email", user.Email, "partyId", user.PartyId)
+
+	return user, nil
 }
 
 func (svc *UserManagementServiceOp) ListCompanyUsers(ctx context.Context) ([]*User, error) {
@@ -205,16 +305,39 @@ func (svc *UserManagementServiceOp) ListCompanyUsers(ctx context.Context) ([]*Us
 		return nil, err
 	}
 
-	var users []*User
-	if err := json.Unmarshal(body, &users); err != nil {
+	if response.StatusCode != 200 {
+		svc.client.Logger.ErrorContext(ctx, "ListCompanyUsers failed", "statusCode", response.StatusCode, "response", string(body))
+		return nil, fmt.Errorf("failed to list company users: HTTP %d - %s", response.StatusCode, string(body))
+	}
+
+	svc.client.Logger.DebugContext(ctx, "ListCompanyUsers API response", "responseBody", string(body))
+
+	// The API response is wrapped in an object with message, terms, and data fields
+	var apiResponse struct {
+		Message string  `json:"message"`
+		Terms   string  `json:"terms"`
+		Data    []*User `json:"data"`
+	}
+	if err := json.Unmarshal(body, &apiResponse); err != nil {
+		svc.client.Logger.ErrorContext(ctx, "Failed to unmarshal ListCompanyUsers response", "error", err, "body", string(body))
 		return nil, err
 	}
 
-	return users, nil
+	svc.client.Logger.DebugContext(ctx, "ListCompanyUsers parsed successfully", "userCount", len(apiResponse.Data))
+
+	return apiResponse.Data, nil
 }
 
 func (svc *UserManagementServiceOp) UpdateUser(ctx context.Context, employeeID int, req *UpdateUserRequest) error {
+	// Validate the request according to API requirements
+	if err := req.Validate(); err != nil {
+		return fmt.Errorf("validation failed: %w", err)
+	}
+
 	path := "/v2/employee/" + strconv.Itoa(employeeID)
+
+	svc.client.Logger.DebugContext(ctx, "Updating user", "employeeID", employeeID)
+
 	clientReq, err := svc.client.NewRequest(ctx, "PUT", path, req)
 	if err != nil {
 		return err
@@ -288,6 +411,11 @@ func (svc *UserManagementServiceOp) GetUserActivity(ctx context.Context, req *Ge
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		return nil, err
+	}
+
+	if response.StatusCode != 200 {
+		svc.client.Logger.ErrorContext(ctx, "GetUserActivity failed", "statusCode", response.StatusCode, "response", string(body))
+		return nil, fmt.Errorf("failed to get user activity: HTTP %d - %s", response.StatusCode, string(body))
 	}
 
 	var activities []*UserActivity
