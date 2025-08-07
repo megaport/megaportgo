@@ -18,10 +18,12 @@ type User struct {
 	Mobile                     string      `json:"mobile"`
 	Email                      string      `json:"email"`
 	PartyId                    int         `json:"partyId"`
+	PersonId                   int         `json:"personId"` // Used in list responses instead of partyId
 	Username                   string      `json:"username"`
 	Description                string      `json:"description"`
 	Active                     bool        `json:"active"`
 	UID                        string      `json:"uid"`
+	PersonUid                  string      `json:"personUid"` // Alternative UID field in list responses
 	Emails                     []UserEmail `json:"emails"`
 	SalesforceId               string      `json:"salesforceId"`
 	ChannelManager             bool        `json:"channelManager"`
@@ -35,6 +37,30 @@ type User struct {
 	ConfirmationPending        bool        `json:"confirmationPending"`
 	Name                       string      `json:"name"`
 	ReceivesChildNotifications bool        `json:"receivesChildNotifications"`
+
+	// Additional fields from list API response
+	CompanyId      int    `json:"companyId"`
+	EmploymentId   int    `json:"employmentId"`
+	PositionId     int    `json:"positionId"`
+	PersonAltId    string `json:"personAltId"`
+	EmploymentType string `json:"employmentType"`
+	CompanyName    string `json:"companyName"`
+}
+
+// GetUserID returns the user's ID, preferring PartyId but falling back to PersonId
+func (u *User) GetUserID() int {
+	if u.PartyId != 0 {
+		return u.PartyId
+	}
+	return u.PersonId
+}
+
+// GetUserUID returns the user's UID, preferring UID but falling back to PersonUid
+func (u *User) GetUserUID() string {
+	if u.UID != "" {
+		return u.UID
+	}
+	return u.PersonUid
 }
 
 type UserPosition string
@@ -65,6 +91,31 @@ const USER_POSITION_FINANCIAL_CONTACT UserPosition = "Financial Contact"
 // USER_POSITION_READ_ONLY represents a Read Only user.
 // Read Only is the most restrictive role. Note that a Read Only user can view service details which you may want to keep secure and private.
 const USER_POSITION_READ_ONLY UserPosition = "Read Only"
+
+// IsValid checks if the UserPosition is one of the valid predefined positions
+func (p UserPosition) IsValid() bool {
+	switch p {
+	case USER_POSITION_COMPANY_ADMIN,
+		USER_POSITION_TECHNICAL_ADMIN,
+		USER_POSITION_TECHNICAL_CONTACT,
+		USER_POSITION_FINANCE,
+		USER_POSITION_FINANCIAL_CONTACT,
+		USER_POSITION_READ_ONLY:
+		return true
+	default:
+		return false
+	}
+}
+
+// ValidPositions returns a string listing all valid UserPosition values
+func (p UserPosition) ValidPositions() string {
+	return string(USER_POSITION_COMPANY_ADMIN) + ", " +
+		string(USER_POSITION_TECHNICAL_ADMIN) + ", " +
+		string(USER_POSITION_TECHNICAL_CONTACT) + ", " +
+		string(USER_POSITION_FINANCE) + ", " +
+		string(USER_POSITION_FINANCIAL_CONTACT) + ", " +
+		string(USER_POSITION_READ_ONLY)
+}
 
 type UserActivity struct {
 	// LoginName is the display name of the user who performed the activity.

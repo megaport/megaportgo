@@ -41,7 +41,7 @@ func (suite *UserManagementClientTestSuite) TestCreateUser() {
 		FirstName: "John",
 		LastName:  "Doe",
 		Email:     "john.doe@example.com",
-		Phone:     "+1234567890",
+		Phone:     "+14155552671",
 		Active:    true,
 		Position:  USER_POSITION_COMPANY_ADMIN,
 	}
@@ -58,6 +58,7 @@ func (suite *UserManagementClientTestSuite) TestCreateUser() {
 
 	suite.mux.HandleFunc("/v2/employment", func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodPost)
+		w.WriteHeader(http.StatusCreated) // Return 201 Created as expected
 		fmt.Fprint(w, jblob)
 	})
 
@@ -74,13 +75,17 @@ func (suite *UserManagementClientTestSuite) TestGetUser() {
 	employeeID := 9012
 
 	jblob := `{
-        "partyId": 9012,
-        "firstName": "John",
-        "lastName": "Doe",
-        "email": "john.doe@example.com",
-        "phone": "+1234567890",
-        "position": "Company Admin",
-        "active": true
+        "message": "User retrieved successfully",
+        "terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+        "data": {
+            "partyId": 9012,
+            "firstName": "John",
+            "lastName": "Doe",
+            "email": "john.doe@example.com",
+            "phone": "+14155552671",
+            "position": "Company Admin",
+            "active": true
+        }
     }`
 
 	suite.mux.HandleFunc(fmt.Sprintf("/v2/employee/%d", employeeID), func(w http.ResponseWriter, r *http.Request) {
@@ -101,24 +106,28 @@ func (suite *UserManagementClientTestSuite) TestGetUser() {
 func (suite *UserManagementClientTestSuite) TestListCompanyUsers() {
 	ctx := context.Background()
 
-	jblob := `[
-        {
-            "partyId": 9012,
-            "firstName": "John",
-            "lastName": "Doe",
-            "email": "john.doe@example.com",
-            "position": "Company Admin",
-            "active": true
-        },
-        {
-            "partyId": 9013,
-            "firstName": "Jane",
-            "lastName": "Smith",
-            "email": "jane.smith@example.com",
-            "position": "Technical Admin",
-            "active": true
-        }
-    ]`
+	jblob := `{
+        "message": "Users retrieved successfully",
+        "terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+        "data": [
+            {
+                "partyId": 9012,
+                "firstName": "John",
+                "lastName": "Doe",
+                "email": "john.doe@example.com",
+                "position": "Company Admin",
+                "active": true
+            },
+            {
+                "partyId": 9013,
+                "firstName": "Jane",
+                "lastName": "Smith",
+                "email": "jane.smith@example.com",
+                "position": "Technical Admin",
+                "active": true
+            }
+        ]
+    }`
 
 	suite.mux.HandleFunc("/v2/employment", func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
@@ -137,7 +146,7 @@ func (suite *UserManagementClientTestSuite) TestUpdateUser() {
 	ctx := context.Background()
 	employeeID := 9012
 	active := false
-	position := USER_POSITION_TECHNICAL_ADMIN
+	position := string(USER_POSITION_TECHNICAL_ADMIN)
 	firstName := "Johnny"
 
 	updateReq := &UpdateUserRequest{
