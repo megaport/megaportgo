@@ -31,8 +31,8 @@ type SixwindVSRConfig struct {
 	Vendor       string `json:"vendor"`
 	ImageID      int    `json:"imageId"`
 	ProductSize  string `json:"productSize"`
-	MVELabel     string `json:"mveLabel"`
-	SSHPublicKey string `json:"sshPublicKey"`
+	MVELabel     string `json:"mveLabel,omitempty"`
+	SSHPublicKey string `json:"sshPublicKey,omitempty"`
 }
 
 // ArubaConfig represents the configuration for an Aruba MVE.
@@ -42,9 +42,9 @@ type ArubaConfig struct {
 	ImageID     int    `json:"imageId"`
 	ProductSize string `json:"productSize"`
 	MVELabel    string `json:"mveLabel,omitempty"`
-	AccountName string `json:"accountName"`
-	AccountKey  string `json:"accountKey"`
-	SystemTag   string `json:"systemTag"`
+	AccountName string `json:"accountName,omitempty"`
+	AccountKey  string `json:"accountKey,omitempty"`
+	SystemTag   string `json:"systemTag,omitempty"`
 }
 
 // AviatrixConfig represents the configuration for an Aviatrix Secure Edge MVE.
@@ -53,8 +53,8 @@ type AviatrixConfig struct {
 	Vendor      string `json:"vendor"`
 	ImageID     int    `json:"imageId"`
 	ProductSize string `json:"productSize"`
-	MVELabel    string `json:"mveLabel"`
-	CloudInit   string `json:"cloudInit"`
+	MVELabel    string `json:"mveLabel,omitempty"`
+	CloudInit   string `json:"cloudInit,omitempty"`
 }
 
 // CiscoConfig represents the configuration for a Cisco MVE.
@@ -64,13 +64,13 @@ type CiscoConfig struct {
 	ImageID            int    `json:"imageId"`
 	ProductSize        string `json:"productSize"`
 	MVELabel           string `json:"mveLabel,omitempty"`
-	ManageLocally      bool   `json:"manageLocally"`
-	AdminSSHPublicKey  string `json:"adminSshPublicKey"`
-	SSHPublicKey       string `json:"sshPublicKey"`
-	CloudInit          string `json:"cloudInit"`
-	FMCIPAddress       string `json:"fmcIpAddress"`
-	FMCRegistrationKey string `json:"fmcRegistrationKey"`
-	FMCNatID           string `json:"fmcNatId"`
+	ManageLocally      bool   `json:"manageLocally,omitempty"`
+	AdminSSHPublicKey  string `json:"adminSshPublicKey,omitempty"`
+	SSHPublicKey       string `json:"sshPublicKey,omitempty"`
+	CloudInit          string `json:"cloudInit,omitempty"`
+	FMCIPAddress       string `json:"fmcIpAddress,omitempty"`
+	FMCRegistrationKey string `json:"fmcRegistrationKey,omitempty"`
+	FMCNatID           string `json:"fmcNatId,omitempty"`
 }
 
 // FortinetConfig represents the configuration for a Fortinet MVE.
@@ -80,9 +80,9 @@ type FortinetConfig struct {
 	ImageID           int    `json:"imageId"`
 	ProductSize       string `json:"productSize"`
 	MVELabel          string `json:"mveLabel,omitempty"`
-	AdminSSHPublicKey string `json:"adminSshPublicKey"`
-	SSHPublicKey      string `json:"sshPublicKey"`
-	LicenseData       string `json:"licenseData"`
+	AdminSSHPublicKey string `json:"adminSshPublicKey,omitempty"`
+	SSHPublicKey      string `json:"sshPublicKey,omitempty"`
+	LicenseData       string `json:"licenseData,omitempty"`
 }
 
 // PaloAltoConfig represents the configuration for a Palo Alto MVE.
@@ -104,9 +104,9 @@ type PrismaConfig struct {
 	Vendor      string `json:"vendor"`
 	ImageID     int    `json:"imageId"`
 	ProductSize string `json:"productSize"`
-	MVELabel    string `json:"mveLabel"`
-	IONKey      string `json:"ionKey"`
-	SecretKey   string `json:"secretKey"`
+	MVELabel    string `json:"mveLabel,omitempty"`
+	IONKey      string `json:"ionKey,omitempty"`
+	SecretKey   string `json:"secretKey,omitempty"`
 }
 
 // VersaConfig represents the configuration for a Versa MVE.
@@ -116,11 +116,11 @@ type VersaConfig struct {
 	ImageID           int    `json:"imageId"`
 	ProductSize       string `json:"productSize"`
 	MVELabel          string `json:"mveLabel,omitempty"`
-	DirectorAddress   string `json:"directorAddress"`
-	ControllerAddress string `json:"controllerAddress"`
-	LocalAuth         string `json:"localAuth"`
-	RemoteAuth        string `json:"remoteAuth"`
-	SerialNumber      string `json:"serialNumber"`
+	DirectorAddress   string `json:"directorAddress,omitempty"`
+	ControllerAddress string `json:"controllerAddress,omitempty"`
+	LocalAuth         string `json:"localAuth,omitempty"`
+	RemoteAuth        string `json:"remoteAuth,omitempty"`
+	SerialNumber      string `json:"serialNumber,omitempty"`
 }
 
 // VmwareConfig represents the configuration for a VMware MVE.
@@ -130,10 +130,10 @@ type VmwareConfig struct {
 	ImageID           int    `json:"imageId"`
 	ProductSize       string `json:"productSize"`
 	MVELabel          string `json:"mveLabel,omitempty"`
-	AdminSSHPublicKey string `json:"adminSshPublicKey"`
-	SSHPublicKey      string `json:"sshPublicKey"`
-	VcoAddress        string `json:"vcoAddress"`
-	VcoActivationCode string `json:"vcoActivationCode"`
+	AdminSSHPublicKey string `json:"adminSshPublicKey,omitempty"`
+	SSHPublicKey      string `json:"sshPublicKey,omitempty"`
+	VcoAddress        string `json:"vcoAddress,omitempty"`
+	VcoActivationCode string `json:"vcoActivationCode,omitempty"`
 }
 
 // MerakiConfig represents the configuration for a Meraki MVE.
@@ -143,7 +143,7 @@ type MerakiConfig struct {
 	ImageID     int    `json:"imageId"`
 	ProductSize string `json:"productSize"`
 	MVELabel    string `json:"mveLabel,omitempty"`
-	Token       string `json:"token"`
+	Token       string `json:"token,omitempty"`
 }
 
 // MVENetworkInterface represents a vNIC.
