@@ -410,13 +410,14 @@ func (c *Client) Authorize(ctx context.Context) (*AuthInfo, error) {
 	// Set the URL for the token endpoint
 	var tokenURL string
 
-	if c.BaseURL.Host == "api.megaport.com" {
+	switch c.BaseURL.Host {
+	case "api.megaport.com":
 		tokenURL = "https://auth-m2m.megaport.com/oauth2/token"
-	} else if c.BaseURL.Host == "api-staging.megaport.com" {
+	case "api-staging.megaport.com":
 		tokenURL = "https://auth-m2m-staging.megaport.com/oauth2/token"
-	} else if c.BaseURL.Host == "" {
+	case "":
 		tokenURL = "https://auth-m2m-mpone-dev.megaport.com/oauth2/token"
-	} else {
+	default:
 		return nil, errors.New("unknown API environment")
 	}
 

@@ -106,8 +106,8 @@ func (suite *UserManagementIntegrationTestSuite) testCreateUser(c *Client, ctx c
 	}
 
 	suite.client.Logger.DebugContext(ctx, "Sending create user request",
-		slog.String("firstName", createReq.FirstName),
-		slog.String("lastName", createReq.LastName),
+		slog.String("first_name", createReq.FirstName),
+		slog.String("last_name", createReq.LastName),
 		slog.String("email", createReq.Email),
 		slog.Bool("active", createReq.Active),
 		slog.String("position", string(createReq.Position)))
@@ -119,9 +119,9 @@ func (suite *UserManagementIntegrationTestSuite) testCreateUser(c *Client, ctx c
 	}
 
 	suite.client.Logger.DebugContext(ctx, "User created successfully",
-		slog.Int("employeeID", createRes.EmployeeID),
-		slog.Int("employmentID", createRes.EmploymentID),
-		slog.Int("companyID", createRes.CompanyID))
+		slog.Int("employee_id", createRes.EmployeeID),
+		slog.Int("employment_id", createRes.EmploymentID),
+		slog.Int("company_id", createRes.CompanyID))
 
 	return createRes, nil
 }
@@ -134,10 +134,10 @@ func (suite *UserManagementIntegrationTestSuite) testReadUser(c *Client, ctx con
 	suite.NotNil(user)
 
 	suite.client.Logger.DebugContext(ctx, "Retrieved user details",
-		slog.Int("partyId", user.PartyId),
-		slog.Int("personId", user.PersonId),
-		slog.String("firstName", user.FirstName),
-		slog.String("lastName", user.LastName),
+		slog.Int("party_id", user.PartyId),
+		slog.Int("person_id", user.PersonId),
+		slog.String("first_name", user.FirstName),
+		slog.String("last_name", user.LastName),
 		slog.String("email", user.Email),
 		slog.Bool("active", user.Active),
 		slog.String("position", user.Position))
@@ -163,8 +163,8 @@ func (suite *UserManagementIntegrationTestSuite) testUpdateUser(c *Client, ctx c
 	}
 
 	suite.client.Logger.DebugContext(ctx, "Sending update user request",
-		slog.String("newFirstName", newFirstName),
-		slog.String("newLastName", newLastName))
+		slog.String("new_first_name", newFirstName),
+		slog.String("new_last_name", newLastName))
 
 	err := c.UserManagementService.UpdateUser(ctx, employeeID, updateReq)
 	suite.NoError(err)
@@ -175,7 +175,7 @@ func (suite *UserManagementIntegrationTestSuite) testUpdateUser(c *Client, ctx c
 	suite.NotNil(updatedUser)
 
 	suite.client.Logger.DebugContext(ctx, "Verified updated user details",
-		slog.String("firstName", updatedUser.FirstName),
+		slog.String("first_name", updatedUser.FirstName),
 		slog.Bool("active", updatedUser.Active))
 
 	suite.Equal(newFirstName, updatedUser.FirstName)
