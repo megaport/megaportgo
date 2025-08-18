@@ -58,7 +58,7 @@ func (suite *UserManagementIntegrationTestSuite) TestUserCRUD() {
 	// Verify user was actually created by checking it doesn't exist in initial list
 	userIsActuallyNew := true
 	for _, u := range usersListInitial {
-		if u.GetUserID() == employeeID {
+		if u.PersonId == employeeID {
 			userIsActuallyNew = false
 			break
 		}
@@ -71,7 +71,7 @@ func (suite *UserManagementIntegrationTestSuite) TestUserCRUD() {
 
 	foundNewUser := false
 	for _, u := range usersListPostCreate {
-		if u.GetUserID() == employeeID {
+		if u.PersonId == employeeID {
 			foundNewUser = true
 			suite.Equal("test", u.FirstName)
 			suite.Equal("user staging", u.LastName)
@@ -148,7 +148,7 @@ func (suite *UserManagementIntegrationTestSuite) testReadUser(c *Client, ctx con
 	suite.Equal("megaport.testuser@abcd.com", user.Email)
 	suite.True(user.Active)
 	suite.Equal("Company Admin", user.Position)
-	suite.Equal(employeeID, user.GetUserID())
+	suite.Equal(employeeID, user.PartyId)
 }
 
 func (suite *UserManagementIntegrationTestSuite) testUpdateUser(c *Client, ctx context.Context, employeeID int) {
