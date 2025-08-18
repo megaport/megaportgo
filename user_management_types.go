@@ -47,50 +47,35 @@ type User struct {
 	CompanyName    string `json:"companyName"`
 }
 
-// GetUserID returns the user's ID, preferring PartyId but falling back to PersonId
-func (u *User) GetUserID() int {
-	if u.PartyId != 0 {
-		return u.PartyId
-	}
-	return u.PersonId
-}
-
-// GetUserUID returns the user's UID, preferring UID but falling back to PersonUid
-func (u *User) GetUserUID() string {
-	if u.UID != "" {
-		return u.UID
-	}
-	return u.PersonUid
-}
-
 type UserPosition string
 
 // UserPosition constants for known Megaport user roles.
+const (
+	// USER_POSITION_COMPANY_ADMIN represents a Company Admin user.
+	// Company Admin users have access to all user privileges.
+	// We recommend limiting the number of Company Admin users to only those who require full access, but defining at least two for redundancy.
+	USER_POSITION_COMPANY_ADMIN UserPosition = "Company Admin"
 
-// USER_POSITION_COMPANY_ADMIN represents a Company Admin user.
-// Company Admin users have access to all user privileges.
-// We recommend limiting the number of Company Admin users to only those who require full access, but defining at least two for redundancy.
-const USER_POSITION_COMPANY_ADMIN UserPosition = "Company Admin"
+	// USER_POSITION_TECHNICAL_ADMIN represents a Technical Admin user.
+	// This role is for technical users who know how to create and approve orders.
+	USER_POSITION_TECHNICAL_ADMIN UserPosition = "Technical Admin"
 
-// USER_POSITION_TECHNICAL_ADMIN represents a Technical Admin user.
-// This role is for technical users who know how to create and approve orders.
-const USER_POSITION_TECHNICAL_ADMIN UserPosition = "Technical Admin"
+	// USER_POSITION_TECHNICAL_CONTACT represents a Technical Contact user.
+	// This role is for technical users who know how to design and modify services but don't have the authority to approve orders.
+	USER_POSITION_TECHNICAL_CONTACT UserPosition = "Technical Contact"
 
-// USER_POSITION_TECHNICAL_CONTACT represents a Technical Contact user.
-// This role is for technical users who know how to design and modify services but don’t have the authority to approve orders.
-const USER_POSITION_TECHNICAL_CONTACT UserPosition = "Technical Contact"
+	// USER_POSITION_FINANCE represents a Finance user.
+	// Finance users should have a financial responsibility within the organization while also understanding the consequences of their actions if they delete or approve services.
+	USER_POSITION_FINANCE UserPosition = "Finance"
 
-// USER_POSITION_FINANCE represents a Finance user.
-// Finance users should have a financial responsibility within the organization while also understanding the consequences of their actions if they delete or approve services.
-const USER_POSITION_FINANCE UserPosition = "Finance"
+	// USER_POSITION_FINANCIAL_CONTACT represents a Financial Contact user.
+	// This user role is similar to the Finance role without the ability to place and approve orders, delete services, or administer service keys.
+	USER_POSITION_FINANCIAL_CONTACT UserPosition = "Financial Contact"
 
-// USER_POSITION_FINANCIAL_CONTACT represents a Financial Contact user.
-// This user role is similar to the Finance role without the ability to place and approve orders, delete services, or administer service keys.
-const USER_POSITION_FINANCIAL_CONTACT UserPosition = "Financial Contact"
-
-// USER_POSITION_READ_ONLY represents a Read Only user.
-// Read Only is the most restrictive role. Note that a Read Only user can view service details which you may want to keep secure and private.
-const USER_POSITION_READ_ONLY UserPosition = "Read Only"
+	// USER_POSITION_READ_ONLY represents a Read Only user.
+	// Read Only is the most restrictive role. Note that a Read Only user can view service details which you may want to keep secure and private.
+	USER_POSITION_READ_ONLY UserPosition = "Read Only"
+)
 
 // IsValid checks if the UserPosition is one of the valid predefined positions
 func (p UserPosition) IsValid() bool {
