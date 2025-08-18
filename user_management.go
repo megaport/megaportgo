@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/mail"
 	"regexp"
 	"strconv"
@@ -231,7 +232,9 @@ func (svc *UserManagementServiceOp) CreateUser(ctx context.Context, req *CreateU
 	}
 
 	if response.StatusCode != 201 {
-		svc.client.Logger.ErrorContext(ctx, "CreateUser failed", "statusCode", response.StatusCode, "response", string(body))
+		svc.client.Logger.ErrorContext(ctx, "CreateUser failed",
+			slog.Int("status_code", response.StatusCode),
+			slog.String("response", string(body)))
 		return nil, fmt.Errorf("failed to create user: HTTP %d - %s", response.StatusCode, string(body))
 	}
 
@@ -240,7 +243,8 @@ func (svc *UserManagementServiceOp) CreateUser(ctx context.Context, req *CreateU
 		return nil, err
 	}
 
-	svc.client.Logger.InfoContext(ctx, "CreateUser API response", "response", string(body))
+	svc.client.Logger.InfoContext(ctx, "CreateUser API response",
+		slog.String("response", string(body)))
 
 	return apiResponse.Data, nil
 }
@@ -264,11 +268,16 @@ func (svc *UserManagementServiceOp) GetUser(ctx context.Context, employeeID int)
 	}
 
 	if response.StatusCode != 200 {
-		svc.client.Logger.ErrorContext(ctx, "GetUser failed", "employeeID", employeeID, "statusCode", response.StatusCode, "response", string(body))
+		svc.client.Logger.ErrorContext(ctx, "GetUser failed",
+			slog.Int("employee_id", employeeID),
+			slog.Int("status_code", response.StatusCode),
+			slog.String("response", string(body)))
 		return nil, fmt.Errorf("failed to get user %d: HTTP %d - %s", employeeID, response.StatusCode, string(body))
 	}
 
-	svc.client.Logger.InfoContext(ctx, "GetUser API response", "employeeID", employeeID, "response", string(body))
+	svc.client.Logger.InfoContext(ctx, "GetUser API response",
+		slog.Int("employee_id", employeeID),
+		slog.String("response", string(body)))
 
 	// The API response is wrapped in an object with message, terms, and data fields
 	var apiResponse struct {
@@ -277,12 +286,20 @@ func (svc *UserManagementServiceOp) GetUser(ctx context.Context, employeeID int)
 		Data    User   `json:"data"`
 	}
 	if err := json.Unmarshal(body, &apiResponse); err != nil {
-		svc.client.Logger.ErrorContext(ctx, "Failed to unmarshal GetUser response", "employeeID", employeeID, "error", err, "body", string(body))
+		svc.client.Logger.ErrorContext(ctx, "Failed to unmarshal GetUser response",
+			slog.Int("employee_id", employeeID),
+			slog.String("error", err.Error()),
+			slog.String("body", string(body)))
 		return nil, err
 	}
 
 	user := &apiResponse.Data
-	svc.client.Logger.InfoContext(ctx, "GetUser parsed user", "employeeID", employeeID, "active", user.Active, "firstName", user.FirstName, "email", user.Email, "partyId", user.PartyId)
+	svc.client.Logger.InfoContext(ctx, "GetUser parsed user",
+		slog.Int("employee_id", employeeID),
+		slog.Bool("active", user.Active),
+		slog.String("first_name", user.FirstName),
+		slog.String("email", user.Email),
+		slog.Int("party_id", user.PartyId))
 
 	return user, nil
 }
@@ -306,11 +323,14 @@ func (svc *UserManagementServiceOp) ListCompanyUsers(ctx context.Context) ([]*Us
 	}
 
 	if response.StatusCode != 200 {
-		svc.client.Logger.ErrorContext(ctx, "ListCompanyUsers failed", "statusCode", response.StatusCode, "response", string(body))
+		svc.client.Logger.ErrorContext(ctx, "ListCompanyUsers failed",
+			slog.Int("status_code", response.StatusCode),
+			slog.String("response", string(body)))
 		return nil, fmt.Errorf("failed to list company users: HTTP %d - %s", response.StatusCode, string(body))
 	}
 
-	svc.client.Logger.DebugContext(ctx, "ListCompanyUsers API response", "responseBody", string(body))
+	svc.client.Logger.DebugContext(ctx, "ListCompanyUsers API response",
+		slog.String("response_body", string(body)))
 
 	// The API response is wrapped in an object with message, terms, and data fields
 	var apiResponse struct {
@@ -319,11 +339,14 @@ func (svc *UserManagementServiceOp) ListCompanyUsers(ctx context.Context) ([]*Us
 		Data    []*User `json:"data"`
 	}
 	if err := json.Unmarshal(body, &apiResponse); err != nil {
-		svc.client.Logger.ErrorContext(ctx, "Failed to unmarshal ListCompanyUsers response", "error", err, "body", string(body))
+		svc.client.Logger.ErrorContext(ctx, "Failed to unmarshal ListCompanyUsers response",
+			slog.String("error", err.Error()),
+			slog.String("body", string(body)))
 		return nil, err
 	}
 
-	svc.client.Logger.DebugContext(ctx, "ListCompanyUsers parsed successfully", "userCount", len(apiResponse.Data))
+	svc.client.Logger.DebugContext(ctx, "ListCompanyUsers parsed successfully",
+		slog.Int("user_count", len(apiResponse.Data)))
 
 	return apiResponse.Data, nil
 }
@@ -336,7 +359,8 @@ func (svc *UserManagementServiceOp) UpdateUser(ctx context.Context, employeeID i
 
 	path := "/v2/employee/" + strconv.Itoa(employeeID)
 
-	svc.client.Logger.DebugContext(ctx, "Updating user", "employeeID", employeeID)
+	svc.client.Logger.DebugContext(ctx, "Updating user",
+		slog.Int("employee_id", employeeID))
 
 	clientReq, err := svc.client.NewRequest(ctx, "PUT", path, req)
 	if err != nil {
@@ -414,7 +438,9 @@ func (svc *UserManagementServiceOp) GetUserActivity(ctx context.Context, req *Ge
 	}
 
 	if response.StatusCode != 200 {
-		svc.client.Logger.ErrorContext(ctx, "GetUserActivity failed", "statusCode", response.StatusCode, "response", string(body))
+		svc.client.Logger.ErrorContext(ctx, "GetUserActivity failed",
+			slog.Int("status_code", response.StatusCode),
+			slog.String("response", string(body)))
 		return nil, fmt.Errorf("failed to get user activity: HTTP %d - %s", response.StatusCode, string(body))
 	}
 
