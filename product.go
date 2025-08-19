@@ -51,7 +51,7 @@ type ModifyProductRequest struct {
 	ProductID             string
 	ProductType           string
 	Name                  string `json:"name,omitempty"`
-	CostCentre            string `json:"costCentre,omitempty"`
+	CostCentre            string `json:"costCentre"`
 	MarketplaceVisibility *bool  `json:"marketplaceVisibility,omitempty"`
 	ContractTermMonths    int    `json:"term,omitempty"`
 }
