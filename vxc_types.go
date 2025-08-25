@@ -179,9 +179,9 @@ type Peer struct {
 // VXCUpdate represents the fields that can be updated on a VXC.
 type VXCUpdate struct {
 	Name           string `json:"name,omitempty"`
-	RateLimit      *int   `json:"rateLimit,omitempty"` // A new speed for the connection in MBPS.
-	CostCentre     string `json:"costCentre"`          // A customer reference number to be included in billing information and invoices. Also known as the Service Level Reference (SLR).
-	Shutdown       *bool  `json:"shutdown,omitempty"`  // Temporarily shut down and re-enable the VXC. Valid values are true (shut down) and false (enabled). If not provided, it defaults to false (enabled).
+	RateLimit      *int   `json:"rateLimit,omitempty"`  // A new speed for the connection in MBPS.
+	CostCentre     string `json:"costCentre,omitempty"` // A customer reference number to be included in billing information and invoices. Also known as the Service Level Reference (SLR).
+	Shutdown       *bool  `json:"shutdown,omitempty"`   // Temporarily shut down and re-enable the VXC. Valid values are true (shut down) and false (enabled). If not provided, it defaults to false (enabled).
 	AEndVLAN       *int   `json:"aEndVlan,omitempty"`
 	BEndVLAN       *int   `json:"bEndVlan,omitempty"`
 	AEndInnerVLAN  *int   `json:"aEndInnerVlan,omitempty"`
