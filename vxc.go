@@ -351,7 +351,7 @@ func (svc *VXCServiceOp) UpdateVXC(ctx context.Context, id string, req *UpdateVX
 		update.BEndProductUID = *req.BEndProductUID
 	}
 	if req.CostCentre != nil {
-		update.CostCentre = *req.CostCentre
+		update.CostCentre = req.CostCentre
 	}
 	if req.AEndInnerVLAN != nil {
 		update.AEndInnerVLAN = req.AEndInnerVLAN
