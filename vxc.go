@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -33,6 +34,8 @@ type VXCService interface {
 	ListVXCResourceTags(ctx context.Context, vxcID string) (map[string]string, error)
 	// UpdateVXCResourceTags updates the resource tags for a VXC in the Megaport Products API.
 	UpdateVXCResourceTags(ctx context.Context, vxcID string, tags map[string]string) error
+	// LookupGooglePartnerPorts looks up Google Cloud partner ports with diversity zone information.
+	LookupGooglePartnerPorts(ctx context.Context, pairingKey string) (*GooglePartnerAttachmentDetails, error)
 }
 
 // NewVXCService creates a new instance of the VXC Service.
@@ -576,4 +579,101 @@ func shouldIncludeVXC(vxc *VXC, req *ListVXCsRequest) bool {
 	}
 
 	return true
+}
+
+// parseGoogleDiversityZone extracts the diversity zone from a Google port name.
+// Examples: "New York (lga-zone1-16)" -> Zone1, "Ashburn (iad-zone2-1)" -> Zone2
+func parseGoogleDiversityZone(portName string) GoogleDiversityZone {
+	// Use regex to find zone1 or zone2 in the port name
+	zonePattern := regexp.MustCompile(`zone([12])`)
+	matches := zonePattern.FindStringSubmatch(portName)
+
+	if len(matches) >= 2 {
+		switch matches[1] {
+		case "1":
+			return Zone1
+		case "2":
+			return Zone2
+		}
+	}
+
+	return ZoneUnknown
+}
+
+// parseGoogleLocation extracts the location name from a Google port name.
+// Example: "New York (lga-zone1-16)" -> "New York"
+func parseGoogleLocation(portName string) string {
+	if idx := strings.Index(portName, " ("); idx != -1 {
+		return portName[:idx]
+	}
+	return portName
+}
+
+// LookupGooglePartnerPorts looks up Google Cloud partner ports with diversity zone information.
+func (svc *VXCServiceOp) LookupGooglePartnerPorts(ctx context.Context, pairingKey string) (*GooglePartnerAttachmentDetails, error) {
+	lookupUrl := "/v2/secure/google/" + pairingKey
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, lookupUrl, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := svc.Client.Do(ctx, clientReq, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	lookupResponse := PartnerLookupResponse{}
+	if err := json.Unmarshal(body, &lookupResponse); err != nil {
+		return nil, err
+	}
+
+	// Parse the response and extract Google diversity zone information
+	var availablePorts []GooglePartnerPort
+	var zone1Port, zone2Port *GooglePartnerPort
+
+	for _, megaport := range lookupResponse.Data.Megaports {
+		// Check if the port is available (vxc field is null/0)
+		isAvailable := megaport.VXC == 0
+
+		googlePort := GooglePartnerPort{
+			ProductUID:  megaport.ProductUID,
+			Name:        megaport.Name,
+			Location:    parseGoogleLocation(megaport.Name),
+			Zone:        parseGoogleDiversityZone(megaport.Name),
+			IsAvailable: isAvailable,
+		}
+
+		if isAvailable {
+			availablePorts = append(availablePorts, googlePort)
+
+			// Track zone1 and zone2 ports separately for easy access
+			switch googlePort.Zone {
+			case Zone1:
+				if zone1Port == nil {
+					zone1Port = &googlePort
+				}
+			case Zone2:
+				if zone2Port == nil {
+					zone2Port = &googlePort
+				}
+			}
+		}
+	}
+
+	// Determine if we have diverse ports (both zone1 and zone2 available)
+	hasDiversePorts := zone1Port != nil && zone2Port != nil
+
+	return &GooglePartnerAttachmentDetails{
+		AvailablePorts:  availablePorts,
+		BandwidthsMbps:  lookupResponse.Data.Bandwidths,
+		Zone1Port:       zone1Port,
+		Zone2Port:       zone2Port,
+		HasDiversePorts: hasDiversePorts,
+	}, nil
 }

@@ -176,6 +176,37 @@ type Peer struct {
 	SharedKey       string `json:"shared_key"`
 }
 
+// DiversityZone represents the physical domain of a Megaport resource.
+// Using a custom type improves type safety and code readability.
+type GoogleDiversityZone string
+
+const (
+	Zone1       GoogleDiversityZone = "zone1"
+	Zone2       GoogleDiversityZone = "zone2"
+	ZoneUnknown GoogleDiversityZone = "unknown" // For error cases or unidentifiable zones
+)
+
+// GooglePartnerPort represents a single available Google Cloud destination port,
+// containing all necessary information parsed from the API response.
+type GooglePartnerPort struct {
+	ProductUID  string              `json:"productUid"`
+	Name        string              `json:"name"`
+	Location    string              // e.g., "New York", parsed from the Name field
+	Zone        GoogleDiversityZone // The parsed diversity zone (Zone1 or Zone2)
+	IsAvailable bool                // True if the 'vxc' field in the API response was null
+}
+
+// GooglePartnerAttachmentDetails holds the complete, structured information
+// returned from a pairing key lookup. This struct will be the return type of
+// the discovery function.
+type GooglePartnerAttachmentDetails struct {
+	AvailablePorts  []GooglePartnerPort `json:"availablePorts"`
+	BandwidthsMbps  []int               `json:"bandwidths"`
+	Zone1Port       *GooglePartnerPort  `json:"zone1Port,omitempty"`
+	Zone2Port       *GooglePartnerPort  `json:"zone2Port,omitempty"`
+	HasDiversePorts bool                `json:"hasDiversePorts"`
+}
+
 // VXCUpdate represents the fields that can be updated on a VXC.
 type VXCUpdate struct {
 	Name           string  `json:"name,omitempty"`
