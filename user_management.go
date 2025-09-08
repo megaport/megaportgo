@@ -243,9 +243,6 @@ func (svc *UserManagementServiceOp) CreateUser(ctx context.Context, req *CreateU
 		return nil, err
 	}
 
-	svc.client.Logger.InfoContext(ctx, "CreateUser API response",
-		slog.String("response", string(body)))
-
 	return apiResponse.Data, nil
 }
 
@@ -275,10 +272,6 @@ func (svc *UserManagementServiceOp) GetUser(ctx context.Context, employeeID int)
 		return nil, fmt.Errorf("failed to get user %d: HTTP %d - %s", employeeID, response.StatusCode, string(body))
 	}
 
-	svc.client.Logger.InfoContext(ctx, "GetUser API response",
-		slog.Int("employee_id", employeeID),
-		slog.String("response", string(body)))
-
 	// The API response is wrapped in an object with message, terms, and data fields
 	var apiResponse struct {
 		Message string `json:"message"`
@@ -294,12 +287,6 @@ func (svc *UserManagementServiceOp) GetUser(ctx context.Context, employeeID int)
 	}
 
 	user := &apiResponse.Data
-	svc.client.Logger.InfoContext(ctx, "GetUser parsed user",
-		slog.Int("employee_id", employeeID),
-		slog.Bool("active", user.Active),
-		slog.String("first_name", user.FirstName),
-		slog.String("email", user.Email),
-		slog.Int("party_id", user.PartyId))
 
 	return user, nil
 }
@@ -329,8 +316,8 @@ func (svc *UserManagementServiceOp) ListCompanyUsers(ctx context.Context) ([]*Us
 		return nil, fmt.Errorf("failed to list company users: HTTP %d - %s", response.StatusCode, string(body))
 	}
 
-	svc.client.Logger.DebugContext(ctx, "ListCompanyUsers API response",
-		slog.String("response_body", string(body)))
+	svc.client.Logger.DebugContext(ctx, "ListCompanyUsers API response received",
+		slog.Int("response_size", len(body)))
 
 	// The API response is wrapped in an object with message, terms, and data fields
 	var apiResponse struct {
@@ -355,6 +342,15 @@ func (svc *UserManagementServiceOp) UpdateUser(ctx context.Context, employeeID i
 	// Validate the request according to API requirements
 	if err := req.Validate(); err != nil {
 		return fmt.Errorf("validation failed: %w", err)
+	}
+
+	// Get User Details First Before Updating
+	existingUser, err := svc.GetUser(ctx, employeeID)
+	if err != nil {
+		return err
+	}
+	if existingUser.InvitationPending {
+		return fmt.Errorf("user %d is pending confirmation", employeeID)
 	}
 
 	path := "/v2/employee/" + strconv.Itoa(employeeID)

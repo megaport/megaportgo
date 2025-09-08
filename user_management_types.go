@@ -35,6 +35,7 @@ type User struct {
 	Promotions                 bool        `json:"promotions"`
 	MfaEnabled                 bool        `json:"mfaEnabled"`
 	ConfirmationPending        bool        `json:"confirmationPending"`
+	InvitationPending          bool        `json:"invitationPending"`
 	Name                       string      `json:"name"`
 	ReceivesChildNotifications bool        `json:"receivesChildNotifications"`
 
