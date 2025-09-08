@@ -155,10 +155,31 @@ func (suite *UserManagementClientTestSuite) TestUpdateUser() {
 		FirstName: &firstName,
 	}
 
+	// Handle both GET (to fetch existing user) and PUT (to update) requests
 	suite.mux.HandleFunc(fmt.Sprintf("/v2/employee/%d", employeeID), func(w http.ResponseWriter, r *http.Request) {
-		suite.testMethod(r, http.MethodPut)
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, `{"message": "User updated successfully"}`)
+		switch r.Method {
+		case http.MethodGet:
+			// Return existing user data for the initial GET request
+			fmt.Fprint(w, `{
+				"message": "User retrieved successfully",
+				"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+				"data": {
+					"partyId": 9012,
+					"firstName": "John",
+					"lastName": "Doe",
+					"email": "john.doe@example.com",
+					"position": "Company Admin",
+					"active": true,
+					"confirmationPending": false
+				}
+			}`)
+		case http.MethodPut:
+			// Handle the actual update request
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprint(w, `{"message": "User updated successfully"}`)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
 	})
 
 	err := suite.client.UserManagementService.UpdateUser(ctx, employeeID, updateReq)

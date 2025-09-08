@@ -39,8 +39,9 @@ func (suite *UserManagementIntegrationTestSuite) SetupSuite() {
 	suite.client = megaportClient
 }
 
-// TestUserCRUD tests the full lifecycle of user management: Create, Read, Update, Delete
-func (suite *UserManagementIntegrationTestSuite) TestUserCRUD() {
+// TestUserCRD tests the lifecycle of user management: Create, Read, Delete
+// Note: Update operations are skipped as they require email confirmation which is not suitable for automated testing
+func (suite *UserManagementIntegrationTestSuite) TestUserCRD() {
 	ctx := context.Background()
 
 	// Get initial users list to verify new user is actually created
@@ -86,10 +87,49 @@ func (suite *UserManagementIntegrationTestSuite) TestUserCRUD() {
 	// Test Read operation
 	suite.testReadUser(suite.client, ctx, employeeID)
 
-	// Test Update operation
-	suite.testUpdateUser(suite.client, ctx, employeeID)
+	// Skip Update operation - requires email confirmation which is not suitable for automated testing
 
 	// Test Delete operation
+	suite.testDeleteUser(suite.client, ctx, employeeID)
+}
+
+// TestUpdateUserPendingConfirmation tests that updating a user with confirmationPending=true returns an error
+func (suite *UserManagementIntegrationTestSuite) TestUpdateUserPendingConfirmation() {
+	ctx := context.Background()
+
+	// Create a user first (newly created users have confirmationPending=true)
+	createdUser, err := suite.testCreateUser(suite.client, ctx)
+	suite.NoError(err)
+	suite.NotNil(createdUser)
+
+	employeeID := createdUser.EmployeeID
+	suite.True(employeeID > 0, "Employee ID should be greater than 0")
+
+	// Verify the user has confirmationPending=true (newly created users should have this)
+	user, err := suite.client.UserManagementService.GetUser(ctx, employeeID)
+	suite.NoError(err)
+	suite.NotNil(user)
+
+	// Try to update the user while confirmation is pending - this should fail
+	newFirstName := "UpdatedName"
+	updateReq := &UpdateUserRequest{
+		FirstName: &newFirstName,
+	}
+
+	suite.client.Logger.DebugContext(ctx, "Attempting to update user with pending confirmation",
+		slog.Int("employee_id", employeeID),
+		slog.Bool("confirmation_pending", user.ConfirmationPending))
+
+	err = suite.client.UserManagementService.UpdateUser(ctx, employeeID, updateReq)
+
+	// This should return an error because the user has confirmationPending=true
+	suite.Error(err, "Updating user with pending confirmation should return an error")
+	suite.Contains(err.Error(), "pending confirmation", "Error should mention pending confirmation")
+
+	suite.client.Logger.DebugContext(ctx, "Update correctly failed for user with pending confirmation",
+		slog.String("error", err.Error()))
+
+	// Clean up - delete the test user
 	suite.testDeleteUser(suite.client, ctx, employeeID)
 }
 
@@ -149,39 +189,6 @@ func (suite *UserManagementIntegrationTestSuite) testReadUser(c *Client, ctx con
 	suite.True(user.Active)
 	suite.Equal("Company Admin", user.Position)
 	suite.Equal(employeeID, user.PartyId)
-}
-
-func (suite *UserManagementIntegrationTestSuite) testUpdateUser(c *Client, ctx context.Context, employeeID int) {
-	suite.client.Logger.DebugContext(ctx, "Updating User", slog.Int("employee_id", employeeID))
-
-	// Update user's first name and active status
-	newFirstName := "updated-test"
-	newLastName := "updated-user"
-	updateReq := &UpdateUserRequest{
-		FirstName: &newFirstName,
-		LastName:  &newLastName,
-	}
-
-	suite.client.Logger.DebugContext(ctx, "Sending update user request",
-		slog.String("new_first_name", newFirstName),
-		slog.String("new_last_name", newLastName))
-
-	err := c.UserManagementService.UpdateUser(ctx, employeeID, updateReq)
-	suite.NoError(err)
-
-	// Verify the update by reading the user again
-	updatedUser, err := c.UserManagementService.GetUser(ctx, employeeID)
-	suite.NoError(err)
-	suite.NotNil(updatedUser)
-
-	suite.client.Logger.DebugContext(ctx, "Verified updated user details",
-		slog.String("first_name", updatedUser.FirstName),
-		slog.Bool("active", updatedUser.Active))
-
-	suite.Equal(newFirstName, updatedUser.FirstName)
-	suite.Equal(newLastName, updatedUser.LastName)
-	suite.Equal("megaport.testuser@abcd.com", updatedUser.Email)
-	suite.Equal(true, updatedUser.Active)
 }
 
 func (suite *UserManagementIntegrationTestSuite) testDeleteUser(c *Client, ctx context.Context, employeeID int) {
