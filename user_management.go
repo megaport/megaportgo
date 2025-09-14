@@ -25,6 +25,8 @@ type UserManagementService interface {
 	UpdateUser(ctx context.Context, employeeID int, req *UpdateUserRequest) error
 	// DeleteUser deletes a user by their employee ID.
 	DeleteUser(ctx context.Context, employeeID int) error
+	// DeactivateUser deactivates a user by their employee ID.
+	DeactivateUser(ctx context.Context, employeeID int) error
 	// GetUserActivity retrieves the activity of a user based on their person ID or UID.
 	GetUserActivity(ctx context.Context, req *GetUserActivityRequest) ([]*UserActivity, error)
 }
@@ -376,7 +378,51 @@ func (svc *UserManagementServiceOp) UpdateUser(ctx context.Context, employeeID i
 	return nil
 }
 
+func (svc *UserManagementServiceOp) DeactivateUser(ctx context.Context, employeeID int) error {
+	// Make direct HTTP request to deactivate user, bypassing UpdateUser validation
+	path := "/v2/employee/" + strconv.Itoa(employeeID)
+
+	// Create request payload to set active to false
+	active := false
+	req := &UpdateUserRequest{
+		Active: &active,
+	}
+
+	svc.client.Logger.DebugContext(ctx, "Deactivating user via direct HTTP request",
+		slog.Int("employee_id", employeeID))
+
+	clientReq, err := svc.client.NewRequest(ctx, "PUT", path, req)
+	if err != nil {
+		return err
+	}
+
+	response, err := svc.client.Do(ctx, clientReq, nil)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != 200 {
+		body, _ := io.ReadAll(response.Body)
+		svc.client.Logger.ErrorContext(ctx, "DeactivateUser failed",
+			slog.Int("employee_id", employeeID),
+			slog.Int("status_code", response.StatusCode),
+			slog.String("response", string(body)))
+		return fmt.Errorf("failed to deactivate user %d: HTTP %d - %s", employeeID, response.StatusCode, string(body))
+	}
+
+	return nil
+}
+
 func (svc *UserManagementServiceOp) DeleteUser(ctx context.Context, employeeID int) error {
+	// If user has logged in, we cannot delete them, only deactivate.
+	existingUser, err := svc.GetUser(ctx, employeeID)
+	if err != nil {
+		return err
+	}
+	if !existingUser.InvitationPending {
+		return fmt.Errorf("user %d has already logged in and cannot be deleted, only deactivated", employeeID)
+	}
 	path := "/v2/employee/" + strconv.Itoa(employeeID)
 	clientReq, err := svc.client.NewRequest(ctx, "DELETE", path, nil)
 	if err != nil {
