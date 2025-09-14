@@ -39,8 +39,9 @@ func (suite *UserManagementIntegrationTestSuite) SetupSuite() {
 	suite.client = megaportClient
 }
 
-// TestUserCRD tests the lifecycle of user management: Create, Read, Delete
+// TestUserCRD tests the lifecycle of user management: Create, Read, Deactivate, Delete
 // Note: Update operations are skipped as they require email confirmation which is not suitable for automated testing
+// The deactivation step is included to simulate real-world workflow before deletion
 func (suite *UserManagementIntegrationTestSuite) TestUserCRD() {
 	ctx := context.Background()
 
@@ -89,6 +90,9 @@ func (suite *UserManagementIntegrationTestSuite) TestUserCRD() {
 
 	// Skip Update operation - requires email confirmation which is not suitable for automated testing
 
+	// Test Deactivation before deletion (simulating real-world workflow)
+	suite.testDeactivateUser(suite.client, ctx, employeeID)
+
 	// Test Delete operation
 	suite.testDeleteUser(suite.client, ctx, employeeID)
 }
@@ -129,7 +133,8 @@ func (suite *UserManagementIntegrationTestSuite) TestUpdateUserPendingConfirmati
 	suite.client.Logger.DebugContext(ctx, "Update correctly failed for user with pending confirmation",
 		slog.String("error", err.Error()))
 
-	// Clean up - delete the test user
+	// Clean up - deactivate then delete the test user
+	suite.testDeactivateUser(suite.client, ctx, employeeID)
 	suite.testDeleteUser(suite.client, ctx, employeeID)
 }
 
@@ -191,17 +196,81 @@ func (suite *UserManagementIntegrationTestSuite) testReadUser(c *Client, ctx con
 	suite.Equal(employeeID, user.PartyId)
 }
 
+func (suite *UserManagementIntegrationTestSuite) testDeactivateUser(c *Client, ctx context.Context, employeeID int) {
+	suite.client.Logger.DebugContext(ctx, "Deactivating User", slog.Int("employee_id", employeeID))
+
+	// First verify user is currently active
+	user, err := c.UserManagementService.GetUser(ctx, employeeID)
+	suite.NoError(err)
+	suite.NotNil(user)
+	suite.True(user.Active, "User should be active before deactivation")
+
+	suite.client.Logger.DebugContext(ctx, "Verified user is currently active",
+		slog.Int("employee_id", employeeID),
+		slog.Bool("active", user.Active))
+
+	// Deactivate the user using the DeactivateUser service method
+	err = c.UserManagementService.DeactivateUser(ctx, employeeID)
+	suite.NoError(err, "Deactivating user should not return an error")
+
+	suite.client.Logger.DebugContext(ctx, "User deactivation request sent successfully")
+
+	// Verify user is now deactivated
+	userAfterDeactivation, err := c.UserManagementService.GetUser(ctx, employeeID)
+	suite.NoError(err)
+	suite.NotNil(userAfterDeactivation)
+	suite.False(userAfterDeactivation.Active, "User should be deactivated after update")
+
+	// Verify other user properties remain unchanged
+	suite.Equal(user.FirstName, userAfterDeactivation.FirstName, "FirstName should remain unchanged")
+	suite.Equal(user.LastName, userAfterDeactivation.LastName, "LastName should remain unchanged")
+
+	// Note: When a user is deactivated, Megaport automatically modifies the email by appending "-deactivated-{randomnumber}"
+	// So we should check that the email contains the original email as a prefix
+	suite.Contains(userAfterDeactivation.Email, "megaport.testuser@abcd", "Email should contain the original email prefix")
+	suite.Contains(userAfterDeactivation.Email, "-deactivated-", "Email should contain the deactivated suffix")
+
+	suite.Equal(user.Position, userAfterDeactivation.Position, "Position should remain unchanged")
+
+	suite.client.Logger.DebugContext(ctx, "User successfully deactivated",
+		slog.Int("employee_id", employeeID),
+		slog.Bool("active", userAfterDeactivation.Active),
+		slog.Bool("invitation_pending", userAfterDeactivation.InvitationPending))
+}
+
 func (suite *UserManagementIntegrationTestSuite) testDeleteUser(c *Client, ctx context.Context, employeeID int) {
 	suite.client.Logger.DebugContext(ctx, "Deleting User", slog.Int("employee_id", employeeID))
 
-	err := c.UserManagementService.DeleteUser(ctx, employeeID)
+	// Before attempting deletion, check if the user can be deleted
+	user, err := c.UserManagementService.GetUser(ctx, employeeID)
 	suite.NoError(err)
+	suite.NotNil(user)
 
-	suite.client.Logger.DebugContext(ctx, "User deleted successfully")
+	suite.client.Logger.DebugContext(ctx, "Checking user status before deletion",
+		slog.Int("employee_id", employeeID),
+		slog.Bool("active", user.Active),
+		slog.Bool("invitation_pending", user.InvitationPending))
 
-	// Verify user is deleted by trying to get it (should fail)
-	_, err = c.UserManagementService.GetUser(ctx, employeeID)
-	suite.Error(err, "Getting deleted user should return an error")
+	err = c.UserManagementService.DeleteUser(ctx, employeeID)
 
-	suite.client.Logger.DebugContext(ctx, "Verified user deletion - GetUser returned error as expected")
+	if user.InvitationPending {
+		// User hasn't logged in yet, so deletion should succeed
+		suite.NoError(err, "Deleting user with pending invitation should succeed")
+		suite.client.Logger.DebugContext(ctx, "User deleted successfully (invitation was pending)")
+
+		// Verify user is deleted by trying to get it (should fail)
+		_, err = c.UserManagementService.GetUser(ctx, employeeID)
+		suite.Error(err, "Getting deleted user should return an error")
+		suite.client.Logger.DebugContext(ctx, "Verified user deletion - GetUser returned error as expected")
+	} else {
+		// User has logged in, so deletion should fail
+		suite.Error(err, "Deleting user who has logged in should fail")
+		suite.Contains(err.Error(), "cannot be deleted", "Error should indicate user cannot be deleted")
+
+		suite.client.Logger.DebugContext(ctx, "Deletion correctly failed for user who has logged in",
+			slog.String("error", err.Error()))
+
+		// Since deletion failed, the user remains in the system (deactivated from previous step)
+		// This is the expected behavior for users who have logged in
+	}
 }
