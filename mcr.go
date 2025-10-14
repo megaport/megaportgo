@@ -42,6 +42,10 @@ type MCRService interface {
 	ListMCRResourceTags(ctx context.Context, mcrID string) (map[string]string, error)
 	// UpdateMCRResourceTags updates the resource tags for an MCR in the Megaport MCR API.
 	UpdateMCRResourceTags(ctx context.Context, mcrID string, tags map[string]string) error
+	// UpdateMCRWithAddOn adds an IPsec add-on to an existing MCR.
+	UpdateMCRWithAddOn(ctx context.Context, mcrID string, req MCRAddOnRequest) error
+	// UpdateMCRIPsecAddOn updates an existing IPsec add-on on an MCR. Setting tunnelCount to 0 will disable IPsec.
+	UpdateMCRIPsecAddOn(ctx context.Context, mcrID string, addOnUID string, tunnelCount int) error
 
 	// DEPRECATED - Use ListMCRPrefixFilterLists instead
 	GetMCRPrefixFilterLists(ctx context.Context, mcrId string) ([]*PrefixFilterList, error)
@@ -69,7 +73,8 @@ type BuyMCRRequest struct {
 	MCRAsn        int
 	CostCentre    string
 	PromoCode     string
-	ResourceTags  map[string]string `json:"resourceTags,omitempty"`
+	ResourceTags  map[string]string      `json:"resourceTags,omitempty"`
+	AddOns        []*MCRAddOnIPsecConfig `json:"addOns,omitempty"`
 
 	WaitForProvision bool          // Wait until the MCR provisions before returning
 	WaitForTime      time.Duration // How long to wait for the MCR to provision if WaitForProvision is true (default is 5 minutes)
@@ -139,6 +144,11 @@ type ModifyMCRPrefixFilterListResponse struct {
 // DeleteMCRPrefixFilterListResponse represents a response from deleting a prefix filter list on an MCR
 type DeleteMCRPrefixFilterListResponse struct {
 	IsDeleted bool
+}
+
+type MCRAddOnRequest struct {
+	AddOnType string
+	AddOn     MCRAddOn
 }
 
 // BuyMCR purchases an MCR from the Megaport MCR API.
@@ -211,6 +221,30 @@ func validateBuyMCRRequest(order *BuyMCRRequest) error {
 	if !slices.Contains(VALID_MCR_PORT_SPEEDS, order.PortSpeed) {
 		return ErrMCRInvalidPortSpeed
 	}
+
+	// Validate IPsec add-ons
+	for _, addOn := range order.AddOns {
+		if err := validateIPsecAddOn(addOn); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// validateIPsecAddOn validates an IPsec add-on configuration
+func validateIPsecAddOn(addOn *MCRAddOnIPsecConfig) error {
+	// Validate add-on type
+	if addOn.AddOnType != "" && addOn.AddOnType != AddOnTypeIPsec {
+		return ErrInvalidAddOnType
+	}
+
+	// Validate tunnel count (must be 0 or 10 - 0 will default to 10)
+	// API requires exactly 10 tunnels for IPsec add-ons
+	if addOn.TunnelCount != 0 && addOn.TunnelCount != 10 {
+		return ErrInvalidIPsecTunnelCount
+	}
+
 	return nil
 }
 
@@ -233,6 +267,27 @@ func createMCROrder(req *BuyMCRRequest) []MCROrder {
 	order.Config.ASN = req.MCRAsn
 	if req.DiversityZone != "" {
 		order.Config.DiversityZone = req.DiversityZone
+	}
+
+	if len(req.AddOns) > 0 {
+		for _, addOn := range req.AddOns {
+			// Set AddOnType if not specified
+			if addOn.AddOnType == "" {
+				addOn.AddOnType = AddOnTypeIPsec
+			}
+
+			// Set default tunnel count if not specified
+			if addOn.TunnelCount == 0 {
+				addOn.TunnelCount = 10 // default to 10 tunnels if not specified
+			}
+
+			// Set default pack count if not specified
+			if addOn.PackCount == 0 {
+				addOn.PackCount = 1 // default to 1 pack if not specified
+			}
+
+			order.AddOns = append(order.AddOns, addOn)
+		}
 	}
 
 	return []MCROrder{order}
@@ -542,4 +597,68 @@ func (svc *MCRServiceOp) UpdateMCRResourceTags(ctx context.Context, mcrID string
 	return svc.Client.ProductService.UpdateProductResourceTags(ctx, mcrID, &UpdateProductResourceTagsRequest{
 		ResourceTags: toProductResourceTags(tags),
 	})
+}
+
+func (svc *MCRServiceOp) UpdateMCRWithAddOn(ctx context.Context, mcrID string, req MCRAddOnRequest) error {
+	if req.AddOnType != AddOnTypeIPsec {
+		return ErrInvalidAddOnType
+	}
+	url := fmt.Sprintf("/v3/product/%s/addon", mcrID)
+	switch t := req.AddOn.(type) {
+	case *MCRAddOnIPsecConfig:
+		// Validate the IPsec configuration
+		if err := validateIPsecAddOn(t); err != nil {
+			return err
+		}
+
+		// Create payload matching API spec: only addOnType and tunnelCount
+		tunnelCount := t.TunnelCount
+		if tunnelCount == 0 {
+			tunnelCount = 10 // default to 10 tunnels if not specified
+		}
+
+		payload := map[string]interface{}{
+			"addOnType":   AddOnTypeIPsec,
+			"tunnelCount": tunnelCount,
+		}
+
+		clientReq, err := svc.Client.NewRequest(ctx, "POST", url, payload)
+		if err != nil {
+			return err
+		}
+		_, err = svc.Client.Do(ctx, clientReq, nil)
+		if err != nil {
+			return err
+		}
+	case nil:
+		return fmt.Errorf("AddOn cannot be nil")
+	default:
+		return ErrInvalidAddOnType
+	}
+
+	return nil
+}
+
+// UpdateMCRIPsecAddOn updates an existing IPsec add-on on an MCR.
+// Set tunnelCount to 0 to disable the IPsec add-on.
+// PUT /v3/product/{productUid}/addon/{addOnUid}
+func (svc *MCRServiceOp) UpdateMCRIPsecAddOn(ctx context.Context, mcrID string, addOnUID string, tunnelCount int) error {
+	// Validate tunnel count (0 to disable, or exactly 10)
+	if tunnelCount != 0 && tunnelCount != 10 {
+		return ErrInvalidIPsecTunnelCount
+	}
+
+	url := "/v3/product/" + mcrID + "/addon/" + addOnUID
+
+	payload := map[string]interface{}{
+		"addOnType":   AddOnTypeIPsec,
+		"tunnelCount": tunnelCount,
+	}
+
+	clientReq, err := svc.Client.NewRequest(ctx, "PUT", url, payload)
+	if err != nil {
+		return err
+	}
+	_, err = svc.Client.Do(ctx, clientReq, nil)
+	return err
 }

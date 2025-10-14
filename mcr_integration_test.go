@@ -566,3 +566,333 @@ func (suite *MCRIntegrationTestSuite) TestMegaportPrefixFilterList() {
 
 	logger.DebugContext(ctx, "mcr deleted", slog.String("status", mcrDeleteInfo.ProvisioningStatus))
 }
+
+// TestMCRWithIPsecAddOn tests creating an MCR with IPsec add-on during purchase
+func (suite *MCRIntegrationTestSuite) TestMCRWithIPsecAddOn() {
+	ctx := context.Background()
+	logger := suite.client.Logger
+	mcrSvc := suite.client.MCRService
+
+	logger.InfoContext(ctx, "Buying MCR with IPsec add-on")
+	testLocation, locErr := GetRandomLocation(ctx, suite.client.LocationService, TEST_MCR_TEST_LOCATION_MARKET)
+	if locErr != nil {
+		suite.FailNowf("could not get location", "could not get location %v", locErr)
+	}
+
+	logger.InfoContext(ctx, "Test location determined", slog.String("location", testLocation.Name))
+
+	// Create MCR with IPsec add-on
+	mcrRes, portErr := mcrSvc.BuyMCR(ctx, &BuyMCRRequest{
+		LocationID:       testLocation.ID,
+		Name:             "MCR with IPsec",
+		Term:             1,
+		PortSpeed:        1000,
+		MCRAsn:           0,
+		DiversityZone:    "red",
+		WaitForProvision: true,
+		WaitForTime:      5 * time.Minute,
+		AddOns: []*MCRAddOnIPsecConfig{
+			{
+				TunnelCount: 10,
+			},
+		},
+	})
+	if portErr != nil {
+		suite.FailNowf("error buying mcr with ipsec", "error buying mcr with ipsec %v", portErr)
+	}
+	mcrId := mcrRes.TechnicalServiceUID
+	if !IsGuid(mcrId) {
+		suite.FailNowf("invalid mcr id", "invalid mcr id %s", mcrId)
+	}
+
+	logger.InfoContext(ctx, "MCR with IPsec purchased", slog.String("mcr_id", mcrId))
+
+	// Verify MCR was created
+	mcr, getErr := mcrSvc.GetMCR(ctx, mcrId)
+	if getErr != nil {
+		suite.FailNowf("could not get mcr", "could not get mcr %v", getErr)
+	}
+	suite.EqualValues("MCR with IPsec", mcr.Name)
+
+	// Delete MCR
+	logger.InfoContext(ctx, "Deleting MCR now", slog.String("mcr_id", mcrId))
+	hardDeleteRes, deleteErr := mcrSvc.DeleteMCR(ctx, &DeleteMCRRequest{
+		MCRID:     mcrId,
+		DeleteNow: true,
+	})
+	if deleteErr != nil {
+		suite.FailNowf("could not delete mcr", "could not delete mcr %v", deleteErr)
+	}
+	suite.True(hardDeleteRes.IsDeleting)
+
+	mcrDeleteInfo, getErr := mcrSvc.GetMCR(ctx, mcrId)
+	if getErr != nil {
+		suite.FailNowf("could not get mcr", "could not get mcr %v", getErr)
+	}
+	suite.EqualValues(STATUS_DECOMMISSIONED, mcrDeleteInfo.ProvisioningStatus)
+	logger.DebugContext(ctx, "mcr deleted", slog.String("provisioning_status", mcrDeleteInfo.ProvisioningStatus))
+}
+
+// TestAddIPsecToExistingMCR tests adding IPsec add-on to an existing MCR
+func (suite *MCRIntegrationTestSuite) TestAddIPsecToExistingMCR() {
+	ctx := context.Background()
+	logger := suite.client.Logger
+	mcrSvc := suite.client.MCRService
+
+	logger.InfoContext(ctx, "Buying MCR without IPsec")
+	testLocation, locErr := GetRandomLocation(ctx, suite.client.LocationService, TEST_MCR_TEST_LOCATION_MARKET)
+	if locErr != nil {
+		suite.FailNowf("could not get location", "could not get location %v", locErr)
+	}
+
+	logger.InfoContext(ctx, "Test location determined", slog.String("location", testLocation.Name))
+
+	// Create MCR without IPsec
+	mcrRes, portErr := mcrSvc.BuyMCR(ctx, &BuyMCRRequest{
+		LocationID:       testLocation.ID,
+		Name:             "MCR for IPsec Update",
+		Term:             1,
+		PortSpeed:        1000,
+		MCRAsn:           0,
+		DiversityZone:    "red",
+		WaitForProvision: true,
+		WaitForTime:      5 * time.Minute,
+	})
+	if portErr != nil {
+		suite.FailNowf("error buying mcr", "error buying mcr %v", portErr)
+	}
+	mcrId := mcrRes.TechnicalServiceUID
+	if !IsGuid(mcrId) {
+		suite.FailNowf("invalid mcr id", "invalid mcr id %s", mcrId)
+	}
+
+	logger.InfoContext(ctx, "MCR purchased", slog.String("mcr_id", mcrId))
+
+	// Add IPsec add-on to existing MCR
+	logger.InfoContext(ctx, "Adding IPsec add-on to MCR", slog.String("mcr_id", mcrId))
+	addOnErr := mcrSvc.UpdateMCRWithAddOn(ctx, mcrId, MCRAddOnRequest{
+		AddOnType: AddOnTypeIPsec,
+		AddOn: &MCRAddOnIPsecConfig{
+			TunnelCount: 10, // API requires exactly 10 tunnels
+		},
+	})
+	if addOnErr != nil {
+		suite.FailNowf("could not add ipsec to mcr", "could not add ipsec to mcr %v", addOnErr)
+	}
+
+	logger.InfoContext(ctx, "IPsec add-on successfully added to MCR")
+
+	// Verify MCR still exists and is accessible, and check AddOns field
+	mcr, getErr := mcrSvc.GetMCR(ctx, mcrId)
+	if getErr != nil {
+		suite.FailNowf("could not get mcr", "could not get mcr %v", getErr)
+	}
+	suite.EqualValues("MCR for IPsec Update", mcr.Name)
+
+	// Verify AddOns field is populated after adding IPsec
+	suite.NotNil(mcr.AddOns, "AddOns should not be nil after adding IPsec")
+	suite.Len(mcr.AddOns, 1, "Should have exactly one add-on")
+	suite.Equal(AddOnTypeIPsec, mcr.AddOns[0].AddOnType, "Add-on type should be IP_SEC")
+	suite.Equal(10, mcr.AddOns[0].TunnelCount, "Tunnel count should be 10")
+	suite.NotEmpty(mcr.AddOns[0].AddOnUID, "Add-on UID should not be empty")
+	logger.InfoContext(ctx, "Verified AddOns field after adding IPsec",
+		slog.String("addon_uid", mcr.AddOns[0].AddOnUID),
+		slog.Int("tunnel_count", mcr.AddOns[0].TunnelCount))
+
+	// Delete MCR
+	logger.InfoContext(ctx, "Deleting MCR now", slog.String("mcr_id", mcrId))
+	hardDeleteRes, deleteErr := mcrSvc.DeleteMCR(ctx, &DeleteMCRRequest{
+		MCRID:     mcrId,
+		DeleteNow: true,
+	})
+	if deleteErr != nil {
+		suite.FailNowf("could not delete mcr", "could not delete mcr %v", deleteErr)
+	}
+	suite.True(hardDeleteRes.IsDeleting)
+
+	mcrDeleteInfo, getErr := mcrSvc.GetMCR(ctx, mcrId)
+	if getErr != nil {
+		suite.FailNowf("could not get mcr", "could not get mcr %v", getErr)
+	}
+	suite.EqualValues(STATUS_DECOMMISSIONED, mcrDeleteInfo.ProvisioningStatus)
+	logger.DebugContext(ctx, "mcr deleted", slog.String("provisioning_status", mcrDeleteInfo.ProvisioningStatus))
+}
+
+// TestUpdateIPsecTunnelCount tests updating the tunnel count of an existing IPsec add-on
+func (suite *MCRIntegrationTestSuite) TestUpdateIPsecTunnelCount() {
+	ctx := context.Background()
+	logger := suite.client.Logger
+	mcrSvc := suite.client.MCRService
+
+	logger.InfoContext(ctx, "Getting test location")
+	testLocation, locErr := GetRandomLocation(ctx, suite.client.LocationService, TEST_MCR_TEST_LOCATION_MARKET)
+	if locErr != nil {
+		suite.FailNowf("could not get random location", "could not get random location %v", locErr)
+	}
+	if !suite.NotNil(testLocation) {
+		suite.FailNow("invalid test location")
+	}
+
+	logger.InfoContext(ctx, "Test location determined", slog.String("location", testLocation.Name))
+
+	// Buy MCR with IPsec add-on
+	logger.InfoContext(ctx, "Buying MCR with IPsec add-on")
+	mcrRes, portErr := mcrSvc.BuyMCR(ctx, &BuyMCRRequest{
+		LocationID:       testLocation.ID,
+		Name:             "MCR with IPsec - Update Test",
+		Term:             1,
+		PortSpeed:        1000,
+		MCRAsn:           0,
+		DiversityZone:    "red",
+		WaitForProvision: true,
+		WaitForTime:      5 * time.Minute,
+		AddOns: []*MCRAddOnIPsecConfig{
+			{
+				TunnelCount: 10,
+			},
+		},
+	})
+	if portErr != nil {
+		suite.FailNowf("error buying mcr with ipsec", "error buying mcr with ipsec %v", portErr)
+	}
+	mcrId := mcrRes.TechnicalServiceUID
+	if !IsGuid(mcrId) {
+		suite.FailNowf("invalid mcr id", "invalid mcr id %s", mcrId)
+	}
+
+	logger.InfoContext(ctx, "MCR with IPsec purchased", slog.String("mcr_id", mcrId))
+
+	// Get MCR to retrieve add-on UID and verify AddOns field
+	mcrInfo, getErr := mcrSvc.GetMCR(ctx, mcrId)
+	if getErr != nil {
+		suite.FailNowf("could not get mcr", "could not get mcr %v", getErr)
+	}
+
+	// Verify AddOns field is populated
+	suite.NotNil(mcrInfo.AddOns, "AddOns should not be nil")
+	suite.Len(mcrInfo.AddOns, 1, "Should have exactly one add-on")
+	suite.Equal(AddOnTypeIPsec, mcrInfo.AddOns[0].AddOnType, "Add-on type should be IP_SEC")
+	suite.Equal(10, mcrInfo.AddOns[0].TunnelCount, "Tunnel count should be 10")
+	suite.NotEmpty(mcrInfo.AddOns[0].AddOnUID, "Add-on UID should not be empty")
+	logger.InfoContext(ctx, "Verified AddOns field",
+		slog.String("addon_uid", mcrInfo.AddOns[0].AddOnUID),
+		slog.Int("tunnel_count", mcrInfo.AddOns[0].TunnelCount))
+
+	// Clean up - Delete MCR
+	logger.InfoContext(ctx, "Deleting MCR", slog.String("mcr_id", mcrId))
+	hardDeleteRes, deleteErr := mcrSvc.DeleteMCR(ctx, &DeleteMCRRequest{
+		MCRID:     mcrId,
+		DeleteNow: true,
+	})
+	if deleteErr != nil {
+		suite.FailNowf("could not delete mcr", "could not delete mcr %v", deleteErr)
+	}
+	suite.True(hardDeleteRes.IsDeleting)
+
+	mcrDeleteInfo, getDelErr := mcrSvc.GetMCR(ctx, mcrId)
+	if getDelErr != nil {
+		suite.FailNowf("could not get mcr after delete", "could not get mcr after delete %v", getDelErr)
+	}
+	suite.EqualValues(STATUS_DECOMMISSIONED, mcrDeleteInfo.ProvisioningStatus)
+	logger.InfoContext(ctx, "MCR deleted", slog.String("provisioning_status", mcrDeleteInfo.ProvisioningStatus))
+}
+
+// TestDisableIPsecAddOn tests disabling IPsec by setting tunnel count to 0
+func (suite *MCRIntegrationTestSuite) TestDisableIPsecAddOn() {
+	ctx := context.Background()
+	logger := suite.client.Logger
+	mcrSvc := suite.client.MCRService
+
+	logger.InfoContext(ctx, "Getting test location")
+	testLocation, locErr := GetRandomLocation(ctx, suite.client.LocationService, TEST_MCR_TEST_LOCATION_MARKET)
+	if locErr != nil {
+		suite.FailNowf("could not get random location", "could not get random location %v", locErr)
+	}
+	if !suite.NotNil(testLocation) {
+		suite.FailNow("invalid test location")
+	}
+
+	logger.InfoContext(ctx, "Test location determined", slog.String("location", testLocation.Name))
+
+	// Buy MCR with IPsec add-on
+	logger.InfoContext(ctx, "Buying MCR with IPsec add-on")
+	mcrRes, portErr := mcrSvc.BuyMCR(ctx, &BuyMCRRequest{
+		LocationID:       testLocation.ID,
+		Name:             "MCR with IPsec - Disable Test",
+		Term:             1,
+		PortSpeed:        1000,
+		MCRAsn:           0,
+		DiversityZone:    "red",
+		WaitForProvision: true,
+		WaitForTime:      5 * time.Minute,
+		AddOns: []*MCRAddOnIPsecConfig{
+			{
+				TunnelCount: 10,
+			},
+		},
+	})
+	if portErr != nil {
+		suite.FailNowf("error buying mcr with ipsec", "error buying mcr with ipsec %v", portErr)
+	}
+	mcrId := mcrRes.TechnicalServiceUID
+	if !IsGuid(mcrId) {
+		suite.FailNowf("invalid mcr id", "invalid mcr id %s", mcrId)
+	}
+
+	logger.InfoContext(ctx, "MCR with IPsec purchased", slog.String("mcr_id", mcrId))
+
+	// Get MCR to retrieve add-on UID
+	mcrInfo, getErr := mcrSvc.GetMCR(ctx, mcrId)
+	if getErr != nil {
+		suite.FailNowf("could not get mcr", "could not get mcr %v", getErr)
+	}
+
+	// Verify AddOns field is populated
+	suite.NotNil(mcrInfo.AddOns, "AddOns should not be nil")
+	suite.Len(mcrInfo.AddOns, 1, "Should have exactly one add-on")
+	suite.Equal(AddOnTypeIPsec, mcrInfo.AddOns[0].AddOnType, "Add-on type should be IP_SEC")
+	suite.Equal(10, mcrInfo.AddOns[0].TunnelCount, "Initial tunnel count should be 10")
+	suite.NotEmpty(mcrInfo.AddOns[0].AddOnUID, "Add-on UID should not be empty")
+
+	addOnUID := mcrInfo.AddOns[0].AddOnUID
+	logger.InfoContext(ctx, "Retrieved add-on UID", slog.String("addon_uid", addOnUID))
+
+	// Disable IPsec by setting tunnel count to 0
+	logger.InfoContext(ctx, "Disabling IPsec add-on by setting tunnel count to 0")
+	updateErr := mcrSvc.UpdateMCRIPsecAddOn(ctx, mcrId, addOnUID, 0)
+	if updateErr != nil {
+		suite.FailNowf("could not disable ipsec", "could not disable ipsec %v", updateErr)
+	}
+	logger.InfoContext(ctx, "IPsec add-on disabled successfully")
+
+	// Verify IPsec is disabled (tunnel count should be 0)
+	updatedMCR, getErr2 := mcrSvc.GetMCR(ctx, mcrId)
+	if getErr2 != nil {
+		suite.FailNowf("could not get mcr after disabling", "could not get mcr after disabling %v", getErr2)
+	}
+
+	// After disabling, the add-on should still exist but with tunnelCount = 0
+	suite.NotNil(updatedMCR.AddOns, "AddOns should not be nil after disabling")
+	if len(updatedMCR.AddOns) > 0 {
+		suite.Equal(0, updatedMCR.AddOns[0].TunnelCount, "Tunnel count should be 0 after disabling")
+		logger.InfoContext(ctx, "Verified IPsec is disabled", slog.Int("tunnel_count", updatedMCR.AddOns[0].TunnelCount))
+	}
+
+	// Clean up - Delete MCR
+	logger.InfoContext(ctx, "Deleting MCR", slog.String("mcr_id", mcrId))
+	hardDeleteRes, deleteErr := mcrSvc.DeleteMCR(ctx, &DeleteMCRRequest{
+		MCRID:     mcrId,
+		DeleteNow: true,
+	})
+	if deleteErr != nil {
+		suite.FailNowf("could not delete mcr", "could not delete mcr %v", deleteErr)
+	}
+	suite.True(hardDeleteRes.IsDeleting)
+
+	mcrDeleteInfo, getDelErr := mcrSvc.GetMCR(ctx, mcrId)
+	if getDelErr != nil {
+		suite.FailNowf("could not get mcr after delete", "could not get mcr after delete %v", getDelErr)
+	}
+	suite.EqualValues(STATUS_DECOMMISSIONED, mcrDeleteInfo.ProvisioningStatus)
+	logger.InfoContext(ctx, "MCR deleted", slog.String("provisioning_status", mcrDeleteInfo.ProvisioningStatus))
+}
