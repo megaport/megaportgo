@@ -83,3 +83,9 @@ var ErrInvalidVXCAEndPartnerConfig = errors.New("invalid vxc a-end partner confi
 
 // ErrInvalidVXCBEndPartnerConfig is returned when an invalid VXC B-End partner config is provided
 var ErrInvalidVXCBEndPartnerConfig = errors.New("invalid vxc b-end partner config")
+
+// ErrInvalidAddOnType is returned when an invalid add-on type is provided
+var ErrInvalidAddOnType = errors.New("invalid add-on type, currently only IP_SEC is supported")
+
+// ErrInvalidIPsecTunnelCount is returned when the IPsec tunnel count is not valid
+var ErrInvalidIPsecTunnelCount = errors.New("invalid IPsec tunnel count, must be 10 (or 0 to use default of 10)")
