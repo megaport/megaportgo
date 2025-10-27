@@ -192,9 +192,27 @@ func (suite *UserManagementClientTestSuite) TestDeleteUser() {
 	employeeID := 9012
 
 	suite.mux.HandleFunc(fmt.Sprintf("/v2/employee/%d", employeeID), func(w http.ResponseWriter, r *http.Request) {
-		suite.testMethod(r, http.MethodDelete)
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, `{"message": "User deleted successfully"}`)
+		switch r.Method {
+		case http.MethodGet:
+			// DeleteUser first calls GetUser to check if user has logged in
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprint(w, `{
+				"message": "success",
+				"terms": "",
+				"data": {
+					"partyId": 9012,
+					"firstName": "Test",
+					"lastName": "User",
+					"email": "test@example.com",
+					"invitationPending": true
+				}
+			}`)
+		case http.MethodDelete:
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprint(w, `{"message": "User deleted successfully"}`)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
 	})
 
 	err := suite.client.UserManagementService.DeleteUser(ctx, employeeID)
