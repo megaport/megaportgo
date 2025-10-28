@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"net/mail"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -352,7 +353,7 @@ func (svc *UserManagementServiceOp) UpdateUser(ctx context.Context, employeeID i
 		return err
 	}
 	if existingUser.InvitationPending {
-		return fmt.Errorf("user %d is pending confirmation", employeeID)
+		return fmt.Errorf("cannot update user %d: user has not accepted invitation yet (invitation pending)", employeeID)
 	}
 
 	path := "/v2/employee/" + strconv.Itoa(employeeID)
@@ -447,20 +448,17 @@ func (svc *UserManagementServiceOp) DeleteUser(ctx context.Context, employeeID i
 func (svc *UserManagementServiceOp) GetUserActivity(ctx context.Context, req *GetUserActivityRequest) ([]*UserActivity, error) {
 	path := "/v3/activity"
 
-	// Append query parameters if provided
-	first := true
+	// Append query parameters if provided using proper URL encoding
+	queryParams := url.Values{}
 	if req.PersonIdOrUid != "" {
-		path += "?personIdOrUid=" + req.PersonIdOrUid
-		first = false
+		queryParams.Add("personIdOrUid", req.PersonIdOrUid)
+	}
+	if req.CompanyIdOrUid != "" {
+		queryParams.Add("companyIdOrUid", req.CompanyIdOrUid)
 	}
 
-	if req.CompanyIdOrUid != "" {
-		if first {
-			path += "?"
-		} else {
-			path += "&"
-		}
-		path += "companyIdOrUid=" + req.CompanyIdOrUid
+	if len(queryParams) > 0 {
+		path += "?" + queryParams.Encode()
 	}
 
 	clientReq, err := svc.client.NewRequest(ctx, "GET", path, nil)

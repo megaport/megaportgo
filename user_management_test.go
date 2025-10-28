@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// UserManagementClientTestSuite tests the service key service client
+// UserManagementClientTestSuite tests the user management service client
 type UserManagementClientTestSuite struct {
 	ClientTestSuite
 }

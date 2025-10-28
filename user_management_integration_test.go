@@ -126,11 +126,11 @@ func (suite *UserManagementIntegrationTestSuite) TestUpdateUserPendingConfirmati
 
 	err = suite.client.UserManagementService.UpdateUser(ctx, employeeID, updateReq)
 
-	// This should return an error because the user has confirmationPending=true
-	suite.Error(err, "Updating user with pending confirmation should return an error")
-	suite.Contains(err.Error(), "pending confirmation", "Error should mention pending confirmation")
+	// This should return an error because the user has invitationPending=true
+	suite.Error(err, "Updating user with pending invitation should return an error")
+	suite.Contains(err.Error(), "invitation pending", "Error should mention invitation pending")
 
-	suite.client.Logger.DebugContext(ctx, "Update correctly failed for user with pending confirmation",
+	suite.client.Logger.DebugContext(ctx, "Update correctly failed for user with pending invitation",
 		slog.String("error", err.Error()))
 
 	// Clean up - deactivate then delete the test user
