@@ -300,7 +300,7 @@ func (svc *VXCServiceOp) DeleteVXC(ctx context.Context, id string, req *DeleteVX
 
 // UpdateVXC updates a VXC in the Megaport VXC API.
 func (svc *VXCServiceOp) UpdateVXC(ctx context.Context, id string, req *UpdateVXCRequest) (*VXC, error) {
-	if req.Term != nil && (*req.Term != 1 && *req.Term != 12 && *req.Term != 24 && *req.Term != 36) {
+	if req.Term != nil && !slices.Contains(VALID_CONTRACT_TERMS, *req.Term) {
 		return nil, ErrInvalidTerm
 	}
 	if req.CostCentre != nil && len(*req.CostCentre) > 255 {
