@@ -4,14 +4,15 @@ import "strconv"
 
 // MCROrder represents a request to buy an MCR from the Megaport Products API.
 type MCROrder struct {
-	LocationID int            `json:"locationId"`
-	Name       string         `json:"productName"`
-	Term       int            `json:"term"`
-	Type       string         `json:"productType"`
-	PortSpeed  int            `json:"portSpeed"`
-	CostCentre string         `json:"costCentre"`
-	PromoCode  string         `json:"promoCode,omitempty"`
-	Config     MCROrderConfig `json:"config"`
+	LocationID int                    `json:"locationId"`
+	Name       string                 `json:"productName"`
+	Term       int                    `json:"term"`
+	Type       string                 `json:"productType"`
+	PortSpeed  int                    `json:"portSpeed"`
+	CostCentre string                 `json:"costCentre"`
+	PromoCode  string                 `json:"promoCode,omitempty"`
+	Config     MCROrderConfig         `json:"config"`
+	AddOns     []*MCRAddOnIPsecConfig `json:"addOns,omitempty"`
 
 	ResourceTags []ResourceTag `json:"resourceTags,omitempty"`
 }
@@ -21,6 +22,25 @@ type MCROrderConfig struct {
 	ASN           int    `json:"mcrAsn,omitempty"`
 	DiversityZone string `json:"diversityZone,omitempty"`
 }
+
+// MCRAddOn is an interface for MCR add-on configuration.
+type MCRAddOn interface {
+	IsMCRAddOn()
+}
+
+const AddOnTypeIPsec = "IP_SEC"
+
+// MCRAddOnIPsecConfig represents the IPsec add-on configuration for an MCR order.
+type MCRAddOnIPsecConfig struct {
+	MCRAddOn
+	ProductUID  string `json:"productUid,omitempty"`
+	AddOnUID    string `json:"addOnUid,omitempty"`
+	AddOnType   string `json:"addOnType,omitempty"`
+	TunnelCount int    `json:"tunnelCount,omitempty"`
+	PackCount   int    `json:"packCount,omitempty"`
+}
+
+// TODO - MCR Add Ons for BGP Configuration and IP Address
 
 // MCROrderConfirmation represents a response from the Megaport Products API after ordering an MCR.
 type MCROrderConfirmation struct {
@@ -66,6 +86,7 @@ type MCR struct {
 	LocationDetails       *ProductLocationDetails `json:"locationDetail"`
 	AssociatedVXCs        []*VXC                  `json:"associatedVxcs"`
 	AssociatedIXs         []*IX                   `json:"associatedIxs"`
+	AddOns                []*MCRAddOnIPsecConfig  `json:"addOns,omitempty"`
 }
 
 func (m *MCR) GetType() string {
