@@ -83,3 +83,9 @@ var ErrInvalidVXCAEndPartnerConfig = errors.New("invalid vxc a-end partner confi
 
 // ErrInvalidVXCBEndPartnerConfig is returned when an invalid VXC B-End partner config is provided
 var ErrInvalidVXCBEndPartnerConfig = errors.New("invalid vxc b-end partner config")
+
+// ErrMCRCancelLaterNotAllowed is returned when attempting to schedule MCR deletion for later (only CANCEL_NOW is allowed)
+var ErrMCRCancelLaterNotAllowed = errors.New("MCR products do not support scheduled deletion (cancel later). Only immediate deletion (CANCEL_NOW) is allowed per product lifecycle requirements")
+
+// ErrTransitVXCCancelLaterNotAllowed is returned when attempting to schedule Transit VXC deletion for later (only CANCEL_NOW is allowed)
+var ErrTransitVXCCancelLaterNotAllowed = errors.New("Transit VXC (Megaport Internet) does not support scheduled deletion (cancel later). Only immediate deletion (CANCEL_NOW) is allowed per product lifecycle requirements")

@@ -1077,16 +1077,43 @@ func (suite *VXCClientTestSuite) TestDeleteVXC() {
 		DeleteNow: true,
 	}
 
-	jblob := `{
+	// Mock GetVXC call (needed to check if VXC is Transit)
+	getVxcBlob := `{
+		"message": "Found Product 36b3f68e-2f54-4331-bf94-f8984449365f",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": {
+			"productId": 1,
+			"productUid": "36b3f68e-2f54-4331-bf94-f8984449365f",
+			"productName": "test-vxc",
+			"productType": "VXC",
+			"rateLimit": 50,
+			"provisioningStatus": "LIVE",
+			"resources": {
+				"csp_connection": {
+					"connectType": "AWS",
+					"resource_name": "csp_connection",
+					"resource_type": "csp_connection"
+				}
+			}
+		}
+	}`
+
+	getPath := "/v2/product/" + productUid
+	suite.mux.HandleFunc(getPath, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, getVxcBlob)
+	})
+
+	deleteBlob := `{
 		"message": "Action [CANCEL_NOW Service 36b3f68e-2f54-4331-bf94-f8984449365f] has been done.",
 		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"
 	}`
 
-	path := "/v3/product/" + productUid + "/action/CANCEL_NOW"
+	deletePath := "/v3/product/" + productUid + "/action/CANCEL_NOW"
 
-	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc(deletePath, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodPost)
-		fmt.Fprint(w, jblob)
+		fmt.Fprint(w, deleteBlob)
 	})
 
 	err := vxcSvc.DeleteVXC(ctx, productUid, req)
