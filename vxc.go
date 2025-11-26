@@ -316,15 +316,9 @@ func (svc *VXCServiceOp) DeleteVXC(ctx context.Context, id string, req *DeleteVX
 		return ErrTransitVXCCancelLaterNotAllowed
 	}
 
-	deleteNow := req.DeleteNow
-	// Force immediate deletion for Transit VXCs
-	if isTransitVXC(vxc) {
-		deleteNow = true
-	}
-
 	_, err = svc.Client.ProductService.DeleteProduct(ctx, &DeleteProductRequest{
 		ProductID: id,
-		DeleteNow: deleteNow,
+		DeleteNow: req.DeleteNow,
 	})
 	if err != nil {
 		return err
