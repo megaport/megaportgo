@@ -287,7 +287,7 @@ func WithAccessToken(token string, expiry time.Time) ClientOpt {
 		c.accessToken = token
 		if expiry.IsZero() {
 			// Set far-future expiry if not provided, token lifecycle managed externally
-			c.tokenExpiry = time.Now().Add(24 * 365 * time.Hour)
+			c.tokenExpiry = time.Date(9999, 12, 31, 23, 59, 59, 0, time.UTC)
 		} else {
 			c.tokenExpiry = expiry
 		}
@@ -300,6 +300,8 @@ func WithAccessToken(token string, expiry time.Time) ClientOpt {
 // This is ideal for WASM clients where the web portal manages the authentication token.
 func WithTokenProvider(tp TokenProvider) ClientOpt {
 	return func(c *Client) error {
+		c.authMux.Lock()
+		defer c.authMux.Unlock()
 		c.tokenProvider = tp
 		return nil
 	}
@@ -346,8 +348,12 @@ func (c *Client) NewRequest(ctx context.Context, method, urlStr string, body int
 	req.Header.Set("User-Agent", c.UserAgent)
 
 	// Get token from provider if available, otherwise use stored token
-	if c.tokenProvider != nil {
-		token, err := c.tokenProvider.GetToken(ctx)
+	c.authMux.Lock()
+	provider := c.tokenProvider
+	c.authMux.Unlock()
+
+	if provider != nil {
+		token, err := provider.GetToken(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get token from provider: %w", err)
 		}
@@ -447,7 +453,7 @@ func (c *Client) SetAccessToken(token string, expiry time.Time) {
 	c.accessToken = token
 	if expiry.IsZero() {
 		// Set far-future expiry if not provided, token lifecycle managed externally
-		c.tokenExpiry = time.Now().Add(24 * 365 * time.Hour)
+		c.tokenExpiry = time.Date(9999, 12, 31, 23, 59, 59, 0, time.UTC)
 	} else {
 		c.tokenExpiry = expiry
 	}
@@ -456,15 +462,21 @@ func (c *Client) SetAccessToken(token string, expiry time.Time) {
 // SetTokenProvider sets a custom token provider for the client.
 // When set, the client will use this provider instead of the AccessKey/SecretKey flow.
 func (c *Client) SetTokenProvider(tp TokenProvider) {
+	c.authMux.Lock()
+	defer c.authMux.Unlock()
 	c.tokenProvider = tp
 }
 
 // Authorize performs an OAuth-style login using the client's AccessKey and SecretKey and updates the client's access token on a successful response.
 // If a TokenProvider is set, it will be used instead and this method returns immediately.
 func (c *Client) Authorize(ctx context.Context) (*AuthInfo, error) {
+	c.authMux.Lock()
+	provider := c.tokenProvider
+	c.authMux.Unlock()
+
 	// If using a token provider, skip the OAuth flow - token is managed externally
-	if c.tokenProvider != nil {
-		token, err := c.tokenProvider.GetToken(ctx)
+	if provider != nil {
+		token, err := provider.GetToken(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get token from provider: %w", err)
 		}
