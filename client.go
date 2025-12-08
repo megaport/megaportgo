@@ -32,6 +32,14 @@ const (
 	headerTraceId  = "Trace-Id"
 )
 
+// TokenProvider is an interface for providing access tokens.
+// This allows external systems (like a web portal) to manage token lifecycle.
+type TokenProvider interface {
+	// GetToken returns the current valid access token.
+	// Implementations should handle token refresh if needed.
+	GetToken(ctx context.Context) (token string, err error)
+}
+
 // Client manges communication with the Megaport API
 type Client struct {
 	// HTTP Client used to communicate with the Megaport API
@@ -51,6 +59,9 @@ type Client struct {
 
 	// The secret key for the API token
 	SecretKey string
+
+	// TokenProvider for external token management (e.g., web portal sessions)
+	tokenProvider TokenProvider
 
 	// Services used for communicating with the Megaport API
 
@@ -266,6 +277,36 @@ func WithLogResponseBody() ClientOpt {
 	}
 }
 
+// WithAccessToken is a client option for setting a pre-obtained access token.
+// Use this when integrating with web clients that already have a valid session token.
+// If expiry is zero, the token is assumed to be valid indefinitely (or managed externally).
+func WithAccessToken(token string, expiry time.Time) ClientOpt {
+	return func(c *Client) error {
+		c.authMux.Lock()
+		defer c.authMux.Unlock()
+		c.accessToken = token
+		if expiry.IsZero() {
+			// Set far-future expiry if not provided, token lifecycle managed externally
+			c.tokenExpiry = time.Date(9999, 12, 31, 23, 59, 59, 0, time.UTC)
+		} else {
+			c.tokenExpiry = expiry
+		}
+		return nil
+	}
+}
+
+// WithTokenProvider sets a custom token provider for the client.
+// When set, the client will use this provider instead of the AccessKey/SecretKey flow.
+// This is ideal for WASM clients where the web portal manages the authentication token.
+func WithTokenProvider(tp TokenProvider) ClientOpt {
+	return func(c *Client) error {
+		c.authMux.Lock()
+		defer c.authMux.Unlock()
+		c.tokenProvider = tp
+		return nil
+	}
+}
+
 // NewRequest creates an API request. A relative URL can be provided in urlStr, which will be resolved to the
 // BaseURL of the Client. Relative URLS should always be specified without a preceding slash. If specified, the
 // value pointed to by body is JSON encoded and included in as the request body.
@@ -306,11 +347,26 @@ func (c *Client) NewRequest(ctx context.Context, method, urlStr string, body int
 	req.Header.Set("Accept", mediaType)
 	req.Header.Set("User-Agent", c.UserAgent)
 
+	// Get token from provider if available, otherwise use stored token
 	c.authMux.Lock()
-	if c.accessToken != "" {
-		req.Header.Set("Authorization", "Bearer "+c.accessToken)
-	}
+	provider := c.tokenProvider
 	c.authMux.Unlock()
+
+	if provider != nil {
+		token, err := provider.GetToken(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get token from provider: %w", err)
+		}
+		if token != "" {
+			req.Header.Set("Authorization", "Bearer "+token)
+		}
+	} else {
+		c.authMux.Lock()
+		if c.accessToken != "" {
+			req.Header.Set("Authorization", "Bearer "+c.accessToken)
+		}
+		c.authMux.Unlock()
+	}
 
 	return req, nil
 }
@@ -387,8 +443,46 @@ type AuthInfo struct {
 	AccessToken string
 }
 
+// SetAccessToken allows setting an externally obtained access token directly,
+// bypassing the AccessKey/SecretKey OAuth flow. This is useful for WASM clients
+// where the token is already obtained through the portal's authentication.
+// If expiry is zero, the token is assumed to be valid indefinitely (or managed externally).
+func (c *Client) SetAccessToken(token string, expiry time.Time) {
+	c.authMux.Lock()
+	defer c.authMux.Unlock()
+	c.accessToken = token
+	if expiry.IsZero() {
+		// Set far-future expiry if not provided, token lifecycle managed externally
+		c.tokenExpiry = time.Date(9999, 12, 31, 23, 59, 59, 0, time.UTC)
+	} else {
+		c.tokenExpiry = expiry
+	}
+}
+
+// SetTokenProvider sets a custom token provider for the client.
+// When set, the client will use this provider instead of the AccessKey/SecretKey flow.
+func (c *Client) SetTokenProvider(tp TokenProvider) {
+	c.authMux.Lock()
+	defer c.authMux.Unlock()
+	c.tokenProvider = tp
+}
+
 // Authorize performs an OAuth-style login using the client's AccessKey and SecretKey and updates the client's access token on a successful response.
+// If a TokenProvider is set, it will be used instead and this method returns immediately.
 func (c *Client) Authorize(ctx context.Context) (*AuthInfo, error) {
+	c.authMux.Lock()
+	provider := c.tokenProvider
+	c.authMux.Unlock()
+
+	// If using a token provider, skip the OAuth flow - token is managed externally
+	if provider != nil {
+		token, err := provider.GetToken(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get token from provider: %w", err)
+		}
+		return &AuthInfo{AccessToken: token}, nil
+	}
+
 	c.Logger.DebugContext(ctx, "authorizing client using access key and secret key", slog.String("access_key", c.AccessKey))
 
 	// Shortcut if we've already authenticated.
