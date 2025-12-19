@@ -570,34 +570,74 @@ func (suite *MVEClientTestSuite) TestModifyMVE() {
 	suite.Equal(wantRes, gotRes)
 }
 
-func (suite *MVEClientTestSuite) TestListMVEs() {
+func (suite *MVEClientTestSuite) TestListMVEImages() {
 	mveSvc := suite.client.MVEService
 	ctx := context.Background()
+	// v4 API response format - nested structure with multiple product groups
+	// This tests that the flattening logic correctly denormalizes Product/Vendor
+	// from parent level to each individual image
 	jblob := `{
 		"message": "Current supported MVE images",
 		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
 		"data": {
 		  "mveImages": [
 			{
-			  "id": 56,
-			  "version": "6.4.15",
 			  "product": "FortiGate-VM",
 			  "vendor": "Fortinet",
-			  "vendorDescription": null,
-			  "releaseImage": true,
-			  "productCode": "fortigate"
+			  "vendorProductId": "fortinet_fortigate-vm",
+			  "images": [
+				{
+				  "id": 56,
+				  "version": "6.4.15",
+				  "productCode": "fortigate",
+				  "vendorDescription": null,
+				  "releaseImage": true,
+				  "availableSizes": ["MVE 2/8", "MVE 4/16", "MVE 8/32"]
+				},
+				{
+				  "id": 57,
+				  "version": "7.0.14",
+				  "productCode": "fortigate",
+				  "vendorDescription": null,
+				  "releaseImage": true,
+				  "availableSizes": ["MVE 2/8", "MVE 4/16", "MVE 8/32", "MVE 12/48"]
+				}
+			  ]
 			},
 			{
-			  "id": 57,
-			  "version": "7.0.14",
-			  "product": "FortiGate-VM",
-			  "vendor": "Fortinet",
-			  "vendorDescription": null,
-			  "releaseImage": true,
-			  "productCode": "fortigate"
-			}]
+			  "product": "C8000",
+			  "vendor": "Cisco",
+			  "vendorProductId": "cisco_c8000",
+			  "images": [
+				{
+				  "id": 92,
+				  "version": "17.16.01a",
+				  "productCode": "c8000",
+				  "vendorDescription": "Cisco Catalyst 8000V Edge Software",
+				  "releaseImage": true,
+				  "availableSizes": ["MVE 2/8", "MVE 4/16", "MVE 8/32", "MVE 12/48"]
+				}
+			  ]
+			},
+			{
+			  "product": "vMX",
+			  "vendor": "Meraki",
+			  "vendorProductId": "meraki_vmx",
+			  "images": [
+				{
+				  "id": 97,
+				  "version": "Meraki Classic 19.2",
+				  "productCode": "meraki-vmx",
+				  "vendorDescription": null,
+				  "releaseImage": true,
+				  "availableSizes": ["MVE 2/8"]
+				}
+			  ]
+			}
+		  ]
 		}
 	}`
+	// After flattening, each image should have Product/Vendor denormalized from parent
 	want := []*MVEImage{
 		{
 			ID:                56,
@@ -607,6 +647,7 @@ func (suite *MVEClientTestSuite) TestListMVEs() {
 			VendorDescription: "",
 			ReleaseImage:      true,
 			ProductCode:       "fortigate",
+			AvailableSizes:    []string{"MVE 2/8", "MVE 4/16", "MVE 8/32"},
 		},
 		{
 			ID:                57,
@@ -616,9 +657,30 @@ func (suite *MVEClientTestSuite) TestListMVEs() {
 			VendorDescription: "",
 			ReleaseImage:      true,
 			ProductCode:       "fortigate",
+			AvailableSizes:    []string{"MVE 2/8", "MVE 4/16", "MVE 8/32", "MVE 12/48"},
+		},
+		{
+			ID:                92,
+			Version:           "17.16.01a",
+			Product:           "C8000",
+			Vendor:            "Cisco",
+			VendorDescription: "Cisco Catalyst 8000V Edge Software",
+			ReleaseImage:      true,
+			ProductCode:       "c8000",
+			AvailableSizes:    []string{"MVE 2/8", "MVE 4/16", "MVE 8/32", "MVE 12/48"},
+		},
+		{
+			ID:                97,
+			Version:           "Meraki Classic 19.2",
+			Product:           "vMX",
+			Vendor:            "Meraki",
+			VendorDescription: "",
+			ReleaseImage:      true,
+			ProductCode:       "meraki-vmx",
+			AvailableSizes:    []string{"MVE 2/8"},
 		},
 	}
-	suite.mux.HandleFunc("/v3/product/mve/images", func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc("/v4/product/mve/images", func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, jblob)
 	})
