@@ -160,8 +160,8 @@ func (suite *MVEClientTestSuite) TestBuyMVE() {
 	suite.Equal(want, got)
 }
 
-// TestListMVEProducts tests the ListMVEs method
-func (suite *MVEClientTestSuite) TestListMVEProducts() {
+// TestListMVEs tests the ListMVEs method which lists provisioned MVE products
+func (suite *MVEClientTestSuite) TestListMVEs() {
 	mveSvc := suite.client.MVEService
 	ctx := context.Background()
 

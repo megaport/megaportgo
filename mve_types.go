@@ -272,8 +272,8 @@ type MVEResponse struct {
 type MVEImage struct {
 	ID                int      `json:"id"`
 	Version           string   `json:"version"`
-	Product           string   `json:"product"`           // Denormalized from parent in v4 API
-	Vendor            string   `json:"vendor"`            // Denormalized from parent in v4 API
+	Product           string   `json:"product"` // Denormalized from parent in v4 API
+	Vendor            string   `json:"vendor"`  // Denormalized from parent in v4 API
 	VendorDescription string   `json:"vendorDescription"`
 	ReleaseImage      bool     `json:"releaseImage"`
 	ProductCode       string   `json:"productCode"`
@@ -283,10 +283,10 @@ type MVEImage struct {
 // MVEImageProduct represents a vendor/product grouping of MVE images from the v4 API.
 // Each product contains multiple image versions.
 type MVEImageProduct struct {
-	Product         string              `json:"product"`
-	Vendor          string              `json:"vendor"`
-	VendorProductID string              `json:"vendorProductId"`
-	Images          []*MVEImageVersion  `json:"images"`
+	Product         string             `json:"product"`
+	Vendor          string             `json:"vendor"`
+	VendorProductID string             `json:"vendorProductId"`
+	Images          []*MVEImageVersion `json:"images"`
 }
 
 // MVEImageVersion represents an individual MVE image version within a product group (v4 API structure).

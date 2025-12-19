@@ -351,8 +351,8 @@ func (svc *MVEServiceOp) ListMVEImages(ctx context.Context) ([]*MVEImage, error)
 			flatImages = append(flatImages, &MVEImage{
 				ID:                img.ID,
 				Version:           img.Version,
-				Product:           productGroup.Product,  // Denormalized from parent
-				Vendor:            productGroup.Vendor,   // Denormalized from parent
+				Product:           productGroup.Product, // Denormalized from parent
+				Vendor:            productGroup.Vendor,  // Denormalized from parent
 				VendorDescription: img.VendorDescription,
 				ReleaseImage:      img.ReleaseImage,
 				ProductCode:       img.ProductCode,
