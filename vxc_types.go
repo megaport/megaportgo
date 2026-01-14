@@ -311,8 +311,9 @@ type VXCOrderVrouterPartnerConfig struct {
 	Interfaces              []PartnerConfigInterface `json:"interfaces,omitempty"`
 }
 
-// DEPRECATED - Use VXCOrderVrouterPartnerConfig instead
 // VXCOrderAEndPartnerConfig represents the configuration of a VXC A-End partner.
+//
+// Deprecated: Use VXCOrderVrouterPartnerConfig instead.
 type VXCOrderAEndPartnerConfig struct {
 	VXCPartnerConfiguration `json:"-"`
 	Interfaces              []PartnerConfigInterface `json:"interfaces,omitempty"`

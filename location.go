@@ -33,23 +33,28 @@ type LocationService interface {
 	// IsValidMarketCode checks if a market code is valid in the Megaport Network Regions API.
 	IsValidMarketCode(ctx context.Context, marketCode string) (bool, error)
 
-	// V2 API methods (DEPRECATED - use V3 methods for new code)
 	// ListLocations returns a list of all locations in the Megaport Locations API v2.
+	//
 	// Deprecated: Use ListLocationsV3 instead. The v2 API will be removed in a future version.
 	ListLocations(ctx context.Context) ([]*Location, error)
 	// GetLocationByID returns a location by its ID in the Megaport Locations API v2.
+	//
 	// Deprecated: Use GetLocationByIDV3 instead. The v2 API will be removed in a future version.
 	GetLocationByID(ctx context.Context, locationID int) (*Location, error)
 	// GetLocationByName returns a location by its name in the Megaport Locations API v2.
+	//
 	// Deprecated: Use GetLocationByNameV3 instead. The v2 API will be removed in a future version.
 	GetLocationByName(ctx context.Context, locationName string) (*Location, error)
 	// GetLocationByNameFuzzy returns a location by its name in the Megaport Locations API v2 using fuzzy search.
+	//
 	// Deprecated: Use GetLocationByNameFuzzyV3 instead. The v2 API will be removed in a future version.
 	GetLocationByNameFuzzy(ctx context.Context, search string) ([]*Location, error)
 	// FilterLocationsByMarketCode filters locations by market code in the Megaport Locations API v2.
+	//
 	// Deprecated: Use FilterLocationsByMarketCodeV3 instead. The v2 API will be removed in a future version.
 	FilterLocationsByMarketCode(ctx context.Context, marketCode string, locations []*Location) ([]*Location, error)
 	// FilterLocationsByMcrAvailability filters locations by MCR availability in the Megaport Locations API v2.
+	//
 	// Deprecated: Use FilterLocationsByMcrAvailabilityV3 instead. The v2 API will be removed in a future version.
 	FilterLocationsByMcrAvailability(ctx context.Context, mcrAvailable bool, locations []*Location) []*Location
 }

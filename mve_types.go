@@ -299,14 +299,20 @@ type MVEImageVersion struct {
 	AvailableSizes    []string `json:"availableSizes"`
 }
 
-// MVEImageAPIResponse represents the response to an MVE image request (v3 API - deprecated).
+// MVEImageAPIResponse represents the response to an MVE image request from the v3 API.
+//
+// Deprecated: This struct is part of the v3 API and is maintained for backward compatibility.
+// Use MVEImageAPIResponseV4 for new implementations.
 type MVEImageAPIResponse struct {
 	Message string                   `json:"message"`
 	Terms   string                   `json:"terms"`
 	Data    *MVEImageAPIResponseData `json:"data"`
 }
 
-// MVEImageAPIResponseData represents the data in an MVE image response (v3 API - deprecated).
+// MVEImageAPIResponseData represents the data in an MVE image response from the v3 API.
+//
+// Deprecated: This struct is part of the v3 API and is maintained for backward compatibility.
+// Use MVEImageAPIResponseDataV4 for new implementations.
 type MVEImageAPIResponseData struct {
 	Images []*MVEImage `json:"mveImages"`
 }

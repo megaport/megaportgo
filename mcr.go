@@ -340,7 +340,9 @@ func (svc *MCRServiceOp) CreatePrefixFilterList(ctx context.Context, req *Create
 	}, nil
 }
 
-// DEPRECATED - Use ListMCRPrefixFilterLists instead
+// GetMCRPrefixFilterLists returns prefix filter lists for the specified MCR2.
+//
+// Deprecated: Use ListMCRPrefixFilterLists instead.
 func (svc *MCRServiceOp) GetMCRPrefixFilterLists(ctx context.Context, mcrId string) ([]*PrefixFilterList, error) {
 	res, err := svc.ListMCRPrefixFilterLists(ctx, mcrId)
 	if err != nil {
