@@ -9,8 +9,9 @@ import (
 	"github.com/lithammer/fuzzysearch/fuzzy"
 )
 
-// Location represents a location in the Megaport API v2 (DEPRECATED).
-// This struct is maintained for backward compatibility but should not be used for new code.
+// Location represents a location in the Megaport API v2.
+//
+// Deprecated: This struct is maintained for backward compatibility but should not be used for new code.
 // Use LocationV3 for new implementations.
 type Location struct {
 	Name             string            `json:"name"`
@@ -30,7 +31,10 @@ type Location struct {
 	Status           string            `json:"status"`
 }
 
-// LocationProducts represent the products available at a location in the Megaport API.
+// LocationProducts represents the products available at a location in the Megaport API v2.
+//
+// Deprecated: This struct is part of the v2 API and is maintained for backward compatibility.
+// Use LocationV3 with its DiversityZones field for new implementations.
 type LocationProducts struct {
 	MCR        bool          `json:"mcr"`
 	MCRVersion int           `json:"mcrVersion"`
@@ -40,7 +44,10 @@ type LocationProducts struct {
 	MCR2       []int         `json:"mcr2"`
 }
 
-// LocationMVE represents the MVE product available at a location in the Megaport API.
+// LocationMVE represents the MVE product available at a location in the Megaport API v2.
+//
+// Deprecated: This struct is part of the v2 API and is maintained for backward compatibility.
+// Use LocationV3 for new implementations.
 type LocationMVE struct {
 	Sizes             []string             `json:"sizes"`
 	Details           []LocationMVEDetails `json:"details"`
@@ -53,7 +60,10 @@ type LocationMVE struct {
 	ReleaseImage      bool                 `json:"releaseImage"`
 }
 
-// LocationMVEDetails represents the details of the MVE product available at a location in the Megaport API.
+// LocationMVEDetails represents the details of the MVE product available at a location in the Megaport API v2.
+//
+// Deprecated: This struct is part of the v2 API and is maintained for backward compatibility.
+// Use LocationV3 for new implementations.
 type LocationMVEDetails struct {
 	Size          string `json:"size"`
 	Label         string `json:"label"`
@@ -114,11 +124,8 @@ func (l *LocationV3) ToLegacyLocation() *Location {
 	}
 }
 
-// ==========================================
-// DEPRECATED V2 API IMPLEMENTATION METHODS
-// ==========================================
-
 // ListLocations returns a list of all locations in the Megaport Locations API.
+//
 // Deprecated: Use ListLocationsV3 instead. The v2 API will be removed in a future version.
 func (svc *LocationServiceOp) ListLocations(ctx context.Context) ([]*Location, error) {
 	path := "/v2/locations"
@@ -149,6 +156,7 @@ func (svc *LocationServiceOp) ListLocations(ctx context.Context) ([]*Location, e
 }
 
 // GetLocationByID returns a location by its ID in the Megaport Locations API.
+//
 // Deprecated: Use GetLocationByIDV3 instead. The v2 API will be removed in a future version.
 func (svc *LocationServiceOp) GetLocationByID(ctx context.Context, locationID int) (*Location, error) {
 	allLocations, locErr := svc.ListLocations(ctx)
@@ -164,6 +172,7 @@ func (svc *LocationServiceOp) GetLocationByID(ctx context.Context, locationID in
 }
 
 // GetLocationByName returns a location by its name in the Megaport Locations API.
+//
 // Deprecated: Use GetLocationByNameV3 instead. The v2 API will be removed in a future version.
 func (svc *LocationServiceOp) GetLocationByName(ctx context.Context, locationName string) (*Location, error) {
 	allLocations, locErr := svc.ListLocations(ctx)
@@ -179,6 +188,7 @@ func (svc *LocationServiceOp) GetLocationByName(ctx context.Context, locationNam
 }
 
 // GetLocationByNameFuzzy returns a location by its name in the Megaport Locations API using fuzzy search.
+//
 // Deprecated: Use GetLocationByNameFuzzyV3 instead. The v2 API will be removed in a future version.
 func (svc *LocationServiceOp) GetLocationByNameFuzzy(ctx context.Context, search string) ([]*Location, error) {
 	locations, err := svc.ListLocations(ctx)
@@ -201,6 +211,7 @@ func (svc *LocationServiceOp) GetLocationByNameFuzzy(ctx context.Context, search
 }
 
 // FilterLocationsByMarketCode filters locations by market code in the Megaport Locations API.
+//
 // Deprecated: Use FilterLocationsByMarketCodeV3 instead. The v2 API will be removed in a future version.
 func (svc *LocationServiceOp) FilterLocationsByMarketCode(ctx context.Context, marketCode string, locations []*Location) ([]*Location, error) {
 	existingLocations := locations
@@ -220,6 +231,7 @@ func (svc *LocationServiceOp) FilterLocationsByMarketCode(ctx context.Context, m
 }
 
 // FilterLocationsByMcrAvailability filters locations by MCR availability in the Megaport Locations API.
+//
 // Deprecated: Use FilterLocationsByMcrAvailabilityV3 instead. The v2 API will be removed in a future version.
 func (svc *LocationServiceOp) FilterLocationsByMcrAvailability(ctx context.Context, mcrAvailable bool, locations []*Location) []*Location {
 	existingLocations := locations
