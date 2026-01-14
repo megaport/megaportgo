@@ -170,6 +170,7 @@ type countryResponse struct {
 }
 
 // countryInnerResponse represents the inner response from the Megaport Network Regions API.
+// Used internally for JSON unmarshalling.
 type countryInnerResponse struct {
 	Countries     []*Country `json:"countries"`
 	NetworkRegion string     `json:"networkRegion"`
