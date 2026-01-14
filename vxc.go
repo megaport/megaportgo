@@ -406,7 +406,7 @@ func (svc *VXCServiceOp) UpdateVXC(ctx context.Context, id string, req *UpdateVX
 				}
 
 				var isUpdated bool
-				if vxc.ProvisioningStatus == "LIVE" {
+				if slices.Contains(SERVICE_STATE_READY, vxc.ProvisioningStatus) {
 					isUpdated = true
 				}
 				if isUpdated {
