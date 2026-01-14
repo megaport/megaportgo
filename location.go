@@ -164,8 +164,8 @@ type locationV3Response struct {
 // countryResponse represents the response from the Megaport Network Regions API.
 // Used internally for JSON unmarshalling.
 type countryResponse struct {
-	Message string                 `json:"message"`
-	Terms   string                 `json:"terms"`
+	Message string                  `json:"message"`
+	Terms   string                  `json:"terms"`
 	Data    []*countryInnerResponse `json:"data"`
 }
 
