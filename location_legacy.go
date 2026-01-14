@@ -145,7 +145,7 @@ func (svc *LocationServiceOp) ListLocations(ctx context.Context) ([]*Location, e
 		return nil, fileErr
 	}
 
-	locationResponse := &LocationResponse{}
+	locationResponse := &locationResponse{}
 
 	unmarshalErr := json.Unmarshal(body, locationResponse)
 	if unmarshalErr != nil {
