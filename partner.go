@@ -55,13 +55,13 @@ func (svc *PartnerServiceOp) ListPartnerMegaports(ctx context.Context) ([]*Partn
 		return nil, fileErr
 	}
 
-	partnerMegaportResponse := PartnerMegaportResponse{}
-	unmarshalErr := json.Unmarshal(body, &partnerMegaportResponse)
+	partnerResp := partnerMegaportResponse{}
+	unmarshalErr := json.Unmarshal(body, &partnerResp)
 	if unmarshalErr != nil {
 		return nil, unmarshalErr
 	}
 
-	return partnerMegaportResponse.Data, nil
+	return partnerResp.Data, nil
 }
 
 // FilterPartnerMegaportByProductName filters a list of partner megaports by product name in the Megaport API.

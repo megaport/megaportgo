@@ -197,15 +197,17 @@ type VXCUpdate struct {
 	BEndPartnerConfig VXCPartnerConfiguration `json:"bEndConfig,omitempty"`
 }
 
-// VXCOrderResponse represents the response from the VXC Order API.
-type VXCOrderResponse struct {
+// vxcOrderResponse represents the response from the VXC Order API.
+// Used internally for JSON unmarshalling.
+type vxcOrderResponse struct {
 	Message string                 `json:"message"`
 	Terms   string                 `json:"terms"`
 	Data    []VXCOrderConfirmation `json:"data"`
 }
 
-// VXCResponse represents the response from the VXC API.
-type VXCResponse struct {
+// vxcResponse represents the response from the VXC API.
+// Used internally for JSON unmarshalling.
+type vxcResponse struct {
 	Message string `json:"message"`
 	Terms   string `json:"terms"`
 	Data    VXC    `json:"data"`

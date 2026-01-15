@@ -128,15 +128,17 @@ type MCRPrefixListEntry struct {
 	Le     int    `json:"le,omitempty"` // Less than or equal to - (Optional) The maximum ending prefix length to be matched. The prefix length is greater than or equal to the minimum value (ge). Valid values are from 0 to 32 (IPv4), or 0 to 128 (IPv6), but the maximum must be no less than the minimum value (ge).
 }
 
-// MCROrdersResponse represents a response from the Megaport Products API after ordering an MCR.
-type MCROrderResponse struct {
+// mcrOrderResponse represents a response from the Megaport Products API after ordering an MCR.
+// Used internally for JSON unmarshalling.
+type mcrOrderResponse struct {
 	Message string                  `json:"message"`
 	Terms   string                  `json:"terms"`
 	Data    []*MCROrderConfirmation `json:"data"`
 }
 
-// MCRResponse represents a response from the Megaport MCR API after querying an MCR.
-type MCRResponse struct {
+// mcrResponse represents a response from the Megaport MCR API after querying an MCR.
+// Used internally for JSON unmarshalling.
+type mcrResponse struct {
 	Message string `json:"message"`
 	Terms   string `json:"terms"`
 	Data    *MCR   `json:"data"`
@@ -149,21 +151,17 @@ type PrefixFilterList struct {
 	AddressFamily string `json:"addressFamily"`
 }
 
-// CreateMCRPrefixFilterListResponse represents a response from the Megaport MCR API after creating a prefix filter list.
-type CreateMCRPrefixFilterListAPIResponse struct {
-	Message string                  `json:"message"`
-	Terms   string                  `json:"terms"`
-	Data    *APIMCRPrefixFilterList `json:"data"`
-}
-
-// ListMCRPrefixFilterListResponse represents a response from the Megaport MCR API after querying an MCR's prefix filter list.
-type ListMCRPrefixFilterListResponse struct {
+// listMCRPrefixFilterListResponse represents a response from the Megaport MCR API after querying an MCR's prefix filter list.
+// Used internally for JSON unmarshalling.
+type listMCRPrefixFilterListResponse struct {
 	Message string              `json:"message"`
 	Terms   string              `json:"terms"`
 	Data    []*PrefixFilterList `json:"data"`
 }
 
-type APIMCRPrefixFilterListResponse struct {
+// apiMCRPrefixFilterListResponse represents a response from the Megaport MCR API for a single prefix filter list.
+// Used internally for JSON unmarshalling.
+type apiMCRPrefixFilterListResponse struct {
 	Message string                  `json:"message"`
 	Terms   string                  `json:"terms"`
 	Data    *APIMCRPrefixFilterList `json:"data"`

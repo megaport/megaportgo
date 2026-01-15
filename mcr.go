@@ -158,7 +158,7 @@ func (svc *MCRServiceOp) BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMC
 		return nil, resErr
 	}
 
-	orderInfo := MCROrderResponse{}
+	orderInfo := mcrOrderResponse{}
 	unmarshalErr := json.Unmarshal(*body, &orderInfo)
 
 	if unmarshalErr != nil {
@@ -298,7 +298,7 @@ func (svc *MCRServiceOp) GetMCR(ctx context.Context, mcrId string) (*MCR, error)
 		return nil, fileErr
 	}
 
-	mcrRes := &MCRResponse{}
+	mcrRes := &mcrResponse{}
 	unmarshalErr := json.Unmarshal(body, mcrRes)
 
 	if unmarshalErr != nil {
@@ -330,7 +330,7 @@ func (svc *MCRServiceOp) CreatePrefixFilterList(ctx context.Context, req *Create
 		return nil, fileErr
 	}
 
-	createRes := &APIMCRPrefixFilterListResponse{}
+	createRes := &apiMCRPrefixFilterListResponse{}
 	unmarshalErr := json.Unmarshal(body, createRes)
 	if unmarshalErr != nil {
 		return nil, unmarshalErr
@@ -373,7 +373,7 @@ func (svc *MCRServiceOp) ListMCRPrefixFilterLists(ctx context.Context, mcrId str
 		return nil, fileErr
 	}
 
-	prefixFilterList := &ListMCRPrefixFilterListResponse{}
+	prefixFilterList := &listMCRPrefixFilterListResponse{}
 	unmarshalErr := json.Unmarshal(body, prefixFilterList)
 
 	if unmarshalErr != nil {
@@ -404,7 +404,7 @@ func (svc *MCRServiceOp) GetMCRPrefixFilterList(ctx context.Context, mcrID strin
 		return nil, fileErr
 	}
 
-	apiPrefixFilterList := &APIMCRPrefixFilterListResponse{}
+	apiPrefixFilterList := &apiMCRPrefixFilterListResponse{}
 	unmarshalErr := json.Unmarshal(body, apiPrefixFilterList)
 	if unmarshalErr != nil {
 		return nil, unmarshalErr

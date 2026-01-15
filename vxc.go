@@ -168,7 +168,7 @@ func (svc *VXCServiceOp) BuyVXC(ctx context.Context, req *BuyVXCRequest) (*BuyVX
 		return nil, responseError
 	}
 
-	orderInfo := VXCOrderResponse{}
+	orderInfo := vxcOrderResponse{}
 	if err := json.Unmarshal(*responseBody, &orderInfo); err != nil {
 		return nil, err
 	}
@@ -235,7 +235,7 @@ func (svc *VXCServiceOp) GetVXC(ctx context.Context, id string) (*VXC, error) {
 		return nil, err
 	}
 
-	vxcDetails := VXCResponse{}
+	vxcDetails := vxcResponse{}
 	if err = json.Unmarshal(body, &vxcDetails); err != nil {
 		return nil, err
 	}
@@ -376,7 +376,7 @@ func (svc *VXCServiceOp) UpdateVXC(ctx context.Context, id string, req *UpdateVX
 		return nil, err
 	}
 
-	vxcDetails := VXCResponse{}
+	vxcDetails := vxcResponse{}
 	if err = json.Unmarshal(body, &vxcDetails); err != nil {
 		return nil, err
 	}
@@ -439,7 +439,7 @@ func (svc *VXCServiceOp) LookupPartnerPorts(ctx context.Context, req *LookupPart
 		return nil, fileErr
 	}
 
-	lookupResponse := PartnerLookupResponse{}
+	lookupResponse := partnerLookupResponse{}
 	parseErr := json.Unmarshal(body, &lookupResponse)
 
 	if parseErr != nil {
@@ -483,7 +483,7 @@ func (svc *VXCServiceOp) ListPartnerPorts(ctx context.Context, req *ListPartnerP
 		return nil, fileErr
 	}
 
-	lookupResponse := PartnerLookupResponse{}
+	lookupResponse := partnerLookupResponse{}
 	parseErr := json.Unmarshal(body, &lookupResponse)
 
 	if parseErr != nil {
