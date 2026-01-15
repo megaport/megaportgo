@@ -43,7 +43,9 @@ type MCRService interface {
 	// UpdateMCRResourceTags updates the resource tags for an MCR in the Megaport MCR API.
 	UpdateMCRResourceTags(ctx context.Context, mcrID string, tags map[string]string) error
 
-	// DEPRECATED - Use ListMCRPrefixFilterLists instead
+	// GetMCRPrefixFilterLists returns prefix filter lists for the specified MCR2.
+	//
+	// Deprecated: Use ListMCRPrefixFilterLists instead.
 	GetMCRPrefixFilterLists(ctx context.Context, mcrId string) ([]*PrefixFilterList, error)
 }
 
