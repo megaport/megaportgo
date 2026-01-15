@@ -104,8 +104,9 @@ type Client struct {
 	authMux sync.Mutex
 }
 
-// AccessTokenResponse is the response structure for the Login method containing the access token and expiration time.
-type AccessTokenResponse struct {
+// accessTokenResponse is the response structure for the Login method containing the access token and expiration time.
+// Used internally for JSON unmarshalling.
+type accessTokenResponse struct {
 	AccessToken  string `json:"access_token"`
 	TokenType    string `json:"token_type"`
 	ExpiresIn    int    `json:"expires_in"`
@@ -547,7 +548,7 @@ func (c *Client) Authorize(ctx context.Context) (*AuthInfo, error) {
 	}
 
 	// Parse the response JSON to extract the access token and expiration time
-	authResponse := AccessTokenResponse{}
+	authResponse := accessTokenResponse{}
 	if err := json.Unmarshal(body, &authResponse); err != nil {
 		return nil, err
 	}
