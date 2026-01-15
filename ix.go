@@ -203,7 +203,7 @@ func (svc *IXServiceOp) GetIX(ctx context.Context, id string) (*IX, error) {
 		return nil, fileErr
 	}
 
-	ixResponse := IXResponse{}
+	ixResponse := ixResponse{}
 
 	unmarshalErr := json.Unmarshal(body, &ixResponse)
 	if unmarshalErr != nil {
@@ -280,7 +280,7 @@ func (svc *IXServiceOp) UpdateIX(ctx context.Context, id string, req *UpdateIXRe
 	}
 
 	// Parse the response
-	ixResponse := IXResponse{}
+	ixResponse := ixResponse{}
 	if err = json.Unmarshal(body, &ixResponse); err != nil {
 		return nil, err
 	}

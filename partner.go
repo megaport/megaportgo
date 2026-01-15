@@ -55,7 +55,7 @@ func (svc *PartnerServiceOp) ListPartnerMegaports(ctx context.Context) ([]*Partn
 		return nil, fileErr
 	}
 
-	partnerMegaportResponse := PartnerMegaportResponse{}
+	partnerMegaportResponse := partnerMegaportResponse{}
 	unmarshalErr := json.Unmarshal(body, &partnerMegaportResponse)
 	if unmarshalErr != nil {
 		return nil, unmarshalErr
