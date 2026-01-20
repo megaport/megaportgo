@@ -107,30 +107,18 @@ func (suite *MCRIntegrationTestSuite) TestMCRLifecycle() {
 	}
 	suite.EqualValues(newMCRName, mcr.Name)
 
-	// Testing MCR Cancel
-	logger.InfoContext(ctx, "Scheduling MCR for deletion (30 days).", slog.String("mcr_id", mcrId))
+	// Testing MCR Cancel - MCR products do not support cancel later (only CANCEL_NOW)
+	logger.InfoContext(ctx, "Attempting to schedule MCR for deletion (cancel later) - this should fail.", slog.String("mcr_id", mcrId))
 
-	// This is a soft Delete
-	softDeleteRes, deleteErr := mcrSvc.DeleteMCR(ctx, &DeleteMCRRequest{
+	// Attempt soft delete - this should now fail because MCR only supports CANCEL_NOW
+	_, deleteErr := mcrSvc.DeleteMCR(ctx, &DeleteMCRRequest{
 		MCRID:     mcrId,
 		DeleteNow: false,
 	})
-	if deleteErr != nil {
-		suite.FailNowf("could not soft delete mcr", "could not soft delete mcr %v", deleteErr)
-	}
-	suite.True(softDeleteRes.IsDeleting, true)
-
-	mcrCancelInfo, getErr := mcrSvc.GetMCR(ctx, mcrId)
-	if getErr != nil {
-		suite.FailNowf("could not get mcr", "could not get mcr %v", getErr)
-	}
-	suite.EqualValues(STATUS_CANCELLED, mcrCancelInfo.ProvisioningStatus)
-	logger.DebugContext(ctx, "MCR Canceled", slog.String("provisioning_status", mcrCancelInfo.ProvisioningStatus))
-	restoreRes, restoreErr := mcrSvc.RestoreMCR(ctx, mcrId)
-	if restoreErr != nil {
-		suite.FailNowf("could not restore mcr", "could not restore mcr %v", getErr)
-	}
-	suite.True(restoreRes.IsRestored)
+	// Expect error since MCR does not support cancel later
+	suite.Error(deleteErr, "expected error when attempting to cancel MCR later")
+	suite.ErrorIs(deleteErr, ErrMCRCancelLaterNotAllowed, "expected ErrMCRCancelLaterNotAllowed error")
+	logger.DebugContext(ctx, "MCR cancel later correctly rejected", slog.String("error", deleteErr.Error()))
 
 	// Testing MCR Delete
 	logger.InfoContext(ctx, "Deleting MCR now.")
