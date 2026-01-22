@@ -9,8 +9,75 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
+
+// TestCreateVXCOrder_PortUIDAutoPopulation tests that PortUID is automatically
+// populated from AEndConfiguration.ProductUID when PortUID is not set.
+func TestCreateVXCOrder_PortUIDAutoPopulation(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		req            *BuyVXCRequest
+		expectedPortID string
+	}{
+		{
+			name: "PortUID is set explicitly - should use PortUID",
+			req: &BuyVXCRequest{
+				PortUID: "explicit-port-uid",
+				VXCName: "test-vxc",
+				AEndConfiguration: VXCOrderEndpointConfiguration{
+					ProductUID: "a-end-product-uid",
+				},
+			},
+			expectedPortID: "explicit-port-uid",
+		},
+		{
+			name: "PortUID is empty but AEndConfiguration.ProductUID is set - should use AEndConfiguration.ProductUID",
+			req: &BuyVXCRequest{
+				PortUID: "",
+				VXCName: "test-vxc",
+				AEndConfiguration: VXCOrderEndpointConfiguration{
+					ProductUID: "a-end-product-uid",
+				},
+			},
+			expectedPortID: "a-end-product-uid",
+		},
+		{
+			name: "Both PortUID and AEndConfiguration.ProductUID are empty - should remain empty",
+			req: &BuyVXCRequest{
+				PortUID: "",
+				VXCName: "test-vxc",
+				AEndConfiguration: VXCOrderEndpointConfiguration{
+					ProductUID: "",
+				},
+			},
+			expectedPortID: "",
+		},
+		{
+			name: "PortUID is set and AEndConfiguration.ProductUID is empty - should use PortUID",
+			req: &BuyVXCRequest{
+				PortUID: "explicit-port-uid",
+				VXCName: "test-vxc",
+				AEndConfiguration: VXCOrderEndpointConfiguration{
+					ProductUID: "",
+				},
+			},
+			expectedPortID: "explicit-port-uid",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			orders := createVXCOrder(tt.req)
+
+			assert.Len(t, orders, 1, "Expected exactly one VXC order")
+			assert.Equal(t, tt.expectedPortID, orders[0].PortID, "PortID mismatch")
+		})
+	}
+}
 
 // VXCClientTestSuite tests the VXC service.
 type VXCClientTestSuite struct {
