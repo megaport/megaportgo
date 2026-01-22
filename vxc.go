@@ -260,8 +260,15 @@ func (svc *VXCServiceOp) UpdateVXCResourceTags(ctx context.Context, vxcID string
 }
 
 func createVXCOrder(req *BuyVXCRequest) []VXCOrder {
+	// If PortUID is not set but AEndConfiguration.ProductUID is, use it as the PortUID
+	// This improves DX by not requiring the same value in two places
+	portUID := req.PortUID
+	if portUID == "" && req.AEndConfiguration.ProductUID != "" {
+		portUID = req.AEndConfiguration.ProductUID
+	}
+
 	return []VXCOrder{{
-		PortID: req.PortUID,
+		PortID: portUID,
 		AssociatedVXCs: []VXCOrderConfiguration{
 			{
 				Name:         req.VXCName,
