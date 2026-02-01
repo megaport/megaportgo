@@ -213,7 +213,12 @@ func (svc *MCRLookingGlassServiceOp) ListBGPNeighborRoutes(ctx context.Context, 
 
 // ListIPRoutesAsync initiates an async query for IP routes.
 func (svc *MCRLookingGlassServiceOp) ListIPRoutesAsync(ctx context.Context, mcrUID string) (*LookingGlassAsyncJob, error) {
-	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/routes?async=true", mcrUID)
+	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/routes", mcrUID)
+
+	// Build query parameters
+	params := url.Values{}
+	params.Set("async", "true")
+	path = path + "?" + params.Encode()
 
 	clientReq, err := svc.Client.NewRequest(ctx, "GET", path, nil)
 	if err != nil {
@@ -269,13 +274,16 @@ func (svc *MCRLookingGlassServiceOp) GetAsyncIPRoutes(ctx context.Context, mcrUI
 
 // ListBGPNeighborRoutesAsync initiates an async query for BGP neighbor routes.
 func (svc *MCRLookingGlassServiceOp) ListBGPNeighborRoutesAsync(ctx context.Context, req *ListBGPNeighborRoutesRequest) (*LookingGlassAsyncJob, error) {
-	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/bgpSessions/%s/%s?async=true",
+	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/bgpSessions/%s/%s",
 		req.MCRID, req.SessionID, req.Direction)
 
-	// Add IP filter if provided
+	// Build query parameters
+	params := url.Values{}
+	params.Set("async", "true")
 	if req.IPFilter != "" {
-		path = path + "&ip=" + url.QueryEscape(req.IPFilter)
+		params.Set("ip", req.IPFilter)
 	}
+	path = path + "?" + params.Encode()
 
 	clientReq, err := svc.Client.NewRequest(ctx, "GET", path, nil)
 	if err != nil {
@@ -335,6 +343,9 @@ func (svc *MCRLookingGlassServiceOp) WaitForAsyncIPRoutes(ctx context.Context, m
 		timeout = 5 * time.Minute
 	}
 
+	// Looking Glass async jobs are diagnostic and typically complete faster than provisioning
+	// workflows (which use a 30s polling interval). We poll more frequently (5s) here to
+	// return results sooner while still avoiding excessive request volume.
 	ticker := time.NewTicker(5 * time.Second)
 	timer := time.NewTimer(timeout)
 	defer ticker.Stop()
@@ -373,6 +384,9 @@ func (svc *MCRLookingGlassServiceOp) WaitForAsyncBGPNeighborRoutes(ctx context.C
 		timeout = 5 * time.Minute
 	}
 
+	// Looking Glass async jobs are diagnostic and typically complete faster than provisioning
+	// workflows (which use a 30s polling interval). We poll more frequently (5s) here to
+	// return results sooner while still avoiding excessive request volume.
 	ticker := time.NewTicker(5 * time.Second)
 	timer := time.NewTimer(timeout)
 	defer ticker.Stop()

@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -596,4 +597,197 @@ func (suite *MCRLookingGlassClientTestSuite) TestListBGPSessionsEmpty() {
 	got, err := lgSvc.ListBGPSessions(ctx, mcrUID)
 	suite.NoError(err)
 	suite.Empty(got)
+}
+
+// TestListBGPRoutesWithFilter tests the ListBGPRoutesWithFilter method with IP filter.
+func (suite *MCRLookingGlassClientTestSuite) TestListBGPRoutesWithFilter() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+	mcrUID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	want := []*LookingGlassBGPRoute{
+		{
+			Prefix:     "10.0.0.0/24",
+			NextHop:    "192.168.1.1",
+			ASPath:     []int{65001},
+			LocalPref:  PtrTo(100),
+			Origin:     "IGP",
+			Valid:      true,
+			Best:       true,
+			NeighborIP: "192.168.1.1",
+		},
+	}
+
+	jblob := `{
+		"message": "BGP routes retrieved successfully",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": [
+			{
+				"prefix": "10.0.0.0/24",
+				"nextHop": "192.168.1.1",
+				"asPath": [65001],
+				"localPref": 100,
+				"origin": "IGP",
+				"valid": true,
+				"best": true,
+				"neighborIp": "192.168.1.1"
+			}
+		]
+	}`
+
+	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/bgp", mcrUID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		suite.Equal("10.0.0.0/24", r.URL.Query().Get("ip"))
+		fmt.Fprint(w, jblob)
+	})
+
+	got, err := lgSvc.ListBGPRoutesWithFilter(ctx, &ListBGPRoutesRequest{
+		MCRID:    mcrUID,
+		IPFilter: "10.0.0.0/24",
+	})
+	suite.NoError(err)
+	suite.Equal(want, got)
+}
+
+// TestWaitForAsyncIPRoutesComplete tests WaitForAsyncIPRoutes when job completes immediately.
+func (suite *MCRLookingGlassClientTestSuite) TestWaitForAsyncIPRoutesComplete() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+	mcrUID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	jobID := "job-12345"
+
+	want := []*LookingGlassIPRoute{
+		{
+			Prefix:   "10.0.0.0/24",
+			NextHop:  "192.168.1.1",
+			Protocol: RouteProtocolBGP,
+		},
+	}
+
+	jblob := `{
+		"message": "Async job complete",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": {
+			"jobId": "job-12345",
+			"status": "COMPLETE",
+			"routes": [
+				{
+					"prefix": "10.0.0.0/24",
+					"nextHop": "192.168.1.1",
+					"protocol": "BGP"
+				}
+			]
+		}
+	}`
+
+	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/routes/async/%s", mcrUID, jobID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, jblob)
+	})
+
+	got, err := lgSvc.WaitForAsyncIPRoutes(ctx, mcrUID, jobID, 10*time.Second)
+	suite.NoError(err)
+	suite.Equal(want, got)
+}
+
+// TestWaitForAsyncIPRoutesFailed tests WaitForAsyncIPRoutes when job fails.
+func (suite *MCRLookingGlassClientTestSuite) TestWaitForAsyncIPRoutesFailed() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+	mcrUID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	jobID := "job-12345"
+
+	jblob := `{
+		"message": "Async job failed",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": {
+			"jobId": "job-12345",
+			"status": "FAILED"
+		}
+	}`
+
+	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/routes/async/%s", mcrUID, jobID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, jblob)
+	})
+
+	_, err := lgSvc.WaitForAsyncIPRoutes(ctx, mcrUID, jobID, 10*time.Second)
+	suite.Error(err)
+	suite.Contains(err.Error(), "failed")
+}
+
+// TestWaitForAsyncBGPNeighborRoutesComplete tests WaitForAsyncBGPNeighborRoutes when job completes.
+func (suite *MCRLookingGlassClientTestSuite) TestWaitForAsyncBGPNeighborRoutesComplete() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+	mcrUID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	jobID := "job-67890"
+
+	want := []*LookingGlassBGPNeighborRoute{
+		{
+			Prefix:  "10.0.0.0/24",
+			NextHop: "192.168.1.1",
+			ASPath:  []int{65001},
+			Valid:   true,
+			Best:    true,
+		},
+	}
+
+	jblob := `{
+		"message": "Async job complete",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": {
+			"jobId": "job-67890",
+			"status": "COMPLETE",
+			"routes": [
+				{
+					"prefix": "10.0.0.0/24",
+					"nextHop": "192.168.1.1",
+					"asPath": [65001],
+					"valid": true,
+					"best": true
+				}
+			]
+		}
+	}`
+
+	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/bgpSessions/async/%s", mcrUID, jobID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, jblob)
+	})
+
+	got, err := lgSvc.WaitForAsyncBGPNeighborRoutes(ctx, mcrUID, jobID, 10*time.Second)
+	suite.NoError(err)
+	suite.Equal(want, got)
+}
+
+// TestWaitForAsyncBGPNeighborRoutesFailed tests WaitForAsyncBGPNeighborRoutes when job fails.
+func (suite *MCRLookingGlassClientTestSuite) TestWaitForAsyncBGPNeighborRoutesFailed() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+	mcrUID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	jobID := "job-67890"
+
+	jblob := `{
+		"message": "Async job failed",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": {
+			"jobId": "job-67890",
+			"status": "FAILED"
+		}
+	}`
+
+	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/bgpSessions/async/%s", mcrUID, jobID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, jblob)
+	})
+
+	_, err := lgSvc.WaitForAsyncBGPNeighborRoutes(ctx, mcrUID, jobID, 10*time.Second)
+	suite.Error(err)
+	suite.Contains(err.Error(), "failed")
 }
