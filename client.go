@@ -89,6 +89,8 @@ type Client struct {
 	IXService IXService
 	// BillingMarketService provides methods for interacting with the Billing Market API
 	BillingMarketService BillingMarketService
+	// MCRLookingGlassService provides methods for interacting with the MCR Looking Glass API
+	MCRLookingGlassService MCRLookingGlassService
 
 	accessToken string    // Access Token for client
 	tokenExpiry time.Time // Token Expiration
@@ -186,6 +188,7 @@ func NewClient(httpClient *http.Client, base *url.URL) *Client {
 	c.ManagedAccountService = NewManagedAccountService(c)
 	c.BillingMarketService = NewBillingMarketService(c)
 	c.UserManagementService = NewUserManagementService(c)
+	c.MCRLookingGlassService = NewMCRLookingGlassService(c)
 
 	c.headers = make(map[string]string)
 
