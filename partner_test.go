@@ -307,6 +307,89 @@ func (suite *PartnerClientTestSuite) TestFilterPartnerMegaportByLocationId() {
 	suite.Equal(wantFiltered, gotFiltered)
 }
 
+// TestFilterPartnerMegaportByMetro tests the FilterPartnerMegaportByMetro method.
+func (suite *PartnerClientTestSuite) TestFilterPartnerMegaportByMetro() {
+	partnerSvc := suite.client.PartnerService
+	locSvc := suite.client.LocationService
+	ctx := context.Background()
+
+	want := []*PartnerMegaport{awsPartner, azurePartner, defaultPartner, awsHcPartner}
+
+	suite.mux.HandleFunc(partnerMegaportUrl, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, jblob)
+	})
+
+	locPath := "/v3/locations"
+	locJblob := `{
+		"message": "List public locations",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": [
+			{
+				"id": 1,
+				"name": "Test Location Sydney",
+				"metro": "Sydney",
+				"market": "AU",
+				"status": "Active",
+				"address": {"street":"","suburb":"","city":"Sydney","state":"NSW","postcode":"2000","country":"Australia"},
+				"dataCentre": {"id": 1, "name": "Test DC"},
+				"latitude": -33.8,
+				"longitude": 151.2
+			},
+			{
+				"id": 2,
+				"name": "Test Location Sydney 2",
+				"metro": "Sydney",
+				"market": "AU",
+				"status": "Active",
+				"address": {"street":"","suburb":"","city":"Sydney","state":"NSW","postcode":"2000","country":"Australia"},
+				"dataCentre": {"id": 2, "name": "Test DC 2"},
+				"latitude": -33.8,
+				"longitude": 151.2
+			},
+			{
+				"id": 3,
+				"name": "Test Location Melbourne",
+				"metro": "Melbourne",
+				"market": "AU",
+				"status": "Active",
+				"address": {"street":"","suburb":"","city":"Melbourne","state":"VIC","postcode":"3000","country":"Australia"},
+				"dataCentre": {"id": 3, "name": "Test DC 3"},
+				"latitude": -37.8,
+				"longitude": 144.9
+			}
+		]
+	}`
+	suite.mux.HandleFunc(locPath, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, locJblob)
+	})
+
+	partners, err := partnerSvc.ListPartnerMegaports(ctx)
+	suite.NoError(err)
+	suite.Equal(want, partners)
+
+	// Filter by "Sydney" metro — locations 1 and 2 are in Sydney.
+	// awsPartner (locationId=1) and azurePartner (locationId=2) should match.
+	wantFiltered := []*PartnerMegaport{awsPartner, azurePartner}
+
+	gotFiltered, err := partnerSvc.FilterPartnerMegaportByMetro(ctx, partners, locSvc, "Sydney")
+	suite.NoError(err)
+	suite.Equal(wantFiltered, gotFiltered)
+
+	// Filter by "Melbourne" metro — location 3 is in Melbourne.
+	// defaultPartner (locationId=3) and awsHcPartner (locationId=3) should match.
+	wantMelbourne := []*PartnerMegaport{defaultPartner, awsHcPartner}
+
+	gotMelbourne, err := partnerSvc.FilterPartnerMegaportByMetro(ctx, partners, locSvc, "Melbourne")
+	suite.NoError(err)
+	suite.Equal(wantMelbourne, gotMelbourne)
+
+	// Filter by non-existent metro should return ErrNoPartnerPortsFound.
+	_, err = partnerSvc.FilterPartnerMegaportByMetro(ctx, partners, locSvc, "Auckland")
+	suite.ErrorIs(err, ErrNoPartnerPortsFound)
+}
+
 // TestFilterPartnerMegaportByDiversityZone tests the FilterPartnerMegaportByDiversityZone method.
 func (suite *PartnerClientTestSuite) TestFilterPartnerMegaportByDiversityZone() {
 	partnerSvc := suite.client.PartnerService
