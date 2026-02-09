@@ -24,6 +24,8 @@ type LocationService interface {
 	FilterLocationsByMarketCodeV3(ctx context.Context, marketCode string, locations []*LocationV3) ([]*LocationV3, error)
 	// FilterLocationsByMcrAvailabilityV3 filters locations by MCR availability in the Megaport Locations API v3.
 	FilterLocationsByMcrAvailabilityV3(ctx context.Context, mcrAvailable bool, locations []*LocationV3) []*LocationV3
+	// FilterLocationsByMetroV3 filters locations by metro name in the Megaport Locations API v3.
+	FilterLocationsByMetroV3(ctx context.Context, metro string, locations []*LocationV3) []*LocationV3
 
 	// Shared methods (work with both v2 and v3)
 	// ListCountries returns a list of all countries in the Megaport Network Regions API.
@@ -288,6 +290,17 @@ func (svc *LocationServiceOp) FilterLocationsByMcrAvailabilityV3(ctx context.Con
 		hasAnyMCR := location.HasMCRSupport()
 		if hasAnyMCR == mcrAvailable {
 			toReturn = append(toReturn, location)
+		}
+	}
+	return toReturn
+}
+
+// FilterLocationsByMetroV3 filters locations by metro name using the v3 API.
+func (svc *LocationServiceOp) FilterLocationsByMetroV3(ctx context.Context, metro string, locations []*LocationV3) []*LocationV3 {
+	toReturn := []*LocationV3{}
+	for _, loc := range locations {
+		if loc.Metro == metro {
+			toReturn = append(toReturn, loc)
 		}
 	}
 	return toReturn

@@ -802,6 +802,60 @@ func (suite *LocationV3ClientTestSuite) TestFilterLocationsByMcrAvailabilityV3()
 	suite.Equal(want, got)
 }
 
+// TestFilterLocationsByMetroV3 tests the FilterLocationsByMetroV3 method.
+func (suite *LocationV3ClientTestSuite) TestFilterLocationsByMetroV3() {
+	ctx := context.Background()
+	locSvc := suite.client.LocationService
+
+	locations := []*LocationV3{
+		{
+			ID:     2,
+			Name:   "Equinix SY1",
+			Metro:  "Sydney",
+			Market: "AU",
+			Status: "Active",
+		},
+		{
+			ID:     3,
+			Name:   "Global Switch Sydney West",
+			Metro:  "Sydney",
+			Market: "AU",
+			Status: "Active",
+		},
+		{
+			ID:     100,
+			Name:   "Test US Location",
+			Metro:  "Denver",
+			Market: "US",
+			Status: "Active",
+		},
+	}
+
+	want := []*LocationV3{
+		{
+			ID:     2,
+			Name:   "Equinix SY1",
+			Metro:  "Sydney",
+			Market: "AU",
+			Status: "Active",
+		},
+		{
+			ID:     3,
+			Name:   "Global Switch Sydney West",
+			Metro:  "Sydney",
+			Market: "AU",
+			Status: "Active",
+		},
+	}
+
+	got := locSvc.FilterLocationsByMetroV3(ctx, "Sydney", locations)
+	suite.Equal(want, got)
+
+	// Test with no matching metro
+	gotEmpty := locSvc.FilterLocationsByMetroV3(ctx, "Auckland", locations)
+	suite.Empty(gotEmpty)
+}
+
 // TestLocationV3HelperMethods tests the helper methods for LocationV3 struct.
 func (suite *LocationV3ClientTestSuite) TestLocationV3HelperMethods() {
 	// Test location with MCR support
