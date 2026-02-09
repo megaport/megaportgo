@@ -217,7 +217,7 @@ func (svc *PartnerServiceOp) FilterPartnerMegaportByMetro(ctx context.Context, p
 
 	toReturn := []*PartnerMegaport{}
 	for _, partner := range partners {
-		if metroLocationIDs[partner.LocationId] && partner.VXCPermitted {
+		if partner.VXCPermitted && (metro == "" || metroLocationIDs[partner.LocationId]) {
 			toReturn = append(toReturn, partner)
 		}
 	}

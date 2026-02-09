@@ -296,10 +296,11 @@ func (svc *LocationServiceOp) FilterLocationsByMcrAvailabilityV3(ctx context.Con
 }
 
 // FilterLocationsByMetroV3 filters locations by metro name using the v3 API.
+// If metro is empty, all locations are returned.
 func (svc *LocationServiceOp) FilterLocationsByMetroV3(ctx context.Context, metro string, locations []*LocationV3) []*LocationV3 {
 	toReturn := []*LocationV3{}
 	for _, loc := range locations {
-		if loc.Metro == metro {
+		if metro == "" || loc.Metro == metro {
 			toReturn = append(toReturn, loc)
 		}
 	}
