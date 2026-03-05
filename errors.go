@@ -83,3 +83,9 @@ var ErrInvalidVXCAEndPartnerConfig = errors.New("invalid vxc a-end partner confi
 
 // ErrInvalidVXCBEndPartnerConfig is returned when an invalid VXC B-End partner config is provided
 var ErrInvalidVXCBEndPartnerConfig = errors.New("invalid vxc b-end partner config")
+
+// ErrInvalidMonth is returned when RTT statistics are requested for an invalid month
+var ErrInvalidMonth = errors.New("invalid month, must be between 1 and 12")
+
+// ErrInvalidYear is returned when RTT statistics are requested for an invalid year
+var ErrInvalidYear = errors.New("invalid year, must be between 0 and 99")
