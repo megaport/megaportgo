@@ -1,11 +1,11 @@
 package megaport
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -70,17 +70,13 @@ func (svc *NATGatewayServiceOp) ListNATGatewaySessions(ctx context.Context) ([]*
 	if err != nil {
 		return nil, err
 	}
-	resp, err := svc.Client.Do(ctx, clientReq, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
+	var buf bytes.Buffer
+	_, err = svc.Client.Do(ctx, clientReq, &buf)
 	if err != nil {
 		return nil, err
 	}
 	sessionsResp := NATGatewaySessionsResponse{}
-	if err := json.Unmarshal(body, &sessionsResp); err != nil {
+	if err := json.Unmarshal(buf.Bytes(), &sessionsResp); err != nil {
 		return nil, err
 	}
 	return sessionsResp.Data, nil
@@ -112,17 +108,13 @@ func (svc *NATGatewayServiceOp) GetNATGatewayTelemetry(ctx context.Context, req 
 	if err != nil {
 		return nil, err
 	}
-	resp, err := svc.Client.Do(ctx, clientReq, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
+	var buf bytes.Buffer
+	_, err = svc.Client.Do(ctx, clientReq, &buf)
 	if err != nil {
 		return nil, err
 	}
 	telemetryResp := &ServiceTelemetryResponse{}
-	if err := json.Unmarshal(body, telemetryResp); err != nil {
+	if err := json.Unmarshal(buf.Bytes(), telemetryResp); err != nil {
 		return nil, err
 	}
 	return telemetryResp, nil
