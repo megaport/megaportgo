@@ -1,6 +1,6 @@
 ## Contributions
 
-Please read the (Contribution Guidelines)[https://github.com/megaport/megaportgo/wiki/Contributing.md]
+Please read the [Contribution Guidelines](https://github.com/megaport/megaportgo/wiki/Contributing.md)
 prior to lodging Pull Requests (PR).
 
 ## Description
@@ -19,14 +19,14 @@ Please delete options that are not relevant.
 - [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
 - [ ] This change requires a documentation update
 
-# Contributor Agreement
+## Contributor Agreement
 
 Lodging this Pull Request (PR) indicates agreement with the project's 
-(Contributor License Agreement)[https://github.com/megaport/megaportgo/wiki/Megaport_Contributor_Licence_Agreement.md].
+[Contributor License Agreement](https://github.com/megaport/megaportgo/wiki/Megaport_Contributor_Licence_Agreement.md).
 
 Please read the Contributor Licence Agreement (CLA) and affirm your acceptance here:
 
-[I have read an accept the CLA]
+[I have read and accept the CLA]
 
 **NOTE** If multiple authors have commited to this PR, each one will need to comment on this PR and 
 agree to the CLA before this PR can be accepted.
