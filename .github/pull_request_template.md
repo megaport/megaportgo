@@ -1,6 +1,6 @@
 ## Contributions
 
-Please read the [Contribution Guidelines](https://github.com/megaport/megaportgo/wiki/Contributing.md)
+Please read the [Contribution Guidelines](https://github.com/megaport/megaportgo/blob/main/CONTRIBUTING.md)
 prior to lodging Pull Requests (PR).
 
 ## Description
@@ -22,7 +22,7 @@ Please delete options that are not relevant.
 ## Contributor Agreement
 
 Lodging this Pull Request (PR) indicates agreement with the project's 
-[Contributor License Agreement](https://github.com/megaport/megaportgo/wiki/Megaport_Contributor_Licence_Agreement.md).
+[Contributor License Agreement](https://github.com/megaport/megaportgo/blob/main/CLA.md).
 
 Please read the Contributor Licence Agreement (CLA) and affirm your acceptance here:
 
