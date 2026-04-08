@@ -89,3 +89,9 @@ var ErrInvalidAddOnType = errors.New("invalid add-on type, currently only IP_SEC
 
 // ErrInvalidIPsecTunnelCount is returned when the IPsec tunnel count is not valid
 var ErrInvalidIPsecTunnelCount = errors.New("invalid IPsec tunnel count, must be 10 (or 0 to use default of 10)")
+
+// ErrInvalidMonth is returned when RTT statistics are requested for an invalid month
+var ErrInvalidMonth = errors.New("invalid month, must be between 1 and 12")
+
+// ErrInvalidYear is returned when RTT statistics are requested for an invalid year
+var ErrInvalidYear = errors.New("invalid year, must be between 0 and 99")

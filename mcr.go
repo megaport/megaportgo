@@ -47,7 +47,9 @@ type MCRService interface {
 	// UpdateMCRIPsecAddOn updates an existing IPsec add-on on an MCR. Setting tunnelCount to 0 will disable IPsec.
 	UpdateMCRIPsecAddOn(ctx context.Context, mcrID string, addOnUID string, tunnelCount int) error
 
-	// DEPRECATED - Use ListMCRPrefixFilterLists instead
+	// GetMCRPrefixFilterLists returns prefix filter lists for the specified MCR2.
+	//
+	// Deprecated: Use ListMCRPrefixFilterLists instead.
 	GetMCRPrefixFilterLists(ctx context.Context, mcrId string) ([]*PrefixFilterList, error)
 }
 
@@ -395,7 +397,9 @@ func (svc *MCRServiceOp) CreatePrefixFilterList(ctx context.Context, req *Create
 	}, nil
 }
 
-// DEPRECATED - Use ListMCRPrefixFilterLists instead
+// GetMCRPrefixFilterLists returns prefix filter lists for the specified MCR2.
+//
+// Deprecated: Use ListMCRPrefixFilterLists instead.
 func (svc *MCRServiceOp) GetMCRPrefixFilterLists(ctx context.Context, mcrId string) ([]*PrefixFilterList, error) {
 	res, err := svc.ListMCRPrefixFilterLists(ctx, mcrId)
 	if err != nil {
