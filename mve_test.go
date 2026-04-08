@@ -136,14 +136,17 @@ func (suite *MVEClientTestSuite) TestBuyMVE() {
 	}}
 	want := &BuyMVEResponse{TechnicalServiceUID: productUid}
 
-	suite.mux.HandleFunc("/v3/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
-		v := new([]MVEOrderConfig)
-		err := json.NewDecoder(r.Body).Decode(v)
+	suite.mux.HandleFunc("/v4/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
+		var wrapper struct {
+			NetworkDesign []MVEOrderConfig `json:"networkDesign"`
+			DiscountCodes []string         `json:"discountCodes"`
+		}
+		err := json.NewDecoder(r.Body).Decode(&wrapper)
 		if err != nil {
 			suite.FailNowf("could not decode json", "could not decode json %v", err)
 		}
 
-		orders := *v
+		orders := wrapper.NetworkDesign
 		wantOrder := mveOrder[0]
 		gotOrder := orders[0]
 		suite.testMethod(r, http.MethodPost)
@@ -154,6 +157,7 @@ func (suite *MVEClientTestSuite) TestBuyMVE() {
 		suite.Equal(wantOrder.LocationID, gotOrder.LocationID)
 		suite.Equal(wantOrder.NetworkInterfaces, gotOrder.NetworkInterfaces)
 		suite.Equal(wantOrder.Config, gotOrder.Config)
+		suite.Equal([]string{}, wrapper.DiscountCodes)
 	})
 	got, err := mveSvc.BuyMVE(ctx, req)
 	suite.NoError(err)
