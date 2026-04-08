@@ -34,11 +34,11 @@ type NATGatewayServiceOp struct {
 
 // GetNATGatewayTelemetryRequest represents a request to get telemetry data for a NAT Gateway.
 type GetNATGatewayTelemetryRequest struct {
-	ProductUID string   // The product UID of the NAT Gateway.
-	Types      []string // Telemetry types to retrieve, e.g. "BITS", "PACKETS", "SPEED".
+	ProductUID string     // The product UID of the NAT Gateway.
+	Types      []string   // Telemetry types to retrieve, e.g. "BITS", "PACKETS", "SPEED".
 	From       *time.Time // Start time. Mutually exclusive with Days.
 	To         *time.Time // End time. Mutually exclusive with Days.
-	Days       *int32   // Number of days of telemetry (1-180). Mutually exclusive with From/To.
+	Days       *int32     // Number of days of telemetry (1-180). Mutually exclusive with From/To.
 }
 
 // ErrNATGatewayProductUIDRequired is returned when a ProductUID is not provided.
