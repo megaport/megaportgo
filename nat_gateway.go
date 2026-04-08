@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"time"
 )
 
 // NATGatewayService is an interface for interfacing with the NAT Gateway endpoints of the Megaport API.
@@ -35,8 +36,8 @@ type NATGatewayServiceOp struct {
 type GetNATGatewayTelemetryRequest struct {
 	ProductUID string   // The product UID of the NAT Gateway.
 	Types      []string // Telemetry types to retrieve, e.g. "BITS", "PACKETS", "SPEED".
-	From       *int64   // Start time in epoch milliseconds. Mutually exclusive with Days.
-	To         *int64   // End time in epoch milliseconds. Mutually exclusive with Days.
+	From       *time.Time // Start time. Mutually exclusive with Days.
+	To         *time.Time // End time. Mutually exclusive with Days.
 	Days       *int32   // Number of days of telemetry (1-180). Mutually exclusive with From/To.
 }
 
@@ -95,10 +96,10 @@ func (svc *NATGatewayServiceOp) GetNATGatewayTelemetry(ctx context.Context, req 
 		params.Add("type", t)
 	}
 	if req.From != nil {
-		params.Set("from", strconv.FormatInt(*req.From, 10))
+		params.Set("from", strconv.FormatInt(req.From.UnixMilli(), 10))
 	}
 	if req.To != nil {
-		params.Set("to", strconv.FormatInt(*req.To, 10))
+		params.Set("to", strconv.FormatInt(req.To.UnixMilli(), 10))
 	}
 	if req.Days != nil {
 		params.Set("days", strconv.FormatInt(int64(*req.Days), 10))

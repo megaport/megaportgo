@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -163,11 +164,13 @@ func (suite *NATGatewayClientTestSuite) TestGetNATGatewayTelemetryWithFromTo() {
 		fmt.Fprint(w, jblob)
 	})
 
+	fromTime := time.UnixMilli(1608516536000)
+	toTime := time.UnixMilli(1608603936000)
 	resp, err := natSvc.GetNATGatewayTelemetry(ctx, &GetNATGatewayTelemetryRequest{
 		ProductUID: productUID,
 		Types:      []string{"BITS", "PACKETS"},
-		From:       PtrTo[int64](1608516536000),
-		To:         PtrTo[int64](1608603936000),
+		From:       &fromTime,
+		To:         &toTime,
 	})
 	suite.NoError(err)
 	suite.Equal(productUID, resp.ServiceUID)
@@ -196,7 +199,7 @@ func (suite *NATGatewayClientTestSuite) TestGetNATGatewayTelemetryValidation() {
 		ProductUID: "some-uid",
 		Types:      []string{"BITS"},
 		Days:       PtrTo[int32](7),
-		From:       PtrTo[int64](1608516536000),
+		From:       PtrTo(time.UnixMilli(1608516536000)),
 	})
 	suite.ErrorIs(err, ErrNATGatewayTelemetryTimeExclusive)
 }
