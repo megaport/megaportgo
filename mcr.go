@@ -76,7 +76,7 @@ type BuyMCRRequest struct {
 	CostCentre    string
 	PromoCode     string
 	ResourceTags  map[string]string `json:"resourceTags,omitempty"`
-	AddOns        []MCRAddOn       `json:"addOns,omitempty"`
+	AddOns        []MCRAddOn        `json:"addOns,omitempty"`
 
 	WaitForProvision bool          // Wait until the MCR provisions before returning
 	WaitForTime      time.Duration // How long to wait for the MCR to provision if WaitForProvision is true (default is 5 minutes)
