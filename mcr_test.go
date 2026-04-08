@@ -622,64 +622,49 @@ func (suite *MCRClientTestSuite) TestRestoreMCR() {
 
 // TestValidateIPsecAddOn tests the validation of IPsec add-on configurations
 func (suite *MCRClientTestSuite) TestValidateIPsecAddOn() {
-	// Test valid configuration with explicit type and 10 tunnels
-	validAddOn := &MCRAddOnIPsecConfig{
-		AddOnType:   AddOnTypeIPsec,
-		TunnelCount: 10,
+	// Test valid configurations with all valid tunnel counts
+	for _, count := range []int{10, 20, 30} {
+		validAddOn := &MCRAddOnIPsecConfig{
+			TunnelCount: count,
+		}
+		err := validateMCRAddOn(validAddOn)
+		suite.NoError(err, "tunnel count %d should be valid", count)
 	}
-	err := validateIPsecAddOn(validAddOn)
-	suite.NoError(err)
-
-	// Test valid configuration without explicit type (will be set automatically)
-	validAddOnNoType := &MCRAddOnIPsecConfig{
-		TunnelCount: 10,
-	}
-	err = validateIPsecAddOn(validAddOnNoType)
-	suite.NoError(err)
 
 	// Test valid configuration with zero tunnel count (will default to 10)
 	validAddOnZeroTunnels := &MCRAddOnIPsecConfig{
-		AddOnType:   AddOnTypeIPsec,
 		TunnelCount: 0,
 	}
-	err = validateIPsecAddOn(validAddOnZeroTunnels)
+	err := validateMCRAddOn(validAddOnZeroTunnels)
 	suite.NoError(err)
 
-	// Test invalid: tunnel count not 10 or 0
+	// Test GetAddOnType returns correct type
+	ipsecAddOn := &MCRAddOnIPsecConfig{}
+	suite.Equal(AddOnTypeIPsec, ipsecAddOn.GetAddOnType())
+
+	// Test invalid: tunnel count not in valid set
 	invalidTunnelCount := &MCRAddOnIPsecConfig{
-		AddOnType:   AddOnTypeIPsec,
 		TunnelCount: 5,
 	}
-	err = validateIPsecAddOn(invalidTunnelCount)
+	err = validateMCRAddOn(invalidTunnelCount)
 	suite.Error(err)
 	suite.Equal(ErrInvalidIPsecTunnelCount, err)
 
 	// Test invalid: tunnel count exceeds maximum
 	invalidTunnelCountHigh := &MCRAddOnIPsecConfig{
-		AddOnType:   AddOnTypeIPsec,
-		TunnelCount: 11,
+		TunnelCount: 40,
 	}
-	err = validateIPsecAddOn(invalidTunnelCountHigh)
+	err = validateMCRAddOn(invalidTunnelCountHigh)
 	suite.Error(err)
 	suite.Equal(ErrInvalidIPsecTunnelCount, err)
 
 	// Test invalid: negative tunnel count
 	negativeTunnelCount := &MCRAddOnIPsecConfig{
-		AddOnType:   AddOnTypeIPsec,
 		TunnelCount: -1,
 	}
-	err = validateIPsecAddOn(negativeTunnelCount)
+	err = validateMCRAddOn(negativeTunnelCount)
 	suite.Error(err)
 	suite.Equal(ErrInvalidIPsecTunnelCount, err)
-
-	// Test invalid: wrong add-on type
-	invalidAddOnType := &MCRAddOnIPsecConfig{
-		AddOnType:   "INVALID_TYPE",
-		TunnelCount: 10,
-	}
-	err = validateIPsecAddOn(invalidAddOnType)
-	suite.Error(err)
-	suite.Equal(ErrInvalidAddOnType, err)
 }
 
 // TestBuyMCRWithIPsecValidation tests that BuyMCR validates IPsec add-ons
@@ -687,7 +672,7 @@ func (suite *MCRClientTestSuite) TestBuyMCRWithIPsecValidation() {
 	ctx := context.Background()
 	mcrSvc := suite.client.MCRService
 
-	// Test with invalid tunnel count (not 10)
+	// Test with invalid tunnel count
 	req := &BuyMCRRequest{
 		LocationID:    1,
 		Name:          "test-mcr",
@@ -695,9 +680,9 @@ func (suite *MCRClientTestSuite) TestBuyMCRWithIPsecValidation() {
 		PortSpeed:     1000,
 		MCRAsn:        0,
 		DiversityZone: "red",
-		AddOns: []*MCRAddOnIPsecConfig{
-			{
-				TunnelCount: 5, // Invalid - must be 10 or 0
+		AddOns: []MCRAddOn{
+			&MCRAddOnIPsecConfig{
+				TunnelCount: 5, // Invalid - must be 10, 20, or 30
 			},
 		},
 	}
@@ -714,9 +699,9 @@ func (suite *MCRClientTestSuite) TestBuyMCRWithIPsecValidation() {
 		PortSpeed:     1000,
 		MCRAsn:        0,
 		DiversityZone: "red",
-		AddOns: []*MCRAddOnIPsecConfig{
-			{
-				TunnelCount: 10, // Valid - exactly 10
+		AddOns: []MCRAddOn{
+			&MCRAddOnIPsecConfig{
+				TunnelCount: 10,
 			},
 		},
 	}

@@ -12,7 +12,7 @@ type MCROrder struct {
 	CostCentre string                 `json:"costCentre"`
 	PromoCode  string                 `json:"promoCode,omitempty"`
 	Config     MCROrderConfig         `json:"config"`
-	AddOns     []*MCRAddOnIPsecConfig `json:"addOns,omitempty"`
+	AddOns     []MCRAddOn `json:"addOns,omitempty"`
 
 	ResourceTags []ResourceTag `json:"resourceTags,omitempty"`
 }
@@ -26,18 +26,27 @@ type MCROrderConfig struct {
 // MCRAddOn is an interface for MCR add-on configuration.
 type MCRAddOn interface {
 	IsMCRAddOn()
+	GetAddOnType() string
 }
 
 const AddOnTypeIPsec = "IP_SEC"
 
+// ValidIPsecTunnelCounts contains the valid tunnel counts for IPsec add-ons per the API spec.
+var ValidIPsecTunnelCounts = []int{10, 20, 30}
+
 // MCRAddOnIPsecConfig represents the IPsec add-on configuration for an MCR order.
 type MCRAddOnIPsecConfig struct {
-	MCRAddOn
 	ProductUID  string `json:"productUid,omitempty"`
 	AddOnUID    string `json:"addOnUid,omitempty"`
 	AddOnType   string `json:"addOnType,omitempty"`
 	TunnelCount int    `json:"tunnelCount,omitempty"`
 	PackCount   int    `json:"packCount,omitempty"`
+}
+
+func (*MCRAddOnIPsecConfig) IsMCRAddOn() {}
+
+func (*MCRAddOnIPsecConfig) GetAddOnType() string {
+	return AddOnTypeIPsec
 }
 
 // TODO - MCR Add Ons for BGP Configuration and IP Address

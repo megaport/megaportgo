@@ -591,8 +591,8 @@ func (suite *MCRIntegrationTestSuite) TestMCRWithIPsecAddOn() {
 		DiversityZone:    "red",
 		WaitForProvision: true,
 		WaitForTime:      5 * time.Minute,
-		AddOns: []*MCRAddOnIPsecConfig{
-			{
+		AddOns: []MCRAddOn{
+			&MCRAddOnIPsecConfig{
 				TunnelCount: 10,
 			},
 		},
@@ -671,9 +671,8 @@ func (suite *MCRIntegrationTestSuite) TestAddIPsecToExistingMCR() {
 	// Add IPsec add-on to existing MCR
 	logger.InfoContext(ctx, "Adding IPsec add-on to MCR", slog.String("mcr_id", mcrId))
 	addOnErr := mcrSvc.UpdateMCRWithAddOn(ctx, mcrId, MCRAddOnRequest{
-		AddOnType: AddOnTypeIPsec,
 		AddOn: &MCRAddOnIPsecConfig{
-			TunnelCount: 10, // API requires exactly 10 tunnels
+			TunnelCount: 10,
 		},
 	})
 	if addOnErr != nil {
@@ -746,8 +745,8 @@ func (suite *MCRIntegrationTestSuite) TestUpdateIPsecTunnelCount() {
 		DiversityZone:    "red",
 		WaitForProvision: true,
 		WaitForTime:      5 * time.Minute,
-		AddOns: []*MCRAddOnIPsecConfig{
-			{
+		AddOns: []MCRAddOn{
+			&MCRAddOnIPsecConfig{
 				TunnelCount: 10,
 			},
 		},
@@ -825,8 +824,8 @@ func (suite *MCRIntegrationTestSuite) TestDisableIPsecAddOn() {
 		DiversityZone:    "red",
 		WaitForProvision: true,
 		WaitForTime:      5 * time.Minute,
-		AddOns: []*MCRAddOnIPsecConfig{
-			{
+		AddOns: []MCRAddOn{
+			&MCRAddOnIPsecConfig{
 				TunnelCount: 10,
 			},
 		},
