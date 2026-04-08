@@ -50,6 +50,12 @@ var ErrNATGatewayTelemetryTypesRequired = errors.New("at least one telemetry typ
 // ErrNATGatewayTelemetryTimeExclusive is returned when both Days and From/To are provided.
 var ErrNATGatewayTelemetryTimeExclusive = errors.New("days and from/to are mutually exclusive")
 
+// ErrNATGatewayTelemetryDaysOutOfRange is returned when Days is not between 1 and 180.
+var ErrNATGatewayTelemetryDaysOutOfRange = errors.New("days must be between 1 and 180")
+
+// ErrNATGatewayTelemetryFromToIncomplete is returned when only one of From/To is provided.
+var ErrNATGatewayTelemetryFromToIncomplete = errors.New("both from and to must be provided together")
+
 // validateGetNATGatewayTelemetryRequest validates the request parameters.
 func validateGetNATGatewayTelemetryRequest(req *GetNATGatewayTelemetryRequest) error {
 	if req.ProductUID == "" {
@@ -60,6 +66,12 @@ func validateGetNATGatewayTelemetryRequest(req *GetNATGatewayTelemetryRequest) e
 	}
 	if req.Days != nil && (req.From != nil || req.To != nil) {
 		return ErrNATGatewayTelemetryTimeExclusive
+	}
+	if req.Days != nil && (*req.Days < 1 || *req.Days > 180) {
+		return ErrNATGatewayTelemetryDaysOutOfRange
+	}
+	if (req.From != nil) != (req.To != nil) {
+		return ErrNATGatewayTelemetryFromToIncomplete
 	}
 	return nil
 }
@@ -72,10 +84,11 @@ func (svc *NATGatewayServiceOp) ListNATGatewaySessions(ctx context.Context) ([]*
 		return nil, err
 	}
 	var buf bytes.Buffer
-	_, err = svc.Client.Do(ctx, clientReq, &buf)
+	resp, err := svc.Client.Do(ctx, clientReq, &buf)
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	sessionsResp := NATGatewaySessionsResponse{}
 	if err := json.Unmarshal(buf.Bytes(), &sessionsResp); err != nil {
 		return nil, err
@@ -110,10 +123,11 @@ func (svc *NATGatewayServiceOp) GetNATGatewayTelemetry(ctx context.Context, req 
 		return nil, err
 	}
 	var buf bytes.Buffer
-	_, err = svc.Client.Do(ctx, clientReq, &buf)
+	resp, err := svc.Client.Do(ctx, clientReq, &buf)
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	telemetryResp := &ServiceTelemetryResponse{}
 	if err := json.Unmarshal(buf.Bytes(), telemetryResp); err != nil {
 		return nil, err

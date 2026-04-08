@@ -202,4 +202,36 @@ func (suite *NATGatewayClientTestSuite) TestGetNATGatewayTelemetryValidation() {
 		From:       PtrTo(time.UnixMilli(1608516536000)),
 	})
 	suite.ErrorIs(err, ErrNATGatewayTelemetryTimeExclusive)
+
+	// Days out of range (too low)
+	_, err = natSvc.GetNATGatewayTelemetry(ctx, &GetNATGatewayTelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		Days:       PtrTo[int32](0),
+	})
+	suite.ErrorIs(err, ErrNATGatewayTelemetryDaysOutOfRange)
+
+	// Days out of range (too high)
+	_, err = natSvc.GetNATGatewayTelemetry(ctx, &GetNATGatewayTelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		Days:       PtrTo[int32](181),
+	})
+	suite.ErrorIs(err, ErrNATGatewayTelemetryDaysOutOfRange)
+
+	// Only From without To
+	_, err = natSvc.GetNATGatewayTelemetry(ctx, &GetNATGatewayTelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		From:       PtrTo(time.UnixMilli(1608516536000)),
+	})
+	suite.ErrorIs(err, ErrNATGatewayTelemetryFromToIncomplete)
+
+	// Only To without From
+	_, err = natSvc.GetNATGatewayTelemetry(ctx, &GetNATGatewayTelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		To:         PtrTo(time.UnixMilli(1608603936000)),
+	})
+	suite.ErrorIs(err, ErrNATGatewayTelemetryFromToIncomplete)
 }
