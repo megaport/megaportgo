@@ -75,3 +75,79 @@ type TelemetryUnit struct {
 	Name     string `json:"name"`
 	FullName string `json:"fullName"`
 }
+
+// NATGateway represents a NAT Gateway product from the Megaport API.
+type NATGateway struct {
+	AdminLocked           bool                    `json:"adminLocked"`
+	AutoRenewTerm         bool                    `json:"autoRenewTerm"`
+	Config                NATGatewayNetworkConfig `json:"config"`
+	ContractEndDate       string                  `json:"contractEndDate"`
+	CreateDate            string                  `json:"createDate"`
+	CreatedBy             string                  `json:"createdBy"`
+	LocationID            int                     `json:"locationId"`
+	Locked                bool                    `json:"locked"`
+	OrderApprovalStatus   string                  `json:"orderApprovalStatus"`
+	ProductName           string                  `json:"productName"`
+	ProductUID            string                  `json:"productUid"`
+	PromoCode             string                  `json:"promoCode"`
+	ProvisioningStatus    string                  `json:"provisioningStatus"`
+	ResourceTags          []ResourceTag           `json:"resourceTags"`
+	ServiceLevelReference string                  `json:"serviceLevelReference"`
+	Speed                 int                     `json:"speed"`
+	Term                  int                     `json:"term"`
+}
+
+// NATGatewayNetworkConfig represents the network configuration for a NAT Gateway.
+type NATGatewayNetworkConfig struct {
+	ASN                int    `json:"asn"`
+	BGPShutdownDefault bool   `json:"bgpShutdownDefault"`
+	DiversityZone      string `json:"diversityZone"`
+	SessionCount       int    `json:"sessionCount"`
+}
+
+// CreateNATGatewayRequest represents a request to create a NAT Gateway.
+type CreateNATGatewayRequest struct {
+	AutoRenewTerm         bool                    `json:"autoRenewTerm"`
+	Config                NATGatewayNetworkConfig `json:"config"`
+	LocationID            int                     `json:"locationId"`
+	ProductName           string                  `json:"productName"`
+	PromoCode             string                  `json:"promoCode,omitempty"`
+	ResourceTags          []ResourceTag           `json:"resourceTags,omitempty"`
+	ServiceLevelReference string                  `json:"serviceLevelReference,omitempty"`
+	Speed                 int                     `json:"speed"`
+	Term                  int                     `json:"term"`
+}
+
+// UpdateNATGatewayRequest represents a request to update a NAT Gateway.
+type UpdateNATGatewayRequest struct {
+	ProductUID            string                  `json:"-"` // path parameter, not serialized
+	AutoRenewTerm         bool                    `json:"autoRenewTerm"`
+	Config                NATGatewayNetworkConfig `json:"config"`
+	LocationID            int                     `json:"locationId"`
+	ProductName           string                  `json:"productName"`
+	PromoCode             string                  `json:"promoCode,omitempty"`
+	ResourceTags          []ResourceTag           `json:"resourceTags,omitempty"`
+	ServiceLevelReference string                  `json:"serviceLevelReference,omitempty"`
+	Speed                 int                     `json:"speed"`
+	Term                  int                     `json:"term"`
+}
+
+// NATGatewayResponse is the API response for a single NAT Gateway.
+type NATGatewayResponse struct {
+	Message string     `json:"message"`
+	Terms   string     `json:"terms"`
+	Data    NATGateway `json:"data"`
+}
+
+// NATGatewayListResponse is the API response for listing NAT Gateways.
+type NATGatewayListResponse struct {
+	Message string        `json:"message"`
+	Terms   string        `json:"terms"`
+	Data    []*NATGateway `json:"data"`
+}
+
+// DeleteNATGatewayResponse is the API response for deleting a NAT Gateway.
+type DeleteNATGatewayResponse struct {
+	Message string `json:"message"`
+	Terms   string `json:"terms"`
+}

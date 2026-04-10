@@ -8,12 +8,23 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"time"
 )
 
 // NATGatewayService is an interface for interfacing with the NAT Gateway endpoints of the Megaport API.
 type NATGatewayService interface {
+	// CreateNATGateway creates a new NAT Gateway resource.
+	CreateNATGateway(ctx context.Context, req *CreateNATGatewayRequest) (*NATGateway, error)
+	// ListNATGateways retrieves all NAT Gateways for the authenticated company.
+	ListNATGateways(ctx context.Context) ([]*NATGateway, error)
+	// GetNATGateway retrieves a NAT Gateway by its product UID.
+	GetNATGateway(ctx context.Context, productUID string) (*NATGateway, error)
+	// UpdateNATGateway updates a NAT Gateway by its product UID.
+	UpdateNATGateway(ctx context.Context, req *UpdateNATGatewayRequest) (*NATGateway, error)
+	// DeleteNATGateway deletes a NAT Gateway by its product UID.
+	DeleteNATGateway(ctx context.Context, productUID string) error
 	// ListNATGatewaySessions returns the speed/session-count availability matrix for NAT Gateways.
 	ListNATGatewaySessions(ctx context.Context) ([]*NATGatewaySession, error)
 	// GetNATGatewayTelemetry returns telemetry data for a NAT Gateway product.
@@ -55,6 +66,166 @@ var ErrNATGatewayTelemetryDaysOutOfRange = errors.New("days must be between 1 an
 
 // ErrNATGatewayTelemetryFromToIncomplete is returned when only one of From/To is provided.
 var ErrNATGatewayTelemetryFromToIncomplete = errors.New("both from and to must be provided together")
+
+// ErrNATGatewayProductNameRequired is returned when a ProductName is not provided.
+var ErrNATGatewayProductNameRequired = errors.New("product name is required")
+
+// ErrNATGatewayLocationIDRequired is returned when a LocationID is not provided or is invalid.
+var ErrNATGatewayLocationIDRequired = errors.New("location ID must be greater than 0")
+
+// ErrNATGatewaySpeedRequired is returned when a Speed is not provided or is invalid.
+var ErrNATGatewaySpeedRequired = errors.New("speed must be greater than 0")
+
+// ErrNATGatewayInvalidTerm is returned when a Term is not a valid contract term.
+var ErrNATGatewayInvalidTerm = errors.New("term must be one of: 1, 12, 24, 36, 48, 60")
+
+// validateCreateNATGatewayRequest validates the request parameters for creating a NAT Gateway.
+func validateCreateNATGatewayRequest(req *CreateNATGatewayRequest) error {
+	if req.ProductName == "" {
+		return ErrNATGatewayProductNameRequired
+	}
+	if req.LocationID < 1 {
+		return ErrNATGatewayLocationIDRequired
+	}
+	if req.Speed < 1 {
+		return ErrNATGatewaySpeedRequired
+	}
+	if !slices.Contains(VALID_CONTRACT_TERMS, req.Term) {
+		return ErrNATGatewayInvalidTerm
+	}
+	return nil
+}
+
+// validateUpdateNATGatewayRequest validates the request parameters for updating a NAT Gateway.
+func validateUpdateNATGatewayRequest(req *UpdateNATGatewayRequest) error {
+	if req.ProductUID == "" {
+		return ErrNATGatewayProductUIDRequired
+	}
+	if req.ProductName == "" {
+		return ErrNATGatewayProductNameRequired
+	}
+	if req.LocationID < 1 {
+		return ErrNATGatewayLocationIDRequired
+	}
+	if req.Speed < 1 {
+		return ErrNATGatewaySpeedRequired
+	}
+	if !slices.Contains(VALID_CONTRACT_TERMS, req.Term) {
+		return ErrNATGatewayInvalidTerm
+	}
+	return nil
+}
+
+// CreateNATGateway creates a new NAT Gateway resource.
+func (svc *NATGatewayServiceOp) CreateNATGateway(ctx context.Context, req *CreateNATGatewayRequest) (*NATGateway, error) {
+	if err := validateCreateNATGatewayRequest(req); err != nil {
+		return nil, err
+	}
+
+	path := "/v3/products/nat_gateways"
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodPost, path, req)
+	if err != nil {
+		return nil, err
+	}
+	var buf bytes.Buffer
+	resp, err := svc.Client.Do(ctx, clientReq, &buf)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	var natResp NATGatewayResponse
+	if err := json.Unmarshal(buf.Bytes(), &natResp); err != nil {
+		return nil, err
+	}
+	return &natResp.Data, nil
+}
+
+// ListNATGateways retrieves all NAT Gateways for the authenticated company.
+func (svc *NATGatewayServiceOp) ListNATGateways(ctx context.Context) ([]*NATGateway, error) {
+	path := "/v3/products/nat_gateways"
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var buf bytes.Buffer
+	resp, err := svc.Client.Do(ctx, clientReq, &buf)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	var listResp NATGatewayListResponse
+	if err := json.Unmarshal(buf.Bytes(), &listResp); err != nil {
+		return nil, err
+	}
+	return listResp.Data, nil
+}
+
+// GetNATGateway retrieves a NAT Gateway by its product UID.
+func (svc *NATGatewayServiceOp) GetNATGateway(ctx context.Context, productUID string) (*NATGateway, error) {
+	if productUID == "" {
+		return nil, ErrNATGatewayProductUIDRequired
+	}
+
+	path := fmt.Sprintf("/v3/products/nat_gateways/%s", url.PathEscape(productUID))
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var buf bytes.Buffer
+	resp, err := svc.Client.Do(ctx, clientReq, &buf)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	var natResp NATGatewayResponse
+	if err := json.Unmarshal(buf.Bytes(), &natResp); err != nil {
+		return nil, err
+	}
+	return &natResp.Data, nil
+}
+
+// UpdateNATGateway updates a NAT Gateway by its product UID.
+func (svc *NATGatewayServiceOp) UpdateNATGateway(ctx context.Context, req *UpdateNATGatewayRequest) (*NATGateway, error) {
+	if err := validateUpdateNATGatewayRequest(req); err != nil {
+		return nil, err
+	}
+
+	path := fmt.Sprintf("/v3/products/nat_gateways/%s", url.PathEscape(req.ProductUID))
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodPut, path, req)
+	if err != nil {
+		return nil, err
+	}
+	var buf bytes.Buffer
+	resp, err := svc.Client.Do(ctx, clientReq, &buf)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	var natResp NATGatewayResponse
+	if err := json.Unmarshal(buf.Bytes(), &natResp); err != nil {
+		return nil, err
+	}
+	return &natResp.Data, nil
+}
+
+// DeleteNATGateway deletes a NAT Gateway by its product UID.
+func (svc *NATGatewayServiceOp) DeleteNATGateway(ctx context.Context, productUID string) error {
+	if productUID == "" {
+		return ErrNATGatewayProductUIDRequired
+	}
+
+	path := fmt.Sprintf("/v3/products/nat_gateways/%s", url.PathEscape(productUID))
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodDelete, path, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := svc.Client.Do(ctx, clientReq, nil)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return nil
+}
 
 // validateGetNATGatewayTelemetryRequest validates the request parameters.
 func validateGetNATGatewayTelemetryRequest(req *GetNATGatewayTelemetryRequest) error {
