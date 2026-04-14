@@ -13,6 +13,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -331,4 +332,196 @@ func (suite *ClientTestSuite) testMethod(r *http.Request, expected string) {
 	if expected != r.Method {
 		suite.FailNowf("Request method = %v, expected %v", r.Method, expected)
 	}
+}
+
+// MockTokenProvider is a mock implementation of TokenProvider for testing.
+type MockTokenProvider struct {
+	Token string
+	Err   error
+	Calls int
+}
+
+func (m *MockTokenProvider) GetToken(ctx context.Context) (string, error) {
+	m.Calls++
+	return m.Token, m.Err
+}
+
+// TestWithAccessToken tests if WithAccessToken sets the access token correctly.
+func (suite *ClientTestSuite) TestWithAccessToken() {
+	token := "test-token-12345"
+	c, err := New(nil, WithAccessToken(token, time.Time{}))
+
+	suite.Require().NoError(err)
+	suite.Equal(token, c.accessToken)
+	suite.False(c.tokenExpiry.IsZero(), "Token expiry should be set to a future time when zero is passed")
+}
+
+// TestWithAccessToken_withExpiry tests if WithAccessToken sets the access token with a specific expiry.
+func (suite *ClientTestSuite) TestWithAccessToken_withExpiry() {
+	token := "test-token-12345"
+	expiry := time.Now().Add(1 * time.Hour)
+	c, err := New(nil, WithAccessToken(token, expiry))
+
+	suite.Require().NoError(err)
+	suite.Equal(token, c.accessToken)
+	suite.Equal(expiry.Unix(), c.tokenExpiry.Unix())
+}
+
+// TestWithTokenProvider tests if WithTokenProvider sets the token provider correctly.
+func (suite *ClientTestSuite) TestWithTokenProvider() {
+	provider := &MockTokenProvider{Token: "provider-token"}
+	c, err := New(nil, WithTokenProvider(provider))
+
+	suite.Require().NoError(err)
+	suite.NotNil(c.tokenProvider)
+}
+
+// TestSetAccessToken tests if SetAccessToken sets the access token correctly.
+func (suite *ClientTestSuite) TestSetAccessToken() {
+	c := NewClient(nil, nil)
+	token := "test-token-12345"
+
+	c.SetAccessToken(token, time.Time{})
+
+	suite.Equal(token, c.accessToken)
+	suite.False(c.tokenExpiry.IsZero(), "Token expiry should be set to a future time when zero is passed")
+}
+
+// TestSetAccessToken_withExpiry tests if SetAccessToken sets the access token with a specific expiry.
+func (suite *ClientTestSuite) TestSetAccessToken_withExpiry() {
+	c := NewClient(nil, nil)
+	token := "test-token-12345"
+	expiry := time.Now().Add(1 * time.Hour)
+
+	c.SetAccessToken(token, expiry)
+
+	suite.Equal(token, c.accessToken)
+	suite.Equal(expiry.Unix(), c.tokenExpiry.Unix())
+}
+
+// TestSetTokenProvider tests if SetTokenProvider sets the token provider correctly.
+func (suite *ClientTestSuite) TestSetTokenProvider() {
+	c := NewClient(nil, nil)
+	provider := &MockTokenProvider{Token: "provider-token"}
+
+	c.SetTokenProvider(provider)
+
+	suite.NotNil(c.tokenProvider)
+}
+
+// TestNewRequest_withAccessToken tests if NewRequest includes the Authorization header when access token is set.
+func (suite *ClientTestSuite) TestNewRequest_withAccessToken() {
+	token := "my-access-token"
+	c, err := New(nil, WithAccessToken(token, time.Time{}))
+	suite.Require().NoError(err)
+
+	req, err := c.NewRequest(ctx, http.MethodGet, "/test", nil)
+	suite.Require().NoError(err)
+
+	authHeader := req.Header.Get("Authorization")
+	suite.Equal("Bearer "+token, authHeader)
+}
+
+// TestNewRequest_withTokenProvider tests if NewRequest uses the TokenProvider for authorization.
+func (suite *ClientTestSuite) TestNewRequest_withTokenProvider() {
+	provider := &MockTokenProvider{Token: "provider-token-xyz"}
+	c, err := New(nil, WithTokenProvider(provider))
+	suite.Require().NoError(err)
+
+	req, err := c.NewRequest(ctx, http.MethodGet, "/test", nil)
+	suite.Require().NoError(err)
+
+	authHeader := req.Header.Get("Authorization")
+	suite.Equal("Bearer provider-token-xyz", authHeader)
+	suite.Equal(1, provider.Calls, "TokenProvider.GetToken should be called once")
+}
+
+// TestNewRequest_tokenProviderError tests if NewRequest returns an error when TokenProvider fails.
+func (suite *ClientTestSuite) TestNewRequest_tokenProviderError() {
+	provider := &MockTokenProvider{Err: fmt.Errorf("token fetch failed")}
+	c, err := New(nil, WithTokenProvider(provider))
+	suite.Require().NoError(err)
+
+	_, err = c.NewRequest(ctx, http.MethodGet, "/test", nil)
+	suite.Error(err)
+	suite.Contains(err.Error(), "failed to get token from provider")
+}
+
+// TestNewRequest_tokenProviderPrecedence tests that TokenProvider takes precedence over stored accessToken.
+func (suite *ClientTestSuite) TestNewRequest_tokenProviderPrecedence() {
+	provider := &MockTokenProvider{Token: "provider-token"}
+	c, err := New(nil,
+		WithAccessToken("stored-token", time.Time{}),
+		WithTokenProvider(provider),
+	)
+	suite.Require().NoError(err)
+
+	req, err := c.NewRequest(ctx, http.MethodGet, "/test", nil)
+	suite.Require().NoError(err)
+
+	authHeader := req.Header.Get("Authorization")
+	suite.Equal("Bearer provider-token", authHeader, "TokenProvider should take precedence over stored token")
+}
+
+// TestAuthorize_withTokenProvider tests if Authorize returns the token from TokenProvider.
+func (suite *ClientTestSuite) TestAuthorize_withTokenProvider() {
+	provider := &MockTokenProvider{Token: "auth-provider-token"}
+	c, err := New(nil, WithTokenProvider(provider))
+	suite.Require().NoError(err)
+
+	authInfo, err := c.Authorize(ctx)
+	suite.Require().NoError(err)
+	suite.Equal("auth-provider-token", authInfo.AccessToken)
+}
+
+// TestAuthorize_tokenProviderError tests if Authorize returns an error when TokenProvider fails.
+func (suite *ClientTestSuite) TestAuthorize_tokenProviderError() {
+	provider := &MockTokenProvider{Err: fmt.Errorf("auth failed")}
+	c, err := New(nil, WithTokenProvider(provider))
+	suite.Require().NoError(err)
+
+	_, err = c.Authorize(ctx)
+	suite.Error(err)
+	suite.Contains(err.Error(), "failed to get token from provider")
+}
+
+// TestDo_withTokenProvider tests a full request cycle using TokenProvider.
+func (suite *ClientTestSuite) TestDo_withTokenProvider() {
+	type response struct {
+		Status string `json:"status"`
+	}
+
+	// Set up handler that validates the auth header
+	var receivedAuthHeader string
+	suite.mux.HandleFunc("/test-endpoint", func(w http.ResponseWriter, r *http.Request) {
+		receivedAuthHeader = r.Header.Get("Authorization")
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"status":"ok"}`)
+	})
+
+	provider := &MockTokenProvider{Token: "integration-test-token"}
+	suite.client.SetTokenProvider(provider)
+
+	req, err := suite.client.NewRequest(ctx, http.MethodGet, "/test-endpoint", nil)
+	suite.Require().NoError(err)
+
+	body := new(response)
+	_, err = suite.client.Do(ctx, req, body)
+	suite.Require().NoError(err)
+
+	suite.Equal("Bearer integration-test-token", receivedAuthHeader)
+	suite.Equal("ok", body.Status)
+}
+
+// TestTokenProvider_emptyToken tests that an empty token from provider doesn't set Authorization header.
+func (suite *ClientTestSuite) TestTokenProvider_emptyToken() {
+	provider := &MockTokenProvider{Token: ""}
+	c, err := New(nil, WithTokenProvider(provider))
+	suite.Require().NoError(err)
+
+	req, err := c.NewRequest(ctx, http.MethodGet, "/test", nil)
+	suite.Require().NoError(err)
+
+	authHeader := req.Header.Get("Authorization")
+	suite.Empty(authHeader, "Authorization header should be empty when provider returns empty token")
 }

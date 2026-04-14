@@ -3,8 +3,10 @@ package megaport
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 
 	"github.com/lithammer/fuzzysearch/fuzzy"
 )
@@ -32,24 +34,31 @@ type LocationService interface {
 	ListMarketCodes(ctx context.Context) ([]string, error)
 	// IsValidMarketCode checks if a market code is valid in the Megaport Network Regions API.
 	IsValidMarketCode(ctx context.Context, marketCode string) (bool, error)
+	// GetRoundTripTimes returns a list of median RTTs between a specified location and other Megaport locations.
+	GetRoundTripTimes(ctx context.Context, srcLocation, year, month int) ([]*RoundTripTime, error)
 
-	// V2 API methods (DEPRECATED - use V3 methods for new code)
 	// ListLocations returns a list of all locations in the Megaport Locations API v2.
+	//
 	// Deprecated: Use ListLocationsV3 instead. The v2 API will be removed in a future version.
 	ListLocations(ctx context.Context) ([]*Location, error)
 	// GetLocationByID returns a location by its ID in the Megaport Locations API v2.
+	//
 	// Deprecated: Use GetLocationByIDV3 instead. The v2 API will be removed in a future version.
 	GetLocationByID(ctx context.Context, locationID int) (*Location, error)
 	// GetLocationByName returns a location by its name in the Megaport Locations API v2.
+	//
 	// Deprecated: Use GetLocationByNameV3 instead. The v2 API will be removed in a future version.
 	GetLocationByName(ctx context.Context, locationName string) (*Location, error)
 	// GetLocationByNameFuzzy returns a location by its name in the Megaport Locations API v2 using fuzzy search.
+	//
 	// Deprecated: Use GetLocationByNameFuzzyV3 instead. The v2 API will be removed in a future version.
 	GetLocationByNameFuzzy(ctx context.Context, search string) ([]*Location, error)
 	// FilterLocationsByMarketCode filters locations by market code in the Megaport Locations API v2.
+	//
 	// Deprecated: Use FilterLocationsByMarketCodeV3 instead. The v2 API will be removed in a future version.
 	FilterLocationsByMarketCode(ctx context.Context, marketCode string, locations []*Location) ([]*Location, error)
 	// FilterLocationsByMcrAvailability filters locations by MCR availability in the Megaport Locations API v2.
+	//
 	// Deprecated: Use FilterLocationsByMcrAvailabilityV3 instead. The v2 API will be removed in a future version.
 	FilterLocationsByMcrAvailability(ctx context.Context, mcrAvailable bool, locations []*Location) []*Location
 }
@@ -173,6 +182,20 @@ type ProductLocationDetails struct {
 	City    string `json:"city"`
 	Metro   string `json:"metro"`
 	Country string `json:"country"`
+}
+
+// RoundTripTime represents the median RTT (over a month) between two Megaport Locations
+type RoundTripTime struct {
+	SrcLocation int     `json:"srcLocation"`
+	DstLocation int     `json:"dstLocation"`
+	MedianRTT   float64 `json:"medianRTT"`
+}
+
+// RoundTripTimeResponse represents the response from the Megaport Locations RTT API
+type RoundTripTimeResponse struct {
+	Message string           `json:"message"`
+	Terms   string           `json:"terms"`
+	Data    []*RoundTripTime `json:"data"`
 }
 
 // ==========================================
@@ -502,4 +525,57 @@ func (svc *LocationServiceOp) IsValidMarketCode(ctx context.Context, marketCode 
 	}
 
 	return found, nil
+}
+
+// GetRoundTripTimes returns a list of median RTTs from a specified location to other
+// Megaport locations, for the given month. Note that the statistics provided by this
+// endpoint are historical, rather than on-demand. Data for the current month will not
+// reliably be available. Also note that at time of writing, data is not made available
+// in the staging environment; an empty slice of RTTs will be returned.
+func (svc *LocationServiceOp) GetRoundTripTimes(ctx context.Context, srcLocation, year, month int) ([]*RoundTripTime, error) {
+	path := "/v2/locations/rtt"
+
+	// Years are represented by their last two digits (i.e. 26 -> 2026)
+	if year < 0 {
+		return nil, ErrInvalidYear
+	}
+
+	// Months are one-indexed (i.e. 1 -> January)
+	if month < 1 || month > 12 {
+		return nil, ErrInvalidMonth
+	}
+
+	// The Locations API expects a two-digit year suffix to represent the year (e.g. 2026 -> 26).
+	yearSuffix := year % 100
+
+	params := url.Values{}
+	params.Add("srcLocation", fmt.Sprintf("%d", srcLocation))
+	params.Add("year", fmt.Sprintf("%d", yearSuffix))
+	params.Add("month", fmt.Sprintf("%d", month))
+	url := svc.Client.BaseURL.JoinPath(path)
+	url.RawQuery = params.Encode()
+	urlStr := url.String()
+
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, urlStr, nil)
+	if err != nil {
+		return nil, err
+	}
+	response, resErr := svc.Client.Do(ctx, clientReq, nil)
+	if resErr != nil {
+		return nil, resErr
+	}
+	defer response.Body.Close()
+
+	body, fileErr := io.ReadAll(response.Body)
+	if fileErr != nil {
+		return nil, fileErr
+	}
+
+	rttResponse := RoundTripTimeResponse{}
+	unmarshalErr := json.Unmarshal(body, &rttResponse)
+	if unmarshalErr != nil {
+		return nil, unmarshalErr
+	}
+
+	return rttResponse.Data, nil
 }
