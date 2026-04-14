@@ -322,8 +322,9 @@ func (svc *MVEServiceOp) DeleteMVE(ctx context.Context, req *DeleteMVERequest) (
 }
 
 // ListMVEImages returns a list of currently supported MVE images and details for each image, including image ID, version, product, and vendor. The image id returned indicates the software version and key configuration parameters of the image. The releaseImage value returned indicates whether the MVE image is available for selection when ordering an MVE.
+// This method uses the v4 API and flattens the nested response to maintain backward compatibility.
 func (svc *MVEServiceOp) ListMVEImages(ctx context.Context) ([]*MVEImage, error) {
-	path := "/v3/product/mve/images"
+	path := "/v4/product/mve/images"
 	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
@@ -337,11 +338,29 @@ func (svc *MVEServiceOp) ListMVEImages(ctx context.Context) ([]*MVEImage, error)
 	if err != nil {
 		return nil, err
 	}
-	imageResp := MVEImageAPIResponse{}
+	imageResp := MVEImageAPIResponseV4{}
 	if err := json.Unmarshal(body, &imageResp); err != nil {
 		return nil, err
 	}
-	return imageResp.Data.Images, nil
+
+	// Flatten the nested v4 response structure to maintain backward compatibility
+	// Product and Vendor are denormalized from the parent level to each image
+	var flatImages []*MVEImage
+	for _, productGroup := range imageResp.Data.Images {
+		for _, img := range productGroup.Images {
+			flatImages = append(flatImages, &MVEImage{
+				ID:                img.ID,
+				Version:           img.Version,
+				Product:           productGroup.Product, // Denormalized from parent
+				Vendor:            productGroup.Vendor,  // Denormalized from parent
+				VendorDescription: img.VendorDescription,
+				ReleaseImage:      img.ReleaseImage,
+				ProductCode:       img.ProductCode,
+				AvailableSizes:    img.AvailableSizes, // New field from v4 API
+			})
+		}
+	}
+	return flatImages, nil
 }
 
 // ListAvailableMVESizes returns a list of currently available MVE sizes and details for each size. The instance size determines the MVE capabilities, such as how many concurrent connections it can support. The compute sizes are 2/8, 4/16, 8/32, and 12/48, where the first number is the CPU and the second number is the GB of available RAM. Each size has 4 GB of RAM for every vCPU allocated.

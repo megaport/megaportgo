@@ -84,6 +84,18 @@ var ErrInvalidVXCAEndPartnerConfig = errors.New("invalid vxc a-end partner confi
 // ErrInvalidVXCBEndPartnerConfig is returned when an invalid VXC B-End partner config is provided
 var ErrInvalidVXCBEndPartnerConfig = errors.New("invalid vxc b-end partner config")
 
+// ErrInvalidAddOnType is returned when an invalid add-on type is provided
+var ErrInvalidAddOnType = errors.New("invalid add-on type, currently only IP_SEC is supported")
+
+// ErrInvalidIPsecTunnelCount is returned when the IPsec tunnel count is not valid
+var ErrInvalidIPsecTunnelCount = errors.New("invalid IPsec tunnel count, valid values are 10, 20, or 30 (0 defaults to 10)")
+
+// ErrInvalidMonth is returned when RTT statistics are requested for an invalid month
+var ErrInvalidMonth = errors.New("invalid month, must be between 1 and 12")
+
+// ErrInvalidYear is returned when RTT statistics are requested for an invalid year
+var ErrInvalidYear = errors.New("invalid year, must be between 0 and 99")
+
 // maintenanceStatesToString converts a slice of MaintenanceState to a slice of string
 func maintenanceStatesToString(states []MaintenanceState) []string {
 	strs := make([]string, len(states))

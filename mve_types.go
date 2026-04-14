@@ -31,8 +31,8 @@ type SixwindVSRConfig struct {
 	Vendor       string `json:"vendor"`
 	ImageID      int    `json:"imageId"`
 	ProductSize  string `json:"productSize"`
-	MVELabel     string `json:"mveLabel"`
-	SSHPublicKey string `json:"sshPublicKey"`
+	MVELabel     string `json:"mveLabel,omitempty"`
+	SSHPublicKey string `json:"sshPublicKey,omitempty"`
 }
 
 // ArubaConfig represents the configuration for an Aruba MVE.
@@ -42,9 +42,9 @@ type ArubaConfig struct {
 	ImageID     int    `json:"imageId"`
 	ProductSize string `json:"productSize"`
 	MVELabel    string `json:"mveLabel,omitempty"`
-	AccountName string `json:"accountName"`
-	AccountKey  string `json:"accountKey"`
-	SystemTag   string `json:"systemTag"`
+	AccountName string `json:"accountName,omitempty"`
+	AccountKey  string `json:"accountKey,omitempty"`
+	SystemTag   string `json:"systemTag,omitempty"`
 }
 
 // AviatrixConfig represents the configuration for an Aviatrix Secure Edge MVE.
@@ -53,8 +53,8 @@ type AviatrixConfig struct {
 	Vendor      string `json:"vendor"`
 	ImageID     int    `json:"imageId"`
 	ProductSize string `json:"productSize"`
-	MVELabel    string `json:"mveLabel"`
-	CloudInit   string `json:"cloudInit"`
+	MVELabel    string `json:"mveLabel,omitempty"`
+	CloudInit   string `json:"cloudInit,omitempty"`
 }
 
 // CiscoConfig represents the configuration for a Cisco MVE.
@@ -64,13 +64,13 @@ type CiscoConfig struct {
 	ImageID            int    `json:"imageId"`
 	ProductSize        string `json:"productSize"`
 	MVELabel           string `json:"mveLabel,omitempty"`
-	ManageLocally      bool   `json:"manageLocally"`
-	AdminSSHPublicKey  string `json:"adminSshPublicKey"`
-	SSHPublicKey       string `json:"sshPublicKey"`
-	CloudInit          string `json:"cloudInit"`
-	FMCIPAddress       string `json:"fmcIpAddress"`
-	FMCRegistrationKey string `json:"fmcRegistrationKey"`
-	FMCNatID           string `json:"fmcNatId"`
+	ManageLocally      bool   `json:"manageLocally,omitempty"`
+	AdminSSHPublicKey  string `json:"adminSshPublicKey,omitempty"`
+	SSHPublicKey       string `json:"sshPublicKey,omitempty"`
+	CloudInit          string `json:"cloudInit,omitempty"`
+	FMCIPAddress       string `json:"fmcIpAddress,omitempty"`
+	FMCRegistrationKey string `json:"fmcRegistrationKey,omitempty"`
+	FMCNatID           string `json:"fmcNatId,omitempty"`
 }
 
 // FortinetConfig represents the configuration for a Fortinet MVE.
@@ -80,9 +80,9 @@ type FortinetConfig struct {
 	ImageID           int    `json:"imageId"`
 	ProductSize       string `json:"productSize"`
 	MVELabel          string `json:"mveLabel,omitempty"`
-	AdminSSHPublicKey string `json:"adminSshPublicKey"`
-	SSHPublicKey      string `json:"sshPublicKey"`
-	LicenseData       string `json:"licenseData"`
+	AdminSSHPublicKey string `json:"adminSshPublicKey,omitempty"`
+	SSHPublicKey      string `json:"sshPublicKey,omitempty"`
+	LicenseData       string `json:"licenseData,omitempty"`
 }
 
 // PaloAltoConfig represents the configuration for a Palo Alto MVE.
@@ -104,9 +104,9 @@ type PrismaConfig struct {
 	Vendor      string `json:"vendor"`
 	ImageID     int    `json:"imageId"`
 	ProductSize string `json:"productSize"`
-	MVELabel    string `json:"mveLabel"`
-	IONKey      string `json:"ionKey"`
-	SecretKey   string `json:"secretKey"`
+	MVELabel    string `json:"mveLabel,omitempty"`
+	IONKey      string `json:"ionKey,omitempty"`
+	SecretKey   string `json:"secretKey,omitempty"`
 }
 
 // VersaConfig represents the configuration for a Versa MVE.
@@ -116,11 +116,11 @@ type VersaConfig struct {
 	ImageID           int    `json:"imageId"`
 	ProductSize       string `json:"productSize"`
 	MVELabel          string `json:"mveLabel,omitempty"`
-	DirectorAddress   string `json:"directorAddress"`
-	ControllerAddress string `json:"controllerAddress"`
-	LocalAuth         string `json:"localAuth"`
-	RemoteAuth        string `json:"remoteAuth"`
-	SerialNumber      string `json:"serialNumber"`
+	DirectorAddress   string `json:"directorAddress,omitempty"`
+	ControllerAddress string `json:"controllerAddress,omitempty"`
+	LocalAuth         string `json:"localAuth,omitempty"`
+	RemoteAuth        string `json:"remoteAuth,omitempty"`
+	SerialNumber      string `json:"serialNumber,omitempty"`
 }
 
 // VmwareConfig represents the configuration for a VMware MVE.
@@ -130,10 +130,10 @@ type VmwareConfig struct {
 	ImageID           int    `json:"imageId"`
 	ProductSize       string `json:"productSize"`
 	MVELabel          string `json:"mveLabel,omitempty"`
-	AdminSSHPublicKey string `json:"adminSshPublicKey"`
-	SSHPublicKey      string `json:"sshPublicKey"`
-	VcoAddress        string `json:"vcoAddress"`
-	VcoActivationCode string `json:"vcoActivationCode"`
+	AdminSSHPublicKey string `json:"adminSshPublicKey,omitempty"`
+	SSHPublicKey      string `json:"sshPublicKey,omitempty"`
+	VcoAddress        string `json:"vcoAddress,omitempty"`
+	VcoActivationCode string `json:"vcoActivationCode,omitempty"`
 }
 
 // MerakiConfig represents the configuration for a Meraki MVE.
@@ -143,7 +143,7 @@ type MerakiConfig struct {
 	ImageID     int    `json:"imageId"`
 	ProductSize string `json:"productSize"`
 	MVELabel    string `json:"mveLabel,omitempty"`
-	Token       string `json:"token"`
+	Token       string `json:"token,omitempty"`
 }
 
 // MVENetworkInterface represents a vNIC.
@@ -267,26 +267,66 @@ type MVEResponse struct {
 }
 
 // MVEImage represents details for an MVE image, including image ID, version, product, and vendor.
+// In the v4 API, Product and Vendor are at the parent level (MVEImageProduct), but we denormalize
+// them here for backward compatibility with existing code.
 type MVEImage struct {
-	ID                int    `json:"id"`
-	Version           string `json:"version"`
-	Product           string `json:"product"`
-	Vendor            string `json:"vendor"`
-	VendorDescription string `json:"vendorDescription"`
-	ReleaseImage      bool   `json:"releaseImage"`
-	ProductCode       string `json:"productCode"`
+	ID                int      `json:"id"`
+	Version           string   `json:"version"`
+	Product           string   `json:"product"` // Denormalized from parent in v4 API
+	Vendor            string   `json:"vendor"`  // Denormalized from parent in v4 API
+	VendorDescription string   `json:"vendorDescription"`
+	ReleaseImage      bool     `json:"releaseImage"`
+	ProductCode       string   `json:"productCode"`
+	AvailableSizes    []string `json:"availableSizes"` // New in v4 API - list of compatible MVE sizes
 }
 
-// MVEImageAPIResponse represents the response to an MVE image request.
+// MVEImageProduct represents a vendor/product grouping of MVE images from the v4 API.
+// Each product contains multiple image versions.
+type MVEImageProduct struct {
+	Product         string             `json:"product"`
+	Vendor          string             `json:"vendor"`
+	VendorProductID string             `json:"vendorProductId"`
+	Images          []*MVEImageVersion `json:"images"`
+}
+
+// MVEImageVersion represents an individual MVE image version within a product group (v4 API structure).
+type MVEImageVersion struct {
+	ID                int      `json:"id"`
+	Version           string   `json:"version"`
+	ProductCode       string   `json:"productCode"`
+	VendorDescription string   `json:"vendorDescription"`
+	ReleaseImage      bool     `json:"releaseImage"`
+	AvailableSizes    []string `json:"availableSizes"`
+}
+
+// MVEImageAPIResponse represents the response to an MVE image request from the v3 API.
+//
+// Deprecated: This struct is part of the v3 API and is maintained for backward compatibility.
+// Use MVEImageAPIResponseV4 for new implementations.
 type MVEImageAPIResponse struct {
 	Message string                   `json:"message"`
 	Terms   string                   `json:"terms"`
 	Data    *MVEImageAPIResponseData `json:"data"`
 }
 
-// MVEImageAPIResponseData represents the data in an MVE image response.
+// MVEImageAPIResponseData represents the data in an MVE image response from the v3 API.
+//
+// Deprecated: This struct is part of the v3 API and is maintained for backward compatibility.
+// Use MVEImageAPIResponseDataV4 for new implementations.
 type MVEImageAPIResponseData struct {
 	Images []*MVEImage `json:"mveImages"`
+}
+
+// MVEImageAPIResponseV4 represents the response to an MVE image request from the v4 API.
+type MVEImageAPIResponseV4 struct {
+	Message string                     `json:"message"`
+	Terms   string                     `json:"terms"`
+	Data    *MVEImageAPIResponseDataV4 `json:"data"`
+}
+
+// MVEImageAPIResponseDataV4 represents the data in an MVE image response from the v4 API.
+type MVEImageAPIResponseDataV4 struct {
+	Images []*MVEImageProduct `json:"mveImages"`
 }
 
 // MVESize represents the details on the MVE size. The instance size determines the MVE capabilities, such as how many concurrent connections it can support. The compute sizes are 2/8, 4/16, 8/32, and 12/48, where the first number is the CPU and the second number is the GB of available RAM. Each size has 4 GB of RAM for every vCPU allocated.

@@ -10,11 +10,12 @@ const (
 	SERVICE_LIVE       = "LIVE"       // The LIVE service state.
 
 	// Product types
-	PRODUCT_MEGAPORT = "megaport"
-	PRODUCT_VXC      = "vxc"
-	PRODUCT_MCR      = "mcr2"
-	PRODUCT_MVE      = "mve"
-	PRODUCT_IX       = "ix"
+	PRODUCT_MEGAPORT    = "megaport"
+	PRODUCT_VXC         = "vxc"
+	PRODUCT_MCR         = "mcr2"
+	PRODUCT_MVE         = "mve"
+	PRODUCT_IX          = "ix"
+	PRODUCT_NAT_GATEWAY = "nat_gateway"
 
 	// Cancellation states
 	STATUS_DECOMMISSIONED = "DECOMMISSIONED"
@@ -31,9 +32,9 @@ const (
 
 var (
 	// VALID_CONTRACT_TERMS lists the valid contract terms in months.
-	VALID_CONTRACT_TERMS = []int{1, 12, 24, 36}
+	VALID_CONTRACT_TERMS = []int{1, 12, 24, 36, 48, 60}
 
-	VALID_MCR_PORT_SPEEDS = []int{1000, 2500, 5000, 10000, 25000, 50000, 100000}
+	VALID_MCR_PORT_SPEEDS = []int{1000, 2500, 5000, 10000, 25000, 50000, 100000, 400000}
 
 	// SERVICE_STATE_READY is a list of service states that are considered ready for use.
 	SERVICE_STATE_READY = []string{SERVICE_CONFIGURED, SERVICE_LIVE}
