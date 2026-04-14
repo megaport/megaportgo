@@ -1,6 +1,7 @@
 package megaport
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -64,6 +65,7 @@ func (suite *EventsTestSuite) TestGetMaintenanceEvents() {
     ]`
 
 	suite.mux.HandleFunc("/ens/v1/status/maintenance", func(w http.ResponseWriter, r *http.Request) {
+		suite.Equal("Scheduled", r.URL.Query().Get("state"))
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, err := w.Write([]byte(sampleJSON))
@@ -72,12 +74,43 @@ func (suite *EventsTestSuite) TestGetMaintenanceEvents() {
 		}
 	})
 
-	svc := &EventsServiceOp{client: suite.client}
-	events, err := svc.GetMaintenanceEvents("Scheduled")
+	svc := &EventsServiceOp{Client: suite.client}
+	events, err := svc.GetMaintenanceEvents(context.Background(), "Scheduled")
 	suite.NoError(err)
 	suite.Len(events, 2)
 	suite.Equal("CSS-1234", events[0].EventID)
 	suite.Equal("Not Needed", events[1].CancelReason)
+}
+
+func (suite *EventsTestSuite) TestGetMaintenanceEvents_CaseInsensitive() {
+	suite.mux.HandleFunc("/ens/v1/status/maintenance", func(w http.ResponseWriter, r *http.Request) {
+		// canonical casing must be sent regardless of input casing
+		suite.Equal("Scheduled", r.URL.Query().Get("state"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`[]`))
+	})
+
+	svc := &EventsServiceOp{Client: suite.client}
+	events, err := svc.GetMaintenanceEvents(context.Background(), "scheduled")
+	suite.NoError(err)
+	suite.Empty(events)
+}
+
+func (suite *EventsTestSuite) TestGetMaintenanceEvents_InvalidState() {
+	svc := &EventsServiceOp{Client: suite.client}
+	_, err := svc.GetMaintenanceEvents(context.Background(), "invalid-state")
+	suite.ErrorIs(err, ErrInvalidMaintenanceState)
+}
+
+func (suite *EventsTestSuite) TestGetMaintenanceEvents_HTTPError() {
+	suite.mux.HandleFunc("/ens/v1/status/maintenance", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	})
+
+	svc := &EventsServiceOp{Client: suite.client}
+	_, err := svc.GetMaintenanceEvents(context.Background(), "Scheduled")
+	suite.Error(err)
 }
 
 func (suite *EventsTestSuite) TestGetOutageEvents() {
@@ -109,6 +142,7 @@ func (suite *EventsTestSuite) TestGetOutageEvents() {
     ]`
 
 	suite.mux.HandleFunc("/ens/v1/status/outage", func(w http.ResponseWriter, r *http.Request) {
+		suite.Equal("Ongoing", r.URL.Query().Get("state"))
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, err := w.Write([]byte(sampleJSON))
@@ -117,10 +151,41 @@ func (suite *EventsTestSuite) TestGetOutageEvents() {
 		}
 	})
 
-	svc := &EventsServiceOp{client: suite.client}
-	events, err := svc.GetOutageEvents("Ongoing")
+	svc := &EventsServiceOp{Client: suite.client}
+	events, err := svc.GetOutageEvents(context.Background(), "Ongoing")
 	suite.NoError(err)
 	suite.Len(events, 2)
 	suite.Equal("c2037361-eb5b-48a3-9c73-fb4efbf2c886", events[0].OutageID)
 	suite.Equal("CSS-12345", events[1].EventID)
+}
+
+func (suite *EventsTestSuite) TestGetOutageEvents_CaseInsensitive() {
+	suite.mux.HandleFunc("/ens/v1/status/outage", func(w http.ResponseWriter, r *http.Request) {
+		// canonical casing must be sent regardless of input casing
+		suite.Equal("Ongoing", r.URL.Query().Get("state"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`[]`))
+	})
+
+	svc := &EventsServiceOp{Client: suite.client}
+	events, err := svc.GetOutageEvents(context.Background(), "ongoing")
+	suite.NoError(err)
+	suite.Empty(events)
+}
+
+func (suite *EventsTestSuite) TestGetOutageEvents_InvalidState() {
+	svc := &EventsServiceOp{Client: suite.client}
+	_, err := svc.GetOutageEvents(context.Background(), "invalid-state")
+	suite.ErrorIs(err, ErrInvalidOutageState)
+}
+
+func (suite *EventsTestSuite) TestGetOutageEvents_HTTPError() {
+	suite.mux.HandleFunc("/ens/v1/status/outage", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	})
+
+	svc := &EventsServiceOp{Client: suite.client}
+	_, err := svc.GetOutageEvents(context.Background(), "Ongoing")
+	suite.Error(err)
 }

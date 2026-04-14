@@ -1,25 +1,28 @@
 package megaport
 
 import (
+	"context"
 	"encoding/json"
+	"io"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
 type EventsService interface {
 	// GetMaintenanceEvents returns details about maintenance events, filtered by the specified state value.
-	GetMaintenanceEvents(state string) ([]MaintenanceEvent, error)
+	GetMaintenanceEvents(ctx context.Context, state string) ([]MaintenanceEvent, error)
 	// GetOutageEvents returns details about outage events, filtered by the specified state value.
-	GetOutageEvents(state string) ([]OutageEvent, error)
+	GetOutageEvents(ctx context.Context, state string) ([]OutageEvent, error)
 }
 
 type EventsServiceOp struct {
-	client *Client
+	Client *Client
 }
 
 func NewEventsService(client *Client) EventsService {
 	return &EventsServiceOp{
-		client: client,
+		Client: client,
 	}
 }
 
@@ -131,38 +134,41 @@ type OutageEvent struct {
 
 // GetMaintenanceEvents retrieves maintenance events from the Megaport API, filtered by the specified state.
 // It validates the state against the valid maintenance states and returns an error if invalid.
-func (s *EventsServiceOp) GetMaintenanceEvents(state string) ([]MaintenanceEvent, error) {
-	// Validate state
-	valid := false
+func (svc *EventsServiceOp) GetMaintenanceEvents(ctx context.Context, state string) ([]MaintenanceEvent, error) {
+	var canonical MaintenanceState
 	for _, st := range VALID_MAINTENANCE_STATES {
 		if strings.EqualFold(string(st), state) {
-			valid = true
+			canonical = st
 			break
 		}
 	}
-	if !valid {
+	if canonical == "" {
 		return nil, ErrInvalidMaintenanceState
 	}
 
-	// Build URL
-	url := s.client.BaseURL.JoinPath("/ens/v1/status/maintenance").String() + "?state=" + state
+	params := url.Values{}
+	params.Add("state", string(canonical))
+	u := svc.Client.BaseURL.JoinPath("/ens/v1/status/maintenance")
+	u.RawQuery = params.Encode()
 
-	// Create HTTP request
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := svc.Client.NewRequest(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	// Perform request
-	resp, err := s.client.HTTPClient.Do(req)
+	response, err := svc.Client.Do(ctx, req, nil)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer response.Body.Close()
 
-	// Decode response as an array of MaintenanceEvent
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+
 	var events []MaintenanceEvent
-	if err := json.NewDecoder(resp.Body).Decode(&events); err != nil {
+	if err := json.Unmarshal(body, &events); err != nil {
 		return nil, err
 	}
 
@@ -171,38 +177,41 @@ func (s *EventsServiceOp) GetMaintenanceEvents(state string) ([]MaintenanceEvent
 
 // GetOutageEvents retrieves outage events from the Megaport API, filtered by the specified state.
 // It validates the state against the valid outage states and returns an error if invalid.
-func (s *EventsServiceOp) GetOutageEvents(state string) ([]OutageEvent, error) {
-	// Validate state
-	valid := false
+func (svc *EventsServiceOp) GetOutageEvents(ctx context.Context, state string) ([]OutageEvent, error) {
+	var canonical OutageState
 	for _, st := range VALID_OUTAGE_STATES {
 		if strings.EqualFold(string(st), state) {
-			valid = true
+			canonical = st
 			break
 		}
 	}
-	if !valid {
+	if canonical == "" {
 		return nil, ErrInvalidOutageState
 	}
 
-	// Build URL
-	url := s.client.BaseURL.JoinPath("/ens/v1/status/outage").String() + "?state=" + state
+	params := url.Values{}
+	params.Add("state", string(canonical))
+	u := svc.Client.BaseURL.JoinPath("/ens/v1/status/outage")
+	u.RawQuery = params.Encode()
 
-	// Create HTTP request
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := svc.Client.NewRequest(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	// Perform request
-	resp, err := s.client.HTTPClient.Do(req)
+	response, err := svc.Client.Do(ctx, req, nil)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer response.Body.Close()
 
-	// Decode response as an array of OutageEvent
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+
 	var events []OutageEvent
-	if err := json.NewDecoder(resp.Body).Decode(&events); err != nil {
+	if err := json.Unmarshal(body, &events); err != nil {
 		return nil, err
 	}
 
