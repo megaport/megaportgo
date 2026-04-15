@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -227,7 +228,7 @@ func (svc *OrderApprovalServiceOp) doAction(ctx context.Context, orderApprovalUI
 	if err != nil {
 		return err
 	}
-	response, resErr := svc.Client.Do(ctx, clientReq, nil)
+	response, resErr := svc.Client.Do(ctx, clientReq, io.Discard)
 	if resErr != nil {
 		return resErr
 	}
