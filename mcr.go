@@ -567,9 +567,9 @@ func (svc *MCRServiceOp) ModifyMCRPrefixFilterList(ctx context.Context, mcrID st
 }
 
 // DeleteMCR deletes an MCR in the Megaport MCR API.
-// Note: MCR products only support immediate deletion (CANCEL_NOW). Per API requirements,
-// the DeleteNow flag will be automatically set to true. Attempting to schedule deletion
-// for later (DeleteNow=false) will return an error.
+// Note: MCR products only support immediate deletion (CANCEL_NOW). Requests with
+// DeleteNow=false are rejected with ErrMCRCancelLaterNotAllowed, and accepted
+// requests always call the underlying API with DeleteNow=true.
 func (svc *MCRServiceOp) DeleteMCR(ctx context.Context, req *DeleteMCRRequest) (*DeleteMCRResponse, error) {
 	// Enforce MCR lifecycle restriction: only CANCEL_NOW is allowed
 	if !req.DeleteNow {

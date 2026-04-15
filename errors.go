@@ -97,7 +97,7 @@ var ErrInvalidMonth = errors.New("invalid month, must be between 1 and 12")
 var ErrInvalidYear = errors.New("invalid year, must be between 0 and 99")
 
 // ErrMCRCancelLaterNotAllowed is returned when attempting to schedule MCR deletion for later (only CANCEL_NOW is allowed)
-var ErrMCRCancelLaterNotAllowed = errors.New("MCR products do not support scheduled deletion (cancel later). Only immediate deletion (CANCEL_NOW) is allowed per product lifecycle requirements")
+var ErrMCRCancelLaterNotAllowed = errors.New("mcr products do not support scheduled deletion (cancel later), only immediate deletion (CANCEL_NOW) is allowed")
 
 // ErrTransitVXCCancelLaterNotAllowed is returned when attempting to schedule Transit VXC deletion for later (only CANCEL_NOW is allowed)
-var ErrTransitVXCCancelLaterNotAllowed = errors.New("transit VXC (Megaport Internet) does not support scheduled deletion (cancel later). Only immediate deletion (CANCEL_NOW) is allowed per product lifecycle requirements")
+var ErrTransitVXCCancelLaterNotAllowed = errors.New("transit vxc (megaport internet) does not support scheduled deletion (cancel later), only immediate deletion (CANCEL_NOW) is allowed")

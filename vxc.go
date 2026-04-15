@@ -286,8 +286,9 @@ func (svc *VXCServiceOp) ValidateVXCOrder(ctx context.Context, req *BuyVXCReques
 	return svc.Client.ProductService.ValidateProductOrder(ctx, buyOrder)
 }
 
-// isTransitVXC checks if a VXC is a Transit VXC (Megaport Internet) by examining the partner configuration.
-// A VXC is considered a Transit VXC if either A-End or B-End has connectType "TRANSIT".
+// isTransitVXC checks if a VXC is a Transit VXC (Megaport Internet) by examining
+// its CSP connection resources. A VXC is considered a Transit VXC if any
+// CSPConnection entry is a CSPConnectionTransit with ConnectType "TRANSIT".
 func isTransitVXC(vxc *VXC) bool {
 	if vxc == nil || vxc.Resources == nil || vxc.Resources.CSPConnection == nil {
 		return false
@@ -305,18 +306,19 @@ func isTransitVXC(vxc *VXC) bool {
 // Note: Transit VXCs (Megaport Internet) only support immediate deletion (CANCEL_NOW).
 // Attempting to schedule deletion (DeleteNow=false) for Transit VXCs will return an error.
 func (svc *VXCServiceOp) DeleteVXC(ctx context.Context, id string, req *DeleteVXCRequest) error {
-	// Check if this is a Transit VXC that requires immediate deletion
-	vxc, err := svc.GetVXC(ctx, id)
-	if err != nil {
-		return err
+	// Only validate Transit VXC restriction when scheduling deletion.
+	// Immediate deletions skip the extra API call entirely.
+	if !req.DeleteNow {
+		vxc, err := svc.GetVXC(ctx, id)
+		if err != nil {
+			return err
+		}
+		if isTransitVXC(vxc) {
+			return ErrTransitVXCCancelLaterNotAllowed
+		}
 	}
 
-	// Enforce Transit VXC lifecycle restriction: only CANCEL_NOW is allowed
-	if isTransitVXC(vxc) && !req.DeleteNow {
-		return ErrTransitVXCCancelLaterNotAllowed
-	}
-
-	_, err = svc.Client.ProductService.DeleteProduct(ctx, &DeleteProductRequest{
+	_, err := svc.Client.ProductService.DeleteProduct(ctx, &DeleteProductRequest{
 		ProductID: id,
 		DeleteNow: req.DeleteNow,
 	})

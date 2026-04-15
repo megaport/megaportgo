@@ -116,8 +116,8 @@ func (suite *MCRIntegrationTestSuite) TestMCRLifecycle() {
 		DeleteNow: false,
 	})
 	// Expect error since MCR does not support cancel later
-	suite.Error(deleteErr, "expected error when attempting to cancel MCR later")
-	suite.ErrorIs(deleteErr, ErrMCRCancelLaterNotAllowed, "expected ErrMCRCancelLaterNotAllowed error")
+	suite.Require().Error(deleteErr, "expected error when attempting to cancel MCR later")
+	suite.Require().ErrorIs(deleteErr, ErrMCRCancelLaterNotAllowed, "expected ErrMCRCancelLaterNotAllowed error")
 	logger.DebugContext(ctx, "MCR cancel later correctly rejected", slog.String("error", deleteErr.Error()))
 
 	// Testing MCR Delete
