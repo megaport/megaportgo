@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -59,6 +60,9 @@ type OrderApprovalServiceOp struct {
 	Client *Client
 }
 
+// ErrOrderApprovalUIDRequired is returned when an order approval UID is not provided.
+var ErrOrderApprovalUIDRequired = errors.New("order approval UID is required")
+
 // OrderApproval represents an order approval from the Megaport API.
 type OrderApproval struct {
 	UID                string              `json:"uid"`
@@ -110,6 +114,9 @@ type OrderApprovalActionRequest struct {
 
 // ListOrderApprovals lists order approval requests from the Megaport API.
 func (svc *OrderApprovalServiceOp) ListOrderApprovals(ctx context.Context, req *ListOrderApprovalsRequest) (*ListOrderApprovalsResponse, error) {
+	if req == nil {
+		req = &ListOrderApprovalsRequest{}
+	}
 	path := "/v3/order_approvals"
 	params := url.Values{}
 	if req.Status != nil {
@@ -211,6 +218,9 @@ func (svc *OrderApprovalServiceOp) WithdrawOrderApproval(ctx context.Context, or
 }
 
 func (svc *OrderApprovalServiceOp) doAction(ctx context.Context, orderApprovalUID string, action string, req *OrderApprovalActionRequest) error {
+	if orderApprovalUID == "" {
+		return ErrOrderApprovalUIDRequired
+	}
 	path := fmt.Sprintf("/v3/order_approvals/%s/%s", url.PathEscape(orderApprovalUID), action)
 	u := svc.Client.BaseURL.JoinPath(path).String()
 

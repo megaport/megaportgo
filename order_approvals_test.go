@@ -137,6 +137,39 @@ func (suite *OrderApprovalClientTestSuite) TestListOrderApprovalsWithServiceIDs(
 	suite.Empty(listRes.OrderApprovals)
 }
 
+func (suite *OrderApprovalClientTestSuite) TestListOrderApprovalsNilRequest() {
+	ctx := context.Background()
+
+	jblob := `{
+		"message": "Success",
+		"terms": "https://www.megaport.com/legal/acceptable-use-policy",
+		"data": []
+	}`
+
+	suite.mux.HandleFunc("/v3/order_approvals", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		suite.Empty(r.URL.Query())
+		fmt.Fprint(w, jblob)
+	})
+
+	listRes, err := suite.client.OrderApprovalService.ListOrderApprovals(ctx, nil)
+	suite.NoError(err)
+	suite.NotNil(listRes)
+	suite.Empty(listRes.OrderApprovals)
+}
+
+func (suite *OrderApprovalClientTestSuite) TestActionEmptyUID() {
+	ctx := context.Background()
+	err := suite.client.OrderApprovalService.ApproveOrderApproval(ctx, "", &OrderApprovalActionRequest{})
+	suite.ErrorIs(err, ErrOrderApprovalUIDRequired)
+
+	err = suite.client.OrderApprovalService.RejectOrderApproval(ctx, "", &OrderApprovalActionRequest{})
+	suite.ErrorIs(err, ErrOrderApprovalUIDRequired)
+
+	err = suite.client.OrderApprovalService.WithdrawOrderApproval(ctx, "", &OrderApprovalActionRequest{})
+	suite.ErrorIs(err, ErrOrderApprovalUIDRequired)
+}
+
 func (suite *OrderApprovalClientTestSuite) TestApproveOrderApproval() {
 	ctx := context.Background()
 	uid := "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
