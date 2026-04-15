@@ -118,7 +118,7 @@ func (svc *OrderApprovalServiceOp) ListOrderApprovals(ctx context.Context, req *
 	if req == nil {
 		req = &ListOrderApprovalsRequest{}
 	}
-	path := "v3/order_approvals"
+	path := "/v3/order_approvals"
 	params := url.Values{}
 	if req.Status != nil {
 		params.Add("status", string(*req.Status))
@@ -143,13 +143,11 @@ func (svc *OrderApprovalServiceOp) ListOrderApprovals(ctx context.Context, req *
 		params.Add("direction", *req.Direction)
 	}
 
-	u := svc.Client.BaseURL.JoinPath(path)
 	if len(params) > 0 {
-		u.RawQuery = params.Encode()
+		path = path + "?" + params.Encode()
 	}
-	urlString := u.String()
 
-	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, urlString, nil)
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +158,7 @@ func (svc *OrderApprovalServiceOp) ListOrderApprovals(ctx context.Context, req *
 	}
 	defer response.Body.Close()
 
-	svc.Client.Logger.DebugContext(ctx, "Listing Order Approvals", slog.String("url", urlString), slog.Int("status_code", response.StatusCode))
+	svc.Client.Logger.DebugContext(ctx, "Listing Order Approvals", slog.String("url", path), slog.Int("status_code", response.StatusCode))
 
 	var apiResponse ListOrderApprovalsAPIResponse
 	if err = json.Unmarshal(buf.Bytes(), &apiResponse); err != nil {
