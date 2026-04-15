@@ -221,8 +221,7 @@ func (svc *OrderApprovalServiceOp) doAction(ctx context.Context, orderApprovalUI
 	if orderApprovalUID == "" {
 		return ErrOrderApprovalUIDRequired
 	}
-	path := fmt.Sprintf("/v3/order_approvals/%s/%s", url.PathEscape(orderApprovalUID), action)
-	u := svc.Client.BaseURL.JoinPath(path).String()
+	u := svc.Client.BaseURL.JoinPath("v3", "order_approvals", orderApprovalUID, action).String()
 
 	clientReq, err := svc.Client.NewRequest(ctx, http.MethodPost, u, req)
 	if err != nil {
