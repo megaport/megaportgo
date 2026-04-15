@@ -591,6 +591,24 @@ func (suite *MCRClientTestSuite) TestDeleteMCR() {
 	suite.Equal(want, got)
 }
 
+// TestDeleteMCRCancelLaterNotAllowed verifies that DeleteMCR rejects DeleteNow=false.
+func (suite *MCRClientTestSuite) TestDeleteMCRCancelLaterNotAllowed() {
+	ctx := context.Background()
+	req := &DeleteMCRRequest{
+		MCRID:     "36b3f68e-2f54-4331-bf94-f8984449365f",
+		DeleteNow: false,
+	}
+	_, err := suite.client.MCRService.DeleteMCR(ctx, req)
+	suite.ErrorIs(err, ErrMCRCancelLaterNotAllowed)
+}
+
+// TestDeleteMCRNilRequest verifies that DeleteMCR rejects a nil request.
+func (suite *MCRClientTestSuite) TestDeleteMCRNilRequest() {
+	ctx := context.Background()
+	_, err := suite.client.MCRService.DeleteMCR(ctx, nil)
+	suite.Error(err)
+}
+
 // TestRestoreMCR tests the RestoreMCR method.
 func (suite *MCRClientTestSuite) TestRestoreMCR() {
 	ctx := context.Background()
