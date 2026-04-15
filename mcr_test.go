@@ -606,7 +606,7 @@ func (suite *MCRClientTestSuite) TestDeleteMCRCancelLaterNotAllowed() {
 func (suite *MCRClientTestSuite) TestDeleteMCRNilRequest() {
 	ctx := context.Background()
 	_, err := suite.client.MCRService.DeleteMCR(ctx, nil)
-	suite.Error(err)
+	suite.ErrorIs(err, ErrDeleteMCRRequestNil)
 }
 
 // TestRestoreMCR tests the RestoreMCR method.

@@ -286,6 +286,9 @@ func (svc *VXCServiceOp) ValidateVXCOrder(ctx context.Context, req *BuyVXCReques
 	return svc.Client.ProductService.ValidateProductOrder(ctx, buyOrder)
 }
 
+// connectTypeTransit is the CSP connect type for Transit VXCs (Megaport Internet).
+const connectTypeTransit = "TRANSIT"
+
 // isTransitVXC checks if a VXC is a Transit VXC (Megaport Internet) by examining
 // its CSP connection resources. A VXC is considered a Transit VXC if any
 // CSPConnection entry has ConnectType "TRANSIT".
@@ -297,11 +300,11 @@ func isTransitVXC(vxc *VXC) bool {
 	for _, csp := range vxc.Resources.CSPConnection.CSPConnection {
 		switch v := csp.(type) {
 		case CSPConnectionTransit:
-			if v.ConnectType == "TRANSIT" {
+			if v.ConnectType == connectTypeTransit {
 				return true
 			}
 		case *CSPConnectionTransit:
-			if v != nil && v.ConnectType == "TRANSIT" {
+			if v != nil && v.ConnectType == connectTypeTransit {
 				return true
 			}
 		}
@@ -314,7 +317,7 @@ func isTransitVXC(vxc *VXC) bool {
 // Attempting to schedule deletion (DeleteNow=false) for Transit VXCs will return an error.
 func (svc *VXCServiceOp) DeleteVXC(ctx context.Context, id string, req *DeleteVXCRequest) error {
 	if req == nil {
-		return fmt.Errorf("delete VXC request cannot be nil")
+		return ErrDeleteVXCRequestNil
 	}
 	// Only validate Transit VXC restriction when scheduling deletion.
 	// Immediate deletions skip the extra API call entirely.
