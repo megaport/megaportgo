@@ -303,8 +303,10 @@ func (svc *MCRLookingGlassServiceOp) ListBGPNeighborRoutesAsync(ctx context.Cont
 	if req.SessionID == "" {
 		return nil, fmt.Errorf("list BGP neighbor routes async request SessionID cannot be empty")
 	}
-	if req.Direction == "" {
-		return nil, fmt.Errorf("list BGP neighbor routes async request Direction cannot be empty")
+	switch req.Direction {
+	case LookingGlassRouteDirectionAdvertised, LookingGlassRouteDirectionReceived:
+	default:
+		return nil, fmt.Errorf("list BGP neighbor routes async request Direction must be one of: advertised, received")
 	}
 	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/bgpSessions/%s/%s",
 		req.MCRID, req.SessionID, req.Direction)
@@ -414,6 +416,9 @@ func (svc *MCRLookingGlassServiceOp) WaitForAsyncIPRoutes(ctx context.Context, m
 			if err != nil {
 				return nil, err
 			}
+			if result == nil {
+				return nil, fmt.Errorf("async IP routes job %s returned nil result", jobID)
+			}
 
 			switch result.Status {
 			case LookingGlassAsyncStatusComplete:
@@ -474,6 +479,9 @@ func (svc *MCRLookingGlassServiceOp) WaitForAsyncBGPNeighborRoutes(ctx context.C
 			result, err := svc.GetAsyncBGPNeighborRoutes(ctx, mcrUID, jobID)
 			if err != nil {
 				return nil, err
+			}
+			if result == nil {
+				return nil, fmt.Errorf("async BGP neighbor routes job %s returned nil result", jobID)
 			}
 
 			switch result.Status {
