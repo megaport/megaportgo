@@ -135,8 +135,8 @@ type ResourceTag struct {
 	Value string `json:"value"`
 }
 
-// BuyRequest is the v4 request envelope for POST /v4/networkdesign/buy.
-type BuyRequest struct {
+// buyRequestV4 is the internal v4 request envelope for POST /v4/networkdesign/buy.
+type buyRequestV4 struct {
 	NetworkDesign interface{} `json:"networkDesign"`
 	DiscountCodes []string    `json:"discountCodes"`
 }
@@ -145,7 +145,7 @@ type BuyRequest struct {
 func (svc *ProductServiceOp) ExecuteOrder(ctx context.Context, requestBody interface{}) (*[]byte, error) {
 	path := "/v4/networkdesign/buy"
 
-	wrappedBody := BuyRequest{
+	wrappedBody := buyRequestV4{
 		NetworkDesign: requestBody,
 		DiscountCodes: []string{},
 	}
