@@ -1,10 +1,10 @@
 package megaport
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -145,7 +145,8 @@ func (svc *OrderApprovalServiceOp) ListOrderApprovals(ctx context.Context, req *
 	if err != nil {
 		return nil, err
 	}
-	response, resErr := svc.Client.Do(ctx, clientReq, nil)
+	var buf bytes.Buffer
+	response, resErr := svc.Client.Do(ctx, clientReq, &buf)
 	if resErr != nil {
 		return nil, resErr
 	}
@@ -153,12 +154,8 @@ func (svc *OrderApprovalServiceOp) ListOrderApprovals(ctx context.Context, req *
 
 	svc.Client.Logger.DebugContext(ctx, "Listing Order Approvals", slog.String("url", urlString), slog.Int("status_code", response.StatusCode))
 
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		return nil, err
-	}
 	var apiResponse ListOrderApprovalsAPIResponse
-	if err = json.Unmarshal(body, &apiResponse); err != nil {
+	if err = json.Unmarshal(buf.Bytes(), &apiResponse); err != nil {
 		return nil, err
 	}
 
