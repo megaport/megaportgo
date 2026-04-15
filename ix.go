@@ -203,14 +203,14 @@ func (svc *IXServiceOp) GetIX(ctx context.Context, id string) (*IX, error) {
 		return nil, fileErr
 	}
 
-	ixResponse := ixResponse{}
+	resp := ixResponse{}
 
-	unmarshalErr := json.Unmarshal(body, &ixResponse)
+	unmarshalErr := json.Unmarshal(body, &resp)
 	if unmarshalErr != nil {
 		return nil, unmarshalErr
 	}
 
-	return &ixResponse.Data, nil
+	return &resp.Data, nil
 }
 
 // UpdateIX updates an existing Internet Exchange
@@ -280,8 +280,8 @@ func (svc *IXServiceOp) UpdateIX(ctx context.Context, id string, req *UpdateIXRe
 	}
 
 	// Parse the response
-	ixResponse := ixResponse{}
-	if err = json.Unmarshal(body, &ixResponse); err != nil {
+	resp := ixResponse{}
+	if err = json.Unmarshal(body, &resp); err != nil {
 		return nil, err
 	}
 
@@ -316,7 +316,7 @@ func (svc *IXServiceOp) UpdateIX(ctx context.Context, id string, req *UpdateIXRe
 		}
 	} else {
 		// Return without waiting
-		return &ixResponse.Data, nil
+		return &resp.Data, nil
 	}
 }
 

@@ -462,9 +462,9 @@ func (svc *LocationServiceOp) ListCountries(ctx context.Context) ([]*Country, er
 		return nil, fileErr
 	}
 
-	countryResponse := countryResponse{}
+	resp := countryResponse{}
 
-	unmarshalErr := json.Unmarshal(body, &countryResponse)
+	unmarshalErr := json.Unmarshal(body, &resp)
 
 	if unmarshalErr != nil {
 		return nil, unmarshalErr
@@ -472,9 +472,9 @@ func (svc *LocationServiceOp) ListCountries(ctx context.Context) ([]*Country, er
 
 	allCountries := make([]*Country, 0)
 
-	for i := 0; i < len(countryResponse.Data); i++ {
-		if countryResponse.Data[i].NetworkRegion == "MP1" {
-			allCountries = countryResponse.Data[i].Countries
+	for i := 0; i < len(resp.Data); i++ {
+		if resp.Data[i].NetworkRegion == "MP1" {
+			allCountries = resp.Data[i].Countries
 		}
 	}
 

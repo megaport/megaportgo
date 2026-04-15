@@ -197,15 +197,15 @@ func (svc *ProductServiceOp) ListProducts(ctx context.Context) ([]Product, error
 
 	for i, rawProduct := range parsed.Data {
 		// First extract just the type field
-		var pp parsedProduct
+		var productMeta parsedProduct
 
-		if err := json.Unmarshal(rawProduct, &pp); err != nil {
+		if err := json.Unmarshal(rawProduct, &productMeta); err != nil {
 			svc.Client.Logger.WarnContext(ctx, fmt.Sprintf("Item %d: Could not extract product type: %v", i, err))
 			continue
 		}
 
 		// Then unmarshal into the appropriate struct based on type
-		switch strings.ToLower(pp.Type) {
+		switch strings.ToLower(productMeta.Type) {
 		case PRODUCT_MEGAPORT:
 			var port Port
 			if err := json.Unmarshal(rawProduct, &port); err != nil {
@@ -432,16 +432,16 @@ func (svc *ProductServiceOp) GetProductType(ctx context.Context, productUID stri
 	// and then return that type.
 	// The response body is expected to be in JSON format.
 
-	var gpr getProductResponse
-	err = json.NewDecoder(response.Body).Decode(&gpr)
+	var productResp getProductResponse
+	err = json.NewDecoder(response.Body).Decode(&productResp)
 	if err != nil {
 		return "", fmt.Errorf("failed to decode response: %w", err)
 	}
-	pp := gpr.Data
+	productData := productResp.Data
 
-	if pp.Type == "" {
+	if productData.Type == "" {
 		return "", fmt.Errorf("product %s type not found in response", productUID)
 	}
 
-	return pp.Type, nil
+	return productData.Type, nil
 }
