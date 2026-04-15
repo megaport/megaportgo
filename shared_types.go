@@ -10,11 +10,12 @@ const (
 	SERVICE_LIVE       = "LIVE"       // The LIVE service state.
 
 	// Product types
-	PRODUCT_MEGAPORT = "megaport"
-	PRODUCT_VXC      = "vxc"
-	PRODUCT_MCR      = "mcr2"
-	PRODUCT_MVE      = "mve"
-	PRODUCT_IX       = "ix"
+	PRODUCT_MEGAPORT    = "megaport"
+	PRODUCT_VXC         = "vxc"
+	PRODUCT_MCR         = "mcr2"
+	PRODUCT_MVE         = "mve"
+	PRODUCT_IX          = "ix"
+	PRODUCT_NAT_GATEWAY = "nat_gateway"
 
 	// Cancellation states
 	STATUS_DECOMMISSIONED = "DECOMMISSIONED"

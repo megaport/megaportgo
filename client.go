@@ -89,6 +89,8 @@ type Client struct {
 	IXService IXService
 	// BillingMarketService provides methods for interacting with the Billing Market API
 	BillingMarketService BillingMarketService
+	// NATGatewayService provides methods for interacting with the NAT Gateway API
+	NATGatewayService NATGatewayService
 	// OrderApprovalService provides methods for interacting with the Order Approvals API
 	OrderApprovalService OrderApprovalService
 
@@ -187,6 +189,7 @@ func NewClient(httpClient *http.Client, base *url.URL) *Client {
 	c.ServiceKeyService = NewServiceKeyService(c)
 	c.ManagedAccountService = NewManagedAccountService(c)
 	c.BillingMarketService = NewBillingMarketService(c)
+	c.NATGatewayService = NewNATGatewayService(c)
 	c.UserManagementService = NewUserManagementService(c)
 	c.OrderApprovalService = NewOrderApprovalService(c)
 
