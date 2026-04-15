@@ -68,6 +68,9 @@ func (svc *MCRLookingGlassServiceOp) ListIPRoutesWithFilter(ctx context.Context,
 	if req == nil {
 		return nil, fmt.Errorf("list IP routes request cannot be nil")
 	}
+	if req.MCRID == "" {
+		return nil, fmt.Errorf("list IP routes request MCRID cannot be empty")
+	}
 	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/routes", url.PathEscape(req.MCRID))
 
 	// Build query parameters
@@ -111,6 +114,9 @@ func (svc *MCRLookingGlassServiceOp) ListBGPRoutes(ctx context.Context, mcrUID s
 func (svc *MCRLookingGlassServiceOp) ListBGPRoutesWithFilter(ctx context.Context, req *ListBGPRoutesRequest) ([]*LookingGlassBGPRoute, error) {
 	if req == nil {
 		return nil, fmt.Errorf("list BGP routes request cannot be nil")
+	}
+	if req.MCRID == "" {
+		return nil, fmt.Errorf("list BGP routes request MCRID cannot be empty")
 	}
 	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/bgp", url.PathEscape(req.MCRID))
 
@@ -341,7 +347,7 @@ func (svc *MCRLookingGlassServiceOp) GetAsyncBGPNeighborRoutes(ctx context.Conte
 
 // WaitForAsyncIPRoutes polls for async IP routes results until complete or timeout.
 func (svc *MCRLookingGlassServiceOp) WaitForAsyncIPRoutes(ctx context.Context, mcrUID string, jobID string, timeout time.Duration) ([]*LookingGlassIPRoute, error) {
-	if timeout == 0 {
+	if timeout <= 0 {
 		timeout = 5 * time.Minute
 	}
 
@@ -405,7 +411,7 @@ func (svc *MCRLookingGlassServiceOp) WaitForAsyncIPRoutes(ctx context.Context, m
 
 // WaitForAsyncBGPNeighborRoutes polls for async BGP neighbor routes results until complete or timeout.
 func (svc *MCRLookingGlassServiceOp) WaitForAsyncBGPNeighborRoutes(ctx context.Context, mcrUID string, jobID string, timeout time.Duration) ([]*LookingGlassBGPNeighborRoute, error) {
-	if timeout == 0 {
+	if timeout <= 0 {
 		timeout = 5 * time.Minute
 	}
 
