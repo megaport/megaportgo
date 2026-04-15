@@ -184,6 +184,17 @@ func (svc *MCRLookingGlassServiceOp) ListBGPNeighborRoutes(ctx context.Context, 
 	if req == nil {
 		return nil, fmt.Errorf("list BGP neighbor routes request cannot be nil")
 	}
+	if req.MCRID == "" {
+		return nil, fmt.Errorf("list BGP neighbor routes request MCRID cannot be empty")
+	}
+	if req.SessionID == "" {
+		return nil, fmt.Errorf("list BGP neighbor routes request SessionID cannot be empty")
+	}
+	switch req.Direction {
+	case LookingGlassRouteDirectionAdvertised, LookingGlassRouteDirectionReceived:
+	default:
+		return nil, fmt.Errorf("list BGP neighbor routes request Direction must be one of: advertised, received")
+	}
 	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/bgpSessions/%s/%s",
 		req.MCRID, req.SessionID, req.Direction)
 
@@ -286,6 +297,15 @@ func (svc *MCRLookingGlassServiceOp) ListBGPNeighborRoutesAsync(ctx context.Cont
 	if req == nil {
 		return nil, fmt.Errorf("list BGP neighbor routes async request cannot be nil")
 	}
+	if req.MCRID == "" {
+		return nil, fmt.Errorf("list BGP neighbor routes async request MCRID cannot be empty")
+	}
+	if req.SessionID == "" {
+		return nil, fmt.Errorf("list BGP neighbor routes async request SessionID cannot be empty")
+	}
+	if req.Direction == "" {
+		return nil, fmt.Errorf("list BGP neighbor routes async request Direction cannot be empty")
+	}
 	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/bgpSessions/%s/%s",
 		req.MCRID, req.SessionID, req.Direction)
 
@@ -361,6 +381,9 @@ func (svc *MCRLookingGlassServiceOp) WaitForAsyncIPRoutes(ctx context.Context, m
 	if err != nil {
 		return nil, err
 	}
+	if result == nil {
+		return nil, fmt.Errorf("async IP routes job %s returned nil result", jobID)
+	}
 	switch result.Status {
 	case LookingGlassAsyncStatusComplete:
 		return result.Routes, nil
@@ -418,6 +441,9 @@ func (svc *MCRLookingGlassServiceOp) WaitForAsyncBGPNeighborRoutes(ctx context.C
 	result, err := svc.GetAsyncBGPNeighborRoutes(ctx, mcrUID, jobID)
 	if err != nil {
 		return nil, err
+	}
+	if result == nil {
+		return nil, fmt.Errorf("async BGP neighbor routes job %s returned nil result", jobID)
 	}
 	switch result.Status {
 	case LookingGlassAsyncStatusComplete:
