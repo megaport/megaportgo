@@ -108,13 +108,6 @@ type OrderApprovalActionRequest struct {
 	Comments string `json:"comments,omitempty"`
 }
 
-// OrderApprovalActionAPIResponse represents the Megaport API HTTP response from an order approval action.
-type OrderApprovalActionAPIResponse struct {
-	Message string `json:"message"`
-	Terms   string `json:"terms"`
-	Data    string `json:"data"`
-}
-
 // ListOrderApprovals lists order approval requests from the Megaport API.
 func (svc *OrderApprovalServiceOp) ListOrderApprovals(ctx context.Context, req *ListOrderApprovalsRequest) (*ListOrderApprovalsResponse, error) {
 	path := "/v3/order_approvals"
@@ -174,16 +167,32 @@ func (svc *OrderApprovalServiceOp) ListOrderApprovals(ctx context.Context, req *
 	}
 
 	if v := response.Header.Get("Pagination-Total-Count"); v != "" {
-		toReturn.TotalCount, _ = strconv.Atoi(v)
+		n, err := strconv.Atoi(v)
+		if err != nil {
+			return nil, fmt.Errorf("invalid Pagination-Total-Count header %q: %w", v, err)
+		}
+		toReturn.TotalCount = n
 	}
 	if v := response.Header.Get("Pagination-Page"); v != "" {
-		toReturn.Page, _ = strconv.Atoi(v)
+		n, err := strconv.Atoi(v)
+		if err != nil {
+			return nil, fmt.Errorf("invalid Pagination-Page header %q: %w", v, err)
+		}
+		toReturn.Page = n
 	}
 	if v := response.Header.Get("Pagination-Limit"); v != "" {
-		toReturn.Limit, _ = strconv.Atoi(v)
+		n, err := strconv.Atoi(v)
+		if err != nil {
+			return nil, fmt.Errorf("invalid Pagination-Limit header %q: %w", v, err)
+		}
+		toReturn.Limit = n
 	}
 	if v := response.Header.Get("Pagination-Total-Page"); v != "" {
-		toReturn.TotalPages, _ = strconv.Atoi(v)
+		n, err := strconv.Atoi(v)
+		if err != nil {
+			return nil, fmt.Errorf("invalid Pagination-Total-Page header %q: %w", v, err)
+		}
+		toReturn.TotalPages = n
 	}
 
 	return toReturn, nil
@@ -205,7 +214,7 @@ func (svc *OrderApprovalServiceOp) WithdrawOrderApproval(ctx context.Context, or
 }
 
 func (svc *OrderApprovalServiceOp) doAction(ctx context.Context, orderApprovalUID string, action string, req *OrderApprovalActionRequest) error {
-	path := fmt.Sprintf("/v3/order_approvals/%s/%s", orderApprovalUID, action)
+	path := fmt.Sprintf("/v3/order_approvals/%s/%s", url.PathEscape(orderApprovalUID), action)
 	u := svc.Client.BaseURL.JoinPath(path).String()
 
 	clientReq, err := svc.Client.NewRequest(ctx, http.MethodPost, u, req)

@@ -149,9 +149,10 @@ func (suite *OrderApprovalClientTestSuite) TestApproveOrderApproval() {
 
 	suite.mux.HandleFunc(fmt.Sprintf("/v3/order_approvals/%s/approve", uid), func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodPost)
-		body, _ := io.ReadAll(r.Body)
+		body, err := io.ReadAll(r.Body)
+		suite.Require().NoError(err)
 		var req OrderApprovalActionRequest
-		_ = json.Unmarshal(body, &req)
+		suite.Require().NoError(json.Unmarshal(body, &req))
 		suite.Equal("Looks good", req.Comments)
 		fmt.Fprint(w, jblob)
 	})
@@ -174,9 +175,10 @@ func (suite *OrderApprovalClientTestSuite) TestRejectOrderApproval() {
 
 	suite.mux.HandleFunc(fmt.Sprintf("/v3/order_approvals/%s/reject", uid), func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodPost)
-		body, _ := io.ReadAll(r.Body)
+		body, err := io.ReadAll(r.Body)
+		suite.Require().NoError(err)
 		var req OrderApprovalActionRequest
-		_ = json.Unmarshal(body, &req)
+		suite.Require().NoError(json.Unmarshal(body, &req))
 		suite.Equal("Not approved", req.Comments)
 		fmt.Fprint(w, jblob)
 	})
@@ -199,9 +201,10 @@ func (suite *OrderApprovalClientTestSuite) TestWithdrawOrderApproval() {
 
 	suite.mux.HandleFunc(fmt.Sprintf("/v3/order_approvals/%s/withdraw", uid), func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodPost)
-		body, _ := io.ReadAll(r.Body)
+		body, err := io.ReadAll(r.Body)
+		suite.Require().NoError(err)
 		var req OrderApprovalActionRequest
-		_ = json.Unmarshal(body, &req)
+		suite.Require().NoError(json.Unmarshal(body, &req))
 		suite.Equal("No longer needed", req.Comments)
 		fmt.Fprint(w, jblob)
 	})
