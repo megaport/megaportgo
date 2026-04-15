@@ -623,3 +623,196 @@ func (suite *MCRClientTestSuite) TestRestoreMCR() {
 	suite.NoError(err)
 	suite.Equal(want, got)
 }
+
+// TestValidateIPsecAddOn tests the validation of IPsec add-on configurations
+func (suite *MCRClientTestSuite) TestValidateIPsecAddOn() {
+	// Test valid configurations with all valid tunnel counts
+	for _, count := range []int{10, 20, 30} {
+		validAddOn := &MCRAddOnIPsecConfig{
+			TunnelCount: count,
+		}
+		err := validateMCRAddOn(validAddOn)
+		suite.NoError(err, "tunnel count %d should be valid", count)
+	}
+
+	// Test valid configuration with zero tunnel count (will default to 10)
+	validAddOnZeroTunnels := &MCRAddOnIPsecConfig{
+		TunnelCount: 0,
+	}
+	err := validateMCRAddOn(validAddOnZeroTunnels)
+	suite.NoError(err)
+
+	// Test GetAddOnType returns correct type
+	ipsecAddOn := &MCRAddOnIPsecConfig{}
+	suite.Equal(AddOnTypeIPsec, ipsecAddOn.GetAddOnType())
+
+	// Test invalid: tunnel count not in valid set
+	invalidTunnelCount := &MCRAddOnIPsecConfig{
+		TunnelCount: 5,
+	}
+	err = validateMCRAddOn(invalidTunnelCount)
+	suite.Error(err)
+	suite.Equal(ErrInvalidIPsecTunnelCount, err)
+
+	// Test invalid: tunnel count exceeds maximum
+	invalidTunnelCountHigh := &MCRAddOnIPsecConfig{
+		TunnelCount: 40,
+	}
+	err = validateMCRAddOn(invalidTunnelCountHigh)
+	suite.Error(err)
+	suite.Equal(ErrInvalidIPsecTunnelCount, err)
+
+	// Test invalid: negative tunnel count
+	negativeTunnelCount := &MCRAddOnIPsecConfig{
+		TunnelCount: -1,
+	}
+	err = validateMCRAddOn(negativeTunnelCount)
+	suite.Error(err)
+	suite.Equal(ErrInvalidIPsecTunnelCount, err)
+}
+
+// TestBuyMCRWithIPsecValidation tests that BuyMCR validates IPsec add-ons
+func (suite *MCRClientTestSuite) TestBuyMCRWithIPsecValidation() {
+	ctx := context.Background()
+	mcrSvc := suite.client.MCRService
+
+	// Test with invalid tunnel count
+	req := &BuyMCRRequest{
+		LocationID:    1,
+		Name:          "test-mcr",
+		Term:          1,
+		PortSpeed:     1000,
+		MCRAsn:        0,
+		DiversityZone: "red",
+		AddOns: []MCRAddOn{
+			&MCRAddOnIPsecConfig{
+				TunnelCount: 5, // Invalid - must be 10, 20, or 30
+			},
+		},
+	}
+
+	_, err := mcrSvc.BuyMCR(ctx, req)
+	suite.Error(err)
+	suite.Equal(ErrInvalidIPsecTunnelCount, err)
+
+	// Test with valid tunnel count (10)
+	reqValid := &BuyMCRRequest{
+		LocationID:    1,
+		Name:          "test-mcr",
+		Term:          1,
+		PortSpeed:     1000,
+		MCRAsn:        0,
+		DiversityZone: "red",
+		AddOns: []MCRAddOn{
+			&MCRAddOnIPsecConfig{
+				TunnelCount: 10,
+			},
+		},
+	}
+
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	jblob := `{
+		"message": "test-message",
+		"terms": "test-terms",
+		"data": [
+			{"technicalServiceUid": "36b3f68e-2f54-4331-bf94-f8984449365f"}
+		]
+	}`
+
+	suite.mux.HandleFunc("/v4/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPost)
+		fmt.Fprint(w, jblob)
+	})
+
+	got, err := mcrSvc.BuyMCR(ctx, reqValid)
+	suite.NoError(err)
+	suite.Equal(productUid, got.TechnicalServiceUID)
+}
+
+// TestUpdateMCRIPsecAddOn tests the UpdateMCRIPsecAddOn method
+func (suite *MCRClientTestSuite) TestUpdateMCRIPsecAddOn() {
+	ctx := context.Background()
+	mcrSvc := suite.client.MCRService
+	mcrID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	addOnUID := "addon-12345"
+
+	// Test with valid tunnel count (10)
+	jblob := `{
+		"message": "IPsec add-on updated successfully",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"
+	}`
+
+	suite.mux.HandleFunc(fmt.Sprintf("/v3/product/%s/addon/%s", mcrID, addOnUID), func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPut)
+
+		// Verify the payload
+		v := make(map[string]interface{})
+		err := json.NewDecoder(r.Body).Decode(&v)
+		if err != nil {
+			suite.FailNowf("could not decode json", "could not decode json %v", err)
+		}
+
+		suite.Equal(AddOnTypeIPsec, v["addOnType"])
+		suite.Equal(float64(10), v["tunnelCount"]) // JSON numbers decode as float64
+
+		fmt.Fprint(w, jblob)
+	})
+
+	err := mcrSvc.UpdateMCRIPsecAddOn(ctx, mcrID, addOnUID, 10)
+	suite.NoError(err)
+}
+
+// TestUpdateMCRIPsecAddOnDisable tests disabling IPsec by setting tunnel count to 0
+func (suite *MCRClientTestSuite) TestUpdateMCRIPsecAddOnDisable() {
+	ctx := context.Background()
+	mcrSvc := suite.client.MCRService
+	mcrID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	addOnUID := "addon-12345"
+
+	jblob := `{
+		"message": "IPsec add-on disabled successfully",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"
+	}`
+
+	suite.mux.HandleFunc(fmt.Sprintf("/v3/product/%s/addon/%s", mcrID, addOnUID), func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPut)
+
+		// Verify the payload
+		v := make(map[string]interface{})
+		err := json.NewDecoder(r.Body).Decode(&v)
+		if err != nil {
+			suite.FailNowf("could not decode json", "could not decode json %v", err)
+		}
+
+		suite.Equal(AddOnTypeIPsec, v["addOnType"])
+		suite.Equal(float64(0), v["tunnelCount"]) // 0 to disable
+
+		fmt.Fprint(w, jblob)
+	})
+
+	err := mcrSvc.UpdateMCRIPsecAddOn(ctx, mcrID, addOnUID, 0)
+	suite.NoError(err)
+}
+
+// TestUpdateMCRIPsecAddOnInvalidTunnelCount tests validation of tunnel count
+func (suite *MCRClientTestSuite) TestUpdateMCRIPsecAddOnInvalidTunnelCount() {
+	ctx := context.Background()
+	mcrSvc := suite.client.MCRService
+	mcrID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	addOnUID := "addon-12345"
+
+	// Test invalid tunnel count (5)
+	err := mcrSvc.UpdateMCRIPsecAddOn(ctx, mcrID, addOnUID, 5)
+	suite.Error(err)
+	suite.Equal(ErrInvalidIPsecTunnelCount, err)
+
+	// Test invalid tunnel count (11 - exceeds max)
+	err = mcrSvc.UpdateMCRIPsecAddOn(ctx, mcrID, addOnUID, 11)
+	suite.Error(err)
+	suite.Equal(ErrInvalidIPsecTunnelCount, err)
+
+	// Test invalid negative tunnel count
+	err = mcrSvc.UpdateMCRIPsecAddOn(ctx, mcrID, addOnUID, -1)
+	suite.Error(err)
+	suite.Equal(ErrInvalidIPsecTunnelCount, err)
+}
