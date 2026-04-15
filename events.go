@@ -52,10 +52,7 @@ const (
 )
 
 // MaintenanceEvent represents a maintenance event returned by the Events API.
-//
-// Returns details about maintenance events, filtered by the specified state value.
-//
-// The following information is returned for maintenance events in the response, with some fields being optional and only included under certain conditions.
+// The response may include optional fields depending on the event state and circumstances.
 type MaintenanceEvent struct {
 	// EventID is the ticket number against which a particular event is created.
 	EventID string `json:"eventId"`
@@ -86,8 +83,7 @@ type MaintenanceEvent struct {
 }
 
 // OutageEvent represents an outage event returned by the Events API.
-//
-// The following information is returned for outage events in the response, with some fields being optional and only included under certain conditions.
+// The response may include optional fields depending on the event state and circumstances.
 type OutageEvent struct {
 	// OutageID is a unique identifier for each outage event.
 	OutageID string `json:"outageId"`
@@ -107,8 +103,8 @@ type OutageEvent struct {
 	// Purpose is the reason why this event is created.
 	Purpose string `json:"purpose"`
 
-	// Services is the list of services affected by the event, containing the short UUIDs of the services.
-	Services []string `json:"services"`
+	// ServiceIDs is the list of services affected by the event, containing the short UUIDs of the services.
+	ServiceIDs []string `json:"services"`
 
 	// RootCause is the reason explaining why an outage happened. This field is present only when an outage is resolved.
 	RootCause string `json:"rootCause"`
