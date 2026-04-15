@@ -29,7 +29,7 @@ type LookingGlassIPRoute struct {
 	ASPath      []int         `json:"asPath"`      // BGP AS path (optional)
 	Age         *int          `json:"age"`         // Age of the route in seconds (optional)
 	Interface   string        `json:"interface"`   // The interface for this route
-	VXCId       *int          `json:"vxcId"`       // Associated VXC ID (optional)
+	VXCID       *int          `json:"vxcId"`       // Associated VXC ID (optional)
 	VXCName     string        `json:"vxcName"`     // Associated VXC name (optional)
 	Communities []string      `json:"communities"` // BGP communities (optional)
 	Origin      string        `json:"origin"`      // BGP origin attribute (optional)
@@ -52,7 +52,7 @@ type LookingGlassBGPRoute struct {
 	NeighborIP  string   `json:"neighborIp"`  // The BGP neighbor IP that advertised this route
 	NeighborASN *int     `json:"neighborAsn"` // The BGP neighbor ASN
 	Age         *int     `json:"age"`         // Age of the route in seconds
-	VXCId       *int     `json:"vxcId"`       // Associated VXC ID
+	VXCID       *int     `json:"vxcId"`       // Associated VXC ID
 	VXCName     string   `json:"vxcName"`     // Associated VXC name
 }
 
@@ -66,7 +66,7 @@ type LookingGlassBGPSession struct {
 	Uptime          *int             `json:"uptime"`          // Session uptime in seconds
 	PrefixesIn      *int             `json:"prefixesIn"`      // Number of prefixes received
 	PrefixesOut     *int             `json:"prefixesOut"`     // Number of prefixes advertised
-	VXCId           int              `json:"vxcId"`           // Associated VXC ID
+	VXCID           int              `json:"vxcId"`           // Associated VXC ID
 	VXCName         string           `json:"vxcName"`         // Associated VXC name
 	LastStateChange *int             `json:"lastStateChange"` // Seconds since last state change
 	Description     string           `json:"description"`     // Session description

@@ -65,6 +65,9 @@ func (svc *MCRLookingGlassServiceOp) ListIPRoutes(ctx context.Context, mcrUID st
 
 // ListIPRoutesWithFilter retrieves the IP routing table with optional filtering.
 func (svc *MCRLookingGlassServiceOp) ListIPRoutesWithFilter(ctx context.Context, req *ListIPRoutesRequest) ([]*LookingGlassIPRoute, error) {
+	if req == nil {
+		return nil, fmt.Errorf("list IP routes request cannot be nil")
+	}
 	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/routes", req.MCRID)
 
 	// Build query parameters
@@ -110,6 +113,9 @@ func (svc *MCRLookingGlassServiceOp) ListBGPRoutes(ctx context.Context, mcrUID s
 
 // ListBGPRoutesWithFilter retrieves BGP routes with optional filtering.
 func (svc *MCRLookingGlassServiceOp) ListBGPRoutesWithFilter(ctx context.Context, req *ListBGPRoutesRequest) ([]*LookingGlassBGPRoute, error) {
+	if req == nil {
+		return nil, fmt.Errorf("list BGP routes request cannot be nil")
+	}
 	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/bgp", req.MCRID)
 
 	// Build query parameters
@@ -175,6 +181,9 @@ func (svc *MCRLookingGlassServiceOp) ListBGPSessions(ctx context.Context, mcrUID
 
 // ListBGPNeighborRoutes retrieves routes advertised to or received from a specific BGP neighbor.
 func (svc *MCRLookingGlassServiceOp) ListBGPNeighborRoutes(ctx context.Context, req *ListBGPNeighborRoutesRequest) ([]*LookingGlassBGPNeighborRoute, error) {
+	if req == nil {
+		return nil, fmt.Errorf("list BGP neighbor routes request cannot be nil")
+	}
 	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/bgpSessions/%s/%s",
 		req.MCRID, req.SessionID, req.Direction)
 
@@ -274,6 +283,9 @@ func (svc *MCRLookingGlassServiceOp) GetAsyncIPRoutes(ctx context.Context, mcrUI
 
 // ListBGPNeighborRoutesAsync initiates an async query for BGP neighbor routes.
 func (svc *MCRLookingGlassServiceOp) ListBGPNeighborRoutesAsync(ctx context.Context, req *ListBGPNeighborRoutesRequest) (*LookingGlassAsyncJob, error) {
+	if req == nil {
+		return nil, fmt.Errorf("list BGP neighbor routes async request cannot be nil")
+	}
 	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/bgpSessions/%s/%s",
 		req.MCRID, req.SessionID, req.Direction)
 
@@ -373,7 +385,7 @@ func (svc *MCRLookingGlassServiceOp) WaitForAsyncIPRoutes(ctx context.Context, m
 		case <-timer.C:
 			return nil, fmt.Errorf("timeout waiting for async IP routes job %s", jobID)
 		case <-ctx.Done():
-			return nil, fmt.Errorf("context canceled waiting for async IP routes job %s", jobID)
+			return nil, fmt.Errorf("waiting for async IP routes job %s: %w", jobID, ctx.Err())
 		case <-ticker.C:
 			result, err := svc.GetAsyncIPRoutes(ctx, mcrUID, jobID)
 			if err != nil {
@@ -431,7 +443,7 @@ func (svc *MCRLookingGlassServiceOp) WaitForAsyncBGPNeighborRoutes(ctx context.C
 		case <-timer.C:
 			return nil, fmt.Errorf("timeout waiting for async BGP neighbor routes job %s", jobID)
 		case <-ctx.Done():
-			return nil, fmt.Errorf("context canceled waiting for async BGP neighbor routes job %s", jobID)
+			return nil, fmt.Errorf("waiting for async BGP neighbor routes job %s: %w", jobID, ctx.Err())
 		case <-ticker.C:
 			result, err := svc.GetAsyncBGPNeighborRoutes(ctx, mcrUID, jobID)
 			if err != nil {
