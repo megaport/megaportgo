@@ -151,6 +151,9 @@ func (svc *MCRLookingGlassServiceOp) ListBGPRoutesWithFilter(ctx context.Context
 
 // ListBGPSessions retrieves all BGP sessions configured on the MCR.
 func (svc *MCRLookingGlassServiceOp) ListBGPSessions(ctx context.Context, mcrUID string) ([]*LookingGlassBGPSession, error) {
+	if mcrUID == "" {
+		return nil, fmt.Errorf("list BGP sessions request MCRID cannot be empty")
+	}
 	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/bgpSessions", url.PathEscape(mcrUID))
 
 	clientReq, err := svc.Client.NewRequest(ctx, "GET", path, nil)
@@ -223,6 +226,9 @@ func (svc *MCRLookingGlassServiceOp) ListBGPNeighborRoutes(ctx context.Context, 
 
 // ListIPRoutesAsync initiates an async query for IP routes.
 func (svc *MCRLookingGlassServiceOp) ListIPRoutesAsync(ctx context.Context, mcrUID string) (*LookingGlassAsyncJob, error) {
+	if mcrUID == "" {
+		return nil, fmt.Errorf("list IP routes async request MCRID cannot be empty")
+	}
 	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/routes", url.PathEscape(mcrUID))
 
 	// Build query parameters
@@ -252,6 +258,12 @@ func (svc *MCRLookingGlassServiceOp) ListIPRoutesAsync(ctx context.Context, mcrU
 
 // GetAsyncIPRoutes retrieves the results of an async IP routes query.
 func (svc *MCRLookingGlassServiceOp) GetAsyncIPRoutes(ctx context.Context, mcrUID string, jobID string) (*AsyncIPRoutesData, error) {
+	if mcrUID == "" {
+		return nil, fmt.Errorf("get async IP routes request MCRID cannot be empty")
+	}
+	if jobID == "" {
+		return nil, fmt.Errorf("get async IP routes request jobID cannot be empty")
+	}
 	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/routes/async/%s", url.PathEscape(mcrUID), url.PathEscape(jobID))
 
 	clientReq, err := svc.Client.NewRequest(ctx, "GET", path, nil)
@@ -323,6 +335,12 @@ func (svc *MCRLookingGlassServiceOp) ListBGPNeighborRoutesAsync(ctx context.Cont
 
 // GetAsyncBGPNeighborRoutes retrieves the results of an async BGP neighbor routes query.
 func (svc *MCRLookingGlassServiceOp) GetAsyncBGPNeighborRoutes(ctx context.Context, mcrUID string, jobID string) (*AsyncBGPNeighborRoutesData, error) {
+	if mcrUID == "" {
+		return nil, fmt.Errorf("get async BGP neighbor routes request MCRID cannot be empty")
+	}
+	if jobID == "" {
+		return nil, fmt.Errorf("get async BGP neighbor routes request jobID cannot be empty")
+	}
 	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/bgpSessions/async/%s", url.PathEscape(mcrUID), url.PathEscape(jobID))
 
 	clientReq, err := svc.Client.NewRequest(ctx, "GET", path, nil)
@@ -347,6 +365,12 @@ func (svc *MCRLookingGlassServiceOp) GetAsyncBGPNeighborRoutes(ctx context.Conte
 
 // WaitForAsyncIPRoutes polls for async IP routes results until complete or timeout.
 func (svc *MCRLookingGlassServiceOp) WaitForAsyncIPRoutes(ctx context.Context, mcrUID string, jobID string, timeout time.Duration) ([]*LookingGlassIPRoute, error) {
+	if mcrUID == "" {
+		return nil, fmt.Errorf("wait for async IP routes request MCRID cannot be empty")
+	}
+	if jobID == "" {
+		return nil, fmt.Errorf("wait for async IP routes request jobID cannot be empty")
+	}
 	if timeout <= 0 {
 		timeout = 5 * time.Minute
 	}
@@ -411,6 +435,12 @@ func (svc *MCRLookingGlassServiceOp) WaitForAsyncIPRoutes(ctx context.Context, m
 
 // WaitForAsyncBGPNeighborRoutes polls for async BGP neighbor routes results until complete or timeout.
 func (svc *MCRLookingGlassServiceOp) WaitForAsyncBGPNeighborRoutes(ctx context.Context, mcrUID string, jobID string, timeout time.Duration) ([]*LookingGlassBGPNeighborRoute, error) {
+	if mcrUID == "" {
+		return nil, fmt.Errorf("wait for async BGP neighbor routes request MCRID cannot be empty")
+	}
+	if jobID == "" {
+		return nil, fmt.Errorf("wait for async BGP neighbor routes request jobID cannot be empty")
+	}
 	if timeout <= 0 {
 		timeout = 5 * time.Minute
 	}
