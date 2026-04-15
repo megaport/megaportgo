@@ -168,6 +168,7 @@ func (suite *OrderApprovalClientTestSuite) TestListOrderApprovalsInvalidPaginati
 	}`
 
 	suite.mux.HandleFunc("/v3/order_approvals", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
 		w.Header().Set("Pagination-Total-Count", "not-a-number")
 		fmt.Fprint(w, jblob)
 	})

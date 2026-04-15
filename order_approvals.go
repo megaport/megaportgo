@@ -85,8 +85,8 @@ type OrderApproval struct {
 type ListOrderApprovalsRequest struct {
 	Status     *OrderApprovalStatus // Filter by approval status (optional).
 	ServiceIDs []int                // Filter by service IDs (optional).
-	PageNumber *int                 // Page number for pagination (default 1).
-	PageSize   *int                 // Page size for pagination (1-100, default 10).
+	PageNumber *int                 // Page number for pagination; if nil, the API default is used.
+	PageSize   *int                 // Page size for pagination; if nil, the API default is used.
 	Sort       *string              // Field to sort by (optional).
 	Direction  *string              // Sort direction: ASC or DESC (default DESC).
 }
