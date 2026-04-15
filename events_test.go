@@ -112,6 +112,18 @@ func (suite *EventsTestSuite) TestGetMaintenanceEvents_HTTPError() {
 	suite.Error(err)
 }
 
+func (suite *EventsTestSuite) TestGetMaintenanceEvents_MalformedJSON() {
+	suite.mux.HandleFunc("/ens/v1/status/maintenance", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, err := w.Write([]byte(`{not valid json`))
+		suite.Require().NoError(err)
+	})
+
+	_, err := suite.client.EventsService.GetMaintenanceEvents(context.Background(), "Scheduled")
+	suite.Error(err)
+}
+
 func (suite *EventsTestSuite) TestGetOutageEvents() {
 	sampleJSON := `[
         {
@@ -177,6 +189,18 @@ func (suite *EventsTestSuite) TestGetOutageEvents_CaseInsensitive() {
 func (suite *EventsTestSuite) TestGetOutageEvents_InvalidState() {
 	_, err := suite.client.EventsService.GetOutageEvents(context.Background(), "invalid-state")
 	suite.ErrorIs(err, ErrInvalidOutageState)
+}
+
+func (suite *EventsTestSuite) TestGetOutageEvents_MalformedJSON() {
+	suite.mux.HandleFunc("/ens/v1/status/outage", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, err := w.Write([]byte(`{not valid json`))
+		suite.Require().NoError(err)
+	})
+
+	_, err := suite.client.EventsService.GetOutageEvents(context.Background(), "Ongoing")
+	suite.Error(err)
 }
 
 func (suite *EventsTestSuite) TestGetOutageEvents_HTTPError() {
