@@ -310,7 +310,6 @@ func (suite *PartnerClientTestSuite) TestFilterPartnerMegaportByLocationId() {
 // TestFilterPartnerMegaportByMetro tests the FilterPartnerMegaportByMetro method.
 func (suite *PartnerClientTestSuite) TestFilterPartnerMegaportByMetro() {
 	partnerSvc := suite.client.PartnerService
-	locSvc := suite.client.LocationService
 	ctx := context.Background()
 
 	want := []*PartnerMegaport{awsPartner, azurePartner, defaultPartner, awsHcPartner}
@@ -373,7 +372,7 @@ func (suite *PartnerClientTestSuite) TestFilterPartnerMegaportByMetro() {
 	// awsPartner (locationId=1) and azurePartner (locationId=2) should match.
 	wantFiltered := []*PartnerMegaport{awsPartner, azurePartner}
 
-	gotFiltered, err := partnerSvc.FilterPartnerMegaportByMetro(ctx, partners, locSvc, "Sydney")
+	gotFiltered, err := partnerSvc.FilterPartnerMegaportByMetro(ctx, partners, "Sydney")
 	suite.NoError(err)
 	suite.Equal(wantFiltered, gotFiltered)
 
@@ -381,12 +380,12 @@ func (suite *PartnerClientTestSuite) TestFilterPartnerMegaportByMetro() {
 	// defaultPartner (locationId=3) and awsHcPartner (locationId=3) should match.
 	wantMelbourne := []*PartnerMegaport{defaultPartner, awsHcPartner}
 
-	gotMelbourne, err := partnerSvc.FilterPartnerMegaportByMetro(ctx, partners, locSvc, "Melbourne")
+	gotMelbourne, err := partnerSvc.FilterPartnerMegaportByMetro(ctx, partners, "Melbourne")
 	suite.NoError(err)
 	suite.Equal(wantMelbourne, gotMelbourne)
 
 	// Filter by non-existent metro should return ErrNoPartnerPortsFound.
-	_, err = partnerSvc.FilterPartnerMegaportByMetro(ctx, partners, locSvc, "Auckland")
+	_, err = partnerSvc.FilterPartnerMegaportByMetro(ctx, partners, "Auckland")
 	suite.ErrorIs(err, ErrNoPartnerPortsFound)
 }
 
