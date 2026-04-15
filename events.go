@@ -155,6 +155,9 @@ func (svc *EventsServiceOp) GetMaintenanceEvents(ctx context.Context, state stri
 	var buf bytes.Buffer
 	resp, err := svc.client.Do(ctx, req, &buf)
 	if err != nil {
+		if resp != nil && resp.Body != nil {
+			resp.Body.Close()
+		}
 		return nil, err
 	}
 	defer resp.Body.Close()
@@ -194,6 +197,9 @@ func (svc *EventsServiceOp) GetOutageEvents(ctx context.Context, state string) (
 	var buf bytes.Buffer
 	resp, err := svc.client.Do(ctx, req, &buf)
 	if err != nil {
+		if resp != nil && resp.Body != nil {
+			resp.Body.Close()
+		}
 		return nil, err
 	}
 	defer resp.Body.Close()
