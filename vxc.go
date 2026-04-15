@@ -288,15 +288,22 @@ func (svc *VXCServiceOp) ValidateVXCOrder(ctx context.Context, req *BuyVXCReques
 
 // isTransitVXC checks if a VXC is a Transit VXC (Megaport Internet) by examining
 // its CSP connection resources. A VXC is considered a Transit VXC if any
-// CSPConnection entry is a CSPConnectionTransit with ConnectType "TRANSIT".
+// CSPConnection entry has ConnectType "TRANSIT".
 func isTransitVXC(vxc *VXC) bool {
 	if vxc == nil || vxc.Resources == nil || vxc.Resources.CSPConnection == nil {
 		return false
 	}
 
 	for _, csp := range vxc.Resources.CSPConnection.CSPConnection {
-		if transitCSP, ok := csp.(CSPConnectionTransit); ok && transitCSP.ConnectType == "TRANSIT" {
-			return true
+		switch v := csp.(type) {
+		case CSPConnectionTransit:
+			if v.ConnectType == "TRANSIT" {
+				return true
+			}
+		case *CSPConnectionTransit:
+			if v != nil && v.ConnectType == "TRANSIT" {
+				return true
+			}
 		}
 	}
 	return false

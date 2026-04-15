@@ -1094,6 +1094,14 @@ func (suite *VXCClientTestSuite) TestDeleteVXC() {
 	suite.NoError(err)
 }
 
+// TestDeleteVXCNilRequest verifies that DeleteVXC rejects a nil request.
+func (suite *VXCClientTestSuite) TestDeleteVXCNilRequest() {
+	ctx := context.Background()
+	err := suite.client.VXCService.DeleteVXC(ctx, "some-id", nil)
+	suite.Error(err)
+	suite.Contains(err.Error(), "delete VXC request cannot be nil")
+}
+
 // TestDeleteTransitVXCWithCancelLater tests that attempting to schedule deletion (cancel later) for a Transit VXC returns an error
 func (suite *VXCClientTestSuite) TestDeleteTransitVXCWithCancelLater() {
 	ctx := context.Background()
