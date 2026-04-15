@@ -20,7 +20,7 @@ func TestCreateVXCOrder_PortUIDAutoPopulation(t *testing.T) {
 	tests := []struct {
 		name            string
 		req             *BuyVXCRequest
-		expectedPortUID string
+		expectedPortID string
 	}{
 		{
 			name: "PortUID is set explicitly - should use PortUID",
@@ -31,7 +31,7 @@ func TestCreateVXCOrder_PortUIDAutoPopulation(t *testing.T) {
 					ProductUID: "a-end-product-uid",
 				},
 			},
-			expectedPortUID: "explicit-port-uid",
+			expectedPortID: "explicit-port-uid",
 		},
 		{
 			name: "PortUID is empty but AEndConfiguration.ProductUID is set - should use AEndConfiguration.ProductUID",
@@ -42,7 +42,7 @@ func TestCreateVXCOrder_PortUIDAutoPopulation(t *testing.T) {
 					ProductUID: "a-end-product-uid",
 				},
 			},
-			expectedPortUID: "a-end-product-uid",
+			expectedPortID: "a-end-product-uid",
 		},
 		{
 			name: "Both PortUID and AEndConfiguration.ProductUID are empty - should remain empty",
@@ -53,7 +53,7 @@ func TestCreateVXCOrder_PortUIDAutoPopulation(t *testing.T) {
 					ProductUID: "",
 				},
 			},
-			expectedPortUID: "",
+			expectedPortID: "",
 		},
 		{
 			name: "PortUID is set and AEndConfiguration.ProductUID is empty - should use PortUID",
@@ -64,7 +64,7 @@ func TestCreateVXCOrder_PortUIDAutoPopulation(t *testing.T) {
 					ProductUID: "",
 				},
 			},
-			expectedPortUID: "explicit-port-uid",
+			expectedPortID: "explicit-port-uid",
 		},
 	}
 
@@ -76,8 +76,8 @@ func TestCreateVXCOrder_PortUIDAutoPopulation(t *testing.T) {
 			if len(orders) != 1 {
 				t.Fatalf("expected exactly one VXC order, got %d", len(orders))
 			}
-			if orders[0].PortID != tt.expectedPortUID {
-				t.Errorf("PortID mismatch: got %q, want %q", orders[0].PortID, tt.expectedPortUID)
+			if orders[0].PortID != tt.expectedPortID {
+				t.Errorf("PortID mismatch: got %q, want %q", orders[0].PortID, tt.expectedPortID)
 			}
 		})
 	}
