@@ -1245,7 +1245,7 @@ func (suite *VXCClientTestSuite) TestIsTransitVXC() {
 			CSPConnection: &CSPConnection{
 				CSPConnection: []CSPConnectionConfig{
 					CSPConnectionTransit{
-						ConnectType:        "TRANSIT",
+						ConnectType:        connectTypeTransit,
 						ResourceName:       "csp_connection",
 						ResourceType:       "csp_connection",
 						CustomerIP4Address: "203.0.113.1/30",
