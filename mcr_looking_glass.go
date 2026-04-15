@@ -343,6 +343,23 @@ func (svc *MCRLookingGlassServiceOp) WaitForAsyncIPRoutes(ctx context.Context, m
 		timeout = 5 * time.Minute
 	}
 
+	// Check immediately before starting the ticker to return results without
+	// delay when the job is already complete.
+	result, err := svc.GetAsyncIPRoutes(ctx, mcrUID, jobID)
+	if err != nil {
+		return nil, err
+	}
+	switch result.Status {
+	case LookingGlassAsyncStatusComplete:
+		return result.Routes, nil
+	case LookingGlassAsyncStatusFailed:
+		return nil, fmt.Errorf("async IP routes job %s failed", jobID)
+	case LookingGlassAsyncStatusPending, LookingGlassAsyncStatusProcessing:
+		// Continue to ticker-based polling below.
+	default:
+		return nil, fmt.Errorf("unknown async job status: %s", result.Status)
+	}
+
 	// Looking Glass async jobs are diagnostic and typically complete faster than provisioning
 	// workflows (which use a 30s polling interval). We poll more frequently (5s) here to
 	// return results sooner while still avoiding excessive request volume.
@@ -356,7 +373,7 @@ func (svc *MCRLookingGlassServiceOp) WaitForAsyncIPRoutes(ctx context.Context, m
 		case <-timer.C:
 			return nil, fmt.Errorf("timeout waiting for async IP routes job %s", jobID)
 		case <-ctx.Done():
-			return nil, fmt.Errorf("context cancelled waiting for async IP routes job %s", jobID)
+			return nil, fmt.Errorf("context canceled waiting for async IP routes job %s", jobID)
 		case <-ticker.C:
 			result, err := svc.GetAsyncIPRoutes(ctx, mcrUID, jobID)
 			if err != nil {
@@ -384,6 +401,23 @@ func (svc *MCRLookingGlassServiceOp) WaitForAsyncBGPNeighborRoutes(ctx context.C
 		timeout = 5 * time.Minute
 	}
 
+	// Check immediately before starting the ticker to return results without
+	// delay when the job is already complete.
+	result, err := svc.GetAsyncBGPNeighborRoutes(ctx, mcrUID, jobID)
+	if err != nil {
+		return nil, err
+	}
+	switch result.Status {
+	case LookingGlassAsyncStatusComplete:
+		return result.Routes, nil
+	case LookingGlassAsyncStatusFailed:
+		return nil, fmt.Errorf("async BGP neighbor routes job %s failed", jobID)
+	case LookingGlassAsyncStatusPending, LookingGlassAsyncStatusProcessing:
+		// Continue to ticker-based polling below.
+	default:
+		return nil, fmt.Errorf("unknown async job status: %s", result.Status)
+	}
+
 	// Looking Glass async jobs are diagnostic and typically complete faster than provisioning
 	// workflows (which use a 30s polling interval). We poll more frequently (5s) here to
 	// return results sooner while still avoiding excessive request volume.
@@ -397,7 +431,7 @@ func (svc *MCRLookingGlassServiceOp) WaitForAsyncBGPNeighborRoutes(ctx context.C
 		case <-timer.C:
 			return nil, fmt.Errorf("timeout waiting for async BGP neighbor routes job %s", jobID)
 		case <-ctx.Done():
-			return nil, fmt.Errorf("context cancelled waiting for async BGP neighbor routes job %s", jobID)
+			return nil, fmt.Errorf("context canceled waiting for async BGP neighbor routes job %s", jobID)
 		case <-ticker.C:
 			result, err := svc.GetAsyncBGPNeighborRoutes(ctx, mcrUID, jobID)
 			if err != nil {
