@@ -157,10 +157,11 @@ func (svc *EventsServiceOp) GetMaintenanceEvents(ctx context.Context, state stri
 	}
 
 	var buf bytes.Buffer
-	_, err = svc.client.Do(ctx, req, &buf)
+	resp, err := svc.client.Do(ctx, req, &buf)
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	var events []MaintenanceEvent
 	if err := json.Unmarshal(buf.Bytes(), &events); err != nil {
@@ -195,10 +196,11 @@ func (svc *EventsServiceOp) GetOutageEvents(ctx context.Context, state string) (
 	}
 
 	var buf bytes.Buffer
-	_, err = svc.client.Do(ctx, req, &buf)
+	resp, err := svc.client.Do(ctx, req, &buf)
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	var events []OutageEvent
 	if err := json.Unmarshal(buf.Bytes(), &events); err != nil {
