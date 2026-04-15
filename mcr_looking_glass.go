@@ -1,10 +1,10 @@
 package megaport
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/url"
 	"time"
 )
@@ -68,7 +68,7 @@ func (svc *MCRLookingGlassServiceOp) ListIPRoutesWithFilter(ctx context.Context,
 	if req == nil {
 		return nil, fmt.Errorf("list IP routes request cannot be nil")
 	}
-	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/routes", req.MCRID)
+	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/routes", url.PathEscape(req.MCRID))
 
 	// Build query parameters
 	params := url.Values{}
@@ -87,19 +87,15 @@ func (svc *MCRLookingGlassServiceOp) ListIPRoutesWithFilter(ctx context.Context,
 		return nil, err
 	}
 
-	response, err := svc.Client.Do(ctx, clientReq, nil)
+	var buf bytes.Buffer
+	response, err := svc.Client.Do(ctx, clientReq, &buf)
 	if err != nil {
 		return nil, err
 	}
 	defer response.Body.Close()
 
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		return nil, err
-	}
-
 	apiResponse := &LookingGlassIPRoutesResponse{}
-	if err := json.Unmarshal(body, apiResponse); err != nil {
+	if err := json.Unmarshal(buf.Bytes(), apiResponse); err != nil {
 		return nil, err
 	}
 
@@ -116,7 +112,7 @@ func (svc *MCRLookingGlassServiceOp) ListBGPRoutesWithFilter(ctx context.Context
 	if req == nil {
 		return nil, fmt.Errorf("list BGP routes request cannot be nil")
 	}
-	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/bgp", req.MCRID)
+	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/bgp", url.PathEscape(req.MCRID))
 
 	// Build query parameters
 	params := url.Values{}
@@ -132,19 +128,15 @@ func (svc *MCRLookingGlassServiceOp) ListBGPRoutesWithFilter(ctx context.Context
 		return nil, err
 	}
 
-	response, err := svc.Client.Do(ctx, clientReq, nil)
+	var buf bytes.Buffer
+	response, err := svc.Client.Do(ctx, clientReq, &buf)
 	if err != nil {
 		return nil, err
 	}
 	defer response.Body.Close()
 
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		return nil, err
-	}
-
 	apiResponse := &LookingGlassBGPRoutesResponse{}
-	if err := json.Unmarshal(body, apiResponse); err != nil {
+	if err := json.Unmarshal(buf.Bytes(), apiResponse); err != nil {
 		return nil, err
 	}
 
@@ -153,26 +145,22 @@ func (svc *MCRLookingGlassServiceOp) ListBGPRoutesWithFilter(ctx context.Context
 
 // ListBGPSessions retrieves all BGP sessions configured on the MCR.
 func (svc *MCRLookingGlassServiceOp) ListBGPSessions(ctx context.Context, mcrUID string) ([]*LookingGlassBGPSession, error) {
-	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/bgpSessions", mcrUID)
+	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/bgpSessions", url.PathEscape(mcrUID))
 
 	clientReq, err := svc.Client.NewRequest(ctx, "GET", path, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	response, err := svc.Client.Do(ctx, clientReq, nil)
+	var buf bytes.Buffer
+	response, err := svc.Client.Do(ctx, clientReq, &buf)
 	if err != nil {
 		return nil, err
 	}
 	defer response.Body.Close()
 
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		return nil, err
-	}
-
 	apiResponse := &LookingGlassBGPSessionsResponse{}
-	if err := json.Unmarshal(body, apiResponse); err != nil {
+	if err := json.Unmarshal(buf.Bytes(), apiResponse); err != nil {
 		return nil, err
 	}
 
@@ -196,7 +184,7 @@ func (svc *MCRLookingGlassServiceOp) ListBGPNeighborRoutes(ctx context.Context, 
 		return nil, fmt.Errorf("list BGP neighbor routes request Direction must be one of: advertised, received")
 	}
 	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/bgpSessions/%s/%s",
-		req.MCRID, req.SessionID, req.Direction)
+		url.PathEscape(req.MCRID), url.PathEscape(req.SessionID), req.Direction)
 
 	// Build query parameters
 	params := url.Values{}
@@ -212,19 +200,15 @@ func (svc *MCRLookingGlassServiceOp) ListBGPNeighborRoutes(ctx context.Context, 
 		return nil, err
 	}
 
-	response, err := svc.Client.Do(ctx, clientReq, nil)
+	var buf bytes.Buffer
+	response, err := svc.Client.Do(ctx, clientReq, &buf)
 	if err != nil {
 		return nil, err
 	}
 	defer response.Body.Close()
 
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		return nil, err
-	}
-
 	apiResponse := &LookingGlassBGPNeighborRoutesResponse{}
-	if err := json.Unmarshal(body, apiResponse); err != nil {
+	if err := json.Unmarshal(buf.Bytes(), apiResponse); err != nil {
 		return nil, err
 	}
 
@@ -233,7 +217,7 @@ func (svc *MCRLookingGlassServiceOp) ListBGPNeighborRoutes(ctx context.Context, 
 
 // ListIPRoutesAsync initiates an async query for IP routes.
 func (svc *MCRLookingGlassServiceOp) ListIPRoutesAsync(ctx context.Context, mcrUID string) (*LookingGlassAsyncJob, error) {
-	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/routes", mcrUID)
+	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/routes", url.PathEscape(mcrUID))
 
 	// Build query parameters
 	params := url.Values{}
@@ -245,19 +229,15 @@ func (svc *MCRLookingGlassServiceOp) ListIPRoutesAsync(ctx context.Context, mcrU
 		return nil, err
 	}
 
-	response, err := svc.Client.Do(ctx, clientReq, nil)
+	var buf bytes.Buffer
+	response, err := svc.Client.Do(ctx, clientReq, &buf)
 	if err != nil {
 		return nil, err
 	}
 	defer response.Body.Close()
 
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		return nil, err
-	}
-
 	apiResponse := &LookingGlassAsyncJobResponse{}
-	if err := json.Unmarshal(body, apiResponse); err != nil {
+	if err := json.Unmarshal(buf.Bytes(), apiResponse); err != nil {
 		return nil, err
 	}
 
@@ -266,26 +246,22 @@ func (svc *MCRLookingGlassServiceOp) ListIPRoutesAsync(ctx context.Context, mcrU
 
 // GetAsyncIPRoutes retrieves the results of an async IP routes query.
 func (svc *MCRLookingGlassServiceOp) GetAsyncIPRoutes(ctx context.Context, mcrUID string, jobID string) (*AsyncIPRoutesData, error) {
-	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/routes/async/%s", mcrUID, jobID)
+	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/routes/async/%s", url.PathEscape(mcrUID), url.PathEscape(jobID))
 
 	clientReq, err := svc.Client.NewRequest(ctx, "GET", path, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	response, err := svc.Client.Do(ctx, clientReq, nil)
+	var buf bytes.Buffer
+	response, err := svc.Client.Do(ctx, clientReq, &buf)
 	if err != nil {
 		return nil, err
 	}
 	defer response.Body.Close()
 
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		return nil, err
-	}
-
 	apiResponse := &LookingGlassAsyncIPRoutesResponse{}
-	if err := json.Unmarshal(body, apiResponse); err != nil {
+	if err := json.Unmarshal(buf.Bytes(), apiResponse); err != nil {
 		return nil, err
 	}
 
@@ -309,7 +285,7 @@ func (svc *MCRLookingGlassServiceOp) ListBGPNeighborRoutesAsync(ctx context.Cont
 		return nil, fmt.Errorf("list BGP neighbor routes async request Direction must be one of: advertised, received")
 	}
 	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/bgpSessions/%s/%s",
-		req.MCRID, req.SessionID, req.Direction)
+		url.PathEscape(req.MCRID), url.PathEscape(req.SessionID), req.Direction)
 
 	// Build query parameters
 	params := url.Values{}
@@ -324,19 +300,15 @@ func (svc *MCRLookingGlassServiceOp) ListBGPNeighborRoutesAsync(ctx context.Cont
 		return nil, err
 	}
 
-	response, err := svc.Client.Do(ctx, clientReq, nil)
+	var buf bytes.Buffer
+	response, err := svc.Client.Do(ctx, clientReq, &buf)
 	if err != nil {
 		return nil, err
 	}
 	defer response.Body.Close()
 
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		return nil, err
-	}
-
 	apiResponse := &LookingGlassAsyncJobResponse{}
-	if err := json.Unmarshal(body, apiResponse); err != nil {
+	if err := json.Unmarshal(buf.Bytes(), apiResponse); err != nil {
 		return nil, err
 	}
 
@@ -345,26 +317,22 @@ func (svc *MCRLookingGlassServiceOp) ListBGPNeighborRoutesAsync(ctx context.Cont
 
 // GetAsyncBGPNeighborRoutes retrieves the results of an async BGP neighbor routes query.
 func (svc *MCRLookingGlassServiceOp) GetAsyncBGPNeighborRoutes(ctx context.Context, mcrUID string, jobID string) (*AsyncBGPNeighborRoutesData, error) {
-	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/bgpSessions/async/%s", mcrUID, jobID)
+	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/bgpSessions/async/%s", url.PathEscape(mcrUID), url.PathEscape(jobID))
 
 	clientReq, err := svc.Client.NewRequest(ctx, "GET", path, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	response, err := svc.Client.Do(ctx, clientReq, nil)
+	var buf bytes.Buffer
+	response, err := svc.Client.Do(ctx, clientReq, &buf)
 	if err != nil {
 		return nil, err
 	}
 	defer response.Body.Close()
 
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		return nil, err
-	}
-
 	apiResponse := &LookingGlassAsyncBGPNeighborRoutesResponse{}
-	if err := json.Unmarshal(body, apiResponse); err != nil {
+	if err := json.Unmarshal(buf.Bytes(), apiResponse); err != nil {
 		return nil, err
 	}
 
