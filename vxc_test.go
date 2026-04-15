@@ -73,7 +73,9 @@ func TestCreateVXCOrder_PortUIDAutoPopulation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			orders := createVXCOrder(tt.req)
 
-			assert.Len(t, orders, 1, "Expected exactly one VXC order")
+			if !assert.Len(t, orders, 1, "Expected exactly one VXC order") {
+				return
+			}
 			assert.Equal(t, tt.expectedPortID, orders[0].PortID, "PortID mismatch")
 		})
 	}
