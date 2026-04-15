@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -19,9 +18,9 @@ func TestCreateVXCOrder_PortUIDAutoPopulation(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name           string
-		req            *BuyVXCRequest
-		expectedPortID string
+		name            string
+		req             *BuyVXCRequest
+		expectedPortUID string
 	}{
 		{
 			name: "PortUID is set explicitly - should use PortUID",
@@ -32,7 +31,7 @@ func TestCreateVXCOrder_PortUIDAutoPopulation(t *testing.T) {
 					ProductUID: "a-end-product-uid",
 				},
 			},
-			expectedPortID: "explicit-port-uid",
+			expectedPortUID: "explicit-port-uid",
 		},
 		{
 			name: "PortUID is empty but AEndConfiguration.ProductUID is set - should use AEndConfiguration.ProductUID",
@@ -43,7 +42,7 @@ func TestCreateVXCOrder_PortUIDAutoPopulation(t *testing.T) {
 					ProductUID: "a-end-product-uid",
 				},
 			},
-			expectedPortID: "a-end-product-uid",
+			expectedPortUID: "a-end-product-uid",
 		},
 		{
 			name: "Both PortUID and AEndConfiguration.ProductUID are empty - should remain empty",
@@ -54,7 +53,7 @@ func TestCreateVXCOrder_PortUIDAutoPopulation(t *testing.T) {
 					ProductUID: "",
 				},
 			},
-			expectedPortID: "",
+			expectedPortUID: "",
 		},
 		{
 			name: "PortUID is set and AEndConfiguration.ProductUID is empty - should use PortUID",
@@ -65,7 +64,7 @@ func TestCreateVXCOrder_PortUIDAutoPopulation(t *testing.T) {
 					ProductUID: "",
 				},
 			},
-			expectedPortID: "explicit-port-uid",
+			expectedPortUID: "explicit-port-uid",
 		},
 	}
 
@@ -73,10 +72,12 @@ func TestCreateVXCOrder_PortUIDAutoPopulation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			orders := createVXCOrder(tt.req)
 
-			if !assert.Len(t, orders, 1, "Expected exactly one VXC order") {
-				return
+			if len(orders) != 1 {
+				t.Fatalf("expected exactly one VXC order, got %d", len(orders))
 			}
-			assert.Equal(t, tt.expectedPortID, orders[0].PortID, "PortID mismatch")
+			if orders[0].PortID != tt.expectedPortUID {
+				t.Errorf("PortID mismatch: got %q, want %q", orders[0].PortID, tt.expectedPortUID)
+			}
 		})
 	}
 }
