@@ -74,8 +74,7 @@ func (suite *EventsTestSuite) TestGetMaintenanceEvents() {
 		}
 	})
 
-	svc := &EventsServiceOp{Client: suite.client}
-	events, err := svc.GetMaintenanceEvents(context.Background(), "Scheduled")
+	events, err := suite.client.EventsService.GetMaintenanceEvents(context.Background(), "Scheduled")
 	suite.NoError(err)
 	suite.Len(events, 2)
 	suite.Equal("CSS-1234", events[0].EventID)
@@ -88,18 +87,19 @@ func (suite *EventsTestSuite) TestGetMaintenanceEvents_CaseInsensitive() {
 		suite.Equal("Scheduled", r.URL.Query().Get("state"))
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`[]`))
+		_, err := w.Write([]byte(`[]`))
+		if err != nil {
+			suite.FailNowf("Failed to write response", "Error: %v", err)
+		}
 	})
 
-	svc := &EventsServiceOp{Client: suite.client}
-	events, err := svc.GetMaintenanceEvents(context.Background(), "scheduled")
+	events, err := suite.client.EventsService.GetMaintenanceEvents(context.Background(), "scheduled")
 	suite.NoError(err)
 	suite.Empty(events)
 }
 
 func (suite *EventsTestSuite) TestGetMaintenanceEvents_InvalidState() {
-	svc := &EventsServiceOp{Client: suite.client}
-	_, err := svc.GetMaintenanceEvents(context.Background(), "invalid-state")
+	_, err := suite.client.EventsService.GetMaintenanceEvents(context.Background(), "invalid-state")
 	suite.ErrorIs(err, ErrInvalidMaintenanceState)
 }
 
@@ -108,8 +108,7 @@ func (suite *EventsTestSuite) TestGetMaintenanceEvents_HTTPError() {
 		w.WriteHeader(http.StatusInternalServerError)
 	})
 
-	svc := &EventsServiceOp{Client: suite.client}
-	_, err := svc.GetMaintenanceEvents(context.Background(), "Scheduled")
+	_, err := suite.client.EventsService.GetMaintenanceEvents(context.Background(), "Scheduled")
 	suite.Error(err)
 }
 
@@ -151,8 +150,7 @@ func (suite *EventsTestSuite) TestGetOutageEvents() {
 		}
 	})
 
-	svc := &EventsServiceOp{Client: suite.client}
-	events, err := svc.GetOutageEvents(context.Background(), "Ongoing")
+	events, err := suite.client.EventsService.GetOutageEvents(context.Background(), "Ongoing")
 	suite.NoError(err)
 	suite.Len(events, 2)
 	suite.Equal("c2037361-eb5b-48a3-9c73-fb4efbf2c886", events[0].OutageID)
@@ -165,18 +163,19 @@ func (suite *EventsTestSuite) TestGetOutageEvents_CaseInsensitive() {
 		suite.Equal("Ongoing", r.URL.Query().Get("state"))
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`[]`))
+		_, err := w.Write([]byte(`[]`))
+		if err != nil {
+			suite.FailNowf("Failed to write response", "Error: %v", err)
+		}
 	})
 
-	svc := &EventsServiceOp{Client: suite.client}
-	events, err := svc.GetOutageEvents(context.Background(), "ongoing")
+	events, err := suite.client.EventsService.GetOutageEvents(context.Background(), "ongoing")
 	suite.NoError(err)
 	suite.Empty(events)
 }
 
 func (suite *EventsTestSuite) TestGetOutageEvents_InvalidState() {
-	svc := &EventsServiceOp{Client: suite.client}
-	_, err := svc.GetOutageEvents(context.Background(), "invalid-state")
+	_, err := suite.client.EventsService.GetOutageEvents(context.Background(), "invalid-state")
 	suite.ErrorIs(err, ErrInvalidOutageState)
 }
 
@@ -185,7 +184,6 @@ func (suite *EventsTestSuite) TestGetOutageEvents_HTTPError() {
 		w.WriteHeader(http.StatusInternalServerError)
 	})
 
-	svc := &EventsServiceOp{Client: suite.client}
-	_, err := svc.GetOutageEvents(context.Background(), "Ongoing")
+	_, err := suite.client.EventsService.GetOutageEvents(context.Background(), "Ongoing")
 	suite.Error(err)
 }

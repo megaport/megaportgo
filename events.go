@@ -1,9 +1,9 @@
 package megaport
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -17,12 +17,12 @@ type EventsService interface {
 }
 
 type EventsServiceOp struct {
-	Client *Client
+	client *Client
 }
 
 func NewEventsService(client *Client) EventsService {
 	return &EventsServiceOp{
-		Client: client,
+		client: client,
 	}
 }
 
@@ -148,27 +148,22 @@ func (svc *EventsServiceOp) GetMaintenanceEvents(ctx context.Context, state stri
 
 	params := url.Values{}
 	params.Add("state", string(canonical))
-	u := svc.Client.BaseURL.JoinPath("/ens/v1/status/maintenance")
+	u := svc.client.BaseURL.JoinPath("/ens/v1/status/maintenance")
 	u.RawQuery = params.Encode()
 
-	req, err := svc.Client.NewRequest(ctx, http.MethodGet, u.String(), nil)
+	req, err := svc.client.NewRequest(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	response, err := svc.Client.Do(ctx, req, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer response.Body.Close()
-
-	body, err := io.ReadAll(response.Body)
+	var buf bytes.Buffer
+	_, err = svc.client.Do(ctx, req, &buf)
 	if err != nil {
 		return nil, err
 	}
 
 	var events []MaintenanceEvent
-	if err := json.Unmarshal(body, &events); err != nil {
+	if err := json.Unmarshal(buf.Bytes(), &events); err != nil {
 		return nil, err
 	}
 
@@ -191,27 +186,22 @@ func (svc *EventsServiceOp) GetOutageEvents(ctx context.Context, state string) (
 
 	params := url.Values{}
 	params.Add("state", string(canonical))
-	u := svc.Client.BaseURL.JoinPath("/ens/v1/status/outage")
+	u := svc.client.BaseURL.JoinPath("/ens/v1/status/outage")
 	u.RawQuery = params.Encode()
 
-	req, err := svc.Client.NewRequest(ctx, http.MethodGet, u.String(), nil)
+	req, err := svc.client.NewRequest(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	response, err := svc.Client.Do(ctx, req, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer response.Body.Close()
-
-	body, err := io.ReadAll(response.Body)
+	var buf bytes.Buffer
+	_, err = svc.client.Do(ctx, req, &buf)
 	if err != nil {
 		return nil, err
 	}
 
 	var events []OutageEvent
-	if err := json.Unmarshal(body, &events); err != nil {
+	if err := json.Unmarshal(buf.Bytes(), &events); err != nil {
 		return nil, err
 	}
 
