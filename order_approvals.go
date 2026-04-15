@@ -118,7 +118,7 @@ func (svc *OrderApprovalServiceOp) ListOrderApprovals(ctx context.Context, req *
 	if req == nil {
 		req = &ListOrderApprovalsRequest{}
 	}
-	path := "/v3/order_approvals"
+	path := "v3/order_approvals"
 	params := url.Values{}
 	if req.Status != nil {
 		params.Add("status", string(*req.Status))
