@@ -145,6 +145,32 @@ func (suite *MCRLookingGlassClientTestSuite) TestListIPRoutesWithFilter() {
 	suite.Equal(want, got)
 }
 
+func (suite *MCRLookingGlassClientTestSuite) TestListIPRoutesWithIPFilter() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+	mcrUID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	jblob := `{
+		"message": "Routes retrieved successfully",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": []
+	}`
+
+	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/routes", mcrUID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		suite.Equal("10.0.0.0/24", r.URL.Query().Get("ip"))
+		fmt.Fprint(w, jblob)
+	})
+
+	got, err := lgSvc.ListIPRoutesWithFilter(ctx, &ListIPRoutesRequest{
+		MCRID:    mcrUID,
+		IPFilter: "10.0.0.0/24",
+	})
+	suite.NoError(err)
+	suite.Empty(got)
+}
+
 // TestListBGPRoutes tests the ListBGPRoutes method.
 func (suite *MCRLookingGlassClientTestSuite) TestListBGPRoutes() {
 	ctx := context.Background()
@@ -393,6 +419,68 @@ func (suite *MCRLookingGlassClientTestSuite) TestListBGPNeighborRoutesAdvertised
 	})
 	suite.NoError(err)
 	suite.Equal(want, got)
+}
+
+func (suite *MCRLookingGlassClientTestSuite) TestListBGPNeighborRoutesWithIPFilter() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+	mcrUID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	sessionID := "session-1"
+
+	jblob := `{
+		"message": "Neighbor routes retrieved successfully",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": []
+	}`
+
+	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/bgpSessions/%s/received", mcrUID, sessionID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		suite.Equal("10.0.0.0/24", r.URL.Query().Get("ip"))
+		fmt.Fprint(w, jblob)
+	})
+
+	got, err := lgSvc.ListBGPNeighborRoutes(ctx, &ListBGPNeighborRoutesRequest{
+		MCRID:     mcrUID,
+		SessionID: sessionID,
+		Direction: LookingGlassRouteDirectionReceived,
+		IPFilter:  "10.0.0.0/24",
+	})
+	suite.NoError(err)
+	suite.Empty(got)
+}
+
+func (suite *MCRLookingGlassClientTestSuite) TestListBGPNeighborRoutesAsyncWithIPFilter() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+	mcrUID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	sessionID := "session-1"
+
+	jblob := `{
+		"message": "Async job created",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": {
+			"jobId": "job-99999",
+			"status": "PENDING"
+		}
+	}`
+
+	path := fmt.Sprintf("/v2/product/mcr2/%s/lookingGlass/bgpSessions/%s/advertised", mcrUID, sessionID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		suite.Equal("true", r.URL.Query().Get("async"))
+		suite.Equal("192.168.1.0/24", r.URL.Query().Get("ip"))
+		fmt.Fprint(w, jblob)
+	})
+
+	got, err := lgSvc.ListBGPNeighborRoutesAsync(ctx, &ListBGPNeighborRoutesRequest{
+		MCRID:     mcrUID,
+		SessionID: sessionID,
+		Direction: LookingGlassRouteDirectionAdvertised,
+		IPFilter:  "192.168.1.0/24",
+	})
+	suite.NoError(err)
+	suite.Equal("job-99999", got.JobID)
 }
 
 // TestListIPRoutesAsync tests the ListIPRoutesAsync method.
