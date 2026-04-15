@@ -217,21 +217,32 @@ func (svc *PartnerServiceOp) FilterPartnerMegaportByMetro(ctx context.Context, p
 		return toReturn, nil
 	}
 
+	hasPermitted := false
+	for _, p := range partners {
+		if p.VXCPermitted {
+			hasPermitted = true
+			break
+		}
+	}
+	if !hasPermitted {
+		return nil, ErrNoPartnerPortsFound
+	}
+
 	locations, err := svc.Client.LocationService.ListLocationsV3(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	metroLocationIDs := make(map[int]bool)
+	metroLocationIDs := make(map[int]struct{})
 	for _, loc := range locations {
 		if loc.Metro == metro {
-			metroLocationIDs[loc.ID] = true
+			metroLocationIDs[loc.ID] = struct{}{}
 		}
 	}
 
 	toReturn := []*PartnerMegaport{}
 	for _, partner := range partners {
-		if partner.VXCPermitted && metroLocationIDs[partner.LocationId] {
+		if _, ok := metroLocationIDs[partner.LocationId]; partner.VXCPermitted && ok {
 			toReturn = append(toReturn, partner)
 		}
 	}

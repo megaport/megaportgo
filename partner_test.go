@@ -389,6 +389,26 @@ func (suite *PartnerClientTestSuite) TestFilterPartnerMegaportByMetro() {
 	suite.ErrorIs(err, ErrNoPartnerPortsFound)
 }
 
+// TestFilterPartnerMegaportByMetroEmptyMetro tests that an empty metro returns all VXCPermitted
+// partners without making a LocationService API call.
+func (suite *PartnerClientTestSuite) TestFilterPartnerMegaportByMetroEmptyMetro() {
+	partnerSvc := suite.client.PartnerService
+	ctx := context.Background()
+
+	suite.mux.HandleFunc(partnerMegaportUrl, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, jblob)
+	})
+
+	partners, err := partnerSvc.ListPartnerMegaports(ctx)
+	suite.NoError(err)
+
+	// No /v3/locations handler registered — any call to LocationService would fail.
+	got, err := partnerSvc.FilterPartnerMegaportByMetro(ctx, partners, "")
+	suite.NoError(err)
+	suite.Equal([]*PartnerMegaport{awsPartner, azurePartner, defaultPartner, awsHcPartner}, got)
+}
+
 // TestFilterPartnerMegaportByDiversityZone tests the FilterPartnerMegaportByDiversityZone method.
 func (suite *PartnerClientTestSuite) TestFilterPartnerMegaportByDiversityZone() {
 	partnerSvc := suite.client.PartnerService

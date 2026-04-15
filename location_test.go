@@ -854,6 +854,10 @@ func (suite *LocationV3ClientTestSuite) TestFilterLocationsByMetroV3() {
 	// Test with no matching metro
 	gotEmpty := locSvc.FilterLocationsByMetroV3(ctx, "Auckland", locations)
 	suite.Empty(gotEmpty)
+
+	// Test with empty metro — all locations should be returned
+	gotAll := locSvc.FilterLocationsByMetroV3(ctx, "", locations)
+	suite.Equal(locations, gotAll)
 }
 
 // TestLocationV3HelperMethods tests the helper methods for LocationV3 struct.
