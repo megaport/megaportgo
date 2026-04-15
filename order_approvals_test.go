@@ -158,6 +158,25 @@ func (suite *OrderApprovalClientTestSuite) TestListOrderApprovalsNilRequest() {
 	suite.Empty(listRes.OrderApprovals)
 }
 
+func (suite *OrderApprovalClientTestSuite) TestListOrderApprovalsInvalidPaginationHeader() {
+	ctx := context.Background()
+
+	jblob := `{
+		"message": "Success",
+		"terms": "https://www.megaport.com/legal/acceptable-use-policy",
+		"data": []
+	}`
+
+	suite.mux.HandleFunc("/v3/order_approvals", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Pagination-Total-Count", "not-a-number")
+		fmt.Fprint(w, jblob)
+	})
+
+	_, err := suite.client.OrderApprovalService.ListOrderApprovals(ctx, &ListOrderApprovalsRequest{})
+	suite.Error(err)
+	suite.Contains(err.Error(), "invalid Pagination-Total-Count header")
+}
+
 func (suite *OrderApprovalClientTestSuite) TestActionEmptyUID() {
 	ctx := context.Background()
 	err := suite.client.OrderApprovalService.ApproveOrderApproval(ctx, "", &OrderApprovalActionRequest{})
