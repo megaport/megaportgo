@@ -1168,6 +1168,57 @@ func (suite *VXCClientTestSuite) TestDeleteTransitVXCWithDeleteNow() {
 	suite.NoError(err, "expected no error when deleting Transit VXC with DeleteNow=true")
 }
 
+// TestDeleteNonTransitVXCWithCancelLater tests that scheduling deletion for a non-Transit VXC succeeds.
+func (suite *VXCClientTestSuite) TestDeleteNonTransitVXCWithCancelLater() {
+	ctx := context.Background()
+
+	vxcSvc := suite.client.VXCService
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	req := &DeleteVXCRequest{
+		DeleteNow: false,
+	}
+
+	// Mock GetVXC returning a non-Transit VXC (AWS)
+	getVxcBlob := `{
+		"message": "Found Product 36b3f68e-2f54-4331-bf94-f8984449365f",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": {
+			"productId": 1,
+			"productUid": "36b3f68e-2f54-4331-bf94-f8984449365f",
+			"productName": "test-vxc",
+			"productType": "VXC",
+			"rateLimit": 50,
+			"provisioningStatus": "LIVE",
+			"resources": {
+				"csp_connection": {
+					"connectType": "AWS",
+					"resource_name": "csp_connection",
+					"resource_type": "csp_connection"
+				}
+			}
+		}
+	}`
+
+	suite.mux.HandleFunc("/v2/product/"+productUid, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, getVxcBlob)
+	})
+
+	deleteBlob := `{
+		"message": "Action [CANCEL Service 36b3f68e-2f54-4331-bf94-f8984449365f] has been done.",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"
+	}`
+
+	suite.mux.HandleFunc("/v3/product/"+productUid+"/action/CANCEL", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPost)
+		fmt.Fprint(w, deleteBlob)
+	})
+
+	err := vxcSvc.DeleteVXC(ctx, productUid, req)
+	suite.NoError(err, "expected no error when scheduling deletion for non-Transit VXC")
+}
+
 // TestIsTransitVXC tests the isTransitVXC helper function with various VXC types
 func (suite *VXCClientTestSuite) TestIsTransitVXC() {
 	// Test nil VXC

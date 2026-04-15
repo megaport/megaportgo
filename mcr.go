@@ -571,6 +571,9 @@ func (svc *MCRServiceOp) ModifyMCRPrefixFilterList(ctx context.Context, mcrID st
 // DeleteNow=false are rejected with ErrMCRCancelLaterNotAllowed, and accepted
 // requests always call the underlying API with DeleteNow=true.
 func (svc *MCRServiceOp) DeleteMCR(ctx context.Context, req *DeleteMCRRequest) (*DeleteMCRResponse, error) {
+	if req == nil {
+		return nil, fmt.Errorf("delete MCR request cannot be nil")
+	}
 	// Enforce MCR lifecycle restriction: only CANCEL_NOW is allowed
 	if !req.DeleteNow {
 		return nil, ErrMCRCancelLaterNotAllowed
