@@ -18,8 +18,8 @@ func TestCreateVXCOrder_PortUIDAutoPopulation(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name            string
-		req             *BuyVXCRequest
+		name           string
+		req            *BuyVXCRequest
 		expectedPortID string
 	}{
 		{
