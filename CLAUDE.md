@@ -2,80 +2,88 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
-
-This is the official Go SDK for the Megaport API (`github.com/megaport/megaportgo`). It enables programmatic management of Megaport network services including Ports, MCRs (Megaport Cloud Routers), MVEs (Megaport Virtual Edges), VXCs (Virtual Cross Connects), and IX connections.
-
-## Build and Test Commands
+## Build & Test Commands
 
 ```bash
-# Run all unit tests (mock-based)
-go test ./...
+# Build
+go build -v ./...
+
+# Run all unit tests
+go test -v ./...
 
 # Run a single test
-go test -run TestPortClientTestSuite/TestBuyPort ./...
+go test -v -run TestPortClientTestSuite/TestBuyPort ./...
 
-# Run integration tests (requires API credentials)
-export MEGAPORT_ACCESS_KEY=YOUR_KEY
-export MEGAPORT_SECRET_KEY=YOUR_KEY
+# Integration tests (requires MEGAPORT_ACCESS_KEY, MEGAPORT_SECRET_KEY)
 go test -timeout 20m -integration ./...
 
-# Run linter
+# Lint (golangci-lint v2.3.1, config in .golangci.yml)
 golangci-lint run
+
+# Format
+gofmt -w .
 ```
 
 ## Architecture
 
-### Single Package Design
-All code lives in a single `megaport` package. There are no subpackages - everything is exported from the root module.
+This is a **flat, single-package Go SDK** (`package megaport`) for the Megaport API. Everything lives at the top level — no subdirectories.
 
-### Client Pattern
-- `Client` struct in `client.go` is the main entry point
-- Created via `megaport.New(httpClient, opts...)` with functional options
-- Services are attached to the client: `client.PortService`, `client.VXCService`, etc.
-- Authentication uses OAuth2 client credentials flow via `client.Authorize(ctx)`
-- Supports custom `TokenProvider` interface for external token management (e.g., WASM)
+### Client + Service Pattern
 
-### Service Interface Pattern
-Each service follows a consistent pattern:
-1. Interface definition (e.g., `PortService`, `VXCService`)
-2. Implementation struct (e.g., `PortServiceOp`) containing a `*Client`
-3. Constructor function (e.g., `NewPortService(c *Client)`)
-4. Request/Response structs for each operation
+`Client` (`client.go`) is the central struct. It holds HTTP client config, authentication state, and all service fields:
 
-### File Organization
-- `{service}.go` - Service interface, implementation, and request/response types
-- `{service}_types.go` - Additional type definitions (for complex services)
-- `{service}_test.go` - Unit tests using httptest mock servers
-- `{service}_integration_test.go` - Integration tests against staging API
+```
+Client
+├── PortService           (port.go)
+├── VXCService            (vxc.go)
+├── MCRService            (mcr.go)
+├── MCRLookingGlassService (mcr_looking_glass.go)
+├── MVEService            (mve.go)
+├── IXService             (ix.go)
+├── LocationService       (location.go)
+├── PartnerService        (partner.go)
+├── ProductService        (product.go)
+├── ServiceKeyService     (service_keys.go)
+├── UserManagementService (user_management.go)
+├── ManagedAccountService (managed_account.go)
+├── BillingMarketService  (billing_markets.go)
+└── NATGatewayService     (nat_gateway.go)
+```
 
-### Testing
-- Unit tests use `github.com/stretchr/testify/suite` with embedded `ClientTestSuite`
-- Mock HTTP responses via `httptest.NewServer`
-- Integration tests are gated behind `-integration` flag
-- Integration tests run against `https://api-staging.megaport.com/`
+Each service follows the same pattern:
+1. **Interface** in the service file (e.g., `PortService`)
+2. **Implementation** as `*ServiceOp` struct (e.g., `PortServiceOp`) with a `Client` field
+3. **Constructor** `NewServiceName(c *Client)` — called during `Client` initialization
+4. **Types** in a companion `*_types.go` file (e.g., `port_types.go`)
 
-### Error Handling
-Package-level errors defined in `errors.go` (e.g., `ErrLocationNotFound`, `ErrInvalidVLAN`). API errors return `*ErrorResponse` with trace ID for debugging.
+Shared constants and types (product types, service states, contract terms, port speeds) are in `shared_types.go`.
 
-## Key APIs
+### Authentication
 
-| Service | Purpose |
-|---------|---------|
-| `PortService` | Physical port management |
-| `MCRService` | Cloud router management, prefix filter lists |
-| `MCRLookingGlassService` | MCR routing table and BGP session visibility |
-| `MVEService` | Virtual edge (SD-WAN) management |
-| `VXCService` | Virtual cross-connect management, partner lookups |
-| `LocationService` | Data center location queries (use V3 methods) |
-| `PartnerService` | Cloud partner port lookups |
-| `ProductService` | Generic product operations, resource tags |
+OAuth2 client credentials flow via `client.Authorize(ctx)`. Three client options:
+- `WithCredentials(accessKey, secretKey)` — standard auth
+- `WithAccessToken(token, expiry)` — pre-set bearer token
+- `WithTokenProvider(tp)` — custom `TokenProvider` interface for external token management (e.g., WASM)
 
-## Important: Location API V3 Migration
+Token endpoints differ per environment (production vs staging vs development).
 
-The Location API v2 is deprecated. Always use V3 methods:
-- `ListLocationsV3()` instead of `ListLocations()`
-- `GetLocationByIDV3()` instead of `GetLocationByID()`
-- `FilterLocationsByMarketCodeV3()` instead of `FilterLocationsByMarketCode()`
+### Request/Response Flow
 
-V3 returns `LocationV3` structs with helper methods like `HasMCRSupport()`, `GetMCRSpeeds()`.
+`client.NewRequest()` builds HTTP requests with auth headers, `client.Do()` executes and decodes responses. `CheckResponse()` validates status codes. Errors include trace IDs from the `Trace-Id` response header for debugging.
+
+### Logging
+
+Uses `log/slog` with structured JSON logging. The `sloglint` linter enforces `attr-only: true`, `context: all`, and `key-naming-case: snake` — all slog calls must use `slog.Attr` helpers (not key-value pairs) and pass context.
+
+## Test Patterns
+
+**Unit tests** use `testify/suite` with an embedded `ClientTestSuite` that provides `mux` (HTTP multiplexer), `server` (httptest.Server), and `client`. Register mock handlers on `mux` to simulate API responses. Tests run in parallel.
+
+**Integration tests** (`*_integration_test.go`) are gated by the `-integration` flag. They authenticate against the staging API and create/modify real resources.
+
+## Key Constraints
+
+- **Location API v3 only** — v2 methods (`ListLocations`, `GetLocationByID`) are deprecated and non-functional. Always use v3 methods (`ListLocationsV3`, `GetLocationByIDV3`, `FilterLocationsByMarketCode`).
+- `megaportgo` is a shared dependency of `megaport-cli` and `terraform-provider-megaport` — changes here affect both consumers.
+- Valid contract terms: 1, 12, 24, 36, 48, 60 months.
+- Valid MCR port speeds: 1000, 2500, 5000, 10000, 25000, 50000, 100000, 400000 Mbps.

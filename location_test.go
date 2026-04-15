@@ -1177,3 +1177,129 @@ func (suite *LocationV3ClientTestSuite) TestGetRandom() {
 	suite.NoError(err)
 	suite.Contains(want, got)
 }
+
+// Note that TestGetRoundTripTimes* tests use the LocationClientTestSuite for v2 endpoints,
+// but are included in this file because the code under test calls an endpoint that is *not*
+// deprecated.
+
+// TestGetRoundTripTimes tests the GetRoundTripTimes method. Note that TestGetRoundTripTimes*
+// tests use the LocationClientTestSuite for v2 endpoints, but are included in this file
+// because the code under test calls an endpoint that is *not* deprecated.
+func (suite *LocationClientTestSuite) TestGetRoundTripTimes() {
+	ctx := context.Background()
+	locSvc := suite.client.LocationService
+	want := []*RoundTripTime{
+		{
+			SrcLocation: 4,
+			DstLocation: 1025,
+			MedianRTT:   208.95250000000001,
+		},
+		{
+			SrcLocation: 4,
+			DstLocation: 2,
+			MedianRTT:   11.314999999999998,
+		},
+		{
+			SrcLocation: 4,
+			DstLocation: 3,
+			MedianRTT:   11.60415,
+		},
+	}
+	jblob := `
+	{
+		"message": "List RTT by location=4 , year=26, month=1",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": [
+			{
+				"srcLocation": 4,
+				"dstLocation": 1025,
+				"medianRTT": 208.95250000000001
+			},
+			{
+				"srcLocation": 4,
+				"dstLocation": 2,
+				"medianRTT": 11.314999999999998
+			},
+			{
+				"srcLocation": 4,
+				"dstLocation": 3,
+				"medianRTT": 11.60415
+			}
+		]
+	}`
+	path := "/v2/locations/rtt"
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		suite.Equal("4", r.URL.Query().Get("srcLocation"))
+		suite.Equal("26", r.URL.Query().Get("year"))
+		suite.Equal("1", r.URL.Query().Get("month"))
+
+		fmt.Fprint(w, jblob)
+	})
+	got, err := locSvc.GetRoundTripTimes(ctx, 4, 2026, 1)
+	suite.NoError(err)
+	suite.Equal(want, got)
+}
+
+// TestGetRoundTripTimesInvalidDateParams tests the GetRoundTripTimes method with invalid date params.
+func (suite *LocationClientTestSuite) TestGetRoundTripTimesInvalidDateParams() {
+	ctx := context.Background()
+	locSvc := suite.client.LocationService
+
+	tests := []struct {
+		name    string
+		year    int
+		month   int
+		wantErr error
+	}{
+		{
+			name:    "year negative",
+			year:    -1,
+			month:   1,
+			wantErr: ErrInvalidYear,
+		},
+		{
+			name:    "month zero",
+			year:    2026,
+			month:   0,
+			wantErr: ErrInvalidMonth,
+		},
+		{
+			name:    "month greater than 12",
+			year:    2026,
+			month:   13,
+			wantErr: ErrInvalidMonth,
+		},
+	}
+
+	for _, tt := range tests {
+		suite.Run(tt.name, func() {
+			got, err := locSvc.GetRoundTripTimes(ctx, 4, tt.year, tt.month)
+			suite.Nil(got)
+			suite.Equal(tt.wantErr, err)
+		})
+	}
+}
+
+// TestGetRoundTripTimesEmptySet tests that GetRoundTripTimes method appropriately handles the case
+// where the API returns an empty set of RTTs. This is the case in staging, or for months that do yet
+// have statistics generated.
+func (suite *LocationClientTestSuite) TestGetRoundTripTimesEmptySet() {
+	ctx := context.Background()
+	locSvc := suite.client.LocationService
+	want := []*RoundTripTime{}
+	jblob := `
+	{
+		"message": "List RTT by location=4 , year=50, month=1",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": []
+	}`
+	path := "/v2/locations/rtt"
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, jblob)
+	})
+	got, err := locSvc.GetRoundTripTimes(ctx, 4, 2050, 1)
+	suite.NoError(err)
+	suite.Equal(want, got)
+}
