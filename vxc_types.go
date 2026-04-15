@@ -666,7 +666,7 @@ func (c *CSPConnection) UnmarshalJSON(data []byte) error {
 				return err
 			}
 			c.CSPConnection = append(c.CSPConnection, vr)
-		case "TRANSIT":
+		case connectTypeTransit:
 			marshaled, err := json.Marshal(cn)
 			if err != nil {
 				return err
@@ -757,7 +757,7 @@ func (c *CSPConnection) UnmarshalJSON(data []byte) error {
 					return err
 				}
 				c.CSPConnection = append(c.CSPConnection, vr)
-			case "TRANSIT":
+			case connectTypeTransit:
 				marshaled, err := json.Marshal(cn)
 				if err != nil {
 					return err
