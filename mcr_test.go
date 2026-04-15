@@ -721,6 +721,24 @@ func (suite *MCRClientTestSuite) TestBuyMCRWithIPsecValidation() {
 
 	suite.mux.HandleFunc("/v4/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodPost)
+		var wrapper struct {
+			NetworkDesign json.RawMessage `json:"networkDesign"`
+			DiscountCodes []string        `json:"discountCodes"`
+		}
+		err := json.NewDecoder(r.Body).Decode(&wrapper)
+		if err != nil {
+			suite.FailNowf("could not decode json", "could not decode json %v", err)
+		}
+		suite.NotNil(wrapper.NetworkDesign)
+		suite.Equal([]string{}, wrapper.DiscountCodes)
+
+		var orders []map[string]interface{}
+		suite.NoError(json.Unmarshal(wrapper.NetworkDesign, &orders))
+		suite.Len(orders, 1)
+		suite.Equal("test-mcr", orders[0]["productName"])
+		suite.Equal(float64(1), orders[0]["term"])
+		suite.Equal(float64(1000), orders[0]["portSpeed"])
+		suite.Equal(float64(1), orders[0]["locationId"])
 		fmt.Fprint(w, jblob)
 	})
 
