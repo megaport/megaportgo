@@ -1077,33 +1077,6 @@ func (suite *VXCClientTestSuite) TestDeleteVXC() {
 		DeleteNow: true,
 	}
 
-	// Mock GetVXC call (needed to check if VXC is Transit)
-	getVxcBlob := `{
-		"message": "Found Product 36b3f68e-2f54-4331-bf94-f8984449365f",
-		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
-		"data": {
-			"productId": 1,
-			"productUid": "36b3f68e-2f54-4331-bf94-f8984449365f",
-			"productName": "test-vxc",
-			"productType": "VXC",
-			"rateLimit": 50,
-			"provisioningStatus": "LIVE",
-			"resources": {
-				"csp_connection": {
-					"connectType": "AWS",
-					"resource_name": "csp_connection",
-					"resource_type": "csp_connection"
-				}
-			}
-		}
-	}`
-
-	getPath := "/v2/product/" + productUid
-	suite.mux.HandleFunc(getPath, func(w http.ResponseWriter, r *http.Request) {
-		suite.testMethod(r, http.MethodGet)
-		fmt.Fprint(w, getVxcBlob)
-	})
-
 	deleteBlob := `{
 		"message": "Action [CANCEL_NOW Service 36b3f68e-2f54-4331-bf94-f8984449365f] has been done.",
 		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"
@@ -1177,35 +1150,6 @@ func (suite *VXCClientTestSuite) TestDeleteTransitVXCWithDeleteNow() {
 	req := &DeleteVXCRequest{
 		DeleteNow: true, // Immediate deletion
 	}
-
-	// Mock GetVXC call returning a Transit VXC
-	getVxcBlob := `{
-		"message": "Found Product 36b3f68e-2f54-4331-bf94-f8984449365f",
-		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
-		"data": {
-			"productId": 1,
-			"productUid": "36b3f68e-2f54-4331-bf94-f8984449365f",
-			"productName": "test-transit-vxc",
-			"productType": "VXC",
-			"rateLimit": 50,
-			"provisioningStatus": "LIVE",
-			"resources": {
-				"csp_connection": {
-					"connectType": "TRANSIT",
-					"resource_name": "csp_connection",
-					"resource_type": "csp_connection",
-					"customer_ip4_address": "203.0.113.1/30",
-					"ipv4_gateway_address": "203.0.113.2"
-				}
-			}
-		}
-	}`
-
-	getPath := "/v2/product/" + productUid
-	suite.mux.HandleFunc(getPath, func(w http.ResponseWriter, r *http.Request) {
-		suite.testMethod(r, http.MethodGet)
-		fmt.Fprint(w, getVxcBlob)
-	})
 
 	deleteBlob := `{
 		"message": "Action [CANCEL_NOW Service 36b3f68e-2f54-4331-bf94-f8984449365f] has been done.",
