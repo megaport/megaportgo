@@ -51,6 +51,20 @@ const (
 	OUTAGE_STATE_RESOLVED       = OutageState("Resolved")
 )
 
+// maintenanceEventsResponse is the API response envelope for maintenance events.
+type maintenanceEventsResponse struct {
+	Message string             `json:"message"`
+	Terms   string             `json:"terms"`
+	Data    []MaintenanceEvent `json:"data"`
+}
+
+// outageEventsResponse is the API response envelope for outage events.
+type outageEventsResponse struct {
+	Message string        `json:"message"`
+	Terms   string        `json:"terms"`
+	Data    []OutageEvent `json:"data"`
+}
+
 // MaintenanceEvent represents a maintenance event returned by the Events API.
 // The response may include optional fields depending on the event state and circumstances.
 type MaintenanceEvent struct {
@@ -162,12 +176,12 @@ func (svc *EventsServiceOp) GetMaintenanceEvents(ctx context.Context, state stri
 	}
 	defer resp.Body.Close()
 
-	var events []MaintenanceEvent
-	if err := json.Unmarshal(buf.Bytes(), &events); err != nil {
+	var envResp maintenanceEventsResponse
+	if err := json.Unmarshal(buf.Bytes(), &envResp); err != nil {
 		return nil, err
 	}
 
-	return events, nil
+	return envResp.Data, nil
 }
 
 // GetOutageEvents retrieves outage events from the Megaport API, filtered by the specified state.
@@ -204,10 +218,10 @@ func (svc *EventsServiceOp) GetOutageEvents(ctx context.Context, state string) (
 	}
 	defer resp.Body.Close()
 
-	var events []OutageEvent
-	if err := json.Unmarshal(buf.Bytes(), &events); err != nil {
+	var envResp outageEventsResponse
+	if err := json.Unmarshal(buf.Bytes(), &envResp); err != nil {
 		return nil, err
 	}
 
-	return events, nil
+	return envResp.Data, nil
 }
