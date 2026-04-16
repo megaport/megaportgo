@@ -375,6 +375,9 @@ func (svc *MCRLookingGlassServiceOp) WaitForAsyncIPRoutes(ctx context.Context, m
 		timeout = 5 * time.Minute
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
 	// Check immediately before starting the ticker to return results without
 	// delay when the job is already complete.
 	result, err := svc.GetAsyncIPRoutes(ctx, mcrUID, jobID)
@@ -399,14 +402,10 @@ func (svc *MCRLookingGlassServiceOp) WaitForAsyncIPRoutes(ctx context.Context, m
 	// workflows (which use a 30s polling interval). We poll more frequently (5s) here to
 	// return results sooner while still avoiding excessive request volume.
 	ticker := time.NewTicker(5 * time.Second)
-	timer := time.NewTimer(timeout)
 	defer ticker.Stop()
-	defer timer.Stop()
 
 	for {
 		select {
-		case <-timer.C:
-			return nil, fmt.Errorf("timeout waiting for async IP routes job %s", jobID)
 		case <-ctx.Done():
 			return nil, fmt.Errorf("waiting for async IP routes job %s: %w", jobID, ctx.Err())
 		case <-ticker.C:
@@ -445,6 +444,9 @@ func (svc *MCRLookingGlassServiceOp) WaitForAsyncBGPNeighborRoutes(ctx context.C
 		timeout = 5 * time.Minute
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
 	// Check immediately before starting the ticker to return results without
 	// delay when the job is already complete.
 	result, err := svc.GetAsyncBGPNeighborRoutes(ctx, mcrUID, jobID)
@@ -469,14 +471,10 @@ func (svc *MCRLookingGlassServiceOp) WaitForAsyncBGPNeighborRoutes(ctx context.C
 	// workflows (which use a 30s polling interval). We poll more frequently (5s) here to
 	// return results sooner while still avoiding excessive request volume.
 	ticker := time.NewTicker(5 * time.Second)
-	timer := time.NewTimer(timeout)
 	defer ticker.Stop()
-	defer timer.Stop()
 
 	for {
 		select {
-		case <-timer.C:
-			return nil, fmt.Errorf("timeout waiting for async BGP neighbor routes job %s", jobID)
 		case <-ctx.Done():
 			return nil, fmt.Errorf("waiting for async BGP neighbor routes job %s: %w", jobID, ctx.Err())
 		case <-ticker.C:

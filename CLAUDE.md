@@ -34,20 +34,20 @@ This is a **flat, single-package Go SDK** (`package megaport`) for the Megaport 
 
 ```
 Client
-├── PortService           (port.go)
-├── VXCService            (vxc.go)
-├── MCRService            (mcr.go)
+├── PortService            (port.go)
+├── VXCService             (vxc.go)
+├── MCRService             (mcr.go)
 ├── MCRLookingGlassService (mcr_looking_glass.go)
-├── MVEService            (mve.go)
-├── IXService             (ix.go)
-├── LocationService       (location.go)
-├── PartnerService        (partner.go)
-├── ProductService        (product.go)
-├── ServiceKeyService     (service_keys.go)
-├── UserManagementService (user_management.go)
-├── ManagedAccountService (managed_account.go)
-├── BillingMarketService  (billing_markets.go)
-└── NATGatewayService     (nat_gateway.go)
+├── MVEService             (mve.go)
+├── IXService              (ix.go)
+├── LocationService        (location.go)
+├── PartnerService         (partner.go)
+├── ProductService         (product.go)
+├── ServiceKeyService      (service_keys.go)
+├── UserManagementService  (user_management.go)
+├── ManagedAccountService  (managed_account.go)
+├── BillingMarketService   (billing_markets.go)
+└── NATGatewayService      (nat_gateway.go)
 ```
 
 Each service follows the same pattern:
