@@ -172,10 +172,13 @@ type NATGatewayOrderPrice struct {
 // NATGatewayValidateResult is a single entry returned by
 // POST /v3/networkdesign/validate.
 type NATGatewayValidateResult struct {
-	ProductUID  string               `json:"productUid"`
-	ProductType string               `json:"productType"`
-	Location    string               `json:"string"`
-	Price       NATGatewayOrderPrice `json:"price"`
+	ProductUID  string `json:"productUid"`
+	ProductType string `json:"productType"`
+	// Metro is the metro/city name returned by the API for the gateway's
+	// location (e.g. "Sydney"). The API ships this as a field literally
+	// named "string" in the JSON response, hence the unusual json tag.
+	Metro string               `json:"string"`
+	Price NATGatewayOrderPrice `json:"price"`
 }
 
 // NATGatewayBuyResult is a single entry returned by

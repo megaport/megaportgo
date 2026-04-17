@@ -236,26 +236,47 @@ func (suite *NATGatewayIntegrationTestSuite) TestNATGatewayFullLifecycle() {
 	)
 
 	// Teardown: DESIGN gateways must be removed via DELETE /v3/products/nat_gateways/{uid};
-	// provisioned gateways are cancelled via ProductService.
+	// provisioned gateways are cancelled via ProductService. If we can't
+	// fetch the current state, fall through to best-effort cleanup via both
+	// paths so a transient GET failure doesn't orphan the resource.
 	defer func() {
 		logger.InfoContext(ctx, "Tearing down NAT Gateway", slog.String("product_uid", productUID))
+
+		deleteDesign := func() {
+			if dErr := natSvc.DeleteNATGateway(ctx, productUID); dErr != nil {
+				logger.WarnContext(ctx, "teardown failed (DESIGN delete)",
+					slog.String("product_uid", productUID),
+					slog.String("error", dErr.Error()),
+				)
+			}
+		}
+		cancelNow := func() {
+			if _, dErr := suite.client.ProductService.DeleteProduct(ctx, &DeleteProductRequest{
+				ProductID: productUID,
+				DeleteNow: true,
+			}); dErr != nil {
+				logger.WarnContext(ctx, "teardown failed (CANCEL_NOW)",
+					slog.String("product_uid", productUID),
+					slog.String("error", dErr.Error()),
+				)
+			}
+		}
+
 		current, getErr := natSvc.GetNATGateway(ctx, productUID)
 		if getErr != nil {
-			logger.WarnContext(ctx, "teardown: could not fetch current state", slog.String("error", getErr.Error()))
+			logger.WarnContext(ctx, "teardown: could not fetch current state; attempting best-effort cleanup",
+				slog.String("product_uid", productUID),
+				slog.String("error", getErr.Error()),
+			)
+			deleteDesign()
+			cancelNow()
 			return
 		}
 		if current.ProvisioningStatus == STATUS_DESIGN {
-			if dErr := natSvc.DeleteNATGateway(ctx, productUID); dErr != nil {
-				logger.WarnContext(ctx, "teardown failed (DESIGN delete)", slog.String("error", dErr.Error()))
-			}
+			deleteDesign()
 			return
 		}
-		if _, dErr := suite.client.ProductService.DeleteProduct(ctx, &DeleteProductRequest{
-			ProductID: productUID,
-			DeleteNow: true,
-		}); dErr != nil {
-			logger.WarnContext(ctx, "teardown failed (CANCEL_NOW)", slog.String("error", dErr.Error()))
-		}
+		cancelNow()
 	}()
 
 	// Step 4: Validate the order (pricing preview).

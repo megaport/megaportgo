@@ -601,7 +601,7 @@ func (suite *NATGatewayClientTestSuite) TestValidateNATGatewayOrder() {
 	suite.True(called)
 	suite.Equal(productUID, result.ProductUID)
 	suite.Equal("NAT_GATEWAY", result.ProductType)
-	suite.Equal("Sydney", result.Location)
+	suite.Equal("Sydney", result.Metro)
 	suite.Equal(float64(600), result.Price.MonthlyRate)
 	suite.Equal("AUD", result.Price.Currency)
 }
