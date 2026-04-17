@@ -93,6 +93,10 @@ type Client struct {
 	BillingMarketService BillingMarketService
 	// NATGatewayService provides methods for interacting with the NAT Gateway API
 	NATGatewayService NATGatewayService
+	// OrderService provides methods for interacting with the Orders API,
+	// which is used to purchase (provision) products that are created in a
+	// non-purchased design state (currently: NAT Gateways).
+	OrderService OrderService
 
 	accessToken string    // Access Token for client
 	tokenExpiry time.Time // Token Expiration
@@ -191,6 +195,7 @@ func NewClient(httpClient *http.Client, base *url.URL) *Client {
 	c.EventsService = NewEventsService(c)
 	c.BillingMarketService = NewBillingMarketService(c)
 	c.NATGatewayService = NewNATGatewayService(c)
+	c.OrderService = NewOrderService(c)
 	c.UserManagementService = NewUserManagementService(c)
 
 	c.headers = make(map[string]string)
