@@ -230,7 +230,8 @@ func (suite *NATGatewayIntegrationTestSuite) TestNATGatewayFullLifecycle() {
 			slog.Int("location_id", testLocation.ID),
 		)
 
-		if vErr := natSvc.ValidateNATGatewayOrder(ctx, candidate.ProductUID); vErr != nil {
+		validation, vErr := natSvc.ValidateNATGatewayOrder(ctx, candidate.ProductUID)
+		if vErr != nil {
 			logger.WarnContext(ctx, "validation failed at location, retrying",
 				slog.String("location", testLocation.Name),
 				slog.String("error", vErr.Error()),
@@ -246,7 +247,11 @@ func (suite *NATGatewayIntegrationTestSuite) TestNATGatewayFullLifecycle() {
 
 		gw = candidate
 		productUID = candidate.ProductUID
-		logger.InfoContext(ctx, "NAT Gateway order validated", slog.String("product_uid", productUID))
+		logger.InfoContext(ctx, "NAT Gateway order validated",
+			slog.String("product_uid", productUID),
+			slog.Float64("monthly_rate", validation.Price.MonthlyRate),
+			slog.String("currency", validation.Price.Currency),
+		)
 		break
 	}
 	if productUID == "" {
@@ -263,7 +268,7 @@ func (suite *NATGatewayIntegrationTestSuite) TestNATGatewayFullLifecycle() {
 			logger.WarnContext(ctx, "teardown: could not fetch current state", slog.String("error", getErr.Error()))
 			return
 		}
-		if current.ProvisioningStatus == "DESIGN" {
+		if current.ProvisioningStatus == STATUS_DESIGN {
 			if dErr := natSvc.DeleteNATGateway(ctx, productUID); dErr != nil {
 				logger.WarnContext(ctx, "teardown failed (DESIGN delete)", slog.String("error", dErr.Error()))
 			}
@@ -278,10 +283,15 @@ func (suite *NATGatewayIntegrationTestSuite) TestNATGatewayFullLifecycle() {
 	}()
 
 	// Step 5: Buy the gateway via /v3/networkdesign/buy — kicks off provisioning.
-	if err := natSvc.BuyNATGateway(ctx, productUID); err != nil {
+	bought, err := natSvc.BuyNATGateway(ctx, productUID)
+	if err != nil {
 		suite.FailNowf("could not buy NAT Gateway", "could not buy NAT Gateway: %v", err)
 	}
-	logger.InfoContext(ctx, "NAT Gateway order bought", slog.String("product_uid", productUID))
+	suite.Equal(productUID, bought.ProductUID)
+	logger.InfoContext(ctx, "NAT Gateway order bought",
+		slog.String("product_uid", productUID),
+		slog.String("provisioning_status", bought.ProvisioningStatus),
+	)
 
 	// Step 6: Poll until the gateway reaches CONFIGURED/LIVE, or fail fast
 	// on a terminal error state.

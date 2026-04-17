@@ -151,3 +151,57 @@ type DeleteNATGatewayResponse struct {
 	Message string `json:"message"`
 	Terms   string `json:"terms"`
 }
+
+// NATGatewayOrderPrice captures the pricing preview returned by
+// POST /v3/networkdesign/validate for a NAT Gateway order.
+type NATGatewayOrderPrice struct {
+	HourlySetup          float64 `json:"hourlySetup"`
+	DailySetup           float64 `json:"dailySetup"`
+	MonthlySetup         float64 `json:"monthlySetup"`
+	HourlyRate           float64 `json:"hourlyRate"`
+	DailyRate            float64 `json:"dailyRate"`
+	MonthlyRate          float64 `json:"monthlyRate"`
+	FixedRecurringCharge float64 `json:"fixedRecurringCharge"`
+	LongHaulMbpsRate     float64 `json:"longHaulMbpsRate"`
+	MbpsRate             float64 `json:"mbpsRate"`
+	Currency             string  `json:"currency"`
+	ProductType          string  `json:"productType"`
+	MonthlyRackRate      float64 `json:"monthlyRackRate"`
+}
+
+// NATGatewayValidateResult is a single entry returned by
+// POST /v3/networkdesign/validate.
+type NATGatewayValidateResult struct {
+	ProductUID  string               `json:"productUid"`
+	ProductType string               `json:"productType"`
+	Location    string               `json:"string"`
+	Price       NATGatewayOrderPrice `json:"price"`
+}
+
+// NATGatewayBuyResult is a single entry returned by
+// POST /v3/networkdesign/buy after a NAT Gateway design is purchased.
+type NATGatewayBuyResult struct {
+	ProductUID         string `json:"uid"`
+	ProductName        string `json:"name"`
+	ServiceName        string `json:"serviceName"`
+	ProductType        string `json:"productType"`
+	ProvisioningStatus string `json:"provisioningStatus"`
+	RateLimit          int    `json:"rateLimit"`
+	LocationID         int    `json:"aLocationId"`
+	ContractTermMonths int    `json:"contractTermMonths"`
+	CreateDate         int64  `json:"createDate"`
+}
+
+// natGatewayValidateEnvelope is the API response envelope for validate.
+type natGatewayValidateEnvelope struct {
+	Message string                      `json:"message"`
+	Terms   string                      `json:"terms"`
+	Data    []*NATGatewayValidateResult `json:"data"`
+}
+
+// natGatewayBuyEnvelope is the API response envelope for buy.
+type natGatewayBuyEnvelope struct {
+	Message string                 `json:"message"`
+	Terms   string                 `json:"terms"`
+	Data    []*NATGatewayBuyResult `json:"data"`
+}
