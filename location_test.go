@@ -802,6 +802,69 @@ func (suite *LocationV3ClientTestSuite) TestFilterLocationsByMcrAvailabilityV3()
 	suite.Equal(want, got)
 }
 
+// TestFilterLocationsByNATGatewaySpeedV3 tests the NAT Gateway speed filter.
+func (suite *LocationV3ClientTestSuite) TestFilterLocationsByNATGatewaySpeedV3() {
+	ctx := context.Background()
+	locSvc := suite.client.LocationService
+
+	locations := []*LocationV3{
+		{
+			ID: 1, Name: "has-1000-red",
+			DiversityZones: &LocationV3DiversityZones{
+				Red: &LocationV3DiversityZone{NATGatewaySpeedMbps: []int{1000, 2500}},
+			},
+		},
+		{
+			ID: 2, Name: "has-1000-blue",
+			DiversityZones: &LocationV3DiversityZones{
+				Blue: &LocationV3DiversityZone{NATGatewaySpeedMbps: []int{1000}},
+			},
+		},
+		{
+			ID: 3, Name: "has-5000-only",
+			DiversityZones: &LocationV3DiversityZones{
+				Red: &LocationV3DiversityZone{NATGatewaySpeedMbps: []int{5000}},
+			},
+		},
+		{
+			ID:             4,
+			Name:           "no-nat-gateway",
+			DiversityZones: &LocationV3DiversityZones{},
+		},
+	}
+
+	got := locSvc.FilterLocationsByNATGatewaySpeedV3(ctx, 1000, locations)
+	suite.Len(got, 2)
+	suite.Equal(1, got[0].ID)
+	suite.Equal(2, got[1].ID)
+
+	// Speed not supported at any location
+	suite.Empty(locSvc.FilterLocationsByNATGatewaySpeedV3(ctx, 400000, locations))
+}
+
+// TestLocationV3NATGatewayHelpers tests the NAT Gateway helper methods on LocationV3.
+func (suite *LocationV3ClientTestSuite) TestLocationV3NATGatewayHelpers() {
+	loc := &LocationV3{
+		DiversityZones: &LocationV3DiversityZones{
+			Red:  &LocationV3DiversityZone{NATGatewaySpeedMbps: []int{1000, 2500, 5000}},
+			Blue: &LocationV3DiversityZone{NATGatewaySpeedMbps: []int{1000}},
+		},
+	}
+	suite.True(loc.HasNATGatewaySupport())
+	suite.True(loc.SupportsNATGatewaySpeed(1000))
+	suite.True(loc.SupportsNATGatewaySpeed(5000))
+	suite.False(loc.SupportsNATGatewaySpeed(100000))
+	suite.ElementsMatch([]int{1000, 2500, 5000}, loc.GetNATGatewaySpeeds())
+
+	empty := &LocationV3{DiversityZones: &LocationV3DiversityZones{}}
+	suite.False(empty.HasNATGatewaySupport())
+	suite.False(empty.SupportsNATGatewaySpeed(1000))
+	suite.Empty(empty.GetNATGatewaySpeeds())
+
+	nilZones := &LocationV3{}
+	suite.False(nilZones.HasNATGatewaySupport())
+}
+
 // TestLocationV3HelperMethods tests the helper methods for LocationV3 struct.
 func (suite *LocationV3ClientTestSuite) TestLocationV3HelperMethods() {
 	// Test location with MCR support
