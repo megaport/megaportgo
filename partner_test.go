@@ -325,7 +325,7 @@ func (suite *PartnerClientTestSuite) TestFilterPartnerMegaportByDiversityZone() 
 
 	wantFiltered := []*PartnerMegaport{awsPartner, defaultPartner}
 
-	gotFiltered, err := partnerSvc.FilterPartnerMegaportByDiversityZone(ctx, partners, "red", true)
+	gotFiltered, err := partnerSvc.FilterPartnerMegaportByDiversityZone(ctx, partners, "red")
 	suite.NoError(err)
 	suite.Equal(wantFiltered, gotFiltered)
 }
