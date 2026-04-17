@@ -2,7 +2,9 @@ package megaport
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -557,4 +559,129 @@ func (suite *NATGatewayClientTestSuite) TestGetNATGatewayTelemetryValidation() {
 		To:         PtrTo(time.UnixMilli(1608603936000)),
 	})
 	suite.ErrorIs(err, ErrNATGatewayTelemetryFromToIncomplete)
+}
+
+func (suite *NATGatewayClientTestSuite) TestValidateNATGatewayOrder() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "11111111-2222-3333-4444-555555555555"
+
+	called := false
+	suite.mux.HandleFunc("/v3/networkdesign/validate", func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		suite.Equal(http.MethodPost, r.Method)
+
+		body, err := io.ReadAll(r.Body)
+		suite.NoError(err)
+		var payload []map[string]string
+		suite.NoError(json.Unmarshal(body, &payload))
+		suite.Equal([]map[string]string{{"productUid": productUID}}, payload)
+
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{
+			"message":"Validation passed",
+			"terms":"",
+			"data":[{
+				"productUid":%q,
+				"productType":"NAT_GATEWAY",
+				"string":"Sydney",
+				"price":{
+					"monthlyRate":600,
+					"mbpsRate":0.6,
+					"currency":"AUD",
+					"productType":"NAT_GATEWAY",
+					"monthlyRackRate":600
+				}
+			}]
+		}`, productUID)
+	})
+
+	result, err := natSvc.ValidateNATGatewayOrder(ctx, productUID)
+	suite.NoError(err)
+	suite.True(called)
+	suite.Equal(productUID, result.ProductUID)
+	suite.Equal("NAT_GATEWAY", result.ProductType)
+	suite.Equal("Sydney", result.Metro)
+	suite.Equal(float64(600), result.Price.MonthlyRate)
+	suite.Equal("AUD", result.Price.Currency)
+}
+
+func (suite *NATGatewayClientTestSuite) TestValidateNATGatewayOrder_EmptyData() {
+	ctx := context.Background()
+	productUID := "11111111-2222-3333-4444-555555555555"
+
+	suite.mux.HandleFunc("/v3/networkdesign/validate", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":[]}`)
+	})
+
+	_, err := suite.client.NATGatewayService.ValidateNATGatewayOrder(ctx, productUID)
+	suite.ErrorIs(err, ErrNATGatewayOrderResponseEmpty)
+}
+
+func (suite *NATGatewayClientTestSuite) TestValidateNATGatewayOrder_MissingUID() {
+	_, err := suite.client.NATGatewayService.ValidateNATGatewayOrder(context.Background(), "")
+	suite.ErrorIs(err, ErrNATGatewayProductUIDRequired)
+}
+
+func (suite *NATGatewayClientTestSuite) TestBuyNATGateway() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "11111111-2222-3333-4444-555555555555"
+
+	called := false
+	suite.mux.HandleFunc("/v3/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		suite.Equal(http.MethodPost, r.Method)
+
+		body, err := io.ReadAll(r.Body)
+		suite.NoError(err)
+		var payload []map[string]string
+		suite.NoError(json.Unmarshal(body, &payload))
+		suite.Equal([]map[string]string{{"productUid": productUID}}, payload)
+
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{
+			"message":"NAT_GATEWAY created",
+			"terms":"",
+			"data":[{
+				"uid":%q,
+				"name":"gw-name",
+				"serviceName":"gw-name",
+				"productType":"NAT_GATEWAY",
+				"provisioningStatus":"DEPLOYABLE",
+				"rateLimit":1000,
+				"aLocationId":10,
+				"contractTermMonths":1,
+				"createDate":1776431685787
+			}]
+		}`, productUID)
+	})
+
+	result, err := natSvc.BuyNATGateway(ctx, productUID)
+	suite.NoError(err)
+	suite.True(called)
+	suite.Equal(productUID, result.ProductUID)
+	suite.Equal("DEPLOYABLE", result.ProvisioningStatus)
+	suite.Equal(1000, result.RateLimit)
+	suite.Equal(10, result.LocationID)
+	suite.Equal(1, result.ContractTermMonths)
+}
+
+func (suite *NATGatewayClientTestSuite) TestBuyNATGateway_EmptyData() {
+	ctx := context.Background()
+	productUID := "11111111-2222-3333-4444-555555555555"
+
+	suite.mux.HandleFunc("/v3/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":[]}`)
+	})
+
+	_, err := suite.client.NATGatewayService.BuyNATGateway(ctx, productUID)
+	suite.ErrorIs(err, ErrNATGatewayOrderResponseEmpty)
+}
+
+func (suite *NATGatewayClientTestSuite) TestBuyNATGateway_MissingUID() {
+	_, err := suite.client.NATGatewayService.BuyNATGateway(context.Background(), "")
+	suite.ErrorIs(err, ErrNATGatewayProductUIDRequired)
 }

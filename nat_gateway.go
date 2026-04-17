@@ -29,6 +29,16 @@ type NATGatewayService interface {
 	ListNATGatewaySessions(ctx context.Context) ([]*NATGatewaySession, error)
 	// GetNATGatewayTelemetry returns telemetry data for a NAT Gateway product.
 	GetNATGatewayTelemetry(ctx context.Context, req *GetNATGatewayTelemetryRequest) (*ServiceTelemetryResponse, error)
+	// ValidateNATGatewayOrder validates a NAT Gateway design via
+	// POST /v3/networkdesign/validate. The gateway must be in DESIGN state.
+	// Returns an order preview including pricing.
+	ValidateNATGatewayOrder(ctx context.Context, productUID string) (*NATGatewayValidateResult, error)
+	// BuyNATGateway purchases (provisions) a NAT Gateway design via
+	// POST /v3/networkdesign/buy. The gateway must be in DESIGN state;
+	// after a successful call it transitions through the normal
+	// DEPLOYABLE -> CONFIGURED -> LIVE lifecycle. Returns the provisioning
+	// service record.
+	BuyNATGateway(ctx context.Context, productUID string) (*NATGatewayBuyResult, error)
 }
 
 // NewNATGatewayService creates a new instance of the NAT Gateway Service.
@@ -224,6 +234,70 @@ func (svc *NATGatewayServiceOp) DeleteNATGateway(ctx context.Context, productUID
 		return err
 	}
 	defer resp.Body.Close()
+	return nil
+}
+
+// natGatewayOrderItem is the minimal payload expected by
+// /v3/networkdesign/validate and /v3/networkdesign/buy for NAT Gateway
+// designs. The endpoints accept an array of items.
+type natGatewayOrderItem struct {
+	ProductUID string `json:"productUid"`
+}
+
+// ErrNATGatewayOrderResponseEmpty is returned when the API response data
+// array is empty (the endpoints are expected to return one entry per
+// submitted productUid).
+var ErrNATGatewayOrderResponseEmpty = errors.New("nat gateway order response contained no data")
+
+// ValidateNATGatewayOrder validates a NAT Gateway design without purchasing.
+// The returned result includes a pricing preview.
+func (svc *NATGatewayServiceOp) ValidateNATGatewayOrder(ctx context.Context, productUID string) (*NATGatewayValidateResult, error) {
+	if productUID == "" {
+		return nil, ErrNATGatewayProductUIDRequired
+	}
+	var envelope natGatewayValidateEnvelope
+	if err := svc.postNetworkDesign(ctx, "/v3/networkdesign/validate", productUID, &envelope); err != nil {
+		return nil, err
+	}
+	if len(envelope.Data) == 0 {
+		return nil, ErrNATGatewayOrderResponseEmpty
+	}
+	return envelope.Data[0], nil
+}
+
+// BuyNATGateway purchases a NAT Gateway design, kicking off provisioning.
+// The returned result contains the initial provisioning service record.
+func (svc *NATGatewayServiceOp) BuyNATGateway(ctx context.Context, productUID string) (*NATGatewayBuyResult, error) {
+	if productUID == "" {
+		return nil, ErrNATGatewayProductUIDRequired
+	}
+	var envelope natGatewayBuyEnvelope
+	if err := svc.postNetworkDesign(ctx, "/v3/networkdesign/buy", productUID, &envelope); err != nil {
+		return nil, err
+	}
+	if len(envelope.Data) == 0 {
+		return nil, ErrNATGatewayOrderResponseEmpty
+	}
+	return envelope.Data[0], nil
+}
+
+func (svc *NATGatewayServiceOp) postNetworkDesign(ctx context.Context, path, productUID string, out interface{}) error {
+	body := []natGatewayOrderItem{{ProductUID: productUID}}
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodPost, path, body)
+	if err != nil {
+		return err
+	}
+	var buf bytes.Buffer
+	resp, err := svc.Client.Do(ctx, clientReq, &buf)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if out != nil {
+		if err := json.Unmarshal(buf.Bytes(), out); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
