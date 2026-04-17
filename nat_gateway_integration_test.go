@@ -4,7 +4,9 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"slices"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -154,4 +156,153 @@ func (suite *NATGatewayIntegrationTestSuite) TestNATGatewayLifecycle() {
 		suite.FailNowf("could not delete NAT Gateway", "could not delete NAT Gateway: %v", err)
 	}
 	logger.DebugContext(ctx, "NAT Gateway deleted", slog.String("product_uid", productUID))
+}
+
+// TestNATGatewayFullLifecycle exercises the end-to-end flow: create the
+// design record, validate and buy the gateway via the network-design
+// endpoints, wait for it to reach CONFIGURED/LIVE, update a mutable field,
+// and tear down via ProductService (the DESIGN-only DELETE endpoint no
+// longer applies once the order has been bought).
+func (suite *NATGatewayIntegrationTestSuite) TestNATGatewayFullLifecycle() {
+	ctx := context.Background()
+	logger := suite.client.Logger
+	natSvc := suite.client.NATGatewayService
+
+	// Step 1: List sessions to pick a valid speed/session count.
+	sessions, err := natSvc.ListNATGatewaySessions(ctx)
+	if err != nil {
+		suite.FailNowf("could not list sessions", "could not list NAT Gateway sessions: %v", err)
+	}
+	suite.NotEmpty(sessions, "expected at least one session configuration")
+	testSpeed := sessions[0].SpeedMbps
+	testSessionCount := sessions[0].SessionCount[0]
+
+	// Step 2: Pick a location.
+	testLocation, locErr := GetRandomLocation(ctx, suite.client.LocationService, TEST_NAT_GATEWAY_LOCATION_MARKET)
+	if locErr != nil {
+		suite.FailNowf("could not get random location", "could not get random location: %v", locErr)
+	}
+	suite.NotNil(testLocation)
+
+	// Step 3: Create the NAT Gateway (returns in DESIGN).
+	createReq := &CreateNATGatewayRequest{
+		AutoRenewTerm: true,
+		Config: NATGatewayNetworkConfig{
+			ASN:                64512,
+			BGPShutdownDefault: false,
+			DiversityZone:      "red",
+			SessionCount:       testSessionCount,
+		},
+		LocationID:  testLocation.ID,
+		ProductName: "Integration Test NAT Gateway (Full Lifecycle)",
+		Speed:       testSpeed,
+		Term:        1,
+	}
+	gw, err := natSvc.CreateNATGateway(ctx, createReq)
+	if err != nil {
+		suite.FailNowf("could not create NAT Gateway", "could not create NAT Gateway: %v", err)
+	}
+	productUID := gw.ProductUID
+	suite.NotEmpty(productUID)
+	logger.InfoContext(ctx, "NAT Gateway design created",
+		slog.String("product_uid", productUID),
+		slog.String("provisioning_status", gw.ProvisioningStatus),
+	)
+
+	// Teardown: cancel the product immediately. Works regardless of state
+	// (DESIGN or post-buy) and runs even if a later step fails.
+	defer func() {
+		logger.InfoContext(ctx, "Tearing down NAT Gateway", slog.String("product_uid", productUID))
+		_, delErr := suite.client.ProductService.DeleteProduct(ctx, &DeleteProductRequest{
+			ProductID: productUID,
+			DeleteNow: true,
+		})
+		if delErr != nil {
+			logger.WarnContext(ctx, "teardown failed", slog.String("error", delErr.Error()))
+		}
+	}()
+
+	// Step 4: Validate the gateway via /v3/networkdesign/validate.
+	if err := natSvc.ValidateNATGatewayOrder(ctx, productUID); err != nil {
+		suite.FailNowf("could not validate NAT Gateway", "could not validate NAT Gateway: %v", err)
+	}
+	logger.InfoContext(ctx, "NAT Gateway order validated", slog.String("product_uid", productUID))
+
+	// Step 5: Buy the gateway via /v3/networkdesign/buy — kicks off provisioning.
+	if err := natSvc.BuyNATGateway(ctx, productUID); err != nil {
+		suite.FailNowf("could not buy NAT Gateway", "could not buy NAT Gateway: %v", err)
+	}
+	logger.InfoContext(ctx, "NAT Gateway order bought", slog.String("product_uid", productUID))
+
+	// Step 6: Poll until the gateway reaches CONFIGURED/LIVE, or fail fast
+	// on a terminal error state.
+	const (
+		pollInterval = 10 * time.Second
+		pollTimeout  = 15 * time.Minute
+	)
+	pollCtx, cancel := context.WithTimeout(ctx, pollTimeout)
+	defer cancel()
+
+	var provisioned *NATGateway
+	ticker := time.NewTicker(pollInterval)
+	defer ticker.Stop()
+
+PollLoop:
+	for {
+		fetched, getErr := natSvc.GetNATGateway(pollCtx, productUID)
+		if getErr != nil {
+			suite.FailNowf("could not poll NAT Gateway", "error while polling NAT Gateway %s: %v", productUID, getErr)
+		}
+		logger.DebugContext(pollCtx, "poll",
+			slog.String("product_uid", productUID),
+			slog.String("provisioning_status", fetched.ProvisioningStatus),
+		)
+		switch {
+		case slices.Contains(SERVICE_STATE_READY, fetched.ProvisioningStatus):
+			provisioned = fetched
+			break PollLoop
+		case fetched.ProvisioningStatus == STATUS_DECOMMISSIONED ||
+			fetched.ProvisioningStatus == STATUS_CANCELLED:
+			suite.FailNowf("NAT Gateway reached terminal state", "gateway %s reached %s", productUID, fetched.ProvisioningStatus)
+		}
+
+		select {
+		case <-pollCtx.Done():
+			suite.FailNowf("timed out waiting for provisioning", "gateway %s did not reach CONFIGURED/LIVE within %s (last status %q)", productUID, pollTimeout, fetched.ProvisioningStatus)
+		case <-ticker.C:
+		}
+	}
+
+	suite.NotNil(provisioned)
+	suite.Contains(SERVICE_STATE_READY, provisioned.ProvisioningStatus)
+	logger.InfoContext(ctx, "NAT Gateway provisioned",
+		slog.String("product_uid", productUID),
+		slog.String("provisioning_status", provisioned.ProvisioningStatus),
+	)
+
+	// Step 7: Update a field that remains mutable after deployment
+	// (productName). Speed/location/promoCode are immutable post-deploy per
+	// the API docs.
+	const updatedName = "Integration Test NAT Gateway (Updated)"
+	updated, err := natSvc.UpdateNATGateway(ctx, &UpdateNATGatewayRequest{
+		ProductUID:    productUID,
+		AutoRenewTerm: false,
+		Config: NATGatewayNetworkConfig{
+			ASN:                provisioned.Config.ASN,
+			BGPShutdownDefault: provisioned.Config.BGPShutdownDefault,
+			DiversityZone:      provisioned.Config.DiversityZone,
+			SessionCount:       provisioned.Config.SessionCount,
+		},
+		LocationID:  provisioned.LocationID,
+		ProductName: updatedName,
+		Speed:       provisioned.Speed,
+		Term:        provisioned.Term,
+	})
+	if err != nil {
+		suite.FailNowf("could not update NAT Gateway", "could not update provisioned NAT Gateway: %v", err)
+	}
+	suite.Equal(updatedName, updated.ProductName)
+	logger.InfoContext(ctx, "NAT Gateway updated", slog.String("product_name", updated.ProductName))
+
+	// Step 8: Teardown runs via the deferred call above.
 }

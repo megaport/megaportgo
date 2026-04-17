@@ -2,7 +2,9 @@ package megaport
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -557,4 +559,62 @@ func (suite *NATGatewayClientTestSuite) TestGetNATGatewayTelemetryValidation() {
 		To:         PtrTo(time.UnixMilli(1608603936000)),
 	})
 	suite.ErrorIs(err, ErrNATGatewayTelemetryFromToIncomplete)
+}
+
+func (suite *NATGatewayClientTestSuite) TestValidateNATGatewayOrder() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "11111111-2222-3333-4444-555555555555"
+
+	called := false
+	suite.mux.HandleFunc("/v3/networkdesign/validate", func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		suite.Equal(http.MethodPost, r.Method)
+
+		body, err := io.ReadAll(r.Body)
+		suite.NoError(err)
+		var payload []map[string]string
+		suite.NoError(json.Unmarshal(body, &payload))
+		suite.Equal([]map[string]string{{"productUid": productUID}}, payload)
+
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":""}`)
+	})
+
+	suite.NoError(natSvc.ValidateNATGatewayOrder(ctx, productUID))
+	suite.True(called)
+}
+
+func (suite *NATGatewayClientTestSuite) TestValidateNATGatewayOrder_MissingUID() {
+	err := suite.client.NATGatewayService.ValidateNATGatewayOrder(context.Background(), "")
+	suite.ErrorIs(err, ErrNATGatewayProductUIDRequired)
+}
+
+func (suite *NATGatewayClientTestSuite) TestBuyNATGateway() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "11111111-2222-3333-4444-555555555555"
+
+	called := false
+	suite.mux.HandleFunc("/v3/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		suite.Equal(http.MethodPost, r.Method)
+
+		body, err := io.ReadAll(r.Body)
+		suite.NoError(err)
+		var payload []map[string]string
+		suite.NoError(json.Unmarshal(body, &payload))
+		suite.Equal([]map[string]string{{"productUid": productUID}}, payload)
+
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":""}`)
+	})
+
+	suite.NoError(natSvc.BuyNATGateway(ctx, productUID))
+	suite.True(called)
+}
+
+func (suite *NATGatewayClientTestSuite) TestBuyNATGateway_MissingUID() {
+	err := suite.client.NATGatewayService.BuyNATGateway(context.Background(), "")
+	suite.ErrorIs(err, ErrNATGatewayProductUIDRequired)
 }

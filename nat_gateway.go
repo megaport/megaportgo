@@ -29,6 +29,14 @@ type NATGatewayService interface {
 	ListNATGatewaySessions(ctx context.Context) ([]*NATGatewaySession, error)
 	// GetNATGatewayTelemetry returns telemetry data for a NAT Gateway product.
 	GetNATGatewayTelemetry(ctx context.Context, req *GetNATGatewayTelemetryRequest) (*ServiceTelemetryResponse, error)
+	// ValidateNATGatewayOrder validates a NAT Gateway design via
+	// POST /v3/networkdesign/validate. The gateway must be in DESIGN state.
+	ValidateNATGatewayOrder(ctx context.Context, productUID string) error
+	// BuyNATGateway purchases (provisions) a NAT Gateway design via
+	// POST /v3/networkdesign/buy. The gateway must be in DESIGN state;
+	// after a successful call it transitions through the normal
+	// DEPLOYABLE -> CONFIGURED -> LIVE lifecycle.
+	BuyNATGateway(ctx context.Context, productUID string) error
 }
 
 // NewNATGatewayService creates a new instance of the NAT Gateway Service.
@@ -216,6 +224,43 @@ func (svc *NATGatewayServiceOp) DeleteNATGateway(ctx context.Context, productUID
 
 	path := fmt.Sprintf("/v3/products/nat_gateways/%s", url.PathEscape(productUID))
 	clientReq, err := svc.Client.NewRequest(ctx, http.MethodDelete, path, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := svc.Client.Do(ctx, clientReq, nil)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return nil
+}
+
+// natGatewayOrderItem is the minimal payload expected by
+// /v3/networkdesign/validate and /v3/networkdesign/buy for NAT Gateway
+// designs. The endpoints accept an array of items.
+type natGatewayOrderItem struct {
+	ProductUID string `json:"productUid"`
+}
+
+// ValidateNATGatewayOrder validates a NAT Gateway design without purchasing.
+func (svc *NATGatewayServiceOp) ValidateNATGatewayOrder(ctx context.Context, productUID string) error {
+	if productUID == "" {
+		return ErrNATGatewayProductUIDRequired
+	}
+	return svc.postNetworkDesign(ctx, "/v3/networkdesign/validate", productUID)
+}
+
+// BuyNATGateway purchases a NAT Gateway design, kicking off provisioning.
+func (svc *NATGatewayServiceOp) BuyNATGateway(ctx context.Context, productUID string) error {
+	if productUID == "" {
+		return ErrNATGatewayProductUIDRequired
+	}
+	return svc.postNetworkDesign(ctx, "/v3/networkdesign/buy", productUID)
+}
+
+func (svc *NATGatewayServiceOp) postNetworkDesign(ctx context.Context, path, productUID string) error {
+	body := []natGatewayOrderItem{{ProductUID: productUID}}
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodPost, path, body)
 	if err != nil {
 		return err
 	}
