@@ -168,65 +168,114 @@ func (suite *NATGatewayIntegrationTestSuite) TestNATGatewayFullLifecycle() {
 	logger := suite.client.Logger
 	natSvc := suite.client.NATGatewayService
 
-	// Step 1: List sessions to pick a valid speed/session count.
+	// Step 1: List sessions to pick the smallest speed/session-count combo
+	// (small speeds are supported at more locations).
 	sessions, err := natSvc.ListNATGatewaySessions(ctx)
 	if err != nil {
 		suite.FailNowf("could not list sessions", "could not list NAT Gateway sessions: %v", err)
 	}
 	suite.NotEmpty(sessions, "expected at least one session configuration")
-	testSpeed := sessions[0].SpeedMbps
-	testSessionCount := sessions[0].SessionCount[0]
-
-	// Step 2: Pick a location.
-	testLocation, locErr := GetRandomLocation(ctx, suite.client.LocationService, TEST_NAT_GATEWAY_LOCATION_MARKET)
-	if locErr != nil {
-		suite.FailNowf("could not get random location", "could not get random location: %v", locErr)
+	minSession := sessions[0]
+	for _, s := range sessions[1:] {
+		if s.SpeedMbps < minSession.SpeedMbps {
+			minSession = s
+		}
 	}
-	suite.NotNil(testLocation)
-
-	// Step 3: Create the NAT Gateway (returns in DESIGN).
-	createReq := &CreateNATGatewayRequest{
-		AutoRenewTerm: true,
-		Config: NATGatewayNetworkConfig{
-			ASN:                64512,
-			BGPShutdownDefault: false,
-			DiversityZone:      "red",
-			SessionCount:       testSessionCount,
-		},
-		LocationID:  testLocation.ID,
-		ProductName: "Integration Test NAT Gateway (Full Lifecycle)",
-		Speed:       testSpeed,
-		Term:        1,
-	}
-	gw, err := natSvc.CreateNATGateway(ctx, createReq)
-	if err != nil {
-		suite.FailNowf("could not create NAT Gateway", "could not create NAT Gateway: %v", err)
-	}
-	productUID := gw.ProductUID
-	suite.NotEmpty(productUID)
-	logger.InfoContext(ctx, "NAT Gateway design created",
-		slog.String("product_uid", productUID),
-		slog.String("provisioning_status", gw.ProvisioningStatus),
+	testSpeed := minSession.SpeedMbps
+	testSessionCount := minSession.SessionCount[0]
+	logger.InfoContext(ctx, "Selected session config",
+		slog.Int("speed", testSpeed),
+		slog.Int("session_count", testSessionCount),
 	)
 
-	// Teardown: cancel the product immediately. Works regardless of state
-	// (DESIGN or post-buy) and runs even if a later step fails.
+	// Step 2: Pick a location and create the gateway, then probe
+	// /networkdesign/validate. If the location doesn't support the chosen
+	// speed, the API returns 400 at validate time — delete the design and
+	// retry with a different location. Bounded retries so a wholly broken
+	// environment doesn't loop forever.
+	const maxLocationAttempts = 5
+
+	var (
+		productUID string
+		gw         *NATGateway
+	)
+	for attempt := 1; attempt <= maxLocationAttempts; attempt++ {
+		testLocation, locErr := GetRandomLocation(ctx, suite.client.LocationService, TEST_NAT_GATEWAY_LOCATION_MARKET)
+		if locErr != nil {
+			suite.FailNowf("could not get random location", "could not get random location: %v", locErr)
+		}
+		suite.NotNil(testLocation)
+
+		createReq := &CreateNATGatewayRequest{
+			AutoRenewTerm: false,
+			Config: NATGatewayNetworkConfig{
+				ASN:                64512,
+				BGPShutdownDefault: false,
+				DiversityZone:      "red",
+				SessionCount:       testSessionCount,
+			},
+			LocationID:  testLocation.ID,
+			ProductName: "Integration Test NAT Gateway (Full Lifecycle)",
+			Speed:       testSpeed,
+			Term:        1,
+		}
+		candidate, createErr := natSvc.CreateNATGateway(ctx, createReq)
+		if createErr != nil {
+			suite.FailNowf("could not create NAT Gateway", "could not create NAT Gateway: %v", createErr)
+		}
+		logger.InfoContext(ctx, "NAT Gateway design created",
+			slog.Int("attempt", attempt),
+			slog.String("product_uid", candidate.ProductUID),
+			slog.String("location", testLocation.Name),
+			slog.Int("location_id", testLocation.ID),
+		)
+
+		if vErr := natSvc.ValidateNATGatewayOrder(ctx, candidate.ProductUID); vErr != nil {
+			logger.WarnContext(ctx, "validation failed at location, retrying",
+				slog.String("location", testLocation.Name),
+				slog.String("error", vErr.Error()),
+			)
+			if dErr := natSvc.DeleteNATGateway(ctx, candidate.ProductUID); dErr != nil {
+				logger.WarnContext(ctx, "could not clean up DESIGN gateway after failed validate",
+					slog.String("product_uid", candidate.ProductUID),
+					slog.String("error", dErr.Error()),
+				)
+			}
+			continue
+		}
+
+		gw = candidate
+		productUID = candidate.ProductUID
+		logger.InfoContext(ctx, "NAT Gateway order validated", slog.String("product_uid", productUID))
+		break
+	}
+	if productUID == "" {
+		suite.FailNowf("could not validate at any location", "exhausted %d location attempts", maxLocationAttempts)
+	}
+	suite.NotNil(gw)
+
+	// Teardown: DESIGN gateways must be removed via DELETE /v3/products/nat_gateways/{uid};
+	// provisioned gateways are cancelled via ProductService.
 	defer func() {
 		logger.InfoContext(ctx, "Tearing down NAT Gateway", slog.String("product_uid", productUID))
-		_, delErr := suite.client.ProductService.DeleteProduct(ctx, &DeleteProductRequest{
+		current, getErr := natSvc.GetNATGateway(ctx, productUID)
+		if getErr != nil {
+			logger.WarnContext(ctx, "teardown: could not fetch current state", slog.String("error", getErr.Error()))
+			return
+		}
+		if current.ProvisioningStatus == "DESIGN" {
+			if dErr := natSvc.DeleteNATGateway(ctx, productUID); dErr != nil {
+				logger.WarnContext(ctx, "teardown failed (DESIGN delete)", slog.String("error", dErr.Error()))
+			}
+			return
+		}
+		if _, dErr := suite.client.ProductService.DeleteProduct(ctx, &DeleteProductRequest{
 			ProductID: productUID,
 			DeleteNow: true,
-		})
-		if delErr != nil {
-			logger.WarnContext(ctx, "teardown failed", slog.String("error", delErr.Error()))
+		}); dErr != nil {
+			logger.WarnContext(ctx, "teardown failed (CANCEL_NOW)", slog.String("error", dErr.Error()))
 		}
 	}()
-
-	// Step 4: Validate the gateway via /v3/networkdesign/validate.
-	if err := natSvc.ValidateNATGatewayOrder(ctx, productUID); err != nil {
-		suite.FailNowf("could not validate NAT Gateway", "could not validate NAT Gateway: %v", err)
-	}
-	logger.InfoContext(ctx, "NAT Gateway order validated", slog.String("product_uid", productUID))
 
 	// Step 5: Buy the gateway via /v3/networkdesign/buy — kicks off provisioning.
 	if err := natSvc.BuyNATGateway(ctx, productUID); err != nil {
