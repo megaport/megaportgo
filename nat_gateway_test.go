@@ -336,20 +336,61 @@ func (suite *NATGatewayClientTestSuite) TestUpdateNATGatewayValidation() {
 	suite.ErrorIs(err, ErrNATGatewayInvalidTerm)
 }
 
-func (suite *NATGatewayClientTestSuite) TestDeleteNATGateway() {
+func (suite *NATGatewayClientTestSuite) TestDeleteNATGatewayDesignState() {
 	ctx := context.Background()
 	natSvc := suite.client.NATGatewayService
 	productUID := "e900d0d5-1030-4e29-b2d8-816ad4263190"
 
-	path := fmt.Sprintf("/v3/products/nat_gateways/%s", productUID)
-	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		suite.Equal(http.MethodDelete, r.Method)
+	// Pre-flight GET — DeleteNATGateway inspects ProvisioningStatus to pick
+	// the right endpoint. DESIGN-state gateways use the nat-gateway-specific
+	// DELETE path.
+	getPath := fmt.Sprintf("/v3/products/nat_gateways/%s", productUID)
+	designDeleteCalled := false
+	suite.mux.HandleFunc(getPath, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"message": "Nat gateway order item deleted successfully", "terms": ""}`)
+		switch r.Method {
+		case http.MethodGet:
+			fmt.Fprintf(w, `{"message":"","terms":"","data":{"productUid":"%s","provisioningStatus":"DESIGN"}}`, productUID)
+		case http.MethodDelete:
+			designDeleteCalled = true
+			fmt.Fprint(w, `{"message":"Nat gateway order item deleted successfully","terms":""}`)
+		default:
+			suite.FailNowf("unexpected method", "unexpected %s on %s", r.Method, getPath)
+		}
 	})
 
 	err := natSvc.DeleteNATGateway(ctx, productUID)
 	suite.NoError(err)
+	suite.True(designDeleteCalled, "expected DESIGN-state delete to hit /v3/products/nat_gateways/{uid}")
+}
+
+func (suite *NATGatewayClientTestSuite) TestDeleteNATGatewayProvisioned() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "c1a2b3c4-d5e6-7890-1234-567890abcdef"
+
+	// Pre-flight GET returns a provisioned status (anything other than
+	// DESIGN) — DeleteNATGateway must route through the generic product
+	// cancel endpoint instead of the design-only DELETE.
+	getPath := fmt.Sprintf("/v3/products/nat_gateways/%s", productUID)
+	suite.mux.HandleFunc(getPath, func(w http.ResponseWriter, r *http.Request) {
+		suite.Equal(http.MethodGet, r.Method, "provisioned gateway must not hit DESIGN DELETE endpoint")
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"message":"","terms":"","data":{"productUid":"%s","provisioningStatus":"LIVE"}}`, productUID)
+	})
+
+	cancelPath := "/v3/product/" + productUID + "/action/CANCEL_NOW"
+	cancelCalled := false
+	suite.mux.HandleFunc(cancelPath, func(w http.ResponseWriter, r *http.Request) {
+		suite.Equal(http.MethodPost, r.Method)
+		cancelCalled = true
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"message":"Action [CANCEL_NOW Service %s] has been done.","terms":""}`, productUID)
+	})
+
+	err := natSvc.DeleteNATGateway(ctx, productUID)
+	suite.NoError(err)
+	suite.True(cancelCalled, "expected provisioned delete to hit /v3/product/{uid}/action/CANCEL_NOW")
 }
 
 func (suite *NATGatewayClientTestSuite) TestDeleteNATGatewayValidation() {

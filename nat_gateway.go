@@ -218,23 +218,48 @@ func (svc *NATGatewayServiceOp) UpdateNATGateway(ctx context.Context, req *Updat
 	return &natResp.Data, nil
 }
 
-// DeleteNATGateway deletes a NAT Gateway by its product UID.
+// DeleteNATGateway deletes a NAT Gateway by its product UID. It handles
+// both lifecycle stages transparently:
+//
+//   - DESIGN-state designs that have never been purchased use
+//     DELETE /v3/products/nat_gateways/{uid} (the design-only endpoint).
+//   - Provisioned gateways (DEPLOYABLE / CONFIGURED / LIVE) are cancelled
+//     via the generic product action POST /v3/product/{uid}/action/CANCEL_NOW,
+//     matching the teardown path used for Ports, MCRs, MVEs, and VXCs.
+//
+// Callers do not need to inspect state themselves. The design endpoint
+// returns 400 for non-DESIGN gateways, and CANCEL_NOW rolls back against
+// DESIGN-state records — so a single unified endpoint is not available from
+// the API side, and the SDK routes based on a pre-flight GET.
 func (svc *NATGatewayServiceOp) DeleteNATGateway(ctx context.Context, productUID string) error {
 	if productUID == "" {
 		return ErrNATGatewayProductUIDRequired
 	}
 
-	path := fmt.Sprintf("/v3/products/nat_gateways/%s", url.PathEscape(productUID))
-	clientReq, err := svc.Client.NewRequest(ctx, http.MethodDelete, path, nil)
+	gw, err := svc.GetNATGateway(ctx, productUID)
 	if err != nil {
 		return err
 	}
-	resp, err := svc.Client.Do(ctx, clientReq, nil)
-	if err != nil {
-		return err
+
+	if gw.ProvisioningStatus == STATUS_DESIGN {
+		path := fmt.Sprintf("/v3/products/nat_gateways/%s", url.PathEscape(productUID))
+		clientReq, err := svc.Client.NewRequest(ctx, http.MethodDelete, path, nil)
+		if err != nil {
+			return err
+		}
+		resp, err := svc.Client.Do(ctx, clientReq, nil)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+		return nil
 	}
-	defer resp.Body.Close()
-	return nil
+
+	_, err = svc.Client.ProductService.DeleteProduct(ctx, &DeleteProductRequest{
+		ProductID: productUID,
+		DeleteNow: true,
+	})
+	return err
 }
 
 // natGatewayOrderItem is the minimal payload expected by
