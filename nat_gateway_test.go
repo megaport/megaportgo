@@ -379,14 +379,14 @@ func (suite *NATGatewayClientTestSuite) TestDeleteNATGatewayProvisioned() {
 		{name: "live", status: SERVICE_LIVE},
 	}
 
-	for _, tc := range cases {
+	for i, tc := range cases {
 		suite.Run(tc.name, func() {
-			suite.SetupTest()
-			defer suite.TearDownTest()
-
+			// Each sub-test uses a distinct UID so the handler paths do not
+			// collide on the shared mux, avoiding the server leak that would
+			// occur from calling suite.SetupTest() per sub-test.
 			ctx := context.Background()
 			natSvc := suite.client.NATGatewayService
-			productUID := "c1a2b3c4-d5e6-7890-1234-567890abcdef"
+			productUID := fmt.Sprintf("c1a2b3c4-d5e6-7890-1234-%012d", i+1)
 
 			getPath := fmt.Sprintf("/v3/products/nat_gateways/%s", productUID)
 			suite.mux.HandleFunc(getPath, func(w http.ResponseWriter, r *http.Request) {

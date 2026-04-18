@@ -2,7 +2,10 @@ package megaport
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"net/http"
+	"net/url"
 	"os"
 	"slices"
 	"testing"
@@ -255,7 +258,24 @@ func (suite *NATGatewayIntegrationTestSuite) TestNATGatewayFullLifecycle() {
 	defer func() {
 		logger.InfoContext(ctx, "Tearing down NAT Gateway", slog.String("product_uid", productUID))
 
-		cancelDirect := func() error {
+		// deleteDesign hits the design-only endpoint directly, bypassing the
+		// pre-flight GET inside DeleteNATGateway so the teardown never
+		// incurs a second GET on the happy DESIGN path and stays usable when
+		// state-inspection is down.
+		deleteDesign := func() error {
+			path := fmt.Sprintf("/v3/products/nat_gateways/%s", url.PathEscape(productUID))
+			req, err := suite.client.NewRequest(ctx, http.MethodDelete, path, nil)
+			if err != nil {
+				return err
+			}
+			resp, err := suite.client.Do(ctx, req, nil)
+			if err != nil {
+				return err
+			}
+			defer resp.Body.Close()
+			return nil
+		}
+		cancelNow := func() error {
 			_, err := suite.client.ProductService.DeleteProduct(ctx, &DeleteProductRequest{
 				ProductID: productUID,
 				DeleteNow: true,
@@ -265,16 +285,22 @@ func (suite *NATGatewayIntegrationTestSuite) TestNATGatewayFullLifecycle() {
 
 		current, getErr := natSvc.GetNATGateway(ctx, productUID)
 		if getErr != nil {
-			// Can't inspect state — avoid leaking a provisioned gateway by
-			// calling CANCEL_NOW directly. For a still-DESIGN record this will
-			// return 400 (harmless), but losing a provisioned gateway would
-			// leak billable resources on staging.
-			logger.WarnContext(ctx, "teardown: could not inspect state, attempting CANCEL_NOW best-effort",
+			// Can't tell which state we're in — attempt both paths so we do
+			// not leak either a DESIGN record or a provisioned gateway. Each
+			// endpoint returns 400 for the wrong state; we log but don't
+			// fail the teardown on those.
+			logger.WarnContext(ctx, "teardown: could not inspect state, attempting both cleanup paths",
 				slog.String("product_uid", productUID),
 				slog.String("error", getErr.Error()),
 			)
-			if err := cancelDirect(); err != nil {
-				logger.WarnContext(ctx, "teardown (CANCEL_NOW) failed",
+			if err := deleteDesign(); err != nil {
+				logger.WarnContext(ctx, "teardown (DESIGN DELETE) best-effort failed",
+					slog.String("product_uid", productUID),
+					slog.String("error", err.Error()),
+				)
+			}
+			if err := cancelNow(); err != nil {
+				logger.WarnContext(ctx, "teardown (CANCEL_NOW) best-effort failed",
 					slog.String("product_uid", productUID),
 					slog.String("error", err.Error()),
 				)
@@ -289,13 +315,12 @@ func (suite *NATGatewayIntegrationTestSuite) TestNATGatewayFullLifecycle() {
 			)
 			return
 		}
-		// Dispatch directly based on the state we already fetched, skipping
-		// the second GET that DeleteNATGateway would otherwise do.
+		// Dispatch directly from the state we already fetched — no second GET.
 		var dErr error
 		if current.ProvisioningStatus == STATUS_DESIGN {
-			dErr = natSvc.DeleteNATGateway(ctx, productUID)
+			dErr = deleteDesign()
 		} else {
-			dErr = cancelDirect()
+			dErr = cancelNow()
 		}
 		if dErr != nil {
 			logger.WarnContext(ctx, "teardown failed",

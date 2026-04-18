@@ -233,8 +233,9 @@ func (svc *NATGatewayServiceOp) UpdateNATGateway(ctx context.Context, req *Updat
 // returns 400 for non-DESIGN gateways, and CANCEL_NOW rolls back against
 // DESIGN-state records — so a single unified endpoint is not available from
 // the API side, and the SDK routes based on a pre-flight GET. Errors from
-// the pre-flight GET (including 404 for an unknown UID) are returned to
-// the caller verbatim.
+// the pre-flight GET (including 404 for an unknown UID) are wrapped with
+// a "nat gateway delete: could not inspect lifecycle state" prefix but
+// preserve the underlying error chain (use errors.Is / errors.As).
 //
 // The routing is not atomic: if a DESIGN-state gateway transitions to
 // DEPLOYABLE between the GET and the DELETE (e.g., another caller has just
