@@ -380,6 +380,7 @@ func (suite *NATGatewayClientTestSuite) TestDeleteNATGatewayProvisioned() {
 	}
 
 	for i, tc := range cases {
+		i, tc := i, tc // capture per-iteration copies for go <1.22 loopclosure safety
 		suite.Run(tc.name, func() {
 			// Each sub-test uses a distinct UID so the handler paths do not
 			// collide on the shared mux, avoiding the server leak that would
