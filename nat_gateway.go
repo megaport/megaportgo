@@ -223,14 +223,27 @@ func (svc *NATGatewayServiceOp) UpdateNATGateway(ctx context.Context, req *Updat
 //
 //   - DESIGN-state designs that have never been purchased use
 //     DELETE /v3/products/nat_gateways/{uid} (the design-only endpoint).
+//     This hard-removes the record — the gateway disappears from list.
 //   - Provisioned gateways (DEPLOYABLE / CONFIGURED / LIVE) are cancelled
 //     via the generic product action POST /v3/product/{uid}/action/CANCEL_NOW,
 //     matching the teardown path used for Ports, MCRs, MVEs, and VXCs.
+//     The record is retained in DECOMMISSIONED / CANCELLED state.
 //
 // Callers do not need to inspect state themselves. The design endpoint
 // returns 400 for non-DESIGN gateways, and CANCEL_NOW rolls back against
 // DESIGN-state records — so a single unified endpoint is not available from
-// the API side, and the SDK routes based on a pre-flight GET.
+// the API side, and the SDK routes based on a pre-flight GET. Errors from
+// the pre-flight GET (including 404 for an unknown UID) are returned to
+// the caller verbatim.
+//
+// The routing is not atomic: if a DESIGN-state gateway transitions to
+// DEPLOYABLE between the GET and the DELETE (e.g., another caller has just
+// purchased it), the design endpoint will return 400. Retrying the delete
+// will route through the provisioned path on the next attempt.
+//
+// Unlike DeletePort / DeleteMCR / DeleteMVE, this method does not currently
+// accept a SafeDelete (end-of-term cancellation) option — provisioned
+// gateways are always cancelled immediately with DeleteNow: true.
 func (svc *NATGatewayServiceOp) DeleteNATGateway(ctx context.Context, productUID string) error {
 	if productUID == "" {
 		return ErrNATGatewayProductUIDRequired
@@ -238,7 +251,7 @@ func (svc *NATGatewayServiceOp) DeleteNATGateway(ctx context.Context, productUID
 
 	gw, err := svc.GetNATGateway(ctx, productUID)
 	if err != nil {
-		return err
+		return fmt.Errorf("nat gateway delete: could not inspect lifecycle state: %w", err)
 	}
 
 	if gw.ProvisioningStatus == STATUS_DESIGN {

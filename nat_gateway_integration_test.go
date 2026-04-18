@@ -168,7 +168,7 @@ func (suite *NATGatewayIntegrationTestSuite) TestNATGatewayLifecycle() {
 	for _, g := range postDeleteList {
 		suite.NotEqual(productUID, g.ProductUID, "deleted DESIGN NAT Gateway %s still appears in list", productUID)
 	}
-	logger.InfoContext(ctx, "NAT Gateway teardown verified", slog.String("product_uid", productUID))
+	logger.InfoContext(ctx, "design NAT Gateway teardown verified (hard-removed from list)", slog.String("product_uid", productUID))
 }
 
 // TestNATGatewayFullLifecycle exercises the end-to-end flow: create the
@@ -255,7 +255,12 @@ func (suite *NATGatewayIntegrationTestSuite) TestNATGatewayFullLifecycle() {
 	defer func() {
 		logger.InfoContext(ctx, "Tearing down NAT Gateway", slog.String("product_uid", productUID))
 		current, getErr := natSvc.GetNATGateway(ctx, productUID)
-		if getErr == nil && current != nil &&
+		if getErr != nil {
+			logger.WarnContext(ctx, "teardown could not inspect current state, attempting delete anyway",
+				slog.String("product_uid", productUID),
+				slog.String("error", getErr.Error()),
+			)
+		} else if current != nil &&
 			(current.ProvisioningStatus == STATUS_DECOMMISSIONED ||
 				current.ProvisioningStatus == STATUS_CANCELLED) {
 			logger.InfoContext(ctx, "teardown skipped: already in terminal state",
@@ -370,6 +375,12 @@ PollLoop:
 	// works even though the gateway is no longer in DESIGN state. This is
 	// the primary deletion path; the defer above remains as a safety net if
 	// any earlier step failed before reaching here.
+	//
+	// Unlike the DESIGN-state delete in TestNATGatewayLifecycle (which
+	// hard-removes the record so verification is by list-exclusion), the
+	// provisioned teardown via CANCEL_NOW leaves a tombstone record behind,
+	// so verification is by GET on the product UID and a check that the
+	// record has moved to DECOMMISSIONED/CANCELLED.
 	if err := natSvc.DeleteNATGateway(ctx, productUID); err != nil {
 		suite.FailNowf("could not delete provisioned NAT Gateway", "could not delete NAT Gateway: %v", err)
 	}
@@ -383,7 +394,7 @@ PollLoop:
 		"expected deleted NAT Gateway to be DECOMMISSIONED or CANCELLED, got %q",
 		postDelete.ProvisioningStatus,
 	)
-	logger.InfoContext(ctx, "NAT Gateway teardown verified",
+	logger.InfoContext(ctx, "provisioned NAT Gateway teardown verified (tombstone record in terminal state)",
 		slog.String("product_uid", productUID),
 		slog.String("provisioning_status", postDelete.ProvisioningStatus),
 	)
