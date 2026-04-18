@@ -63,7 +63,7 @@ func (suite *NATGatewayClientTestSuite) TestCreateNATGateway() {
 			"productName": "NAT Gateway",
 			"productUid": "e900d0d5-1030-4e29-b2d8-816ad4263190",
 			"promoCode": "PROMO123",
-			"provisioningStatus": "NEW",
+			"provisioningStatus": "DESIGN",
 			"resourceTags": [{"key": "env", "value": "test"}],
 			"serviceLevelReference": "SLR-1",
 			"speed": 1000,
@@ -104,7 +104,7 @@ func (suite *NATGatewayClientTestSuite) TestCreateNATGateway() {
 	suite.False(gw.Config.BGPShutdownDefault)
 	suite.Equal("red", gw.Config.DiversityZone)
 	suite.Equal(100, gw.Config.SessionCount)
-	suite.Equal("NEW", gw.ProvisioningStatus)
+	suite.Equal("DESIGN", gw.ProvisioningStatus)
 	suite.Equal("PENDING", gw.OrderApprovalStatus)
 	suite.Len(gw.ResourceTags, 1)
 	suite.Equal("env", gw.ResourceTags[0].Key)
@@ -166,7 +166,7 @@ func (suite *NATGatewayClientTestSuite) TestListNATGateways() {
 				"locationId": 789012,
 				"productName": "NAT Gateway 2",
 				"productUid": "uid-2",
-				"provisioningStatus": "NEW",
+				"provisioningStatus": "DESIGN",
 				"speed": 2500,
 				"term": 24
 			}
