@@ -224,10 +224,12 @@ func (svc *NATGatewayServiceOp) UpdateNATGateway(ctx context.Context, req *Updat
 //   - DESIGN-state designs that have never been purchased use
 //     DELETE /v3/products/nat_gateways/{uid} (the design-only endpoint).
 //     This hard-removes the record — the gateway disappears from list.
-//   - Provisioned gateways (DEPLOYABLE / CONFIGURED / LIVE) are cancelled
-//     via the generic product action POST /v3/product/{uid}/action/CANCEL_NOW,
-//     matching the teardown path used for Ports, MCRs, MVEs, and VXCs.
-//     The record is retained in DECOMMISSIONED / CANCELLED state.
+//   - Any non-DESIGN gateway (e.g. DEPLOYABLE / CONFIGURED / LIVE) is
+//     cancelled via the generic product action
+//     POST /v3/product/{uid}/action/CANCEL_NOW, matching the teardown path
+//     used for Ports, MCRs, MVEs, and VXCs. The record is retained rather
+//     than being hard-deleted, typically transitioning to
+//     DECOMMISSIONED / CANCELLED.
 //
 // Callers do not need to inspect state themselves. The design endpoint
 // returns 400 for non-DESIGN gateways, and CANCEL_NOW rolls back against

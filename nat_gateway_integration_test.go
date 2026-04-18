@@ -168,9 +168,14 @@ func (suite *NATGatewayIntegrationTestSuite) TestNATGatewayLifecycle() {
 	if err != nil {
 		suite.FailNowf("could not list NAT Gateways post-delete", "could not list NAT Gateways: %v", err)
 	}
+	found = false
 	for _, g := range postDeleteList {
-		suite.NotEqual(productUID, g.ProductUID, "deleted DESIGN NAT Gateway %s still appears in list", productUID)
+		if g.ProductUID == productUID {
+			found = true
+			break
+		}
 	}
+	suite.False(found, "deleted DESIGN NAT Gateway %s still appears in list", productUID)
 	logger.InfoContext(ctx, "design NAT Gateway teardown verified (hard-removed from list)", slog.String("product_uid", productUID))
 }
 
