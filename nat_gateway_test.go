@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -345,14 +346,14 @@ func (suite *NATGatewayClientTestSuite) TestDeleteNATGatewayDesignState() {
 	// the right endpoint. DESIGN-state gateways use the nat-gateway-specific
 	// DELETE path.
 	getPath := fmt.Sprintf("/v3/products/nat_gateways/%s", productUID)
-	designDeleteCalled := false
+	var designDeleteCalled atomic.Bool
 	suite.mux.HandleFunc(getPath, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.Method {
 		case http.MethodGet:
 			fmt.Fprintf(w, `{"message":"","terms":"","data":{"productUid":"%s","provisioningStatus":"DESIGN"}}`, productUID)
 		case http.MethodDelete:
-			designDeleteCalled = true
+			designDeleteCalled.Store(true)
 			fmt.Fprint(w, `{"message":"Nat gateway order item deleted successfully","terms":""}`)
 		default:
 			suite.FailNowf("unexpected method", "unexpected %s on %s", r.Method, getPath)
@@ -361,7 +362,7 @@ func (suite *NATGatewayClientTestSuite) TestDeleteNATGatewayDesignState() {
 
 	err := natSvc.DeleteNATGateway(ctx, productUID)
 	suite.NoError(err)
-	suite.True(designDeleteCalled, "expected DESIGN-state delete to hit /v3/products/nat_gateways/{uid}")
+	suite.True(designDeleteCalled.Load(), "expected DESIGN-state delete to hit /v3/products/nat_gateways/{uid}")
 }
 
 func (suite *NATGatewayClientTestSuite) TestDeleteNATGatewayProvisioned() {
@@ -395,17 +396,17 @@ func (suite *NATGatewayClientTestSuite) TestDeleteNATGatewayProvisioned() {
 			})
 
 			cancelPath := "/v3/product/" + productUID + "/action/CANCEL_NOW"
-			cancelCalled := false
+			var cancelCalled atomic.Bool
 			suite.mux.HandleFunc(cancelPath, func(w http.ResponseWriter, r *http.Request) {
 				suite.Equal(http.MethodPost, r.Method)
-				cancelCalled = true
+				cancelCalled.Store(true)
 				w.Header().Set("Content-Type", "application/json")
 				fmt.Fprintf(w, `{"message":"Action [CANCEL_NOW Service %s] has been done.","terms":""}`, productUID)
 			})
 
 			err := natSvc.DeleteNATGateway(ctx, productUID)
 			suite.NoError(err)
-			suite.True(cancelCalled, "expected provisioned delete to hit /v3/product/{uid}/action/CANCEL_NOW")
+			suite.True(cancelCalled.Load(), "expected provisioned delete to hit /v3/product/{uid}/action/CANCEL_NOW")
 		})
 	}
 }

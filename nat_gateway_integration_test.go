@@ -254,24 +254,53 @@ func (suite *NATGatewayIntegrationTestSuite) TestNATGatewayFullLifecycle() {
 	// call if the gateway is already in a terminal state.
 	defer func() {
 		logger.InfoContext(ctx, "Tearing down NAT Gateway", slog.String("product_uid", productUID))
+
+		cancelDirect := func() error {
+			_, err := suite.client.ProductService.DeleteProduct(ctx, &DeleteProductRequest{
+				ProductID: productUID,
+				DeleteNow: true,
+			})
+			return err
+		}
+
 		current, getErr := natSvc.GetNATGateway(ctx, productUID)
 		if getErr != nil {
-			logger.WarnContext(ctx, "teardown could not inspect current state, attempting delete anyway",
+			// Can't inspect state — avoid leaking a provisioned gateway by
+			// calling CANCEL_NOW directly. For a still-DESIGN record this will
+			// return 400 (harmless), but losing a provisioned gateway would
+			// leak billable resources on staging.
+			logger.WarnContext(ctx, "teardown: could not inspect state, attempting CANCEL_NOW best-effort",
 				slog.String("product_uid", productUID),
 				slog.String("error", getErr.Error()),
 			)
-		} else if current != nil &&
-			(current.ProvisioningStatus == STATUS_DECOMMISSIONED ||
-				current.ProvisioningStatus == STATUS_CANCELLED) {
+			if err := cancelDirect(); err != nil {
+				logger.WarnContext(ctx, "teardown (CANCEL_NOW) failed",
+					slog.String("product_uid", productUID),
+					slog.String("error", err.Error()),
+				)
+			}
+			return
+		}
+		if current.ProvisioningStatus == STATUS_DECOMMISSIONED ||
+			current.ProvisioningStatus == STATUS_CANCELLED {
 			logger.InfoContext(ctx, "teardown skipped: already in terminal state",
 				slog.String("product_uid", productUID),
 				slog.String("provisioning_status", current.ProvisioningStatus),
 			)
 			return
 		}
-		if dErr := natSvc.DeleteNATGateway(ctx, productUID); dErr != nil {
+		// Dispatch directly based on the state we already fetched, skipping
+		// the second GET that DeleteNATGateway would otherwise do.
+		var dErr error
+		if current.ProvisioningStatus == STATUS_DESIGN {
+			dErr = natSvc.DeleteNATGateway(ctx, productUID)
+		} else {
+			dErr = cancelDirect()
+		}
+		if dErr != nil {
 			logger.WarnContext(ctx, "teardown failed",
 				slog.String("product_uid", productUID),
+				slog.String("provisioning_status", current.ProvisioningStatus),
 				slog.String("error", dErr.Error()),
 			)
 		}
