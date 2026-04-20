@@ -78,7 +78,7 @@ type OrderApproval struct {
 	RequesterCompanyID int                 `json:"requesterCompanyId"`
 	ServiceID          int                 `json:"serviceId"`
 	Comment            string              `json:"comment"`
-	CreateDate         int64               `json:"createDate"`
+	CreateDate         *Time               `json:"createDate"`
 	Detail             json.RawMessage     `json:"detail"`
 }
 

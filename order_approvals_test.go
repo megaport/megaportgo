@@ -85,7 +85,7 @@ func (suite *OrderApprovalClientTestSuite) TestListOrderApprovals() {
 				RequesterCompanyID: 200,
 				ServiceID:          5678,
 				Comment:            "Please approve this order",
-				CreateDate:         1700000000000,
+				CreateDate:         &Time{GetTime(1700000000000)},
 				Detail:             json.RawMessage(`{"type": "NEW_ORDER", "origin": "https://portal.megaport.com", "userName": "user@example.com", "requesterCompanyId": 200, "productRequest": [{"name": "test"}]}`),
 			},
 		},
