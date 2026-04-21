@@ -2,7 +2,10 @@ package megaport
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"net/http"
+	"net/url"
 	"os"
 	"slices"
 	"testing"
@@ -149,13 +152,31 @@ func (suite *NATGatewayIntegrationTestSuite) TestNATGatewayLifecycle() {
 	suite.False(updated.AutoRenewTerm)
 	logger.DebugContext(ctx, "NAT Gateway updated", slog.String("product_name", updated.ProductName))
 
-	// Step 7: Delete the NAT Gateway (allowed while provisioningStatus is NEW).
+	// Step 7: Delete the DESIGN-state NAT Gateway. DeleteNATGateway inspects
+	// ProvisioningStatus internally and routes to the design-only DELETE
+	// endpoint for gateways that have never been purchased.
 	logger.DebugContext(ctx, "Deleting NAT Gateway.")
 	err = natSvc.DeleteNATGateway(ctx, productUID)
 	if err != nil {
 		suite.FailNowf("could not delete NAT Gateway", "could not delete NAT Gateway: %v", err)
 	}
 	logger.DebugContext(ctx, "NAT Gateway deleted", slog.String("product_uid", productUID))
+
+	// Step 8: Verify the NAT Gateway is gone. DESIGN-state deletes hard-remove
+	// the record, so it should no longer appear in the list.
+	postDeleteList, err := natSvc.ListNATGateways(ctx)
+	if err != nil {
+		suite.FailNowf("could not list NAT Gateways post-delete", "could not list NAT Gateways: %v", err)
+	}
+	found = false
+	for _, g := range postDeleteList {
+		if g.ProductUID == productUID {
+			found = true
+			break
+		}
+	}
+	suite.False(found, "deleted DESIGN NAT Gateway %s still appears in list", productUID)
+	logger.InfoContext(ctx, "design NAT Gateway teardown verified (hard-removed from list)", slog.String("product_uid", productUID))
 }
 
 // TestNATGatewayFullLifecycle exercises the end-to-end flow: create the
@@ -235,48 +256,84 @@ func (suite *NATGatewayIntegrationTestSuite) TestNATGatewayFullLifecycle() {
 		slog.String("provisioning_status", gw.ProvisioningStatus),
 	)
 
-	// Teardown: DESIGN gateways must be removed via DELETE /v3/products/nat_gateways/{uid};
-	// provisioned gateways are cancelled via ProductService. If we can't
-	// fetch the current state, fall through to best-effort cleanup via both
-	// paths so a transient GET failure doesn't orphan the resource.
+	// Teardown: DeleteNATGateway handles any lifecycle stage the gateway
+	// might be in when the defer fires. This is a safety net — the happy
+	// path below performs an explicit delete + verification — so skip the
+	// call if the gateway is already in a terminal state.
 	defer func() {
 		logger.InfoContext(ctx, "Tearing down NAT Gateway", slog.String("product_uid", productUID))
 
-		deleteDesign := func() {
-			if dErr := natSvc.DeleteNATGateway(ctx, productUID); dErr != nil {
-				logger.WarnContext(ctx, "teardown failed (DESIGN delete)",
-					slog.String("product_uid", productUID),
-					slog.String("error", dErr.Error()),
-				)
+		// deleteDesign hits the design-only endpoint directly, bypassing the
+		// pre-flight GET inside DeleteNATGateway so the teardown never
+		// incurs a second GET on the happy DESIGN path and stays usable when
+		// state-inspection is down.
+		deleteDesign := func() error {
+			path := fmt.Sprintf("/v3/products/nat_gateways/%s", url.PathEscape(productUID))
+			req, err := suite.client.NewRequest(ctx, http.MethodDelete, path, nil)
+			if err != nil {
+				return err
 			}
+			resp, err := suite.client.Do(ctx, req, nil)
+			if err != nil {
+				return err
+			}
+			defer resp.Body.Close()
+			return nil
 		}
-		cancelNow := func() {
-			if _, dErr := suite.client.ProductService.DeleteProduct(ctx, &DeleteProductRequest{
+		cancelNow := func() error {
+			_, err := suite.client.ProductService.DeleteProduct(ctx, &DeleteProductRequest{
 				ProductID: productUID,
 				DeleteNow: true,
-			}); dErr != nil {
-				logger.WarnContext(ctx, "teardown failed (CANCEL_NOW)",
-					slog.String("product_uid", productUID),
-					slog.String("error", dErr.Error()),
-				)
-			}
+			})
+			return err
 		}
 
 		current, getErr := natSvc.GetNATGateway(ctx, productUID)
 		if getErr != nil {
-			logger.WarnContext(ctx, "teardown: could not fetch current state; attempting best-effort cleanup",
+			// Can't tell which state we're in — attempt both paths so we do
+			// not leak either a DESIGN record or a provisioned gateway. Each
+			// endpoint returns 400 for the wrong state; we log but don't
+			// fail the teardown on those.
+			logger.WarnContext(ctx, "teardown: could not inspect state, attempting both cleanup paths",
 				slog.String("product_uid", productUID),
 				slog.String("error", getErr.Error()),
 			)
-			deleteDesign()
-			cancelNow()
+			if err := deleteDesign(); err != nil {
+				logger.WarnContext(ctx, "teardown (DESIGN DELETE) best-effort failed",
+					slog.String("product_uid", productUID),
+					slog.String("error", err.Error()),
+				)
+			}
+			if err := cancelNow(); err != nil {
+				logger.WarnContext(ctx, "teardown (CANCEL_NOW) best-effort failed",
+					slog.String("product_uid", productUID),
+					slog.String("error", err.Error()),
+				)
+			}
 			return
 		}
+		if current.ProvisioningStatus == STATUS_DECOMMISSIONED ||
+			current.ProvisioningStatus == STATUS_CANCELLED {
+			logger.InfoContext(ctx, "teardown skipped: already in terminal state",
+				slog.String("product_uid", productUID),
+				slog.String("provisioning_status", current.ProvisioningStatus),
+			)
+			return
+		}
+		// Dispatch directly from the state we already fetched — no second GET.
+		var dErr error
 		if current.ProvisioningStatus == STATUS_DESIGN {
-			deleteDesign()
-			return
+			dErr = deleteDesign()
+		} else {
+			dErr = cancelNow()
 		}
-		cancelNow()
+		if dErr != nil {
+			logger.WarnContext(ctx, "teardown failed",
+				slog.String("product_uid", productUID),
+				slog.String("provisioning_status", current.ProvisioningStatus),
+				slog.String("error", dErr.Error()),
+			)
+		}
 	}()
 
 	// Step 4: Validate the order (pricing preview).
@@ -372,5 +429,32 @@ PollLoop:
 	suite.Equal(updatedName, updated.ProductName)
 	logger.InfoContext(ctx, "NAT Gateway updated", slog.String("product_name", updated.ProductName))
 
-	// Step 8: Teardown runs via the deferred call above.
+	// Step 8: Delete the provisioned NAT Gateway and verify it's gone.
+	// DeleteNATGateway uses the generic product-cancellation endpoint so it
+	// works even though the gateway is no longer in DESIGN state. This is
+	// the primary deletion path; the defer above remains as a safety net if
+	// any earlier step failed before reaching here.
+	//
+	// Unlike the DESIGN-state delete in TestNATGatewayLifecycle (which
+	// hard-removes the record so verification is by list-exclusion), the
+	// provisioned teardown via CANCEL_NOW leaves a tombstone record behind,
+	// so verification is by GET on the product UID and a check that the
+	// record has moved to DECOMMISSIONED/CANCELLED.
+	if err := natSvc.DeleteNATGateway(ctx, productUID); err != nil {
+		suite.FailNowf("could not delete provisioned NAT Gateway", "could not delete NAT Gateway: %v", err)
+	}
+	postDelete, err := natSvc.GetNATGateway(ctx, productUID)
+	if err != nil {
+		suite.FailNowf("could not GET deleted NAT Gateway", "could not GET deleted NAT Gateway: %v", err)
+	}
+	suite.Contains(
+		[]string{STATUS_DECOMMISSIONED, STATUS_CANCELLED},
+		postDelete.ProvisioningStatus,
+		"expected deleted NAT Gateway to be DECOMMISSIONED or CANCELLED, got %q",
+		postDelete.ProvisioningStatus,
+	)
+	logger.InfoContext(ctx, "provisioned NAT Gateway teardown verified (tombstone record in terminal state)",
+		slog.String("product_uid", productUID),
+		slog.String("provisioning_status", postDelete.ProvisioningStatus),
+	)
 }

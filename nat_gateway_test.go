@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -62,7 +63,7 @@ func (suite *NATGatewayClientTestSuite) TestCreateNATGateway() {
 			"productName": "NAT Gateway",
 			"productUid": "e900d0d5-1030-4e29-b2d8-816ad4263190",
 			"promoCode": "PROMO123",
-			"provisioningStatus": "NEW",
+			"provisioningStatus": "DESIGN",
 			"resourceTags": [{"key": "env", "value": "test"}],
 			"serviceLevelReference": "SLR-1",
 			"speed": 1000,
@@ -103,7 +104,7 @@ func (suite *NATGatewayClientTestSuite) TestCreateNATGateway() {
 	suite.False(gw.Config.BGPShutdownDefault)
 	suite.Equal("red", gw.Config.DiversityZone)
 	suite.Equal(100, gw.Config.SessionCount)
-	suite.Equal("NEW", gw.ProvisioningStatus)
+	suite.Equal("DESIGN", gw.ProvisioningStatus)
 	suite.Equal("PENDING", gw.OrderApprovalStatus)
 	suite.Len(gw.ResourceTags, 1)
 	suite.Equal("env", gw.ResourceTags[0].Key)
@@ -165,7 +166,7 @@ func (suite *NATGatewayClientTestSuite) TestListNATGateways() {
 				"locationId": 789012,
 				"productName": "NAT Gateway 2",
 				"productUid": "uid-2",
-				"provisioningStatus": "NEW",
+				"provisioningStatus": "DESIGN",
 				"speed": 2500,
 				"term": 24
 			}
@@ -336,20 +337,79 @@ func (suite *NATGatewayClientTestSuite) TestUpdateNATGatewayValidation() {
 	suite.ErrorIs(err, ErrNATGatewayInvalidTerm)
 }
 
-func (suite *NATGatewayClientTestSuite) TestDeleteNATGateway() {
+func (suite *NATGatewayClientTestSuite) TestDeleteNATGatewayDesignState() {
 	ctx := context.Background()
 	natSvc := suite.client.NATGatewayService
 	productUID := "e900d0d5-1030-4e29-b2d8-816ad4263190"
 
-	path := fmt.Sprintf("/v3/products/nat_gateways/%s", productUID)
-	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		suite.Equal(http.MethodDelete, r.Method)
+	// Pre-flight GET — DeleteNATGateway inspects ProvisioningStatus to pick
+	// the right endpoint. DESIGN-state gateways use the nat-gateway-specific
+	// DELETE path.
+	getPath := fmt.Sprintf("/v3/products/nat_gateways/%s", productUID)
+	var designDeleteCalled atomic.Bool
+	suite.mux.HandleFunc(getPath, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"message": "Nat gateway order item deleted successfully", "terms": ""}`)
+		switch r.Method {
+		case http.MethodGet:
+			fmt.Fprintf(w, `{"message":"","terms":"","data":{"productUid":"%s","provisioningStatus":"DESIGN"}}`, productUID)
+		case http.MethodDelete:
+			designDeleteCalled.Store(true)
+			fmt.Fprint(w, `{"message":"Nat gateway order item deleted successfully","terms":""}`)
+		default:
+			suite.FailNowf("unexpected method", "unexpected %s on %s", r.Method, getPath)
+		}
 	})
 
 	err := natSvc.DeleteNATGateway(ctx, productUID)
 	suite.NoError(err)
+	suite.True(designDeleteCalled.Load(), "expected DESIGN-state delete to hit /v3/products/nat_gateways/{uid}")
+}
+
+func (suite *NATGatewayClientTestSuite) TestDeleteNATGatewayProvisioned() {
+	// DeleteNATGateway must route every non-DESIGN status through the
+	// generic product cancel endpoint. Covering each provisioned status
+	// explicitly guards against accidental regressions where the routing
+	// check is narrowed to a single status (e.g. STATUS_LIVE only).
+	cases := []struct {
+		name   string
+		status string
+	}{
+		{name: "deployable", status: "DEPLOYABLE"},
+		{name: "configured", status: SERVICE_CONFIGURED},
+		{name: "live", status: SERVICE_LIVE},
+	}
+
+	for i, tc := range cases {
+		i, tc := i, tc // capture per-iteration copies for go <1.22 loopclosure safety
+		suite.Run(tc.name, func() {
+			// Each sub-test uses a distinct UID so the handler paths do not
+			// collide on the shared mux, avoiding the server leak that would
+			// occur from calling suite.SetupTest() per sub-test.
+			ctx := context.Background()
+			natSvc := suite.client.NATGatewayService
+			productUID := fmt.Sprintf("c1a2b3c4-d5e6-7890-1234-%012d", i+1)
+
+			getPath := fmt.Sprintf("/v3/products/nat_gateways/%s", productUID)
+			suite.mux.HandleFunc(getPath, func(w http.ResponseWriter, r *http.Request) {
+				suite.Equal(http.MethodGet, r.Method, "provisioned gateway must not hit DESIGN DELETE endpoint")
+				w.Header().Set("Content-Type", "application/json")
+				fmt.Fprintf(w, `{"message":"","terms":"","data":{"productUid":"%s","provisioningStatus":"%s"}}`, productUID, tc.status)
+			})
+
+			cancelPath := "/v3/product/" + productUID + "/action/CANCEL_NOW"
+			var cancelCalled atomic.Bool
+			suite.mux.HandleFunc(cancelPath, func(w http.ResponseWriter, r *http.Request) {
+				suite.Equal(http.MethodPost, r.Method)
+				cancelCalled.Store(true)
+				w.Header().Set("Content-Type", "application/json")
+				fmt.Fprintf(w, `{"message":"Action [CANCEL_NOW Service %s] has been done.","terms":""}`, productUID)
+			})
+
+			err := natSvc.DeleteNATGateway(ctx, productUID)
+			suite.NoError(err)
+			suite.True(cancelCalled.Load(), "expected provisioned delete to hit /v3/product/{uid}/action/CANCEL_NOW")
+		})
+	}
 }
 
 func (suite *NATGatewayClientTestSuite) TestDeleteNATGatewayValidation() {
