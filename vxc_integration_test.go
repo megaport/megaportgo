@@ -770,6 +770,12 @@ func (suite *VXCIntegrationTestSuite) TestMCRVXCWithIPsec() {
 	}
 	mcrUid := mcrRes.TechnicalServiceUID
 	suite.True(IsGuid(mcrUid), "invalid guid for mcr uid")
+	suite.T().Cleanup(func() {
+		logger.InfoContext(ctx, "deleting mcr", slog.String("mcr_uid", mcrUid))
+		if _, err := mcrSvc.DeleteMCR(context.Background(), &DeleteMCRRequest{MCRID: mcrUid, DeleteNow: true}); err != nil {
+			suite.T().Logf("cleanup: cannot delete mcr %s: %v", mcrUid, err)
+		}
+	})
 
 	portLocation, locErr := findActivePortLocation(ctx, locSvc, MCR_LOCATION, 1000)
 	if locErr != nil {
@@ -792,6 +798,12 @@ func (suite *VXCIntegrationTestSuite) TestMCRVXCWithIPsec() {
 	}
 	portUid := portRes.TechnicalServiceUIDs[0]
 	suite.True(IsGuid(portUid), "invalid guid for port uid")
+	suite.T().Cleanup(func() {
+		logger.InfoContext(ctx, "deleting port", slog.String("port_uid", portUid))
+		if _, err := portSvc.DeletePort(context.Background(), &DeletePortRequest{PortID: portUid, DeleteNow: true}); err != nil {
+			suite.T().Logf("cleanup: cannot delete port %s: %v", portUid, err)
+		}
+	})
 
 	phase1 := 28800
 	phase2 := 3600
@@ -836,6 +848,12 @@ func (suite *VXCIntegrationTestSuite) TestMCRVXCWithIPsec() {
 	}
 	vxcUid := vxcRes.TechnicalServiceUID
 	suite.True(IsGuid(vxcUid), "invalid guid for vxc uid")
+	suite.T().Cleanup(func() {
+		logger.InfoContext(ctx, "deleting vxc", slog.String("vxc_uid", vxcUid))
+		if err := vxcSvc.DeleteVXC(context.Background(), vxcUid, &DeleteVXCRequest{DeleteNow: true}); err != nil {
+			suite.T().Logf("cleanup: cannot delete vxc %s: %v", vxcUid, err)
+		}
+	})
 
 	vxc, getErr := vxcSvc.GetVXC(ctx, vxcUid)
 	if getErr != nil {
@@ -844,21 +862,7 @@ func (suite *VXCIntegrationTestSuite) TestMCRVXCWithIPsec() {
 	logger.InfoContext(ctx, "vxc with ipsec tunnel live",
 		slog.String("vxc_uid", vxcUid),
 		slog.String("provisioning_status", vxc.ProvisioningStatus))
-
-	logger.InfoContext(ctx, "deleting vxc", slog.String("vxc_uid", vxcUid))
-	if err := vxcSvc.DeleteVXC(ctx, vxcUid, &DeleteVXCRequest{DeleteNow: true}); err != nil {
-		suite.FailNowf("cannot delete vxc", "cannot delete vxc %v", err)
-	}
-
-	logger.InfoContext(ctx, "deleting port", slog.String("port_uid", portUid))
-	if _, err := portSvc.DeletePort(ctx, &DeletePortRequest{PortID: portUid, DeleteNow: true}); err != nil {
-		suite.FailNowf("cannot delete port", "cannot delete port %v", err)
-	}
-
-	logger.InfoContext(ctx, "deleting mcr", slog.String("mcr_uid", mcrUid))
-	if _, err := mcrSvc.DeleteMCR(ctx, &DeleteMCRRequest{MCRID: mcrUid, DeleteNow: true}); err != nil {
-		suite.FailNowf("cannot delete mcr", "cannot delete mcr %v", err)
-	}
+	suite.Contains(SERVICE_STATE_READY, vxc.ProvisioningStatus, "vxc with ipsec tunnel did not reach a ready provisioning status")
 }
 
 // TestAWSConnectionBuyDefaults tests the AWS connection buy process with default values.
