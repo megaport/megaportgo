@@ -14,9 +14,11 @@ type UserManagementIntegrationTestSuite IntegrationTestSuite
 
 func TestUserManagementIntegrationTestSuite(t *testing.T) {
 	t.Parallel()
-	if *runIntegrationTests {
-		suite.Run(t, new(UserManagementIntegrationTestSuite))
+	if !*runIntegrationTests {
+		return
 	}
+	acquireAccTestSlot(t)
+	suite.Run(t, new(UserManagementIntegrationTestSuite))
 }
 
 func (suite *UserManagementIntegrationTestSuite) SetupSuite() {

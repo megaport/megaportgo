@@ -14,9 +14,11 @@ type LocationIntegrationTestSuite IntegrationTestSuite
 
 func TestLocationIntegrationTestSuite(t *testing.T) {
 	t.Parallel()
-	if *runIntegrationTests {
-		suite.Run(t, new(LocationIntegrationTestSuite))
+	if !*runIntegrationTests {
+		return
 	}
+	acquireAccTestSlot(t)
+	suite.Run(t, new(LocationIntegrationTestSuite))
 }
 
 func (suite *LocationIntegrationTestSuite) SetupSuite() {

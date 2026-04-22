@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"regexp"
 	"strings"
+	"testing"
 	"time"
 )
 
@@ -106,13 +107,14 @@ type portLocationOpts struct {
 
 // findActivePortLocation returns a random ACTIVE location in the given market
 // that advertises Megaport port capacity at the given speed in at least one
-// diversity zone AND accepts a probe port order with those parameters.
-// Mirrors the selection pattern used by the terraform provider's acceptance
-// tests (portLocationHasCapacity + validate probe) so the integration tests
-// don't rely on fragile hardcoded site names.
+// diversity zone AND accepts a probe port order with those parameters. It also
+// claims the location via claimPortLocation so parallel suites don't pick the
+// same site; the claim is released via t.Cleanup when the caller's test
+// method completes.
 //
 //nolint:unparam // marketCode is parameterised for future callers targeting non-AU markets.
-func findActivePortLocation(ctx context.Context, c *Client, marketCode string, speedMbps int, opts ...portLocationOpts) (*LocationV3, error) {
+func findActivePortLocation(ctx context.Context, t *testing.T, c *Client, marketCode string, speedMbps int, opts ...portLocationOpts) (*LocationV3, error) {
+	t.Helper()
 	var opt portLocationOpts
 	if len(opts) > 0 {
 		opt = opts[0]
@@ -150,13 +152,17 @@ func findActivePortLocation(ctx context.Context, c *Client, marketCode string, s
 			PortSpeed:  speedMbps,
 			Market:     marketCode,
 		})
-		if err == nil {
-			return loc, nil
+		if err != nil {
+			c.Logger.DebugContext(ctx, "port location probe failed, trying next",
+				slog.Int("location_id", loc.ID),
+				slog.String("location_name", loc.Name),
+				slog.String("error", err.Error()))
+			continue
 		}
-		c.Logger.DebugContext(ctx, "port location probe failed, trying next",
-			slog.Int("location_id", loc.ID),
-			slog.String("location_name", loc.Name),
-			slog.String("error", err.Error()))
+		if !claimPortLocation(t, loc.ID) {
+			continue
+		}
+		return loc, nil
 	}
 	return nil, fmt.Errorf("no active %s location accepted a %d Mbps port validate probe (metro=%q)", marketCode, speedMbps, opt.Metro)
 }
@@ -167,7 +173,8 @@ func findActivePortLocation(ctx context.Context, c *Client, marketCode string, s
 // MVE capacity is per-image and can't be derived from LocationV3 alone.
 //
 //nolint:unparam // marketCode is parameterised for future non-AU callers.
-func findActiveMVELocation(ctx context.Context, c *Client, marketCode string, vendorConfig VendorConfig, vnics []MVENetworkInterface, diversityZone string) (*LocationV3, error) {
+func findActiveMVELocation(ctx context.Context, t *testing.T, c *Client, marketCode string, vendorConfig VendorConfig, vnics []MVENetworkInterface, diversityZone string) (*LocationV3, error) {
+	t.Helper()
 	locations, err := c.LocationService.ListLocationsV3(ctx)
 	if err != nil {
 		return nil, err
@@ -196,13 +203,17 @@ func findActiveMVELocation(ctx context.Context, c *Client, marketCode string, ve
 			Vnics:         vnics,
 			DiversityZone: diversityZone,
 		})
-		if err == nil {
-			return loc, nil
+		if err != nil {
+			c.Logger.DebugContext(ctx, "mve location probe failed, trying next",
+				slog.Int("location_id", loc.ID),
+				slog.String("location_name", loc.Name),
+				slog.String("error", err.Error()))
+			continue
 		}
-		c.Logger.DebugContext(ctx, "mve location probe failed, trying next",
-			slog.Int("location_id", loc.ID),
-			slog.String("location_name", loc.Name),
-			slog.String("error", err.Error()))
+		if !claimMVELocation(t, loc.ID) {
+			continue
+		}
+		return loc, nil
 	}
 	return nil, fmt.Errorf("no active %s location accepted the MVE validate probe", marketCode)
 }
@@ -212,7 +223,8 @@ func findActiveMVELocation(ctx context.Context, c *Client, marketCode string, ve
 // DiversityZones.natGatewaySpeedMbps field surfaced by v3/locations.
 //
 //nolint:unparam // marketCode is parameterised for future non-AU callers.
-func findActiveNATGatewayLocation(ctx context.Context, c *Client, marketCode string, speedMbps int) (*LocationV3, error) {
+func findActiveNATGatewayLocation(ctx context.Context, t *testing.T, c *Client, marketCode string, speedMbps int) (*LocationV3, error) {
+	t.Helper()
 	locations, err := c.LocationService.ListLocationsV3(ctx)
 	if err != nil {
 		return nil, err
@@ -233,7 +245,15 @@ func findActiveNATGatewayLocation(ctx context.Context, c *Client, marketCode str
 	if len(eligible) == 0 {
 		return nil, fmt.Errorf("no active %s location advertises %d Mbps NAT Gateway capacity", marketCode, speedMbps)
 	}
-	return eligible[GenerateRandomNumber(0, len(eligible))], nil
+	//nolint:gosec // test-only shuffle; cryptographic randomness not required
+	rNAT := rand.New(rand.NewSource(time.Now().UnixNano()))
+	rNAT.Shuffle(len(eligible), func(i, j int) { eligible[i], eligible[j] = eligible[j], eligible[i] })
+	for _, loc := range eligible {
+		if claimNATGatewayLocation(t, loc.ID) {
+			return loc, nil
+		}
+	}
+	return nil, fmt.Errorf("no unclaimed %s location with %d Mbps NAT Gateway capacity", marketCode, speedMbps)
 }
 
 // findActiveMCRLocation returns an ACTIVE location in the given market that
@@ -245,7 +265,8 @@ func findActiveNATGatewayLocation(ctx context.Context, c *Client, marketCode str
 // Mirrors the approach used by the terraform provider's findMVETestLocation.
 //
 //nolint:unparam // marketCode is parameterised for future callers targeting non-AU markets.
-func findActiveMCRLocation(ctx context.Context, c *Client, marketCode, diversityZone string, speedMbps int, addOns ...MCRAddOn) (*LocationV3, error) {
+func findActiveMCRLocation(ctx context.Context, t *testing.T, c *Client, marketCode, diversityZone string, speedMbps int, addOns ...MCRAddOn) (*LocationV3, error) {
+	t.Helper()
 	locations, err := c.LocationService.ListLocationsV3(ctx)
 	if err != nil {
 		return nil, err
@@ -278,14 +299,18 @@ func findActiveMCRLocation(ctx context.Context, c *Client, marketCode, diversity
 			DiversityZone: diversityZone,
 			AddOns:        addOns,
 		})
-		if err == nil {
-			return loc, nil
+		if err != nil {
+			c.Logger.DebugContext(ctx, "mcr location probe failed, trying next",
+				slog.Int("location_id", loc.ID),
+				slog.String("location_name", loc.Name),
+				slog.String("diversity_zone", diversityZone),
+				slog.String("error", err.Error()))
+			continue
 		}
-		c.Logger.DebugContext(ctx, "mcr location probe failed, trying next",
-			slog.Int("location_id", loc.ID),
-			slog.String("location_name", loc.Name),
-			slog.String("diversity_zone", diversityZone),
-			slog.String("error", err.Error()))
+		if !claimMCRLocation(t, loc.ID) {
+			continue
+		}
+		return loc, nil
 	}
 	return nil, fmt.Errorf("no active %s location accepted a %d Mbps MCR validate probe (zone=%q)", marketCode, speedMbps, diversityZone)
 }

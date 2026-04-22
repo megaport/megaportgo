@@ -20,9 +20,11 @@ type MCRIntegrationTestSuite IntegrationTestSuite
 
 func TestMCRIntegrationTestSuite(t *testing.T) {
 	t.Parallel()
-	if *runIntegrationTests {
-		suite.Run(t, new(MCRIntegrationTestSuite))
+	if !*runIntegrationTests {
+		return
 	}
+	acquireAccTestSlot(t)
+	suite.Run(t, new(MCRIntegrationTestSuite))
 }
 
 func (suite *MCRIntegrationTestSuite) SetupSuite() {
@@ -51,7 +53,7 @@ func (suite *MCRIntegrationTestSuite) TestMCRLifecycle() {
 	logger := suite.client.Logger
 	logger.DebugContext(ctx, "Buying MCR Port.")
 	mcrSvc := suite.client.MCRService
-	testLocation, locErr := findActiveMCRLocation(ctx, suite.client, TEST_MCR_TEST_LOCATION_MARKET, "red", 1000)
+	testLocation, locErr := findActiveMCRLocation(ctx, suite.T(), suite.client, TEST_MCR_TEST_LOCATION_MARKET, "red", 1000)
 	if locErr != nil {
 		suite.FailNowf("could not get mcr location", "could not get mcr location %v", locErr)
 	}
@@ -138,7 +140,7 @@ func (suite *MCRIntegrationTestSuite) TestPortSpeedValidation() {
 
 	// Any MCR-capable location works — we expect client-side validation to
 	// reject the invalid 500 Mbps speed before an order is ever submitted.
-	testLocation, locErr := findActiveMCRLocation(ctx, suite.client, TEST_MCR_TEST_LOCATION_MARKET, "", 1000)
+	testLocation, locErr := findActiveMCRLocation(ctx, suite.T(), suite.client, TEST_MCR_TEST_LOCATION_MARKET, "", 1000)
 	if locErr != nil {
 		suite.FailNowf("could not get mcr location", "could not get mcr location %v", locErr)
 	}
@@ -162,7 +164,7 @@ func (suite *MCRIntegrationTestSuite) TestCreatePrefixFilterList() {
 	logger := suite.client.Logger
 
 	logger.InfoContext(ctx, "Buying MCR Port.")
-	testLocation, locErr := findActiveMCRLocation(ctx, suite.client, TEST_MCR_TEST_LOCATION_MARKET, "", 1000)
+	testLocation, locErr := findActiveMCRLocation(ctx, suite.T(), suite.client, TEST_MCR_TEST_LOCATION_MARKET, "", 1000)
 	if locErr != nil {
 		suite.FailNowf("could not get mcr location", "could not get mcr location %v", locErr)
 	}
@@ -262,7 +264,7 @@ func (suite *MCRIntegrationTestSuite) TestMegaportPrefixFilterList() {
 	logger := suite.client.Logger
 
 	logger.InfoContext(ctx, "Buying MCR Port.")
-	testLocation, locErr := findActiveMCRLocation(ctx, suite.client, TEST_MCR_TEST_LOCATION_MARKET, "", 1000)
+	testLocation, locErr := findActiveMCRLocation(ctx, suite.T(), suite.client, TEST_MCR_TEST_LOCATION_MARKET, "", 1000)
 	if locErr != nil {
 		suite.FailNowf("could not get mcr location", "could not get mcr location %v", locErr)
 	}
@@ -551,7 +553,7 @@ func (suite *MCRIntegrationTestSuite) TestMCRWithIPsecAddOn() {
 	mcrSvc := suite.client.MCRService
 
 	logger.InfoContext(ctx, "Buying MCR with IPsec add-on")
-	testLocation, locErr := findActiveMCRLocation(ctx, suite.client, TEST_MCR_TEST_LOCATION_MARKET, "red", 1000, &MCRAddOnIPsecConfig{TunnelCount: 10})
+	testLocation, locErr := findActiveMCRLocation(ctx, suite.T(), suite.client, TEST_MCR_TEST_LOCATION_MARKET, "red", 1000, &MCRAddOnIPsecConfig{TunnelCount: 10})
 	if locErr != nil {
 		suite.FailNowf("could not get location", "could not get location %v", locErr)
 	}
@@ -617,7 +619,7 @@ func (suite *MCRIntegrationTestSuite) TestAddIPsecToExistingMCR() {
 	mcrSvc := suite.client.MCRService
 
 	logger.InfoContext(ctx, "Buying MCR without IPsec")
-	testLocation, locErr := findActiveMCRLocation(ctx, suite.client, TEST_MCR_TEST_LOCATION_MARKET, "red", 1000, &MCRAddOnIPsecConfig{TunnelCount: 10})
+	testLocation, locErr := findActiveMCRLocation(ctx, suite.T(), suite.client, TEST_MCR_TEST_LOCATION_MARKET, "red", 1000, &MCRAddOnIPsecConfig{TunnelCount: 10})
 	if locErr != nil {
 		suite.FailNowf("could not get location", "could not get location %v", locErr)
 	}
@@ -701,7 +703,7 @@ func (suite *MCRIntegrationTestSuite) TestUpdateIPsecTunnelCount() {
 	mcrSvc := suite.client.MCRService
 
 	logger.InfoContext(ctx, "Getting test location")
-	testLocation, locErr := findActiveMCRLocation(ctx, suite.client, TEST_MCR_TEST_LOCATION_MARKET, "red", 1000, &MCRAddOnIPsecConfig{TunnelCount: 10})
+	testLocation, locErr := findActiveMCRLocation(ctx, suite.T(), suite.client, TEST_MCR_TEST_LOCATION_MARKET, "red", 1000, &MCRAddOnIPsecConfig{TunnelCount: 10})
 	if locErr != nil {
 		suite.FailNowf("could not get random location", "could not get random location %v", locErr)
 	}
@@ -780,7 +782,7 @@ func (suite *MCRIntegrationTestSuite) TestDisableIPsecAddOn() {
 	mcrSvc := suite.client.MCRService
 
 	logger.InfoContext(ctx, "Getting test location")
-	testLocation, locErr := findActiveMCRLocation(ctx, suite.client, TEST_MCR_TEST_LOCATION_MARKET, "red", 1000, &MCRAddOnIPsecConfig{TunnelCount: 10})
+	testLocation, locErr := findActiveMCRLocation(ctx, suite.T(), suite.client, TEST_MCR_TEST_LOCATION_MARKET, "red", 1000, &MCRAddOnIPsecConfig{TunnelCount: 10})
 	if locErr != nil {
 		suite.FailNowf("could not get random location", "could not get random location %v", locErr)
 	}

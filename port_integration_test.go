@@ -22,9 +22,11 @@ type PortIntegrationTestSuite IntegrationTestSuite
 
 func TestPortIntegrationTestSuite(t *testing.T) {
 	t.Parallel()
-	if *runIntegrationTests {
-		suite.Run(t, new(PortIntegrationTestSuite))
+	if !*runIntegrationTests {
+		return
 	}
+	acquireAccTestSlot(t)
+	suite.Run(t, new(PortIntegrationTestSuite))
 }
 
 func (suite *PortIntegrationTestSuite) SetupSuite() {
@@ -51,7 +53,7 @@ func (suite *PortIntegrationTestSuite) SetupSuite() {
 func (suite *PortIntegrationTestSuite) TestSinglePort() {
 	ctx := context.Background()
 
-	testLocation, err := findActivePortLocation(ctx, suite.client, TEST_PORT_LOCATION_MARKET, TEST_PORT_SPEED)
+	testLocation, err := findActivePortLocation(ctx, suite.T(), suite.client, TEST_PORT_LOCATION_MARKET, TEST_PORT_SPEED)
 	suite.NoError(err)
 
 	portsListInitial, err := suite.client.PortService.ListPorts(ctx)
@@ -122,7 +124,7 @@ func (suite *PortIntegrationTestSuite) TestSinglePort() {
 func (suite *PortIntegrationTestSuite) TestLAGPort() {
 	ctx := context.Background()
 
-	testLocation, err := findActivePortLocation(ctx, suite.client, TEST_PORT_LOCATION_MARKET, TEST_PORT_SPEED)
+	testLocation, err := findActivePortLocation(ctx, suite.T(), suite.client, TEST_PORT_LOCATION_MARKET, TEST_PORT_SPEED)
 	suite.NoError(err)
 
 	portsListInitial, err := suite.client.PortService.ListPorts(ctx)

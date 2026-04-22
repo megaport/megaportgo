@@ -22,9 +22,11 @@ type MVEIntegrationTestSuite IntegrationTestSuite
 
 func TestMVEIntegrationTestSuite(t *testing.T) {
 	t.Parallel()
-	if *runIntegrationTests {
-		suite.Run(t, new(MVEIntegrationTestSuite))
+	if !*runIntegrationTests {
+		return
 	}
+	acquireAccTestSlot(t)
+	suite.Run(t, new(MVEIntegrationTestSuite))
 }
 
 func (suite *MVEIntegrationTestSuite) SetupSuite() {
@@ -68,7 +70,7 @@ func (suite *MVEIntegrationTestSuite) TestArubaMVE() {
 		{Description: "Control Plane"},
 	}
 
-	testLocation, err := findActiveMVELocation(ctx, suite.client, TEST_MVE_TEST_LOCATION_MARKET, mveConfig, mveVnics, "red")
+	testLocation, err := findActiveMVELocation(ctx, suite.T(), suite.client, TEST_MVE_TEST_LOCATION_MARKET, mveConfig, mveVnics, "red")
 	if err != nil {
 		suite.FailNowf("could not get mve location", "could not get mve location %v", err)
 	}

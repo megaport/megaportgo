@@ -20,9 +20,11 @@ type IXIntegrationTestSuite IntegrationTestSuite
 
 func TestIXIntegrationTestSuite(t *testing.T) {
 	t.Parallel()
-	if *runIntegrationTests {
-		suite.Run(t, new(IXIntegrationTestSuite))
+	if !*runIntegrationTests {
+		return
 	}
+	acquireAccTestSlot(t)
+	suite.Run(t, new(IXIntegrationTestSuite))
 }
 
 func (suite *IXIntegrationTestSuite) SetupSuite() {
@@ -54,7 +56,7 @@ func (suite *IXIntegrationTestSuite) TestIXLifecycle() {
 
 	// Port must sit in Sydney so the "Sydney IX" network service is reachable.
 	logger.InfoContext(ctx, "Finding a suitable location for the port")
-	testLocation, locErr := findActivePortLocation(ctx, suite.client, TEST_IX_LOCATION_MARKET, 1000, portLocationOpts{Metro: "Sydney"})
+	testLocation, locErr := findActivePortLocation(ctx, suite.T(), suite.client, TEST_IX_LOCATION_MARKET, 1000, portLocationOpts{Metro: "Sydney"})
 	if locErr != nil {
 		suite.FailNowf("could not get port location", "could not get port location %v", locErr)
 	}

@@ -23,9 +23,11 @@ type NATGatewayIntegrationTestSuite IntegrationTestSuite
 
 func TestNATGatewayIntegrationTestSuite(t *testing.T) {
 	t.Parallel()
-	if *runIntegrationTests {
-		suite.Run(t, new(NATGatewayIntegrationTestSuite))
+	if !*runIntegrationTests {
+		return
 	}
+	acquireAccTestSlot(t)
+	suite.Run(t, new(NATGatewayIntegrationTestSuite))
 }
 
 func (suite *NATGatewayIntegrationTestSuite) SetupSuite() {
@@ -70,7 +72,7 @@ func (suite *NATGatewayIntegrationTestSuite) TestNATGatewayLifecycle() {
 	)
 
 	// Step 2: Pick a location that advertises NAT Gateway support at the chosen speed.
-	testLocation, locErr := findActiveNATGatewayLocation(ctx, suite.client, TEST_NAT_GATEWAY_LOCATION_MARKET, testSpeed)
+	testLocation, locErr := findActiveNATGatewayLocation(ctx, suite.T(), suite.client, TEST_NAT_GATEWAY_LOCATION_MARKET, testSpeed)
 	if locErr != nil {
 		suite.FailNowf("could not get nat gateway location", "could not get nat gateway location: %v", locErr)
 	}

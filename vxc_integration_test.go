@@ -19,9 +19,11 @@ type VXCIntegrationTestSuite IntegrationTestSuite
 
 func TestVXCIntegrationTestSuite(t *testing.T) {
 	t.Parallel()
-	if *runIntegrationTests {
-		suite.Run(t, new(VXCIntegrationTestSuite))
+	if !*runIntegrationTests {
+		return
 	}
+	acquireAccTestSlot(t)
+	suite.Run(t, new(VXCIntegrationTestSuite))
 }
 
 func (suite *VXCIntegrationTestSuite) SetupSuite() {
@@ -51,7 +53,7 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 	logger := suite.client.Logger
 	portSvc := suite.client.PortService
 
-	testLocation, locationErr := findActivePortLocation(ctx, suite.client, MCR_LOCATION, 1000)
+	testLocation, locationErr := findActivePortLocation(ctx, suite.T(), suite.client, MCR_LOCATION, 1000)
 	if locationErr != nil {
 		suite.FailNowf("cannot find port location", "cannot find port location %v", locationErr)
 	}
@@ -302,7 +304,7 @@ func (suite *VXCIntegrationTestSuite) TestVXCMove() {
 	logger := suite.client.Logger
 	portSvc := suite.client.PortService
 
-	testLocation, locationErr := findActivePortLocation(ctx, suite.client, MCR_LOCATION, 1000)
+	testLocation, locationErr := findActivePortLocation(ctx, suite.T(), suite.client, MCR_LOCATION, 1000)
 	if locationErr != nil {
 		suite.FailNowf("cannot find port location", "cannot find port location %v", locationErr)
 	}
@@ -490,7 +492,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSVIFConnectionBuy() {
 
 	awsPartnerPort := pickAWSPartnerPort(suite.T(), suite.client, CONNECT_TYPE_AWS_VIF)
 
-	testLocation, locErr := findActivePortLocation(ctx, suite.client, MCR_LOCATION, 1000)
+	testLocation, locErr := findActivePortLocation(ctx, suite.T(), suite.client, MCR_LOCATION, 1000)
 	if locErr != nil {
 		suite.FailNowf("cannot find port location", "cannot find port location %v", locErr)
 	}
@@ -614,7 +616,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSHostedConnectionBuy() {
 
 	awsPartnerPort := pickAWSPartnerPort(suite.T(), suite.client, CONNECT_TYPE_AWS_HOSTED_CONNECTION)
 
-	testLocation, locErr := findActiveMCRLocation(ctx, suite.client, MCR_LOCATION, "", 1000)
+	testLocation, locErr := findActiveMCRLocation(ctx, suite.T(), suite.client, MCR_LOCATION, "", 1000)
 	if locErr != nil {
 		suite.FailNowf("cannot find mcr location", "cannot find mcr location %v", locErr)
 	}
@@ -739,7 +741,7 @@ func (suite *VXCIntegrationTestSuite) TestMCRVXCWithIPsec() {
 	ctx := context.Background()
 	logger := suite.client.Logger
 
-	mcrLocation, locErr := findActiveMCRLocation(ctx, suite.client, MCR_LOCATION, "", 1000, &MCRAddOnIPsecConfig{TunnelCount: 10})
+	mcrLocation, locErr := findActiveMCRLocation(ctx, suite.T(), suite.client, MCR_LOCATION, "", 1000, &MCRAddOnIPsecConfig{TunnelCount: 10})
 	if locErr != nil {
 		suite.FailNowf("cannot find mcr location", "cannot find mcr location %v", locErr)
 	}
@@ -769,7 +771,7 @@ func (suite *VXCIntegrationTestSuite) TestMCRVXCWithIPsec() {
 		}
 	})
 
-	portLocation, locErr := findActivePortLocation(ctx, suite.client, MCR_LOCATION, 1000)
+	portLocation, locErr := findActivePortLocation(ctx, suite.T(), suite.client, MCR_LOCATION, 1000)
 	if locErr != nil {
 		suite.FailNowf("cannot find port location", "cannot find port location %v", locErr)
 	}
@@ -864,7 +866,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSConnectionBuyDefaults() {
 	logger := suite.client.Logger
 	portSvc := suite.client.PortService
 
-	testLocation, locErr := findActivePortLocation(ctx, suite.client, MCR_LOCATION, 1000)
+	testLocation, locErr := findActivePortLocation(ctx, suite.T(), suite.client, MCR_LOCATION, 1000)
 	if locErr != nil {
 		suite.FailNowf("cannot find port location", "cannot find port location %v", locErr)
 	}
@@ -966,7 +968,7 @@ func (suite *VXCIntegrationTestSuite) TestBuyAzureExpressRoute() {
 
 	azure := pickAzureServiceKey(suite.T(), suite.client)
 
-	testLocation, locationErr := findActivePortLocation(ctx, suite.client, MCR_LOCATION, 1000)
+	testLocation, locationErr := findActivePortLocation(ctx, suite.T(), suite.client, MCR_LOCATION, 1000)
 	if locationErr != nil {
 		suite.FailNowf("cannot find port location", "cannot find port location %v", locationErr)
 	}
@@ -1098,7 +1100,7 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnect() {
 
 	gcp := pickGCPPairingKey(suite.T(), suite.client)
 
-	testLocation, locErr := findActivePortLocation(ctx, suite.client, MCR_LOCATION, 1000)
+	testLocation, locErr := findActivePortLocation(ctx, suite.T(), suite.client, MCR_LOCATION, 1000)
 	if locErr != nil {
 		suite.FailNowf("cannot find port location", "cannot find port location %v", locErr)
 	}
@@ -1227,7 +1229,7 @@ func (suite *VXCIntegrationTestSuite) TestMVEtoMVEVXC() {
 		{Description: "Test VNIC Index 2"},
 	}
 
-	mveLocation, err := findActiveMVELocation(ctx, suite.client, MCR_LOCATION, mveConfig, mveVnics, "red")
+	mveLocation, err := findActiveMVELocation(ctx, suite.T(), suite.client, MCR_LOCATION, mveConfig, mveVnics, "red")
 	if err != nil {
 		suite.FailNowf("could not get mve location", "could not get mve location %v", err)
 	}
