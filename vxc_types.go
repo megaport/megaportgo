@@ -335,6 +335,26 @@ type PartnerConfigInterface struct {
 	BgpConnections []BgpConnectionConfig `json:"bgpConnections,omitempty"`
 	VLAN           int                   `json:"vlan,omitempty"`
 	IpMtu          int                   `json:"ipMtu,omitempty"`
+	IpsecTunnels   []IPsecTunnelConfig   `json:"ipsecTunnels,omitempty"`
+}
+
+// IPsec start action values used by IPsecTunnelConfig.StartAction.
+const (
+	IPsecStartActionActive  = "active"
+	IPsecStartActionPassive = "passive"
+)
+
+// IPsecTunnelConfig represents an IPsec tunnel interface attached to a VXC
+// A-End interface on an MCR. See https://docs.megaport.com/mcr/ipsec-mcr/.
+// The MCR must have an IPsec add-on provisioned (see MCRAddOnIPsecConfig).
+type IPsecTunnelConfig struct {
+	Description          string `json:"description,omitempty"`
+	SourceIpAddress      string `json:"sourceIpAddress"`
+	DestinationIpAddress string `json:"destinationIpAddress"`
+	PreSharedKey         string `json:"preSharedKey"`
+	StartAction          string `json:"startAction,omitempty"`    // IPsecStartActionActive or IPsecStartActionPassive
+	Phase1Lifetime       *int   `json:"phase1Lifetime,omitempty"` // seconds, 300-604800, API default 28800
+	Phase2Lifetime       *int   `json:"phase2Lifetime,omitempty"` // seconds, 300-604800, must be < Phase1Lifetime, API default 3600
 }
 
 // IpRoute represents an IP route.

@@ -736,6 +736,131 @@ func (suite *VXCIntegrationTestSuite) TestAWSHostedConnectionBuy() {
 	}
 }
 
+// TestMCRVXCWithIPsec provisions an MCR with the IPsec add-on, orders a VXC
+// off it whose A-End interface carries an IPsec tunnel config, verifies the
+// VXC goes live, and tears everything down.
+func (suite *VXCIntegrationTestSuite) TestMCRVXCWithIPsec() {
+	vxcSvc := suite.client.VXCService
+	mcrSvc := suite.client.MCRService
+	portSvc := suite.client.PortService
+	locSvc := suite.client.LocationService
+	ctx := context.Background()
+	logger := suite.client.Logger
+
+	mcrLocation, locErr := findActiveMCRLocation(ctx, suite.client, MCR_LOCATION, "", 1000, &MCRAddOnIPsecConfig{TunnelCount: 10})
+	if locErr != nil {
+		suite.FailNowf("cannot find mcr location", "cannot find mcr location %v", locErr)
+	}
+
+	logger.InfoContext(ctx, "buying mcr with ipsec add-on (a-end)")
+	mcrRes, mcrErr := mcrSvc.BuyMCR(ctx, &BuyMCRRequest{
+		Name:             "IPsec Tunnel Test MCR",
+		LocationID:       mcrLocation.ID,
+		Term:             1,
+		PortSpeed:        1000,
+		MCRAsn:           0,
+		WaitForProvision: true,
+		WaitForTime:      5 * time.Minute,
+		AddOns: []MCRAddOn{
+			&MCRAddOnIPsecConfig{TunnelCount: 10},
+		},
+	})
+	if mcrErr != nil {
+		suite.FailNowf("cannot buy mcr with ipsec", "cannot buy mcr with ipsec %v", mcrErr)
+	}
+	mcrUid := mcrRes.TechnicalServiceUID
+	suite.True(IsGuid(mcrUid), "invalid guid for mcr uid")
+
+	portLocation, locErr := findActivePortLocation(ctx, locSvc, MCR_LOCATION, 1000)
+	if locErr != nil {
+		suite.FailNowf("cannot find port location", "cannot find port location %v", locErr)
+	}
+
+	logger.InfoContext(ctx, "buying port (b-end)")
+	portRes, portErr := portSvc.BuyPort(ctx, &BuyPortRequest{
+		Name:                  "IPsec Tunnel Test Port",
+		LocationId:            portLocation.ID,
+		PortSpeed:             1000,
+		Term:                  1,
+		Market:                "AU",
+		MarketPlaceVisibility: true,
+		WaitForProvision:      true,
+		WaitForTime:           5 * time.Minute,
+	})
+	if portErr != nil {
+		suite.FailNowf("cannot buy port", "cannot buy port %v", portErr)
+	}
+	portUid := portRes.TechnicalServiceUIDs[0]
+	suite.True(IsGuid(portUid), "invalid guid for port uid")
+
+	phase1 := 28800
+	phase2 := 3600
+
+	logger.InfoContext(ctx, "buying vxc with ipsec tunnel on a-end interface")
+	vxcRes, vxcErr := vxcSvc.BuyVXC(ctx, &BuyVXCRequest{
+		PortUID:   mcrUid,
+		VXCName:   "IPsec Tunnel Test VXC",
+		Term:      1,
+		RateLimit: 500,
+		Shutdown:  false,
+		AEndConfiguration: VXCOrderEndpointConfiguration{
+			VLAN: GenerateRandomVLAN(),
+			PartnerConfig: VXCOrderVrouterPartnerConfig{
+				Interfaces: []PartnerConfigInterface{
+					{
+						IpAddresses: []string{"192.0.2.1/30"},
+						IpsecTunnels: []IPsecTunnelConfig{
+							{
+								Description:          "integration-test-tunnel",
+								SourceIpAddress:      "192.0.2.1",
+								DestinationIpAddress: "198.51.100.1",
+								PreSharedKey:         "integrationTestKey123",
+								StartAction:          IPsecStartActionPassive,
+								Phase1Lifetime:       &phase1,
+								Phase2Lifetime:       &phase2,
+							},
+						},
+					},
+				},
+			},
+		},
+		BEndConfiguration: VXCOrderEndpointConfiguration{
+			ProductUID: portUid,
+			VLAN:       GenerateRandomVLAN(),
+		},
+		WaitForProvision: true,
+		WaitForTime:      8 * time.Minute,
+	})
+	if vxcErr != nil {
+		suite.FailNowf("cannot buy vxc with ipsec", "cannot buy vxc with ipsec %v", vxcErr)
+	}
+	vxcUid := vxcRes.TechnicalServiceUID
+	suite.True(IsGuid(vxcUid), "invalid guid for vxc uid")
+
+	vxc, getErr := vxcSvc.GetVXC(ctx, vxcUid)
+	if getErr != nil {
+		suite.FailNowf("cannot get vxc", "cannot get vxc %v", getErr)
+	}
+	logger.InfoContext(ctx, "vxc with ipsec tunnel live",
+		slog.String("vxc_uid", vxcUid),
+		slog.String("provisioning_status", vxc.ProvisioningStatus))
+
+	logger.InfoContext(ctx, "deleting vxc", slog.String("vxc_uid", vxcUid))
+	if err := vxcSvc.DeleteVXC(ctx, vxcUid, &DeleteVXCRequest{DeleteNow: true}); err != nil {
+		suite.FailNowf("cannot delete vxc", "cannot delete vxc %v", err)
+	}
+
+	logger.InfoContext(ctx, "deleting port", slog.String("port_uid", portUid))
+	if _, err := portSvc.DeletePort(ctx, &DeletePortRequest{PortID: portUid, DeleteNow: true}); err != nil {
+		suite.FailNowf("cannot delete port", "cannot delete port %v", err)
+	}
+
+	logger.InfoContext(ctx, "deleting mcr", slog.String("mcr_uid", mcrUid))
+	if _, err := mcrSvc.DeleteMCR(ctx, &DeleteMCRRequest{MCRID: mcrUid, DeleteNow: true}); err != nil {
+		suite.FailNowf("cannot delete mcr", "cannot delete mcr %v", err)
+	}
+}
+
 // TestAWSConnectionBuyDefaults tests the AWS connection buy process with default values.
 func (suite *VXCIntegrationTestSuite) TestAWSConnectionBuyDefaults() {
 	vxcSvc := suite.client.VXCService

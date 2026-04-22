@@ -3,9 +3,11 @@ package megaport
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log/slog"
 	"math/rand"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -89,4 +91,132 @@ func GetRandomLocation(ctx context.Context, svc LocationService, marketCode stri
 	filteredByMCR := svc.FilterLocationsByMcrAvailabilityV3(ctx, true, filtered)
 	testLocation := filteredByMCR[GenerateRandomNumber(0, len(filteredByMCR)-1)]
 	return testLocation, nil
+}
+
+// findActivePortLocation returns a random ACTIVE location in the given market
+// that advertises Megaport port capacity at the given speed in at least one
+// diversity zone. Mirrors the selection logic used by the terraform provider's
+// acceptance tests (portLocationHasCapacity) so the integration tests don't
+// rely on fragile hardcoded site names.
+func findActivePortLocation(ctx context.Context, svc LocationService, marketCode string, speedMbps int) (*LocationV3, error) {
+	locations, err := svc.ListLocationsV3(ctx)
+	if err != nil {
+		return nil, err
+	}
+	filtered, err := svc.FilterLocationsByMarketCodeV3(ctx, marketCode, locations)
+	if err != nil {
+		return nil, err
+	}
+	candidates := make([]*LocationV3, 0, len(filtered))
+	for _, loc := range filtered {
+		if !strings.EqualFold(loc.Status, "active") {
+			continue
+		}
+		if locationHasPortSpeed(loc, speedMbps) {
+			candidates = append(candidates, loc)
+		}
+	}
+	if len(candidates) == 0 {
+		return nil, fmt.Errorf("no active %s location advertises %d Mbps port capacity", marketCode, speedMbps)
+	}
+	return candidates[GenerateRandomNumber(0, len(candidates)-1)], nil
+}
+
+// findActiveMCRLocation returns an ACTIVE location in the given market that
+// advertises MCR capacity at the given speed in the given diversity zone AND
+// accepts a probe MCR order with those parameters. Pass an empty string for
+// diversityZone to allow any zone. Probing via ValidateMCROrder catches sites
+// where the speed is listed but the pool is exhausted ("No available capacity
+// for this request"), which the advertised-speeds check alone can't detect.
+// Mirrors the approach used by the terraform provider's findMVETestLocation.
+//
+//nolint:unparam // marketCode is parameterised for future callers targeting non-AU markets.
+func findActiveMCRLocation(ctx context.Context, c *Client, marketCode, diversityZone string, speedMbps int, addOns ...MCRAddOn) (*LocationV3, error) {
+	locations, err := c.LocationService.ListLocationsV3(ctx)
+	if err != nil {
+		return nil, err
+	}
+	filtered, err := c.LocationService.FilterLocationsByMarketCodeV3(ctx, marketCode, locations)
+	if err != nil {
+		return nil, err
+	}
+	shuffled := make([]*LocationV3, 0, len(filtered))
+	for _, loc := range filtered {
+		if !strings.EqualFold(loc.Status, "active") {
+			continue
+		}
+		if !zoneHasMCRSpeed(loc, diversityZone, speedMbps) {
+			continue
+		}
+		shuffled = append(shuffled, loc)
+	}
+	rand.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
+
+	for _, loc := range shuffled {
+		err := c.MCRService.ValidateMCROrder(ctx, &BuyMCRRequest{
+			LocationID:    loc.ID,
+			Name:          "probe",
+			Term:          1,
+			PortSpeed:     speedMbps,
+			MCRAsn:        0,
+			DiversityZone: diversityZone,
+			AddOns:        addOns,
+		})
+		if err == nil {
+			return loc, nil
+		}
+		c.Logger.DebugContext(ctx, "mcr location probe failed, trying next",
+			slog.Int("location_id", loc.ID),
+			slog.String("location_name", loc.Name),
+			slog.String("diversity_zone", diversityZone),
+			slog.String("error", err.Error()))
+	}
+	return nil, fmt.Errorf("no active %s location accepted a %d Mbps MCR validate probe (zone=%q)", marketCode, speedMbps, diversityZone)
+}
+
+// zoneHasMCRSpeed reports whether the named diversity zone at loc advertises
+// the given MCR speed. An empty zone means "any zone".
+func zoneHasMCRSpeed(loc *LocationV3, zone string, speedMbps int) bool {
+	if loc == nil || loc.DiversityZones == nil {
+		return false
+	}
+	check := func(z *LocationV3DiversityZone) bool {
+		if z == nil {
+			return false
+		}
+		for _, s := range z.McrSpeedMbps {
+			if s == speedMbps {
+				return true
+			}
+		}
+		return false
+	}
+	switch strings.ToLower(zone) {
+	case "red":
+		return check(loc.DiversityZones.Red)
+	case "blue":
+		return check(loc.DiversityZones.Blue)
+	case "":
+		return check(loc.DiversityZones.Red) || check(loc.DiversityZones.Blue)
+	default:
+		return false
+	}
+}
+
+func locationHasPortSpeed(loc *LocationV3, speedMbps int) bool {
+	if loc == nil || loc.DiversityZones == nil {
+		return false
+	}
+	check := func(zone *LocationV3DiversityZone) bool {
+		if zone == nil {
+			return false
+		}
+		for _, s := range zone.MegaportSpeedMbps {
+			if s == speedMbps {
+				return true
+			}
+		}
+		return false
+	}
+	return check(loc.DiversityZones.Red) || check(loc.DiversityZones.Blue)
 }

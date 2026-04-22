@@ -574,7 +574,7 @@ func (suite *MCRIntegrationTestSuite) TestMCRWithIPsecAddOn() {
 	mcrSvc := suite.client.MCRService
 
 	logger.InfoContext(ctx, "Buying MCR with IPsec add-on")
-	testLocation, locErr := GetRandomLocation(ctx, suite.client.LocationService, TEST_MCR_TEST_LOCATION_MARKET)
+	testLocation, locErr := findActiveMCRLocation(ctx, suite.client, TEST_MCR_TEST_LOCATION_MARKET, "red", 1000, &MCRAddOnIPsecConfig{TunnelCount: 10})
 	if locErr != nil {
 		suite.FailNowf("could not get location", "could not get location %v", locErr)
 	}
@@ -640,7 +640,7 @@ func (suite *MCRIntegrationTestSuite) TestAddIPsecToExistingMCR() {
 	mcrSvc := suite.client.MCRService
 
 	logger.InfoContext(ctx, "Buying MCR without IPsec")
-	testLocation, locErr := GetRandomLocation(ctx, suite.client.LocationService, TEST_MCR_TEST_LOCATION_MARKET)
+	testLocation, locErr := findActiveMCRLocation(ctx, suite.client, TEST_MCR_TEST_LOCATION_MARKET, "red", 1000, &MCRAddOnIPsecConfig{TunnelCount: 10})
 	if locErr != nil {
 		suite.FailNowf("could not get location", "could not get location %v", locErr)
 	}
@@ -724,7 +724,7 @@ func (suite *MCRIntegrationTestSuite) TestUpdateIPsecTunnelCount() {
 	mcrSvc := suite.client.MCRService
 
 	logger.InfoContext(ctx, "Getting test location")
-	testLocation, locErr := GetRandomLocation(ctx, suite.client.LocationService, TEST_MCR_TEST_LOCATION_MARKET)
+	testLocation, locErr := findActiveMCRLocation(ctx, suite.client, TEST_MCR_TEST_LOCATION_MARKET, "red", 1000, &MCRAddOnIPsecConfig{TunnelCount: 10})
 	if locErr != nil {
 		suite.FailNowf("could not get random location", "could not get random location %v", locErr)
 	}
@@ -803,7 +803,7 @@ func (suite *MCRIntegrationTestSuite) TestDisableIPsecAddOn() {
 	mcrSvc := suite.client.MCRService
 
 	logger.InfoContext(ctx, "Getting test location")
-	testLocation, locErr := GetRandomLocation(ctx, suite.client.LocationService, TEST_MCR_TEST_LOCATION_MARKET)
+	testLocation, locErr := findActiveMCRLocation(ctx, suite.client, TEST_MCR_TEST_LOCATION_MARKET, "red", 1000, &MCRAddOnIPsecConfig{TunnelCount: 10})
 	if locErr != nil {
 		suite.FailNowf("could not get random location", "could not get random location %v", locErr)
 	}

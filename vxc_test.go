@@ -1139,6 +1139,65 @@ func (suite *VXCClientTestSuite) TestDecomissionedVXCMarshal() {
 	suite.NoError(err)
 }
 
+// TestMCRVXCWithIPsecTunnel verifies that an IPsec tunnel attached to an
+// MCR VXC A-End interface serialises to the wire format documented at
+// https://docs.megaport.com/mcr/ipsec-mcr/.
+func (suite *VXCClientTestSuite) TestMCRVXCWithIPsecTunnel() {
+	phase1 := 28800
+	phase2 := 3600
+	iface := PartnerConfigInterface{
+		IpAddresses: []string{"192.0.2.1/30"},
+		IpsecTunnels: []IPsecTunnelConfig{
+			{
+				Description:          "tunnel-a",
+				SourceIpAddress:      "192.0.2.1",
+				DestinationIpAddress: "198.51.100.1",
+				PreSharedKey:         "notARealKey12345",
+				StartAction:          IPsecStartActionPassive,
+				Phase1Lifetime:       &phase1,
+				Phase2Lifetime:       &phase2,
+			},
+		},
+	}
+	cfg := VXCOrderVrouterPartnerConfig{Interfaces: []PartnerConfigInterface{iface}}
+
+	raw, err := json.Marshal(cfg)
+	suite.NoError(err)
+
+	var got struct {
+		Interfaces []struct {
+			IpsecTunnels []map[string]any `json:"ipsecTunnels"`
+		} `json:"interfaces"`
+	}
+	suite.NoError(json.Unmarshal(raw, &got))
+	suite.Require().Len(got.Interfaces, 1)
+	suite.Require().Len(got.Interfaces[0].IpsecTunnels, 1)
+
+	tunnel := got.Interfaces[0].IpsecTunnels[0]
+	suite.Equal("tunnel-a", tunnel["description"])
+	suite.Equal("192.0.2.1", tunnel["sourceIpAddress"])
+	suite.Equal("198.51.100.1", tunnel["destinationIpAddress"])
+	suite.Equal("notARealKey12345", tunnel["preSharedKey"])
+	suite.Equal("passive", tunnel["startAction"])
+	suite.EqualValues(28800, tunnel["phase1Lifetime"])
+	suite.EqualValues(3600, tunnel["phase2Lifetime"])
+
+	// Unset optional fields must be omitted from the wire payload.
+	minimal := PartnerConfigInterface{
+		IpsecTunnels: []IPsecTunnelConfig{{
+			SourceIpAddress:      "192.0.2.2",
+			DestinationIpAddress: "198.51.100.2",
+			PreSharedKey:         "anotherKey12345",
+		}},
+	}
+	raw, err = json.Marshal(minimal)
+	suite.NoError(err)
+	suite.NotContains(string(raw), "startAction")
+	suite.NotContains(string(raw), "phase1Lifetime")
+	suite.NotContains(string(raw), "phase2Lifetime")
+	suite.NotContains(string(raw), "description")
+}
+
 // TestListVXCs tests the ListVXCs method with various filters
 func (suite *VXCClientTestSuite) TestListVXCs() {
 	// Define mock responses for products list API
