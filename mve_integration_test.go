@@ -12,6 +12,9 @@ import (
 
 const (
 	TEST_MVE_TEST_LOCATION_MARKET = "AU"
+	// MVEArubaImageID is the image ID for the Aruba SD-WAN MVE in staging.
+	// Kept in sync with the terraform provider's MVEArubaImageIDMVE.
+	MVEArubaImageID = 152
 )
 
 // MVEIntegrationTestSuite is the integration test suite for the MVE service
@@ -48,30 +51,35 @@ func (suite *MVEIntegrationTestSuite) SetupSuite() {
 func (suite *MVEIntegrationTestSuite) TestArubaMVE() {
 	mveSvc := suite.client.MVEService
 	ctx := context.Background()
-	locSvc := suite.client.LocationService
 	logger := suite.client.Logger
 
 	logger.DebugContext(ctx, "Buying MVE")
-	testLocation, err := GetRandomLocation(ctx, locSvc, TEST_MVE_TEST_LOCATION_MARKET)
-	if err != nil {
-		suite.FailNowf("could not get location", "could not get location %v", err)
-	}
-	logger.DebugContext(ctx, "test location determined", slog.String("location", testLocation.Name))
 	mveConfig := &ArubaConfig{
 		Vendor:      "aruba",
 		ProductSize: "MEDIUM",
-		ImageID:     23,
+		ImageID:     MVEArubaImageID,
 		AccountName: "test",
 		AccountKey:  "test",
 		SystemTag:   "test",
 	}
+	mveVnics := []MVENetworkInterface{
+		{Description: "Data Plane"},
+		{Description: "Management Plane"},
+		{Description: "Control Plane"},
+	}
+
+	testLocation, err := findActiveMVELocation(ctx, suite.client, TEST_MVE_TEST_LOCATION_MARKET, mveConfig, mveVnics, "red")
+	if err != nil {
+		suite.FailNowf("could not get mve location", "could not get mve location %v", err)
+	}
+	logger.DebugContext(ctx, "test location determined", slog.String("location", testLocation.Name))
 
 	buyMVERes, err := mveSvc.BuyMVE(ctx, &BuyMVERequest{
 		LocationID:       testLocation.ID,
 		Name:             "MVE Test",
 		Term:             12,
 		VendorConfig:     mveConfig,
-		Vnics:            nil,
+		Vnics:            mveVnics,
 		WaitForProvision: true,
 		WaitForTime:      5 * time.Minute,
 		DiversityZone:    "red",

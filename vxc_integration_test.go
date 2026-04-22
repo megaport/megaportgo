@@ -11,12 +11,7 @@ import (
 )
 
 const (
-	TEST_LOCATION_A = "Global Switch Sydney"
-	TEST_LOCATION_B = "Equinix SY3"
-	TEST_LOCATION_C = "90558833-e14f-49cf-84ba-bce1c2c40f2d"
-	MCR_LOCATION    = "AU"
-
-	VXC_MVE_TEST_LOCATION = 65
+	MCR_LOCATION = "AU"
 )
 
 // VXCIntegrationTestSuite tests the VXC Service.
@@ -54,14 +49,12 @@ func (suite *VXCIntegrationTestSuite) TestVXCBuy() {
 	vxcSvc := suite.client.VXCService
 	ctx := context.Background()
 	logger := suite.client.Logger
-	locSvc := suite.client.LocationService
 	portSvc := suite.client.PortService
 
-	fuzzySearch, locationErr := locSvc.GetLocationByNameFuzzy(ctx, TEST_LOCATION_A)
+	testLocation, locationErr := findActivePortLocation(ctx, suite.client, MCR_LOCATION, 1000)
 	if locationErr != nil {
-		suite.FailNowf("cannot find location", "cannot find location %v", locationErr)
+		suite.FailNowf("cannot find port location", "cannot find port location %v", locationErr)
 	}
-	testLocation := fuzzySearch[0]
 
 	logger.InfoContext(ctx, "buying port a end")
 
@@ -307,14 +300,12 @@ func (suite *VXCIntegrationTestSuite) TestVXCMove() {
 	vxcSvc := suite.client.VXCService
 	ctx := context.Background()
 	logger := suite.client.Logger
-	locSvc := suite.client.LocationService
 	portSvc := suite.client.PortService
 
-	fuzzySearch, locationErr := locSvc.GetLocationByNameFuzzy(ctx, TEST_LOCATION_A)
+	testLocation, locationErr := findActivePortLocation(ctx, suite.client, MCR_LOCATION, 1000)
 	if locationErr != nil {
-		suite.FailNowf("cannot find location", "cannot find location %v", locationErr)
+		suite.FailNowf("cannot find port location", "cannot find port location %v", locationErr)
 	}
-	testLocation := fuzzySearch[0]
 
 	logger.InfoContext(ctx, "buying first port a end")
 
@@ -495,12 +486,11 @@ func (suite *VXCIntegrationTestSuite) TestAWSVIFConnectionBuy() {
 	vxcSvc := suite.client.VXCService
 	ctx := context.Background()
 	logger := suite.client.Logger
-	locSvc := suite.client.LocationService
 	portSvc := suite.client.PortService
 
-	testLocation, locErr := locSvc.GetLocationByName(ctx, TEST_LOCATION_B)
+	testLocation, locErr := findActivePortLocation(ctx, suite.client, MCR_LOCATION, 1000)
 	if locErr != nil {
-		suite.FailNowf("cannot find location", "cannot find location %v", locErr)
+		suite.FailNowf("cannot find port location", "cannot find port location %v", locErr)
 	}
 
 	logger.InfoContext(ctx, "buying port a end")
@@ -618,12 +608,11 @@ func (suite *VXCIntegrationTestSuite) TestAWSHostedConnectionBuy() {
 	vxcSvc := suite.client.VXCService
 	ctx := context.Background()
 	logger := suite.client.Logger
-	locSvc := suite.client.LocationService
 	mcrSvc := suite.client.MCRService
 
-	testLocation, locErr := GetRandomLocation(ctx, locSvc, MCR_LOCATION)
+	testLocation, locErr := findActiveMCRLocation(ctx, suite.client, MCR_LOCATION, "", 1000)
 	if locErr != nil {
-		suite.FailNowf("cannot find location", "cannot find location %v", locErr)
+		suite.FailNowf("cannot find mcr location", "cannot find mcr location %v", locErr)
 	}
 
 	logger.InfoContext(ctx, "buying mcr (a-end)")
@@ -743,7 +732,6 @@ func (suite *VXCIntegrationTestSuite) TestMCRVXCWithIPsec() {
 	vxcSvc := suite.client.VXCService
 	mcrSvc := suite.client.MCRService
 	portSvc := suite.client.PortService
-	locSvc := suite.client.LocationService
 	ctx := context.Background()
 	logger := suite.client.Logger
 
@@ -777,7 +765,7 @@ func (suite *VXCIntegrationTestSuite) TestMCRVXCWithIPsec() {
 		}
 	})
 
-	portLocation, locErr := findActivePortLocation(ctx, locSvc, MCR_LOCATION, 1000)
+	portLocation, locErr := findActivePortLocation(ctx, suite.client, MCR_LOCATION, 1000)
 	if locErr != nil {
 		suite.FailNowf("cannot find port location", "cannot find port location %v", locErr)
 	}
@@ -870,12 +858,11 @@ func (suite *VXCIntegrationTestSuite) TestAWSConnectionBuyDefaults() {
 	vxcSvc := suite.client.VXCService
 	ctx := context.Background()
 	logger := suite.client.Logger
-	locSvc := suite.client.LocationService
 	portSvc := suite.client.PortService
 
-	testLocation, locErr := locSvc.GetLocationByName(ctx, TEST_LOCATION_B)
+	testLocation, locErr := findActivePortLocation(ctx, suite.client, MCR_LOCATION, 1000)
 	if locErr != nil {
-		suite.FailNowf("cannot find location", "cannot find location %v", locErr)
+		suite.FailNowf("cannot find port location", "cannot find port location %v", locErr)
 	}
 
 	logger.InfoContext(ctx, "buying port a end")
@@ -971,14 +958,12 @@ func (suite *VXCIntegrationTestSuite) TestBuyAzureExpressRoute() {
 	vxcSvc := suite.client.VXCService
 	ctx := context.Background()
 	logger := suite.client.Logger
-	locSvc := suite.client.LocationService
 	portSvc := suite.client.PortService
 
-	fuzzySearch, locationErr := locSvc.GetLocationByNameFuzzy(ctx, TEST_LOCATION_A)
+	testLocation, locationErr := findActivePortLocation(ctx, suite.client, MCR_LOCATION, 1000)
 	if locationErr != nil {
-		suite.FailNowf("cannot find location", "cannot find location %v", locationErr)
+		suite.FailNowf("cannot find port location", "cannot find port location %v", locationErr)
 	}
-	testLocation := fuzzySearch[0]
 
 	logger.InfoContext(ctx, "buying azure expressroute port a end")
 
@@ -1103,12 +1088,11 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnect() {
 	vxcSvc := suite.client.VXCService
 	ctx := context.Background()
 	logger := suite.client.Logger
-	locSvc := suite.client.LocationService
 	portSvc := suite.client.PortService
 
-	testLocation, locErr := locSvc.GetLocationByName(ctx, TEST_LOCATION_B)
+	testLocation, locErr := findActivePortLocation(ctx, suite.client, MCR_LOCATION, 1000)
 	if locErr != nil {
-		suite.FailNowf("cannot find location", "cannot find location %v", locErr)
+		suite.FailNowf("cannot find port location", "cannot find port location %v", locErr)
 	}
 
 	logger.InfoContext(ctx, "buying google interconect port a end")
@@ -1223,11 +1207,23 @@ func (suite *VXCIntegrationTestSuite) TestMVEtoMVEVXC() {
 	mveConfig := &ArubaConfig{
 		Vendor:      "aruba",
 		ProductSize: "MEDIUM",
-		ImageID:     23,
+		ImageID:     MVEArubaImageID,
 		AccountName: "test",
 		AccountKey:  "test",
 		SystemTag:   "test",
 	}
+
+	mveVnics := []MVENetworkInterface{
+		{Description: "Test VNIC Index 0"},
+		{Description: "Test VNIC Index 1"},
+		{Description: "Test VNIC Index 2"},
+	}
+
+	mveLocation, err := findActiveMVELocation(ctx, suite.client, MCR_LOCATION, mveConfig, mveVnics, "red")
+	if err != nil {
+		suite.FailNowf("could not get mve location", "could not get mve location %v", err)
+	}
+	logger.InfoContext(ctx, "MVE location determined", slog.String("location", mveLocation.Name), slog.Int("location_id", mveLocation.ID))
 
 	// Create 4 MVEs - we'll connect 1->2 initially, then move to 3->4
 	var mveUids []string
@@ -1237,21 +1233,11 @@ func (suite *VXCIntegrationTestSuite) TestMVEtoMVEVXC() {
 
 	for i, mveName := range mveNames {
 		buyMVERes, err := mveSvc.BuyMVE(ctx, &BuyMVERequest{
-			LocationID:   VXC_MVE_TEST_LOCATION,
-			Name:         mveName,
-			Term:         12,
-			VendorConfig: mveConfig,
-			Vnics: []MVENetworkInterface{
-				{
-					Description: "Test VNIC Index 0",
-				},
-				{
-					Description: "Test VNIC Index 1",
-				},
-				{
-					Description: "Test VNIC Index 2",
-				},
-			},
+			LocationID:       mveLocation.ID,
+			Name:             mveName,
+			Term:             12,
+			VendorConfig:     mveConfig,
+			Vnics:            mveVnics,
 			WaitForProvision: true,
 			WaitForTime:      5 * time.Minute,
 			DiversityZone:    "red",
@@ -1457,7 +1443,7 @@ func (suite *VXCIntegrationTestSuite) TestMVEtoMVEVXC() {
 	suite.Equal(mveUids[3], vxcInfo.BEndConfiguration.UID, "Moved VXC GET B-End UID mismatch")
 
 	// Attempt to delete the MVEs 3 and 4 with safe delete enabled. This should fail.
-	_, err := mveSvc.DeleteMVE(ctx, &DeleteMVERequest{
+	_, err = mveSvc.DeleteMVE(ctx, &DeleteMVERequest{
 		MVEID:      mveUids[2],
 		SafeDelete: true,
 	})

@@ -51,9 +51,9 @@ func (suite *MCRIntegrationTestSuite) TestMCRLifecycle() {
 	logger := suite.client.Logger
 	logger.DebugContext(ctx, "Buying MCR Port.")
 	mcrSvc := suite.client.MCRService
-	testLocation, locErr := GetRandomLocation(ctx, suite.client.LocationService, TEST_MCR_TEST_LOCATION_MARKET)
+	testLocation, locErr := findActiveMCRLocation(ctx, suite.client, TEST_MCR_TEST_LOCATION_MARKET, "red", 1000)
 	if locErr != nil {
-		suite.FailNowf("could not get random location", "could not get random location %v", locErr)
+		suite.FailNowf("could not get mcr location", "could not get mcr location %v", locErr)
 	}
 	if !suite.NotNil(testLocation) {
 		suite.FailNow("invalid test location")
@@ -107,35 +107,13 @@ func (suite *MCRIntegrationTestSuite) TestMCRLifecycle() {
 	}
 	suite.EqualValues(newMCRName, mcr.Name)
 
-	// Testing MCR Cancel
-	logger.InfoContext(ctx, "Scheduling MCR for deletion (30 days).", slog.String("mcr_id", mcrId))
-
-	// This is a soft Delete
-	softDeleteRes, deleteErr := mcrSvc.DeleteMCR(ctx, &DeleteMCRRequest{
-		MCRID:     mcrId,
-		DeleteNow: false,
-	})
-	if deleteErr != nil {
-		suite.FailNowf("could not soft delete mcr", "could not soft delete mcr %v", deleteErr)
-	}
-	suite.True(softDeleteRes.IsDeleting, true)
-
-	mcrCancelInfo, getErr := mcrSvc.GetMCR(ctx, mcrId)
-	if getErr != nil {
-		suite.FailNowf("could not get mcr", "could not get mcr %v", getErr)
-	}
-	suite.EqualValues(STATUS_CANCELLED, mcrCancelInfo.ProvisioningStatus)
-	logger.DebugContext(ctx, "MCR Canceled", slog.String("provisioning_status", mcrCancelInfo.ProvisioningStatus))
-	restoreRes, restoreErr := mcrSvc.RestoreMCR(ctx, mcrId)
-	if restoreErr != nil {
-		suite.FailNowf("could not restore mcr", "could not restore mcr %v", getErr)
-	}
-	suite.True(restoreRes.IsRestored)
-
-	// Testing MCR Delete
+	// MCR product type does not support CANCEL (soft-delete / scheduled
+	// end-of-term cancellation) at the API layer — the staging backend
+	// returns 409 "Action [CANCEL] not allowed for product type: MCR".
+	// The terraform provider's MCR resource mirrors this by always using
+	// DeleteNow: true, so this test only exercises hard-delete.
 	logger.InfoContext(ctx, "Deleting MCR now.")
 
-	// This is a Hard Delete
 	hardDeleteRes, deleteErr := mcrSvc.DeleteMCR(ctx, &DeleteMCRRequest{
 		MCRID:     mcrId,
 		DeleteNow: true,
@@ -156,12 +134,13 @@ func (suite *MCRIntegrationTestSuite) TestMCRLifecycle() {
 // TestPortSpeedValidation tests the port speed validation
 func (suite *MCRIntegrationTestSuite) TestPortSpeedValidation() {
 	ctx := context.Background()
-	locSvc := suite.client.LocationService
 	mcrSvc := suite.client.MCRService
 
-	testLocation, locErr := locSvc.GetLocationByName(ctx, "Global Switch Sydney West")
+	// Any MCR-capable location works — we expect client-side validation to
+	// reject the invalid 500 Mbps speed before an order is ever submitted.
+	testLocation, locErr := findActiveMCRLocation(ctx, suite.client, TEST_MCR_TEST_LOCATION_MARKET, "", 1000)
 	if locErr != nil {
-		suite.FailNowf("could not get location", "could not get location %v", locErr)
+		suite.FailNowf("could not get mcr location", "could not get mcr location %v", locErr)
 	}
 	if !suite.NotNil(testLocation) {
 		suite.FailNow("invalid test location")
@@ -179,14 +158,13 @@ func (suite *MCRIntegrationTestSuite) TestPortSpeedValidation() {
 // TestCreatePrefixFilterList tests the creation of a prefix filter list for an MCR.
 func (suite *MCRIntegrationTestSuite) TestCreatePrefixFilterList() {
 	ctx := context.Background()
-	locSvc := suite.client.LocationService
 	mcrSvc := suite.client.MCRService
 	logger := suite.client.Logger
 
 	logger.InfoContext(ctx, "Buying MCR Port.")
-	testLocation, locErr := GetRandomLocation(ctx, locSvc, TEST_MCR_TEST_LOCATION_MARKET)
+	testLocation, locErr := findActiveMCRLocation(ctx, suite.client, TEST_MCR_TEST_LOCATION_MARKET, "", 1000)
 	if locErr != nil {
-		suite.FailNowf("could not get location", "could not get location %v", locErr)
+		suite.FailNowf("could not get mcr location", "could not get mcr location %v", locErr)
 	}
 
 	logger.InfoContext(ctx, "Test location determined", slog.String("location", testLocation.Name))
@@ -280,14 +258,13 @@ func (suite *MCRIntegrationTestSuite) TestCreatePrefixFilterList() {
 // TestCreatePrefixFilterList tests the creation of a prefix filter list for an MCR.
 func (suite *MCRIntegrationTestSuite) TestMegaportPrefixFilterList() {
 	ctx := context.Background()
-	locSvc := suite.client.LocationService
 	mcrSvc := suite.client.MCRService
 	logger := suite.client.Logger
 
 	logger.InfoContext(ctx, "Buying MCR Port.")
-	testLocation, locErr := GetRandomLocation(ctx, locSvc, TEST_MCR_TEST_LOCATION_MARKET)
+	testLocation, locErr := findActiveMCRLocation(ctx, suite.client, TEST_MCR_TEST_LOCATION_MARKET, "", 1000)
 	if locErr != nil {
-		suite.FailNowf("could not get location", "could not get location %v", locErr)
+		suite.FailNowf("could not get mcr location", "could not get mcr location %v", locErr)
 	}
 
 	logger.InfoContext(ctx, "Test location determined", slog.String("location", testLocation.Name))

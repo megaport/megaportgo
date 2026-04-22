@@ -13,7 +13,8 @@ import (
 )
 
 const (
-	TEST_LOCATION_ID_A = 19 // 	Interactive 437 Williamstown
+	TEST_PORT_LOCATION_MARKET = "AU"
+	TEST_PORT_SPEED           = 10000
 )
 
 // PortIntegrationTestSuite tests the Port Service.
@@ -50,14 +51,13 @@ func (suite *PortIntegrationTestSuite) SetupSuite() {
 func (suite *PortIntegrationTestSuite) TestSinglePort() {
 	ctx := context.Background()
 
-	testLocation, err := suite.client.LocationService.GetLocationByID(ctx, TEST_LOCATION_ID_A)
-
+	testLocation, err := findActivePortLocation(ctx, suite.client, TEST_PORT_LOCATION_MARKET, TEST_PORT_SPEED)
 	suite.NoError(err)
 
 	portsListInitial, err := suite.client.PortService.ListPorts(ctx)
 	suite.NoError(err)
 
-	createRes, portErr := suite.testCreatePort(suite.client, ctx, 0, *testLocation)
+	createRes, portErr := suite.testCreatePort(suite.client, ctx, 0, testLocation)
 	suite.NoError(portErr)
 
 	portID := createRes.TechnicalServiceUIDs[0]
@@ -122,13 +122,13 @@ func (suite *PortIntegrationTestSuite) TestSinglePort() {
 func (suite *PortIntegrationTestSuite) TestLAGPort() {
 	ctx := context.Background()
 
-	testLocation, err := suite.client.LocationService.GetLocationByID(ctx, TEST_LOCATION_ID_A)
+	testLocation, err := findActivePortLocation(ctx, suite.client, TEST_PORT_LOCATION_MARKET, TEST_PORT_SPEED)
 	suite.NoError(err)
 
 	portsListInitial, err := suite.client.PortService.ListPorts(ctx)
 	suite.NoError(err)
 
-	orderRes, portErr := suite.testCreatePort(suite.client, ctx, 2, *testLocation)
+	orderRes, portErr := suite.testCreatePort(suite.client, ctx, 2, testLocation)
 	suite.NoError(portErr)
 
 	mainPortIDs := orderRes.TechnicalServiceUIDs
@@ -178,12 +178,12 @@ func (suite *PortIntegrationTestSuite) TestLAGPort() {
 	suite.testDeletePort(suite.client, ctx, mainPortIDs[0])
 }
 
-func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Context, lagCount int, location Location) (*BuyPortResponse, error) {
+func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Context, lagCount int, location *LocationV3) (*BuyPortResponse, error) {
 	suite.client.Logger.DebugContext(ctx, "Buying Port", slog.Int("lag_count", lagCount))
 	orderRes, err := c.PortService.BuyPort(ctx, &BuyPortRequest{
 		Name:                  "Buy Port (LAG) Test",
 		Term:                  1,
-		PortSpeed:             10000,
+		PortSpeed:             TEST_PORT_SPEED,
 		LocationId:            location.ID,
 		Market:                location.Market,
 		LagCount:              lagCount,
