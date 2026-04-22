@@ -8,6 +8,8 @@
 .mpt_test_credentials
 .envrc
 
+testdata/csp_credentials.json
+
 *.exe
 *.exe~
 *.dll

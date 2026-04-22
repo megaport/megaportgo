@@ -488,6 +488,8 @@ func (suite *VXCIntegrationTestSuite) TestAWSVIFConnectionBuy() {
 	logger := suite.client.Logger
 	portSvc := suite.client.PortService
 
+	awsPartnerPort := pickAWSPartnerPort(suite.T(), suite.client, CONNECT_TYPE_AWS_VIF)
+
 	testLocation, locErr := findActivePortLocation(ctx, suite.client, MCR_LOCATION, 1000)
 	if locErr != nil {
 		suite.FailNowf("cannot find port location", "cannot find port location %v", locErr)
@@ -540,7 +542,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSVIFConnectionBuy() {
 			VLAN: aEndVLAN,
 		},
 		BEndConfiguration: VXCOrderEndpointConfiguration{
-			ProductUID: "87860c28-81ef-4e79-8cc7-cfc5a4c4bc86",
+			ProductUID: awsPartnerPort.ProductUID,
 			PartnerConfig: VXCPartnerConfigAWS{
 				ConnectType:  "AWS",
 				Type:         "private",
@@ -610,6 +612,8 @@ func (suite *VXCIntegrationTestSuite) TestAWSHostedConnectionBuy() {
 	logger := suite.client.Logger
 	mcrSvc := suite.client.MCRService
 
+	awsPartnerPort := pickAWSPartnerPort(suite.T(), suite.client, CONNECT_TYPE_AWS_HOSTED_CONNECTION)
+
 	testLocation, locErr := findActiveMCRLocation(ctx, suite.client, MCR_LOCATION, "", 1000)
 	if locErr != nil {
 		suite.FailNowf("cannot find mcr location", "cannot find mcr location %v", locErr)
@@ -677,7 +681,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSHostedConnectionBuy() {
 			},
 		},
 		BEndConfiguration: VXCOrderEndpointConfiguration{
-			ProductUID: "b047870a-adcf-441f-ae34-27a796cdafeb",
+			ProductUID: awsPartnerPort.ProductUID,
 			PartnerConfig: VXCPartnerConfigAWS{
 				ConnectType:  "AWSHC",
 				Type:         "private",
@@ -960,6 +964,8 @@ func (suite *VXCIntegrationTestSuite) TestBuyAzureExpressRoute() {
 	logger := suite.client.Logger
 	portSvc := suite.client.PortService
 
+	azure := pickAzureServiceKey(suite.T(), suite.client)
+
 	testLocation, locationErr := findActivePortLocation(ctx, suite.client, MCR_LOCATION, 1000)
 	if locationErr != nil {
 		suite.FailNowf("cannot find port location", "cannot find port location %v", locationErr)
@@ -985,7 +991,7 @@ func (suite *VXCIntegrationTestSuite) TestBuyAzureExpressRoute() {
 
 	suite.True(IsGuid(aEndUid), "invalid guid for a end uid")
 
-	serviceKey := "1b2329a5-56dc-45d0-8a0d-87b706297777"
+	serviceKey := azure.Key
 
 	peerings := []PartnerOrderAzurePeeringConfig{
 		{
@@ -1090,6 +1096,8 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnect() {
 	logger := suite.client.Logger
 	portSvc := suite.client.PortService
 
+	gcp := pickGCPPairingKey(suite.T(), suite.client)
+
 	testLocation, locErr := findActivePortLocation(ctx, suite.client, MCR_LOCATION, 1000)
 	if locErr != nil {
 		suite.FailNowf("cannot find port location", "cannot find port location %v", locErr)
@@ -1113,7 +1121,7 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnect() {
 	portUid := portRes.TechnicalServiceUIDs[0]
 	suite.True(IsGuid(portUid), "invalid guid for port uid")
 
-	pairingKey := "27325c3a-b640-4b69-a2d5-cdcca797a151/us-west2/1"
+	pairingKey := gcp.Key
 	logger.InfoContext(ctx, "buying google interconnect vxc (b-end)")
 
 	partnerPortRes, partnerPortErr := vxcSvc.LookupPartnerPorts(ctx, &LookupPartnerPortsRequest{
