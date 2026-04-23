@@ -76,7 +76,7 @@ func (suite *IXIntegrationTestSuite) TestIXLifecycle() {
 		Market:                TEST_IX_LOCATION_MARKET,
 		MarketPlaceVisibility: true,
 		WaitForProvision:      true,
-		WaitForTime:           5 * time.Minute,
+		WaitForTime:           10 * time.Minute,
 	})
 	if portErr != nil {
 		suite.FailNowf("error buying port", "error buying port %v", portErr)

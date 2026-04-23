@@ -345,7 +345,25 @@ func (suite *PortIntegrationTestSuite) testCancelPort(c *Client, ctx context.Con
 	suite.EqualValues(STATUS_CANCELLED, portInfo.ProvisioningStatus)
 
 	suite.client.Logger.DebugContext(ctx, "port scheduled for cancellation", slog.String("status", portInfo.ProvisioningStatus), slog.String("port_id", portId))
-	restoreResp, restoreErr := c.PortService.RestorePort(ctx, portId)
+
+	// Staging occasionally 400s UN_CANCEL with "Transaction silently rolled back
+	// because it has been marked as rollback-only" when fired immediately after
+	// CANCEL — the cancel transaction hasn't settled yet. Retry a few times with
+	// backoff before giving up.
+	var restoreResp *RestorePortResponse
+	var restoreErr error
+	for attempt := 1; attempt <= 5; attempt++ {
+		if attempt > 1 {
+			time.Sleep(time.Duration(attempt) * 2 * time.Second)
+		}
+		restoreResp, restoreErr = c.PortService.RestorePort(ctx, portId)
+		if restoreErr == nil {
+			break
+		}
+		suite.client.Logger.DebugContext(ctx, "UN_CANCEL failed, will retry",
+			slog.Int("attempt", attempt),
+			slog.String("error", restoreErr.Error()))
+	}
 	if restoreErr != nil {
 		suite.FailNowf("could not restore port", "could not restore port %v", restoreErr)
 	}
