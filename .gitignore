@@ -16,3 +16,5 @@ testdata/csp_credentials.json
 *.so
 *.test
 *.out
+
+.megaport-tools/
