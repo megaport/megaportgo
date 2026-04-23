@@ -3,6 +3,7 @@ package megaport
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -159,6 +160,7 @@ func makeNATGatewayTeardown(ctx context.Context, suite *NATGatewayIntegrationTes
 			return err
 		}
 		defer resp.Body.Close()
+		_, _ = io.Copy(io.Discard, resp.Body)
 		return nil
 	}
 	cancelNow := func() error {

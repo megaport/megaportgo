@@ -462,6 +462,11 @@ type NATGatewayRoute struct {
 // UnmarshalJSON distinguishes IP vs BGP routes based on which BGP-specific
 // fields are present in the payload.
 func (r *NATGatewayRoute) UnmarshalJSON(b []byte) error {
+	// Reset both variants up-front so a reused NATGatewayRoute value never
+	// ends up with both IP and BGP non-nil — the type's invariant is
+	// "exactly one of IP/BGP is set".
+	r.IP = nil
+	r.BGP = nil
 	var probe map[string]json.RawMessage
 	if err := json.Unmarshal(b, &probe); err != nil {
 		return err

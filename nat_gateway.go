@@ -164,6 +164,7 @@ var (
 	ErrNATGatewayPrefixListDescriptionEmpty   = errors.New("prefix list description is required")
 	ErrNATGatewayPrefixListAddressFamilyEmpty = errors.New("prefix list addressFamily is required")
 	ErrNATGatewayPrefixListEntriesEmpty       = errors.New("prefix list requires at least one entry")
+	ErrNATGatewayPrefixListEmptyResponse      = errors.New("API returned a 2xx response with an empty prefix list payload")
 )
 
 // Diagnostics validation errors.
@@ -636,7 +637,7 @@ func (svc *NATGatewayServiceOp) CreateNATGatewayPrefixList(ctx context.Context, 
 		return nil, err
 	}
 	if envelope.Data == nil {
-		return nil, nil
+		return nil, ErrNATGatewayPrefixListEmptyResponse
 	}
 	return envelope.Data.toPrefixList()
 }
@@ -655,7 +656,7 @@ func (svc *NATGatewayServiceOp) GetNATGatewayPrefixList(ctx context.Context, pro
 		return nil, err
 	}
 	if envelope.Data == nil {
-		return nil, nil
+		return nil, ErrNATGatewayPrefixListEmptyResponse
 	}
 	return envelope.Data.toPrefixList()
 }
@@ -677,7 +678,7 @@ func (svc *NATGatewayServiceOp) UpdateNATGatewayPrefixList(ctx context.Context, 
 		return nil, err
 	}
 	if envelope.Data == nil {
-		return nil, nil
+		return nil, ErrNATGatewayPrefixListEmptyResponse
 	}
 	return envelope.Data.toPrefixList()
 }
@@ -781,14 +782,26 @@ func (svc *NATGatewayServiceOp) GetNATGatewayDiagnosticsRoutes(ctx context.Conte
 }
 
 // pollDiagnosticsRoutes polls GetNATGatewayDiagnosticsRoutes until the
-// operation returns a non-empty result, or the caller-supplied timeout
-// elapses. Empty responses are treated as "still processing".
+// operation returns a non-empty result, the SDK-managed
+// diagnosticsPollTimeout elapses, or the caller's context is cancelled.
+// Empty responses are treated as "still processing".
 func (svc *NATGatewayServiceOp) pollDiagnosticsRoutes(ctx context.Context, productUID, operationID string) ([]*NATGatewayRoute, error) {
 	pollCtx, cancel := context.WithTimeout(ctx, diagnosticsPollTimeout)
 	defer cancel()
+	// pollDoneErr returns ctx.Err() when the caller's context is the one that
+	// fired (cancellation or caller-imposed deadline) and
+	// ErrNATGatewayDiagnosticsTimeout when the SDK-managed
+	// diagnosticsPollTimeout is what elapsed. This lets callers tell
+	// "my deadline hit" from "the diagnostics op never completed".
+	pollDoneErr := func() error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		return ErrNATGatewayDiagnosticsTimeout
+	}
 	select {
 	case <-pollCtx.Done():
-		return nil, ErrNATGatewayDiagnosticsTimeout
+		return nil, pollDoneErr()
 	case <-time.After(diagnosticsPollInitialDelay):
 	}
 	ticker := time.NewTicker(diagnosticsPollInterval)
@@ -803,7 +816,7 @@ func (svc *NATGatewayServiceOp) pollDiagnosticsRoutes(ctx context.Context, produ
 		}
 		select {
 		case <-pollCtx.Done():
-			return nil, ErrNATGatewayDiagnosticsTimeout
+			return nil, pollDoneErr()
 		case <-ticker.C:
 		}
 	}
