@@ -96,6 +96,18 @@ var ErrInvalidMonth = errors.New("invalid month, must be between 1 and 12")
 // ErrInvalidYear is returned when RTT statistics are requested for an invalid year
 var ErrInvalidYear = errors.New("invalid year, must be between 0 and 99")
 
+// ErrMCRCancelLaterNotAllowed is returned when attempting to schedule MCR deletion for later (only CANCEL_NOW is allowed)
+var ErrMCRCancelLaterNotAllowed = errors.New("mcr products do not support scheduled deletion (cancel later), only immediate deletion (CANCEL_NOW) is allowed")
+
+// ErrTransitVXCCancelLaterNotAllowed is returned when attempting to schedule Transit VXC deletion for later (only CANCEL_NOW is allowed)
+var ErrTransitVXCCancelLaterNotAllowed = errors.New("transit vxc (megaport internet) does not support scheduled deletion (cancel later), only immediate deletion (CANCEL_NOW) is allowed")
+
+// ErrDeleteVXCRequestNil is returned when DeleteVXC is called with a nil request.
+var ErrDeleteVXCRequestNil = errors.New("delete VXC request cannot be nil")
+
+// ErrDeleteMCRRequestNil is returned when DeleteMCR is called with a nil request.
+var ErrDeleteMCRRequestNil = errors.New("delete MCR request cannot be nil")
+
 // maintenanceStatesToString converts a slice of MaintenanceState to a slice of strings
 func maintenanceStatesToString(states []MaintenanceState) []string {
 	strs := make([]string, len(states))
