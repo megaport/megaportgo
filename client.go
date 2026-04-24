@@ -93,6 +93,8 @@ type Client struct {
 	BillingMarketService BillingMarketService
 	// NATGatewayService provides methods for interacting with the NAT Gateway API
 	NATGatewayService NATGatewayService
+	// MCRLookingGlassService provides methods for interacting with the MCR Looking Glass API
+	MCRLookingGlassService MCRLookingGlassService
 	// OrderApprovalService provides methods for interacting with the Order Approvals API
 	OrderApprovalService OrderApprovalService
 
@@ -194,6 +196,7 @@ func NewClient(httpClient *http.Client, base *url.URL) *Client {
 	c.BillingMarketService = NewBillingMarketService(c)
 	c.NATGatewayService = NewNATGatewayService(c)
 	c.UserManagementService = NewUserManagementService(c)
+	c.MCRLookingGlassService = NewMCRLookingGlassService(c)
 	c.OrderApprovalService = NewOrderApprovalService(c)
 
 	c.headers = make(map[string]string)
