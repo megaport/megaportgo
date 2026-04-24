@@ -131,8 +131,11 @@ func (suite *MCRLookingGlassIntegrationTestSuite) TestLookingGlassWithMCR() {
 		suite.NotEmpty(asyncJob.JobID, "Async job ID should not be empty")
 		logger.InfoContext(ctx, "Async job created", slog.String("job_id", asyncJob.JobID), slog.String("status", string(asyncJob.Status)))
 
-		// Wait for async results
-		asyncRoutes, err := lgSvc.WaitForAsyncIPRoutes(ctx, mcrUID, asyncJob.JobID, 2*time.Minute)
+		// Wait for async results. The 2-minute bound is on the context so that
+		// the wait helper cannot outlive it.
+		waitCtx, cancelWait := context.WithTimeout(ctx, 2*time.Minute)
+		asyncRoutes, err := lgSvc.WaitForAsyncIPRoutes(waitCtx, mcrUID, asyncJob.JobID)
+		cancelWait()
 		if err != nil {
 			logger.WarnContext(ctx, "WaitForAsyncIPRoutes returned error", slog.String("error", err.Error()))
 		} else {

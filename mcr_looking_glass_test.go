@@ -775,7 +775,9 @@ func (suite *MCRLookingGlassClientTestSuite) TestWaitForAsyncIPRoutesComplete() 
 		fmt.Fprint(w, jblob)
 	})
 
-	got, err := lgSvc.WaitForAsyncIPRoutes(ctx, mcrUID, jobID, 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	got, err := lgSvc.WaitForAsyncIPRoutes(ctx, mcrUID, jobID)
 	suite.NoError(err)
 	suite.Equal(want, got)
 }
@@ -802,7 +804,9 @@ func (suite *MCRLookingGlassClientTestSuite) TestWaitForAsyncIPRoutesFailed() {
 		fmt.Fprint(w, jblob)
 	})
 
-	_, err := lgSvc.WaitForAsyncIPRoutes(ctx, mcrUID, jobID, 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	_, err := lgSvc.WaitForAsyncIPRoutes(ctx, mcrUID, jobID)
 	suite.Error(err)
 	suite.Contains(err.Error(), "failed")
 }
@@ -848,7 +852,9 @@ func (suite *MCRLookingGlassClientTestSuite) TestWaitForAsyncBGPNeighborRoutesCo
 		fmt.Fprint(w, jblob)
 	})
 
-	got, err := lgSvc.WaitForAsyncBGPNeighborRoutes(ctx, mcrUID, jobID, 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	got, err := lgSvc.WaitForAsyncBGPNeighborRoutes(ctx, mcrUID, jobID)
 	suite.NoError(err)
 	suite.Equal(want, got)
 }
@@ -875,7 +881,9 @@ func (suite *MCRLookingGlassClientTestSuite) TestWaitForAsyncBGPNeighborRoutesFa
 		fmt.Fprint(w, jblob)
 	})
 
-	_, err := lgSvc.WaitForAsyncBGPNeighborRoutes(ctx, mcrUID, jobID, 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	_, err := lgSvc.WaitForAsyncBGPNeighborRoutes(ctx, mcrUID, jobID)
 	suite.Error(err)
 	suite.Contains(err.Error(), "failed")
 }

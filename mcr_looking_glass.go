@@ -38,11 +38,23 @@ type MCRLookingGlassService interface {
 	ListBGPNeighborRoutesAsync(ctx context.Context, req *ListBGPNeighborRoutesRequest) (*LookingGlassAsyncJob, error)
 	// GetAsyncBGPNeighborRoutes retrieves the results of an async BGP neighbor routes query.
 	GetAsyncBGPNeighborRoutes(ctx context.Context, mcrUID string, jobID string) (*AsyncBGPNeighborRoutesData, error)
-	// WaitForAsyncIPRoutes polls for async IP routes results until complete or timeout.
-	WaitForAsyncIPRoutes(ctx context.Context, mcrUID string, jobID string, timeout time.Duration) ([]*LookingGlassIPRoute, error)
-	// WaitForAsyncBGPNeighborRoutes polls for async BGP neighbor routes results until complete or timeout.
-	WaitForAsyncBGPNeighborRoutes(ctx context.Context, mcrUID string, jobID string, timeout time.Duration) ([]*LookingGlassBGPNeighborRoute, error)
+	// WaitForAsyncIPRoutes polls for async IP routes results until the job
+	// completes or the context is cancelled. Callers control the overall
+	// timeout by passing a context with a deadline; if the context has no
+	// deadline, a default of defaultAsyncJobTimeout is applied.
+	WaitForAsyncIPRoutes(ctx context.Context, mcrUID string, jobID string) ([]*LookingGlassIPRoute, error)
+	// WaitForAsyncBGPNeighborRoutes polls for async BGP neighbor routes
+	// results until the job completes or the context is cancelled. Callers
+	// control the overall timeout by passing a context with a deadline; if
+	// the context has no deadline, a default of defaultAsyncJobTimeout is
+	// applied.
+	WaitForAsyncBGPNeighborRoutes(ctx context.Context, mcrUID string, jobID string) ([]*LookingGlassBGPNeighborRoute, error)
 }
+
+// defaultAsyncJobTimeout is applied to WaitForAsync* calls when the caller
+// passes a context without a deadline, to avoid blocking forever if the
+// Looking Glass async job never transitions out of a pending state.
+const defaultAsyncJobTimeout = 5 * time.Minute
 
 // MCRLookingGlassServiceOp handles communication with MCR Looking Glass methods of the Megaport API.
 type MCRLookingGlassServiceOp struct {
@@ -363,20 +375,23 @@ func (svc *MCRLookingGlassServiceOp) GetAsyncBGPNeighborRoutes(ctx context.Conte
 	return apiResponse.Data, nil
 }
 
-// WaitForAsyncIPRoutes polls for async IP routes results until complete or timeout.
-func (svc *MCRLookingGlassServiceOp) WaitForAsyncIPRoutes(ctx context.Context, mcrUID string, jobID string, timeout time.Duration) ([]*LookingGlassIPRoute, error) {
+// WaitForAsyncIPRoutes polls for async IP routes results until the job
+// completes or the context is cancelled. If the context has no deadline,
+// defaultAsyncJobTimeout is applied so callers who pass a bare context
+// are still protected from hanging indefinitely.
+func (svc *MCRLookingGlassServiceOp) WaitForAsyncIPRoutes(ctx context.Context, mcrUID string, jobID string) ([]*LookingGlassIPRoute, error) {
 	if mcrUID == "" {
 		return nil, fmt.Errorf("wait for async IP routes request MCRID cannot be empty")
 	}
 	if jobID == "" {
 		return nil, fmt.Errorf("wait for async IP routes request jobID cannot be empty")
 	}
-	if timeout <= 0 {
-		timeout = 5 * time.Minute
-	}
 
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, defaultAsyncJobTimeout)
+		defer cancel()
+	}
 
 	// Check immediately before starting the ticker to return results without
 	// delay when the job is already complete.
@@ -432,20 +447,23 @@ func (svc *MCRLookingGlassServiceOp) WaitForAsyncIPRoutes(ctx context.Context, m
 	}
 }
 
-// WaitForAsyncBGPNeighborRoutes polls for async BGP neighbor routes results until complete or timeout.
-func (svc *MCRLookingGlassServiceOp) WaitForAsyncBGPNeighborRoutes(ctx context.Context, mcrUID string, jobID string, timeout time.Duration) ([]*LookingGlassBGPNeighborRoute, error) {
+// WaitForAsyncBGPNeighborRoutes polls for async BGP neighbor routes results
+// until the job completes or the context is cancelled. If the context has
+// no deadline, defaultAsyncJobTimeout is applied so callers who pass a
+// bare context are still protected from hanging indefinitely.
+func (svc *MCRLookingGlassServiceOp) WaitForAsyncBGPNeighborRoutes(ctx context.Context, mcrUID string, jobID string) ([]*LookingGlassBGPNeighborRoute, error) {
 	if mcrUID == "" {
 		return nil, fmt.Errorf("wait for async BGP neighbor routes request MCRID cannot be empty")
 	}
 	if jobID == "" {
 		return nil, fmt.Errorf("wait for async BGP neighbor routes request jobID cannot be empty")
 	}
-	if timeout <= 0 {
-		timeout = 5 * time.Minute
-	}
 
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, defaultAsyncJobTimeout)
+		defer cancel()
+	}
 
 	// Check immediately before starting the ticker to return results without
 	// delay when the job is already complete.
