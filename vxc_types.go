@@ -328,13 +328,17 @@ type VXCOrderConfirmation struct {
 
 // PartnerConfigInterface represents the configuration of a partner interface.
 type PartnerConfigInterface struct {
-	IpAddresses    []string              `json:"ipAddresses,omitempty"`
-	IpRoutes       []IpRoute             `json:"ipRoutes,omitempty"`
-	NatIpAddresses []string              `json:"natIpAddresses,omitempty"`
-	Bfd            BfdConfig             `json:"bfd,omitempty"`
-	BgpConnections []BgpConnectionConfig `json:"bgpConnections,omitempty"`
-	VLAN           int                   `json:"vlan,omitempty"`
-	IpMtu          int                   `json:"ipMtu,omitempty"`
+	Description     string                `json:"description,omitempty"`
+	InterfaceType   string                `json:"interfaceType,omitempty"` // InterfaceTypeSubInterface (default) or InterfaceTypeIPSecTunnel.
+	IpAddresses     []string              `json:"ipAddresses,omitempty"`
+	IpRoutes        []IpRoute             `json:"ipRoutes,omitempty"`
+	NatIpAddresses  []string              `json:"natIpAddresses,omitempty"`
+	Bfd             BfdConfig             `json:"bfd,omitempty"`
+	BgpConnections  []BgpConnectionConfig `json:"bgpConnections,omitempty"`
+	VLAN            int                   `json:"vlan,omitempty"`
+	IpMtu           int                   `json:"ipMtu,omitempty"`
+	PacketFilterIn  *int64                `json:"packetFilterIn,omitempty"`  // NAT Gateway packet filter ID to apply to inbound packets.
+	PacketFilterOut *int64                `json:"packetFilterOut,omitempty"` // NAT Gateway packet filter ID to apply to outbound packets.
 }
 
 // IpRoute represents an IP route.
