@@ -26,6 +26,9 @@ type LocationService interface {
 	FilterLocationsByMarketCodeV3(ctx context.Context, marketCode string, locations []*LocationV3) ([]*LocationV3, error)
 	// FilterLocationsByMcrAvailabilityV3 filters locations by MCR availability in the Megaport Locations API v3.
 	FilterLocationsByMcrAvailabilityV3(ctx context.Context, mcrAvailable bool, locations []*LocationV3) []*LocationV3
+	// FilterLocationsByNATGatewaySpeedV3 filters locations by NAT Gateway
+	// speed availability (Mbps) advertised in the v3 API diversity zones.
+	FilterLocationsByNATGatewaySpeedV3(ctx context.Context, speedMbps int, locations []*LocationV3) []*LocationV3
 
 	// Shared methods (work with both v2 and v3)
 	// ListCountries returns a list of all countries in the Megaport Network Regions API.
@@ -132,10 +135,11 @@ type LocationV3DiversityZones struct {
 
 // LocationV3DiversityZone represents a single diversity zone with product availability
 type LocationV3DiversityZone struct {
-	McrSpeedMbps       []int `json:"mcrSpeedMbps,omitempty"`
-	MegaportSpeedMbps  []int `json:"megaportSpeedMbps,omitempty"`
-	MveMaxCpuCoreCount *int  `json:"mveMaxCpuCoreCount,omitempty"`
-	MveAvailable       bool  `json:"mveAvailable"`
+	McrSpeedMbps        []int `json:"mcrSpeedMbps,omitempty"`
+	MegaportSpeedMbps   []int `json:"megaportSpeedMbps,omitempty"`
+	MveMaxCpuCoreCount  *int  `json:"mveMaxCpuCoreCount,omitempty"`
+	MveAvailable        bool  `json:"mveAvailable"`
+	NATGatewaySpeedMbps []int `json:"natGatewaySpeedMbps,omitempty"`
 }
 
 // LocationV3ProductAddOns represents additional product options available at the location
@@ -311,6 +315,18 @@ func (svc *LocationServiceOp) FilterLocationsByMcrAvailabilityV3(ctx context.Con
 	return toReturn
 }
 
+// FilterLocationsByNATGatewaySpeedV3 returns only locations where at least
+// one diversity zone advertises the given NAT Gateway speed (Mbps).
+func (svc *LocationServiceOp) FilterLocationsByNATGatewaySpeedV3(ctx context.Context, speedMbps int, locations []*LocationV3) []*LocationV3 {
+	toReturn := []*LocationV3{}
+	for _, location := range locations {
+		if location.SupportsNATGatewaySpeed(speedMbps) {
+			toReturn = append(toReturn, location)
+		}
+	}
+	return toReturn
+}
+
 // ==========================================
 // HELPER METHODS FOR LOCATIONV3
 // ==========================================
@@ -382,6 +398,55 @@ func (l *LocationV3) GetMegaportSpeeds() []int {
 	}
 
 	return uniqueSpeeds
+}
+
+// HasNATGatewaySupport checks if the location supports NAT Gateway in any
+// diversity zone.
+func (l *LocationV3) HasNATGatewaySupport() bool {
+	if l.DiversityZones == nil {
+		return false
+	}
+	if l.DiversityZones.Red != nil && len(l.DiversityZones.Red.NATGatewaySpeedMbps) > 0 {
+		return true
+	}
+	if l.DiversityZones.Blue != nil && len(l.DiversityZones.Blue.NATGatewaySpeedMbps) > 0 {
+		return true
+	}
+	return false
+}
+
+// GetNATGatewaySpeeds returns the deduplicated list of NAT Gateway speeds
+// supported at this location across both diversity zones.
+func (l *LocationV3) GetNATGatewaySpeeds() []int {
+	var allSpeeds []int
+	if l.DiversityZones != nil {
+		if l.DiversityZones.Red != nil {
+			allSpeeds = append(allSpeeds, l.DiversityZones.Red.NATGatewaySpeedMbps...)
+		}
+		if l.DiversityZones.Blue != nil {
+			allSpeeds = append(allSpeeds, l.DiversityZones.Blue.NATGatewaySpeedMbps...)
+		}
+	}
+	seen := make(map[int]bool)
+	var unique []int
+	for _, s := range allSpeeds {
+		if !seen[s] {
+			seen[s] = true
+			unique = append(unique, s)
+		}
+	}
+	return unique
+}
+
+// SupportsNATGatewaySpeed reports whether the location supports a NAT
+// Gateway at the given speed (Mbps) in any diversity zone.
+func (l *LocationV3) SupportsNATGatewaySpeed(speedMbps int) bool {
+	for _, s := range l.GetNATGatewaySpeeds() {
+		if s == speedMbps {
+			return true
+		}
+	}
+	return false
 }
 
 // HasMVESupport checks if the location supports MVE.
