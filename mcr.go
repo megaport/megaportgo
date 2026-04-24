@@ -79,7 +79,7 @@ type BuyMCRRequest struct {
 	AddOns        []MCRAddOn        `json:"addOns,omitempty"`
 
 	WaitForProvision bool          // Wait until the MCR provisions before returning
-	WaitForTime      time.Duration // How long to wait for the MCR to provision if WaitForProvision is true (default is 5 minutes)
+	WaitForTime      time.Duration // How long to wait for the MCR to provision if WaitForProvision is true (default is 5 minutes; must be at least 30 seconds for the poller to fire)
 }
 
 // BuyMCRResponse represents a response from buying an MCR
@@ -113,7 +113,7 @@ type ModifyMCRRequest struct {
 	ContractTermMonths    *int
 
 	WaitForUpdate bool          // Wait until the MCR updates before returning
-	WaitForTime   time.Duration // How long to wait for the MCR to update if WaitForUpdate is true (default is 5 minutes)
+	WaitForTime   time.Duration // How long to wait for the MCR to update if WaitForUpdate is true (default is 5 minutes; must be at least 30 seconds for the poller to fire)
 }
 
 // ModifyMCRResponse represents a response from modifying an MCR
@@ -150,6 +150,9 @@ type DeleteMCRPrefixFilterListResponse struct {
 
 type MCRAddOnRequest struct {
 	AddOn MCRAddOn
+
+	WaitForProvision bool          // Wait until the MCR reaches a ready state before returning
+	WaitForTime      time.Duration // How long to wait if WaitForProvision is true (default is 5 minutes; must be at least 30 seconds for the poller to fire)
 }
 
 // BuyMCR purchases an MCR from the Megaport MCR API.
@@ -195,7 +198,7 @@ func (svc *MCRServiceOp) BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMC
 			case <-timer.C:
 				return nil, fmt.Errorf("time expired waiting for MCR %s to provision", toReturn.TechnicalServiceUID)
 			case <-ctx.Done():
-				return nil, fmt.Errorf("context expired waiting for MCR %s to provision", toReturn.TechnicalServiceUID)
+				return nil, fmt.Errorf("context expired waiting for MCR %s to provision: %w", toReturn.TechnicalServiceUID, ctx.Err())
 			case <-ticker.C:
 				mcrDetails, err := svc.GetMCR(ctx, toReturn.TechnicalServiceUID)
 				if err != nil {
@@ -517,7 +520,7 @@ func (svc *MCRServiceOp) ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (
 			case <-timer.C:
 				return nil, fmt.Errorf("time expired waiting for MCR %s to update", req.MCRID)
 			case <-ctx.Done():
-				return nil, fmt.Errorf("context expired waiting for MCR %s to update", req.MCRID)
+				return nil, fmt.Errorf("context expired waiting for MCR %s to update: %w", req.MCRID, ctx.Err())
 			case <-ticker.C:
 				mcrDetails, err := svc.GetMCR(ctx, req.MCRID)
 				if err != nil {
@@ -646,10 +649,43 @@ func (svc *MCRServiceOp) UpdateMCRWithAddOn(ctx context.Context, mcrID string, r
 			return err
 		}
 		_, err = svc.Client.Do(ctx, clientReq, nil)
-		return err
+		if err != nil {
+			return err
+		}
 	default:
 		return ErrInvalidAddOnType
 	}
+
+	if req.WaitForProvision {
+		toWait := req.WaitForTime
+		if toWait == 0 {
+			toWait = 5 * time.Minute
+		}
+
+		ticker := time.NewTicker(30 * time.Second) // check on the provision status every 30 seconds
+		timer := time.NewTimer(toWait)
+		defer ticker.Stop()
+		defer timer.Stop()
+
+		for {
+			select {
+			case <-timer.C:
+				return fmt.Errorf("time expired waiting for MCR %s to be ready after add-on update", mcrID)
+			case <-ctx.Done():
+				return fmt.Errorf("context expired waiting for MCR %s to be ready after add-on update: %w", mcrID, ctx.Err())
+			case <-ticker.C:
+				mcrDetails, err := svc.GetMCR(ctx, mcrID)
+				if err != nil {
+					return err
+				}
+				if slices.Contains(SERVICE_STATE_READY, mcrDetails.ProvisioningStatus) {
+					return nil
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 // UpdateMCRIPsecAddOn updates an existing IPsec add-on on an MCR.
