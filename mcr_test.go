@@ -69,13 +69,16 @@ func (suite *MCRClientTestSuite) TestBuyMCR() {
 			},
 		},
 	}
-	suite.mux.HandleFunc("/v3/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
-		v := new([]MCROrder)
-		err := json.NewDecoder(r.Body).Decode(v)
+	suite.mux.HandleFunc("/v4/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
+		var wrapper struct {
+			NetworkDesign []MCROrder `json:"networkDesign"`
+			DiscountCodes []string   `json:"discountCodes"`
+		}
+		err := json.NewDecoder(r.Body).Decode(&wrapper)
 		if err != nil {
 			suite.FailNowf("could not decode json", "could not decode json %v", err)
 		}
-		orders := *v
+		orders := wrapper.NetworkDesign
 		wantOrder := mcrOrder[0]
 		gotOrder := orders[0]
 		suite.testMethod(r, http.MethodPost)
@@ -86,6 +89,7 @@ func (suite *MCRClientTestSuite) TestBuyMCR() {
 		suite.Equal(wantOrder.LocationID, gotOrder.LocationID)
 		suite.Equal(wantOrder.Type, gotOrder.Type)
 		suite.Equal(wantOrder.Config, gotOrder.Config)
+		suite.Equal([]string{}, wrapper.DiscountCodes)
 	})
 	got, err := mcrSvc.BuyMCR(ctx, req)
 	suite.NoError(err)
@@ -733,8 +737,26 @@ func (suite *MCRClientTestSuite) TestBuyMCRWithIPsecValidation() {
 		]
 	}`
 
-	suite.mux.HandleFunc("/v3/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc("/v4/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodPost)
+		var wrapper struct {
+			NetworkDesign json.RawMessage `json:"networkDesign"`
+			DiscountCodes []string        `json:"discountCodes"`
+		}
+		err := json.NewDecoder(r.Body).Decode(&wrapper)
+		if err != nil {
+			suite.FailNowf("could not decode json", "could not decode json %v", err)
+		}
+		suite.NotNil(wrapper.NetworkDesign)
+		suite.Equal([]string{}, wrapper.DiscountCodes)
+
+		var orders []map[string]interface{}
+		suite.NoError(json.Unmarshal(wrapper.NetworkDesign, &orders))
+		suite.Len(orders, 1)
+		suite.Equal("test-mcr", orders[0]["productName"])
+		suite.Equal(float64(1), orders[0]["term"])
+		suite.Equal(float64(1000), orders[0]["portSpeed"])
+		suite.Equal(float64(1), orders[0]["locationId"])
 		fmt.Fprint(w, jblob)
 	})
 

@@ -209,20 +209,24 @@ func (suite *VXCClientTestSuite) TestBuyVXC() {
 			}
 		]
 	}`
-	path := "/v3/networkdesign/buy"
+	path := "/v4/networkdesign/buy"
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		v := new([]VXCOrder)
-		err := json.NewDecoder(r.Body).Decode(v)
+		var wrapper struct {
+			NetworkDesign []VXCOrder `json:"networkDesign"`
+			DiscountCodes []string   `json:"discountCodes"`
+		}
+		err := json.NewDecoder(r.Body).Decode(&wrapper)
 		if err != nil {
 			suite.FailNowf("could not decode json", "could not decode json %v", err)
 		}
-		orders := *v
+		orders := wrapper.NetworkDesign
 		wantOrder := vxcOrder[0]
 		gotOrder := orders[0]
 		suite.testMethod(r, http.MethodPost)
 		fmt.Fprint(w, jblob)
 		suite.Equal(wantOrder.PortID, gotOrder.PortID)
 		suite.Equal(&wantOrder.AssociatedVXCs, &gotOrder.AssociatedVXCs)
+		suite.Equal([]string{}, wrapper.DiscountCodes)
 	})
 	want := &BuyVXCResponse{
 		TechnicalServiceUID: vxcProductUid,

@@ -107,3 +107,25 @@ var ErrDeleteVXCRequestNil = errors.New("delete VXC request cannot be nil")
 
 // ErrDeleteMCRRequestNil is returned when DeleteMCR is called with a nil request.
 var ErrDeleteMCRRequestNil = errors.New("delete MCR request cannot be nil")
+
+// maintenanceStatesToString converts a slice of MaintenanceState to a slice of strings
+func maintenanceStatesToString(states []MaintenanceState) []string {
+	strs := make([]string, len(states))
+	for i, v := range states {
+		strs[i] = string(v)
+	}
+	return strs
+}
+
+var ErrInvalidMaintenanceState = fmt.Errorf("invalid maintenance state, valid states are %s", strings.Join(maintenanceStatesToString(VALID_MAINTENANCE_STATES), ", "))
+
+// outageStatesToString converts a slice of OutageState to a slice of strings
+func outageStatesToString(states []OutageState) []string {
+	strs := make([]string, len(states))
+	for i, v := range states {
+		strs[i] = string(v)
+	}
+	return strs
+}
+
+var ErrInvalidOutageState = fmt.Errorf("invalid outage state, valid states are %s", strings.Join(outageStatesToString(VALID_OUTAGE_STATES), ", "))

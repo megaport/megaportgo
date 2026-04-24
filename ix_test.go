@@ -98,7 +98,7 @@ func (suite *IXClientTestSuite) TestBuyIX() {
 	})
 
 	// Mock the buy endpoint
-	buyPath := "/v3/networkdesign/buy"
+	buyPath := "/v4/networkdesign/buy"
 	jblob := fmt.Sprintf(`{
         "message": "IX [%s] created.",
         "terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
@@ -109,17 +109,21 @@ func (suite *IXClientTestSuite) TestBuyIX() {
         ]
     }`, ixProductUid, ixProductUid)
 	suite.mux.HandleFunc(buyPath, func(w http.ResponseWriter, r *http.Request) {
-		v := new([]IXOrder)
-		err := json.NewDecoder(r.Body).Decode(v)
+		var wrapper struct {
+			NetworkDesign []IXOrder `json:"networkDesign"`
+			DiscountCodes []string  `json:"discountCodes"`
+		}
+		err := json.NewDecoder(r.Body).Decode(&wrapper)
 		if err != nil {
 			suite.FailNowf("could not decode json", "could not decode json %v", err)
 		}
-		orders := *v
+		orders := wrapper.NetworkDesign
 		wantOrder := ixOrder
 		gotOrder := orders[0]
 		suite.testMethod(r, http.MethodPost)
 		suite.Equal(wantOrder.ProductUID, gotOrder.ProductUID)
 		suite.Equal(wantOrder.AssociatedIXs[0].ProductName, gotOrder.AssociatedIXs[0].ProductName)
+		suite.Equal([]string{}, wrapper.DiscountCodes)
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprint(w, jblob)
 	})

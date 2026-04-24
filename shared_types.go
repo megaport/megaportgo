@@ -8,6 +8,9 @@ import (
 const (
 	SERVICE_CONFIGURED = "CONFIGURED" // The CONFIGURED service state.
 	SERVICE_LIVE       = "LIVE"       // The LIVE service state.
+	// STATUS_DESIGN is the pre-order state for products that are created but
+	// not yet validated or purchased (currently: NAT Gateways).
+	STATUS_DESIGN = "DESIGN"
 
 	// Product types
 	PRODUCT_MEGAPORT    = "megaport"

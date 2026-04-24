@@ -144,7 +144,7 @@ func (suite *PartnerIntegrationTestSuite) TestFilterPartnerMegaportByDiversityZo
 	if err != nil {
 		suite.FailNowf("could not list partners", "could not list partners %v", err)
 	}
-	filtered, err := partnerSvc.FilterPartnerMegaportByDiversityZone(ctx, partners, "red", true)
+	filtered, err := partnerSvc.FilterPartnerMegaportByDiversityZone(ctx, partners, "red")
 	if err != nil {
 		suite.FailNowf("could not filter partners", "could not filter partners %v", err)
 	}

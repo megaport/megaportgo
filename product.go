@@ -135,13 +135,24 @@ type ResourceTag struct {
 	Value string `json:"value"`
 }
 
+// buyRequestV4 is the internal v4 request envelope for POST /v4/networkdesign/buy.
+type buyRequestV4 struct {
+	NetworkDesign interface{} `json:"networkDesign"`
+	DiscountCodes []string    `json:"discountCodes"`
+}
+
 // ExecuteOrder is responsible for executing an order for a product in the Megaport Products API.
 func (svc *ProductServiceOp) ExecuteOrder(ctx context.Context, requestBody interface{}) (*[]byte, error) {
-	path := "/v3/networkdesign/buy"
+	path := "/v4/networkdesign/buy"
+
+	wrappedBody := buyRequestV4{
+		NetworkDesign: requestBody,
+		DiscountCodes: []string{},
+	}
 
 	url := svc.Client.BaseURL.JoinPath(path).String()
 
-	req, err := svc.Client.NewRequest(ctx, http.MethodPost, url, requestBody)
+	req, err := svc.Client.NewRequest(ctx, http.MethodPost, url, wrappedBody)
 	if err != nil {
 		return nil, err
 	}

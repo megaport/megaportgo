@@ -29,6 +29,16 @@ type NATGatewayService interface {
 	ListNATGatewaySessions(ctx context.Context) ([]*NATGatewaySession, error)
 	// GetNATGatewayTelemetry returns telemetry data for a NAT Gateway product.
 	GetNATGatewayTelemetry(ctx context.Context, req *GetNATGatewayTelemetryRequest) (*ServiceTelemetryResponse, error)
+	// ValidateNATGatewayOrder validates a NAT Gateway design via
+	// POST /v3/networkdesign/validate. The gateway must be in DESIGN state.
+	// Returns an order preview including pricing.
+	ValidateNATGatewayOrder(ctx context.Context, productUID string) (*NATGatewayValidateResult, error)
+	// BuyNATGateway purchases (provisions) a NAT Gateway design via
+	// POST /v3/networkdesign/buy. The gateway must be in DESIGN state;
+	// after a successful call it transitions through the normal
+	// DEPLOYABLE -> CONFIGURED -> LIVE lifecycle. Returns the provisioning
+	// service record.
+	BuyNATGateway(ctx context.Context, productUID string) (*NATGatewayBuyResult, error)
 }
 
 // NewNATGatewayService creates a new instance of the NAT Gateway Service.
@@ -208,22 +218,127 @@ func (svc *NATGatewayServiceOp) UpdateNATGateway(ctx context.Context, req *Updat
 	return &natResp.Data, nil
 }
 
-// DeleteNATGateway deletes a NAT Gateway by its product UID.
+// DeleteNATGateway deletes a NAT Gateway by its product UID. It handles
+// both lifecycle stages transparently:
+//
+//   - DESIGN-state designs that have never been purchased use
+//     DELETE /v3/products/nat_gateways/{uid} (the design-only endpoint).
+//     This hard-removes the record — the gateway disappears from list.
+//   - Any non-DESIGN gateway (e.g. DEPLOYABLE / CONFIGURED / LIVE) is
+//     cancelled via the generic product action
+//     POST /v3/product/{uid}/action/CANCEL_NOW, matching the teardown path
+//     used for Ports, MCRs, MVEs, and VXCs. The record is retained rather
+//     than being hard-deleted, typically transitioning to
+//     DECOMMISSIONED / CANCELLED.
+//
+// Callers do not need to inspect state themselves. The design endpoint
+// returns 400 for non-DESIGN gateways, and CANCEL_NOW rolls back against
+// DESIGN-state records — so a single unified endpoint is not available from
+// the API side, and the SDK routes based on a pre-flight GET. Errors from
+// the pre-flight GET (including 404 for an unknown UID) are wrapped with
+// a "nat gateway delete: could not inspect lifecycle state" prefix but
+// preserve the underlying error chain (use errors.Is / errors.As).
+//
+// The routing is not atomic: if a DESIGN-state gateway transitions to
+// DEPLOYABLE between the GET and the DELETE (e.g., another caller has just
+// purchased it), the design endpoint will return 400. Retrying the delete
+// will route through the provisioned path on the next attempt.
+//
+// Unlike DeletePort / DeleteMCR / DeleteMVE, this method does not currently
+// accept a SafeDelete (end-of-term cancellation) option — provisioned
+// gateways are always cancelled immediately with DeleteNow: true.
 func (svc *NATGatewayServiceOp) DeleteNATGateway(ctx context.Context, productUID string) error {
 	if productUID == "" {
 		return ErrNATGatewayProductUIDRequired
 	}
 
-	path := fmt.Sprintf("/v3/products/nat_gateways/%s", url.PathEscape(productUID))
-	clientReq, err := svc.Client.NewRequest(ctx, http.MethodDelete, path, nil)
+	gw, err := svc.GetNATGateway(ctx, productUID)
+	if err != nil {
+		return fmt.Errorf("nat gateway delete: could not inspect lifecycle state: %w", err)
+	}
+
+	if gw.ProvisioningStatus == STATUS_DESIGN {
+		path := fmt.Sprintf("/v3/products/nat_gateways/%s", url.PathEscape(productUID))
+		clientReq, err := svc.Client.NewRequest(ctx, http.MethodDelete, path, nil)
+		if err != nil {
+			return err
+		}
+		resp, err := svc.Client.Do(ctx, clientReq, nil)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+		return nil
+	}
+
+	_, err = svc.Client.ProductService.DeleteProduct(ctx, &DeleteProductRequest{
+		ProductID: productUID,
+		DeleteNow: true,
+	})
+	return err
+}
+
+// natGatewayOrderItem is the minimal payload expected by
+// /v3/networkdesign/validate and /v3/networkdesign/buy for NAT Gateway
+// designs. The endpoints accept an array of items.
+type natGatewayOrderItem struct {
+	ProductUID string `json:"productUid"`
+}
+
+// ErrNATGatewayOrderResponseEmpty is returned when the API response data
+// array is empty (the endpoints are expected to return one entry per
+// submitted productUid).
+var ErrNATGatewayOrderResponseEmpty = errors.New("nat gateway order response contained no data")
+
+// ValidateNATGatewayOrder validates a NAT Gateway design without purchasing.
+// The returned result includes a pricing preview.
+func (svc *NATGatewayServiceOp) ValidateNATGatewayOrder(ctx context.Context, productUID string) (*NATGatewayValidateResult, error) {
+	if productUID == "" {
+		return nil, ErrNATGatewayProductUIDRequired
+	}
+	var envelope natGatewayValidateEnvelope
+	if err := svc.postNetworkDesign(ctx, "/v3/networkdesign/validate", productUID, &envelope); err != nil {
+		return nil, err
+	}
+	if len(envelope.Data) == 0 {
+		return nil, ErrNATGatewayOrderResponseEmpty
+	}
+	return envelope.Data[0], nil
+}
+
+// BuyNATGateway purchases a NAT Gateway design, kicking off provisioning.
+// The returned result contains the initial provisioning service record.
+func (svc *NATGatewayServiceOp) BuyNATGateway(ctx context.Context, productUID string) (*NATGatewayBuyResult, error) {
+	if productUID == "" {
+		return nil, ErrNATGatewayProductUIDRequired
+	}
+	var envelope natGatewayBuyEnvelope
+	if err := svc.postNetworkDesign(ctx, "/v3/networkdesign/buy", productUID, &envelope); err != nil {
+		return nil, err
+	}
+	if len(envelope.Data) == 0 {
+		return nil, ErrNATGatewayOrderResponseEmpty
+	}
+	return envelope.Data[0], nil
+}
+
+func (svc *NATGatewayServiceOp) postNetworkDesign(ctx context.Context, path, productUID string, out interface{}) error {
+	body := []natGatewayOrderItem{{ProductUID: productUID}}
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodPost, path, body)
 	if err != nil {
 		return err
 	}
-	resp, err := svc.Client.Do(ctx, clientReq, nil)
+	var buf bytes.Buffer
+	resp, err := svc.Client.Do(ctx, clientReq, &buf)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
+	if out != nil {
+		if err := json.Unmarshal(buf.Bytes(), out); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

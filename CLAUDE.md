@@ -45,8 +45,9 @@ Client
 ├── ServiceKeyService    (service_keys.go)
 ├── UserManagementService (user_management.go)
 ├── ManagedAccountService (managed_account.go)
-├── BillingMarketService (billing_markets.go)
-└── NATGatewayService    (nat_gateway.go)
+├── BillingMarketService  (billing_markets.go)
+├── NATGatewayService     (nat_gateway.go)
+└── OrderApprovalService  (order_approvals.go)
 ```
 
 Each service follows the same pattern:
