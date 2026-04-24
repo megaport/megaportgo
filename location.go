@@ -207,14 +207,14 @@ func (svc *LocationServiceOp) ListLocationsV3(ctx context.Context) ([]*LocationV
 		return nil, fileErr
 	}
 
-	locationResponse := &locationV3Response{}
+	resp := &locationV3Response{}
 
-	unmarshalErr := json.Unmarshal(body, locationResponse)
+	unmarshalErr := json.Unmarshal(body, resp)
 	if unmarshalErr != nil {
 		return nil, unmarshalErr
 	}
 
-	return locationResponse.Data, nil
+	return resp.Data, nil
 }
 
 // GetLocationByIDV3 returns a location by its ID using the v3 API.
