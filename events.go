@@ -1,0 +1,227 @@
+package megaport
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/url"
+	"strings"
+)
+
+type EventsService interface {
+	// GetMaintenanceEvents returns details about maintenance events, filtered by the specified state value.
+	GetMaintenanceEvents(ctx context.Context, state string) ([]MaintenanceEvent, error)
+	// GetOutageEvents returns details about outage events, filtered by the specified state value.
+	GetOutageEvents(ctx context.Context, state string) ([]OutageEvent, error)
+}
+
+type EventsServiceOp struct {
+	client *Client
+}
+
+func NewEventsService(client *Client) EventsService {
+	return &EventsServiceOp{
+		client: client,
+	}
+}
+
+type MaintenanceState string
+type OutageState string
+
+var (
+	VALID_MAINTENANCE_STATES = []MaintenanceState{
+		MAINTENANCE_STATE_COMPLETED,
+		MAINTENANCE_STATE_SCHEDULED,
+		MAINTENANCE_STATE_CANCELLED,
+		MAINTENANCE_STATE_RUNNING,
+	}
+	VALID_OUTAGE_STATES = []OutageState{
+		OUTAGE_STATE_ONGOING,
+		OUTAGE_STATE_RESOLVED,
+	}
+)
+
+const (
+	MAINTENANCE_STATE_COMPLETED = MaintenanceState("Completed")
+	MAINTENANCE_STATE_SCHEDULED = MaintenanceState("Scheduled")
+	MAINTENANCE_STATE_CANCELLED = MaintenanceState("Cancelled")
+	MAINTENANCE_STATE_RUNNING   = MaintenanceState("Running")
+	OUTAGE_STATE_ONGOING        = OutageState("Ongoing")
+	OUTAGE_STATE_RESOLVED       = OutageState("Resolved")
+)
+
+// maintenanceEventsResponse is the API response envelope for maintenance events.
+type maintenanceEventsResponse struct {
+	Message string             `json:"message"`
+	Terms   string             `json:"terms"`
+	Data    []MaintenanceEvent `json:"data"`
+}
+
+// outageEventsResponse is the API response envelope for outage events.
+type outageEventsResponse struct {
+	Message string        `json:"message"`
+	Terms   string        `json:"terms"`
+	Data    []OutageEvent `json:"data"`
+}
+
+// MaintenanceEvent represents a maintenance event returned by the Events API.
+// The response may include optional fields depending on the event state and circumstances.
+type MaintenanceEvent struct {
+	// EventID is the ticket number against which a particular event is created.
+	EventID string `json:"eventId"`
+
+	// State is the current state of the event.
+	State string `json:"state"`
+
+	// StartTime is the event start time in ISO 8601 UTC format (yyyy-MM-dd'T'HH:mm:ss.SSSX).
+	StartTime string `json:"startTime"`
+
+	// EndTime is the event end time in ISO 8601 UTC format (yyyy-MM-dd'T'HH:mm:ss.SSSX).
+	EndTime string `json:"endTime"`
+
+	// Impact is the impact of the event on the services, if any.
+	Impact string `json:"impact"`
+
+	// Purpose is the reason why this event is created.
+	Purpose string `json:"purpose"`
+
+	// CancelReason is returned if the event is canceled, stating the cancellation reason.
+	CancelReason string `json:"cancelReason"`
+
+	// EventType is "Emergency" if the event is created on short notice; otherwise, it is a "Planned" event.
+	EventType string `json:"eventType"`
+
+	// ServiceIDs is the list of services affected by the event, containing the short UUIDs of the services.
+	ServiceIDs []string `json:"services"`
+}
+
+// OutageEvent represents an outage event returned by the Events API.
+// The response may include optional fields depending on the event state and circumstances.
+type OutageEvent struct {
+	// OutageID is a unique identifier for each outage event.
+	OutageID string `json:"outageId"`
+
+	// EventID is the ticket number against which a particular event is created.
+	EventID string `json:"eventId"`
+
+	// State is the current state of the event.
+	State string `json:"state"`
+
+	// StartTime is the event start time in ISO 8601 UTC format (yyyy-MM-dd'T'HH:mm:ss.SSSX).
+	StartTime string `json:"startTime"`
+
+	// EndTime is the event end time in ISO 8601 UTC format (yyyy-MM-dd'T'HH:mm:ss.SSSX).
+	EndTime string `json:"endTime"`
+
+	// Purpose is the reason why this event is created.
+	Purpose string `json:"purpose"`
+
+	// ServiceIDs is the list of services affected by the event, containing the short UUIDs of the services.
+	ServiceIDs []string `json:"services"`
+
+	// RootCause is the reason explaining why an outage happened. This field is present only when an outage is resolved.
+	RootCause string `json:"rootCause"`
+
+	// Resolution explains the solution taken to resolve the outage. Present when an outage is resolved.
+	Resolution string `json:"resolution"`
+
+	// MitigationActions explains the steps taken to avoid such outages in the future. Present for resolved outages.
+	MitigationActions string `json:"mitigationActions"`
+
+	// CreatedBy is the user who created the outage.
+	CreatedBy string `json:"createdBy"`
+
+	// CreatedDate is the date and time when an outage event is created, in ISO 8601 UTC format (yyyy-MM-dd'T'HH:mm:ss.SSSX).
+	CreatedDate string `json:"createdDate"`
+
+	// UpdatedDate is the date and time when an outage event is updated, in ISO 8601 UTC format (yyyy-MM-dd'T'HH:mm:ss.SSSX).
+	UpdatedDate string `json:"updatedDate"`
+
+	// Notices is the list of notices sent as an update for an ongoing outage.
+	Notices []string `json:"notices"`
+}
+
+// GetMaintenanceEvents retrieves maintenance events from the Megaport API, filtered by the specified state.
+// It validates the state against the valid maintenance states and returns an error if invalid.
+func (svc *EventsServiceOp) GetMaintenanceEvents(ctx context.Context, state string) ([]MaintenanceEvent, error) {
+	var canonical MaintenanceState
+	for _, st := range VALID_MAINTENANCE_STATES {
+		if strings.EqualFold(string(st), state) {
+			canonical = st
+			break
+		}
+	}
+	if canonical == "" {
+		return nil, ErrInvalidMaintenanceState
+	}
+
+	params := url.Values{}
+	params.Add("state", string(canonical))
+	u := svc.client.BaseURL.JoinPath("/ens/v1/status/maintenance")
+	u.RawQuery = params.Encode()
+
+	req, err := svc.client.NewRequest(ctx, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	resp, err := svc.client.Do(ctx, req, &buf)
+	if err != nil {
+		if resp != nil && resp.Body != nil {
+			resp.Body.Close()
+		}
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var envResp maintenanceEventsResponse
+	if err := json.Unmarshal(buf.Bytes(), &envResp); err != nil {
+		return nil, err
+	}
+
+	return envResp.Data, nil
+}
+
+// GetOutageEvents retrieves outage events from the Megaport API, filtered by the specified state.
+// It validates the state against the valid outage states and returns an error if invalid.
+func (svc *EventsServiceOp) GetOutageEvents(ctx context.Context, state string) ([]OutageEvent, error) {
+	var canonical OutageState
+	for _, st := range VALID_OUTAGE_STATES {
+		if strings.EqualFold(string(st), state) {
+			canonical = st
+			break
+		}
+	}
+	if canonical == "" {
+		return nil, ErrInvalidOutageState
+	}
+
+	params := url.Values{}
+	params.Add("state", string(canonical))
+	u := svc.client.BaseURL.JoinPath("/ens/v1/status/outage")
+	u.RawQuery = params.Encode()
+
+	req, err := svc.client.NewRequest(ctx, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	resp, err := svc.client.Do(ctx, req, &buf)
+	if err != nil {
+		if resp != nil && resp.Body != nil {
+			resp.Body.Close()
+		}
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var envResp outageEventsResponse
+	if err := json.Unmarshal(buf.Bytes(), &envResp); err != nil {
+		return nil, err
+	}
+
+	return envResp.Data, nil
+}

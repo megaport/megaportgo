@@ -3,8 +3,10 @@ package megaport
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 
 	"github.com/lithammer/fuzzysearch/fuzzy"
 )
@@ -26,6 +28,9 @@ type LocationService interface {
 	FilterLocationsByMcrAvailabilityV3(ctx context.Context, mcrAvailable bool, locations []*LocationV3) []*LocationV3
 	// FilterLocationsByMetroV3 filters locations by metro name in the Megaport Locations API v3.
 	FilterLocationsByMetroV3(ctx context.Context, metro string, locations []*LocationV3) []*LocationV3
+	// FilterLocationsByNATGatewaySpeedV3 filters locations by NAT Gateway
+	// speed availability (Mbps) advertised in the v3 API diversity zones.
+	FilterLocationsByNATGatewaySpeedV3(ctx context.Context, speedMbps int, locations []*LocationV3) []*LocationV3
 
 	// Shared methods (work with both v2 and v3)
 	// ListCountries returns a list of all countries in the Megaport Network Regions API.
@@ -34,6 +39,8 @@ type LocationService interface {
 	ListMarketCodes(ctx context.Context) ([]string, error)
 	// IsValidMarketCode checks if a market code is valid in the Megaport Network Regions API.
 	IsValidMarketCode(ctx context.Context, marketCode string) (bool, error)
+	// GetRoundTripTimes returns a list of median RTTs between a specified location and other Megaport locations.
+	GetRoundTripTimes(ctx context.Context, srcLocation, year, month int) ([]*RoundTripTime, error)
 
 	// ListLocations returns a list of all locations in the Megaport Locations API v2.
 	//
@@ -130,10 +137,11 @@ type LocationV3DiversityZones struct {
 
 // LocationV3DiversityZone represents a single diversity zone with product availability
 type LocationV3DiversityZone struct {
-	McrSpeedMbps       []int `json:"mcrSpeedMbps,omitempty"`
-	MegaportSpeedMbps  []int `json:"megaportSpeedMbps,omitempty"`
-	MveMaxCpuCoreCount *int  `json:"mveMaxCpuCoreCount,omitempty"`
-	MveAvailable       bool  `json:"mveAvailable"`
+	McrSpeedMbps        []int `json:"mcrSpeedMbps,omitempty"`
+	MegaportSpeedMbps   []int `json:"megaportSpeedMbps,omitempty"`
+	MveMaxCpuCoreCount  *int  `json:"mveMaxCpuCoreCount,omitempty"`
+	MveAvailable        bool  `json:"mveAvailable"`
+	NATGatewaySpeedMbps []int `json:"natGatewaySpeedMbps,omitempty"`
 }
 
 // LocationV3ProductAddOns represents additional product options available at the location
@@ -180,6 +188,20 @@ type ProductLocationDetails struct {
 	City    string `json:"city"`
 	Metro   string `json:"metro"`
 	Country string `json:"country"`
+}
+
+// RoundTripTime represents the median RTT (over a month) between two Megaport Locations
+type RoundTripTime struct {
+	SrcLocation int     `json:"srcLocation"`
+	DstLocation int     `json:"dstLocation"`
+	MedianRTT   float64 `json:"medianRTT"`
+}
+
+// RoundTripTimeResponse represents the response from the Megaport Locations RTT API
+type RoundTripTimeResponse struct {
+	Message string           `json:"message"`
+	Terms   string           `json:"terms"`
+	Data    []*RoundTripTime `json:"data"`
 }
 
 // ==========================================
@@ -307,6 +329,18 @@ func (svc *LocationServiceOp) FilterLocationsByMetroV3(ctx context.Context, metr
 	return toReturn
 }
 
+// FilterLocationsByNATGatewaySpeedV3 returns only locations where at least
+// one diversity zone advertises the given NAT Gateway speed (Mbps).
+func (svc *LocationServiceOp) FilterLocationsByNATGatewaySpeedV3(ctx context.Context, speedMbps int, locations []*LocationV3) []*LocationV3 {
+	toReturn := []*LocationV3{}
+	for _, location := range locations {
+		if location.SupportsNATGatewaySpeed(speedMbps) {
+			toReturn = append(toReturn, location)
+		}
+	}
+	return toReturn
+}
+
 // ==========================================
 // HELPER METHODS FOR LOCATIONV3
 // ==========================================
@@ -378,6 +412,55 @@ func (l *LocationV3) GetMegaportSpeeds() []int {
 	}
 
 	return uniqueSpeeds
+}
+
+// HasNATGatewaySupport checks if the location supports NAT Gateway in any
+// diversity zone.
+func (l *LocationV3) HasNATGatewaySupport() bool {
+	if l.DiversityZones == nil {
+		return false
+	}
+	if l.DiversityZones.Red != nil && len(l.DiversityZones.Red.NATGatewaySpeedMbps) > 0 {
+		return true
+	}
+	if l.DiversityZones.Blue != nil && len(l.DiversityZones.Blue.NATGatewaySpeedMbps) > 0 {
+		return true
+	}
+	return false
+}
+
+// GetNATGatewaySpeeds returns the deduplicated list of NAT Gateway speeds
+// supported at this location across both diversity zones.
+func (l *LocationV3) GetNATGatewaySpeeds() []int {
+	var allSpeeds []int
+	if l.DiversityZones != nil {
+		if l.DiversityZones.Red != nil {
+			allSpeeds = append(allSpeeds, l.DiversityZones.Red.NATGatewaySpeedMbps...)
+		}
+		if l.DiversityZones.Blue != nil {
+			allSpeeds = append(allSpeeds, l.DiversityZones.Blue.NATGatewaySpeedMbps...)
+		}
+	}
+	seen := make(map[int]bool)
+	var unique []int
+	for _, s := range allSpeeds {
+		if !seen[s] {
+			seen[s] = true
+			unique = append(unique, s)
+		}
+	}
+	return unique
+}
+
+// SupportsNATGatewaySpeed reports whether the location supports a NAT
+// Gateway at the given speed (Mbps) in any diversity zone.
+func (l *LocationV3) SupportsNATGatewaySpeed(speedMbps int) bool {
+	for _, s := range l.GetNATGatewaySpeeds() {
+		if s == speedMbps {
+			return true
+		}
+	}
+	return false
 }
 
 // HasMVESupport checks if the location supports MVE.
@@ -521,4 +604,57 @@ func (svc *LocationServiceOp) IsValidMarketCode(ctx context.Context, marketCode 
 	}
 
 	return found, nil
+}
+
+// GetRoundTripTimes returns a list of median RTTs from a specified location to other
+// Megaport locations, for the given month. Note that the statistics provided by this
+// endpoint are historical, rather than on-demand. Data for the current month will not
+// reliably be available. Also note that at time of writing, data is not made available
+// in the staging environment; an empty slice of RTTs will be returned.
+func (svc *LocationServiceOp) GetRoundTripTimes(ctx context.Context, srcLocation, year, month int) ([]*RoundTripTime, error) {
+	path := "/v2/locations/rtt"
+
+	// Years are represented by their last two digits (i.e. 26 -> 2026)
+	if year < 0 {
+		return nil, ErrInvalidYear
+	}
+
+	// Months are one-indexed (i.e. 1 -> January)
+	if month < 1 || month > 12 {
+		return nil, ErrInvalidMonth
+	}
+
+	// The Locations API expects a two-digit year suffix to represent the year (e.g. 2026 -> 26).
+	yearSuffix := year % 100
+
+	params := url.Values{}
+	params.Add("srcLocation", fmt.Sprintf("%d", srcLocation))
+	params.Add("year", fmt.Sprintf("%d", yearSuffix))
+	params.Add("month", fmt.Sprintf("%d", month))
+	url := svc.Client.BaseURL.JoinPath(path)
+	url.RawQuery = params.Encode()
+	urlStr := url.String()
+
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, urlStr, nil)
+	if err != nil {
+		return nil, err
+	}
+	response, resErr := svc.Client.Do(ctx, clientReq, nil)
+	if resErr != nil {
+		return nil, resErr
+	}
+	defer response.Body.Close()
+
+	body, fileErr := io.ReadAll(response.Body)
+	if fileErr != nil {
+		return nil, fileErr
+	}
+
+	rttResponse := RoundTripTimeResponse{}
+	unmarshalErr := json.Unmarshal(body, &rttResponse)
+	if unmarshalErr != nil {
+		return nil, unmarshalErr
+	}
+
+	return rttResponse.Data, nil
 }

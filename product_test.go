@@ -60,13 +60,16 @@ func (suite *ProductClientTestSuite) TestExecuteOrder() {
 		},
 	}
 
-	suite.mux.HandleFunc("/v3/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
-		v := new([]PortOrder)
-		err := json.NewDecoder(r.Body).Decode(v)
+	suite.mux.HandleFunc("/v4/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
+		var wrapper struct {
+			NetworkDesign []PortOrder `json:"networkDesign"`
+			DiscountCodes []string    `json:"discountCodes"`
+		}
+		err := json.NewDecoder(r.Body).Decode(&wrapper)
 		if err != nil {
 			suite.FailNowf("could not decode json", "could not decode json %v", err)
 		}
-		orders := *v
+		orders := wrapper.NetworkDesign
 		wantOrder := portOrder[0]
 		gotOrder := orders[0]
 		suite.testMethod(r, http.MethodPost)
@@ -77,6 +80,7 @@ func (suite *ProductClientTestSuite) TestExecuteOrder() {
 		suite.Equal(wantOrder.LocationID, gotOrder.LocationID)
 		suite.Equal(wantOrder.Virtual, gotOrder.Virtual)
 		suite.Equal(wantOrder.MarketplaceVisibility, gotOrder.MarketplaceVisibility)
+		suite.Equal([]string{}, wrapper.DiscountCodes)
 	})
 	wantRes := PtrTo([]byte(jblob))
 	gotRes, err := productSvc.ExecuteOrder(ctx, portOrder)

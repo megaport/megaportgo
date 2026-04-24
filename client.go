@@ -87,8 +87,14 @@ type Client struct {
 	ManagedAccountService ManagedAccountService
 	// IXService provides methods for interacting with the IX API
 	IXService IXService
+	// EventsService provides methods for interacting with the Events API
+	EventsService EventsService
 	// BillingMarketService provides methods for interacting with the Billing Market API
 	BillingMarketService BillingMarketService
+	// NATGatewayService provides methods for interacting with the NAT Gateway API
+	NATGatewayService NATGatewayService
+	// OrderApprovalService provides methods for interacting with the Order Approvals API
+	OrderApprovalService OrderApprovalService
 
 	accessToken string    // Access Token for client
 	tokenExpiry time.Time // Token Expiration
@@ -184,8 +190,11 @@ func NewClient(httpClient *http.Client, base *url.URL) *Client {
 	c.PartnerService = NewPartnerService(c)
 	c.ServiceKeyService = NewServiceKeyService(c)
 	c.ManagedAccountService = NewManagedAccountService(c)
+	c.EventsService = NewEventsService(c)
 	c.BillingMarketService = NewBillingMarketService(c)
+	c.NATGatewayService = NewNATGatewayService(c)
 	c.UserManagementService = NewUserManagementService(c)
+	c.OrderApprovalService = NewOrderApprovalService(c)
 
 	c.headers = make(map[string]string)
 

@@ -860,6 +860,69 @@ func (suite *LocationV3ClientTestSuite) TestFilterLocationsByMetroV3() {
 	suite.Equal(locations, gotAll)
 }
 
+// TestFilterLocationsByNATGatewaySpeedV3 tests the NAT Gateway speed filter.
+func (suite *LocationV3ClientTestSuite) TestFilterLocationsByNATGatewaySpeedV3() {
+	ctx := context.Background()
+	locSvc := suite.client.LocationService
+
+	locations := []*LocationV3{
+		{
+			ID: 1, Name: "has-1000-red",
+			DiversityZones: &LocationV3DiversityZones{
+				Red: &LocationV3DiversityZone{NATGatewaySpeedMbps: []int{1000, 2500}},
+			},
+		},
+		{
+			ID: 2, Name: "has-1000-blue",
+			DiversityZones: &LocationV3DiversityZones{
+				Blue: &LocationV3DiversityZone{NATGatewaySpeedMbps: []int{1000}},
+			},
+		},
+		{
+			ID: 3, Name: "has-5000-only",
+			DiversityZones: &LocationV3DiversityZones{
+				Red: &LocationV3DiversityZone{NATGatewaySpeedMbps: []int{5000}},
+			},
+		},
+		{
+			ID:             4,
+			Name:           "no-nat-gateway",
+			DiversityZones: &LocationV3DiversityZones{},
+		},
+	}
+
+	got := locSvc.FilterLocationsByNATGatewaySpeedV3(ctx, 1000, locations)
+	suite.Len(got, 2)
+	suite.Equal(1, got[0].ID)
+	suite.Equal(2, got[1].ID)
+
+	// Speed not supported at any location
+	suite.Empty(locSvc.FilterLocationsByNATGatewaySpeedV3(ctx, 400000, locations))
+}
+
+// TestLocationV3NATGatewayHelpers tests the NAT Gateway helper methods on LocationV3.
+func (suite *LocationV3ClientTestSuite) TestLocationV3NATGatewayHelpers() {
+	loc := &LocationV3{
+		DiversityZones: &LocationV3DiversityZones{
+			Red:  &LocationV3DiversityZone{NATGatewaySpeedMbps: []int{1000, 2500, 5000}},
+			Blue: &LocationV3DiversityZone{NATGatewaySpeedMbps: []int{1000}},
+		},
+	}
+	suite.True(loc.HasNATGatewaySupport())
+	suite.True(loc.SupportsNATGatewaySpeed(1000))
+	suite.True(loc.SupportsNATGatewaySpeed(5000))
+	suite.False(loc.SupportsNATGatewaySpeed(100000))
+	suite.ElementsMatch([]int{1000, 2500, 5000}, loc.GetNATGatewaySpeeds())
+
+	empty := &LocationV3{DiversityZones: &LocationV3DiversityZones{}}
+	suite.False(empty.HasNATGatewaySupport())
+	suite.False(empty.SupportsNATGatewaySpeed(1000))
+	suite.Empty(empty.GetNATGatewaySpeeds())
+
+	nilZones := &LocationV3{}
+	suite.False(nilZones.HasNATGatewaySupport())
+}
+
 // TestLocationV3HelperMethods tests the helper methods for LocationV3 struct.
 func (suite *LocationV3ClientTestSuite) TestLocationV3HelperMethods() {
 	// Test location with MCR support
@@ -1234,4 +1297,130 @@ func (suite *LocationV3ClientTestSuite) TestGetRandom() {
 	got, err := GetRandomLocation(ctx, locSvc, "US")
 	suite.NoError(err)
 	suite.Contains(want, got)
+}
+
+// Note that TestGetRoundTripTimes* tests use the LocationClientTestSuite for v2 endpoints,
+// but are included in this file because the code under test calls an endpoint that is *not*
+// deprecated.
+
+// TestGetRoundTripTimes tests the GetRoundTripTimes method. Note that TestGetRoundTripTimes*
+// tests use the LocationClientTestSuite for v2 endpoints, but are included in this file
+// because the code under test calls an endpoint that is *not* deprecated.
+func (suite *LocationClientTestSuite) TestGetRoundTripTimes() {
+	ctx := context.Background()
+	locSvc := suite.client.LocationService
+	want := []*RoundTripTime{
+		{
+			SrcLocation: 4,
+			DstLocation: 1025,
+			MedianRTT:   208.95250000000001,
+		},
+		{
+			SrcLocation: 4,
+			DstLocation: 2,
+			MedianRTT:   11.314999999999998,
+		},
+		{
+			SrcLocation: 4,
+			DstLocation: 3,
+			MedianRTT:   11.60415,
+		},
+	}
+	jblob := `
+	{
+		"message": "List RTT by location=4 , year=26, month=1",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": [
+			{
+				"srcLocation": 4,
+				"dstLocation": 1025,
+				"medianRTT": 208.95250000000001
+			},
+			{
+				"srcLocation": 4,
+				"dstLocation": 2,
+				"medianRTT": 11.314999999999998
+			},
+			{
+				"srcLocation": 4,
+				"dstLocation": 3,
+				"medianRTT": 11.60415
+			}
+		]
+	}`
+	path := "/v2/locations/rtt"
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		suite.Equal("4", r.URL.Query().Get("srcLocation"))
+		suite.Equal("26", r.URL.Query().Get("year"))
+		suite.Equal("1", r.URL.Query().Get("month"))
+
+		fmt.Fprint(w, jblob)
+	})
+	got, err := locSvc.GetRoundTripTimes(ctx, 4, 2026, 1)
+	suite.NoError(err)
+	suite.Equal(want, got)
+}
+
+// TestGetRoundTripTimesInvalidDateParams tests the GetRoundTripTimes method with invalid date params.
+func (suite *LocationClientTestSuite) TestGetRoundTripTimesInvalidDateParams() {
+	ctx := context.Background()
+	locSvc := suite.client.LocationService
+
+	tests := []struct {
+		name    string
+		year    int
+		month   int
+		wantErr error
+	}{
+		{
+			name:    "year negative",
+			year:    -1,
+			month:   1,
+			wantErr: ErrInvalidYear,
+		},
+		{
+			name:    "month zero",
+			year:    2026,
+			month:   0,
+			wantErr: ErrInvalidMonth,
+		},
+		{
+			name:    "month greater than 12",
+			year:    2026,
+			month:   13,
+			wantErr: ErrInvalidMonth,
+		},
+	}
+
+	for _, tt := range tests {
+		suite.Run(tt.name, func() {
+			got, err := locSvc.GetRoundTripTimes(ctx, 4, tt.year, tt.month)
+			suite.Nil(got)
+			suite.Equal(tt.wantErr, err)
+		})
+	}
+}
+
+// TestGetRoundTripTimesEmptySet tests that GetRoundTripTimes method appropriately handles the case
+// where the API returns an empty set of RTTs. This is the case in staging, or for months that do yet
+// have statistics generated.
+func (suite *LocationClientTestSuite) TestGetRoundTripTimesEmptySet() {
+	ctx := context.Background()
+	locSvc := suite.client.LocationService
+	want := []*RoundTripTime{}
+	jblob := `
+	{
+		"message": "List RTT by location=4 , year=50, month=1",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": []
+	}`
+	path := "/v2/locations/rtt"
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, jblob)
+	})
+	got, err := locSvc.GetRoundTripTimes(ctx, 4, 2050, 1)
+	suite.NoError(err)
+	suite.Equal(want, got)
 }

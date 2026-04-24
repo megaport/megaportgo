@@ -22,7 +22,7 @@ type PartnerService interface {
 	// FilterPartnerMegaportByLocationId filters a list of partner megaports by location ID in the Megaport API.
 	FilterPartnerMegaportByLocationId(ctx context.Context, partners []*PartnerMegaport, locationId int) ([]*PartnerMegaport, error)
 	// FilterPartnerMegaportByDiversityZone filters a list of partner megaports by diversity zone in the Megaport API.
-	FilterPartnerMegaportByDiversityZone(ctx context.Context, partners []*PartnerMegaport, diversityZone string, exactMatch bool) ([]*PartnerMegaport, error)
+	FilterPartnerMegaportByDiversityZone(ctx context.Context, partners []*PartnerMegaport, diversityZone string) ([]*PartnerMegaport, error)
 	// FilterPartnerMegaportByMetro filters a list of partner megaports by metro name, using the client's LocationService to resolve metro-to-location-ID mapping.
 	FilterPartnerMegaportByMetro(ctx context.Context, partners []*PartnerMegaport, metro string) ([]*PartnerMegaport, error)
 }
@@ -172,24 +172,10 @@ func (svc *PartnerServiceOp) FilterPartnerMegaportByLocationId(ctx context.Conte
 }
 
 // FilterPartnerMegaportByDiversityZone filters a list of partner megaports by diversity zone in the Megaport API.
-func (svc *PartnerServiceOp) FilterPartnerMegaportByDiversityZone(ctx context.Context, partners []*PartnerMegaport, diversityZone string, exactMatch bool) ([]*PartnerMegaport, error) {
+func (svc *PartnerServiceOp) FilterPartnerMegaportByDiversityZone(ctx context.Context, partners []*PartnerMegaport, diversityZone string) ([]*PartnerMegaport, error) {
 	toReturn := []*PartnerMegaport{}
 	for _, partner := range partners {
-		match := false
-		if diversityZone != "" {
-			if exactMatch { // Exact Match
-				if diversityZone == partner.DiversityZone {
-					match = true
-				}
-			} else {
-				if fuzzy.Match(diversityZone, partner.DiversityZone) {
-					match = true
-				}
-			}
-		} else {
-			match = true
-		}
-
+		match := diversityZone == "" || diversityZone == partner.DiversityZone
 		if match && partner.VXCPermitted {
 			toReturn = append(toReturn, partner)
 		}
