@@ -46,6 +46,10 @@ type MCRService interface {
 	UpdateMCRWithAddOn(ctx context.Context, mcrID string, req MCRAddOnRequest) error
 	// UpdateMCRIPsecAddOn updates an existing IPsec add-on on an MCR. Setting tunnelCount to 0 will disable IPsec.
 	UpdateMCRIPsecAddOn(ctx context.Context, mcrID string, addOnUID string, tunnelCount int) error
+	// WaitForMCRReady polls until the MCR reaches a ready provisioning state.
+	// A zero timeout defaults to 5 minutes. Returns ErrMCRNotFound or ErrMCRDecommissioned
+	// if the MCR is deleted or decommissioned while polling.
+	WaitForMCRReady(ctx context.Context, mcrID string, timeout time.Duration) error
 
 	// GetMCRPrefixFilterLists returns prefix filter lists for the specified MCR2.
 	//
@@ -657,32 +661,7 @@ func (svc *MCRServiceOp) UpdateMCRWithAddOn(ctx context.Context, mcrID string, r
 	}
 
 	if req.WaitForProvision {
-		toWait := req.WaitForTime
-		if toWait == 0 {
-			toWait = 5 * time.Minute
-		}
-
-		ticker := time.NewTicker(30 * time.Second) // check on the provision status every 30 seconds
-		timer := time.NewTimer(toWait)
-		defer ticker.Stop()
-		defer timer.Stop()
-
-		for {
-			select {
-			case <-timer.C:
-				return fmt.Errorf("time expired waiting for MCR %s to be ready after add-on update", mcrID)
-			case <-ctx.Done():
-				return fmt.Errorf("context expired waiting for MCR %s to be ready after add-on update: %w", mcrID, ctx.Err())
-			case <-ticker.C:
-				mcrDetails, err := svc.GetMCR(ctx, mcrID)
-				if err != nil {
-					return err
-				}
-				if slices.Contains(SERVICE_STATE_READY, mcrDetails.ProvisioningStatus) {
-					return nil
-				}
-			}
-		}
+		return svc.WaitForMCRReady(ctx, mcrID, req.WaitForTime)
 	}
 
 	return nil
@@ -710,4 +689,51 @@ func (svc *MCRServiceOp) UpdateMCRIPsecAddOn(ctx context.Context, mcrID string, 
 	}
 	_, err = svc.Client.Do(ctx, clientReq, nil)
 	return err
+}
+
+// WaitForMCRReady polls until the MCR identified by mcrID reaches a ready
+// provisioning state. A zero timeout defaults to 5 minutes.
+// Returns ErrMCRNotFound if the MCR is deleted while polling, or
+// ErrMCRDecommissioned if it has been decommissioned.
+func (svc *MCRServiceOp) WaitForMCRReady(ctx context.Context, mcrID string, timeout time.Duration) error {
+	if timeout == 0 {
+		timeout = 5 * time.Minute
+	}
+
+	check := func() (bool, error) {
+		mcr, err := svc.GetMCR(ctx, mcrID)
+		if err != nil {
+			if IsServiceNotFoundError(err) {
+				return false, ErrMCRNotFound
+			}
+			return false, err
+		}
+		if mcr.ProvisioningStatus == STATUS_DECOMMISSIONED {
+			return false, ErrMCRDecommissioned
+		}
+		return slices.Contains(SERVICE_STATE_READY, mcr.ProvisioningStatus), nil
+	}
+
+	// Immediate pre-check before starting the ticker.
+	if ready, err := check(); err != nil || ready {
+		return err
+	}
+
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-timer.C:
+			return fmt.Errorf("time expired waiting for MCR %s to reach a ready state", mcrID)
+		case <-ticker.C:
+			if ready, err := check(); err != nil || ready {
+				return err
+			}
+		}
+	}
 }

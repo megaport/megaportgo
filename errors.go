@@ -99,6 +99,26 @@ var ErrInvalidYear = errors.New("invalid year, must be between 0 and 99")
 // ErrMCRCancelLaterNotAllowed is returned when attempting to schedule MCR deletion for later (only CANCEL_NOW is allowed)
 var ErrMCRCancelLaterNotAllowed = errors.New("mcr products do not support scheduled deletion (cancel later), only immediate deletion (CANCEL_NOW) is allowed")
 
+// ErrMCRNotFound is returned when an MCR cannot be found (deleted or never existed).
+var ErrMCRNotFound = errors.New("mcr not found or deleted")
+
+// ErrMCRDecommissioned is returned when an MCR has been decommissioned.
+var ErrMCRDecommissioned = errors.New("mcr has been decommissioned")
+
+// IsServiceNotFoundError reports whether err is a Megaport API not-found response —
+// either HTTP 404 or the non-standard HTTP 400 "Could not find a service with UID" form.
+func IsServiceNotFoundError(err error) bool {
+	apiErr, ok := err.(*ErrorResponse)
+	if !ok || apiErr.Response == nil {
+		return false
+	}
+	if apiErr.Response.StatusCode == http.StatusNotFound {
+		return true
+	}
+	return apiErr.Response.StatusCode == http.StatusBadRequest &&
+		strings.Contains(apiErr.Message, "Could not find a service with UID")
+}
+
 // ErrTransitVXCCancelLaterNotAllowed is returned when attempting to schedule Transit VXC deletion for later (only CANCEL_NOW is allowed)
 var ErrTransitVXCCancelLaterNotAllowed = errors.New("transit vxc (megaport internet) does not support scheduled deletion (cancel later), only immediate deletion (CANCEL_NOW) is allowed")
 
