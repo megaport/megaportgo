@@ -66,7 +66,7 @@ type PriceBookRequest interface {
 
 // VXCPriceBookRequest is a pricing request for a VXC.
 type VXCPriceBookRequest struct {
-	ProductType     string `json:"productType"`  // always "VXC"
+	ProductType     string `json:"productType"` // always "VXC"
 	Currency        string `json:"currency,omitempty"`
 	ALocationID     int    `json:"aLocationId"`
 	BLocationID     int    `json:"bLocationId"`
