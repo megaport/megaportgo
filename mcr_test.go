@@ -909,3 +909,131 @@ func (suite *MCRClientTestSuite) TestUpdateMCRIPsecAddOnInvalidTunnelCount() {
 	suite.Error(err)
 	suite.Equal(ErrInvalidIPsecTunnelCount, err)
 }
+
+func (suite *MCRClientTestSuite) TestGetMCRTelemetry() {
+	ctx := context.Background()
+	mcrSvc := suite.client.MCRService
+	productUID := "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+
+	jblob := `{
+		"serviceUid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+		"type": "BITS",
+		"timeFrame": {"from": 1608516536000, "to": 1608603936000},
+		"data": [
+			{
+				"type": "BITS",
+				"subtype": "IN",
+				"samples": [[1608516536000, 125.5], [1608517536000, 130.2]],
+				"unit": {"name": "Mbps", "fullName": "Megabits per second"}
+			}
+		]
+	}`
+
+	path := fmt.Sprintf("/v2/product/mcr2/%s/telemetry", productUID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.Equal(http.MethodGet, r.Method)
+		suite.Equal("7", r.URL.Query().Get("days"))
+		suite.Equal([]string{"BITS"}, r.URL.Query()["type"])
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, jblob)
+	})
+
+	resp, err := mcrSvc.GetMCRTelemetry(ctx, &GetMCRTelemetryRequest{
+		ProductUID: productUID,
+		Types:      []string{"BITS"},
+		Days:       PtrTo[int32](7),
+	})
+	suite.NoError(err)
+	suite.Equal(productUID, resp.ServiceUID)
+	suite.Equal("BITS", resp.Type)
+	suite.Equal(int64(1608516536000), resp.TimeFrame.From)
+	suite.Equal(int64(1608603936000), resp.TimeFrame.To)
+	suite.Len(resp.Data, 1)
+	suite.Equal("BITS", resp.Data[0].Type)
+	suite.Equal("IN", resp.Data[0].Subtype)
+	suite.Len(resp.Data[0].Samples, 2)
+	suite.Equal(int64(1608516536000), resp.Data[0].Samples[0].Timestamp)
+	suite.Equal(125.5, resp.Data[0].Samples[0].Value)
+	suite.Equal("Mbps", resp.Data[0].Unit.Name)
+	suite.Equal("Megabits per second", resp.Data[0].Unit.FullName)
+}
+
+func (suite *MCRClientTestSuite) TestGetMCRTelemetryWithFromTo() {
+	ctx := context.Background()
+	mcrSvc := suite.client.MCRService
+	productUID := "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+
+	jblob := `{
+		"serviceUid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+		"type": "BITS",
+		"timeFrame": {"from": 1608516536000, "to": 1608603936000},
+		"data": []
+	}`
+
+	path := fmt.Sprintf("/v2/product/mcr2/%s/telemetry", productUID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.Equal(http.MethodGet, r.Method)
+		suite.Equal("1608516536000", r.URL.Query().Get("from"))
+		suite.Equal("1608603936000", r.URL.Query().Get("to"))
+		suite.Equal([]string{"BITS", "PACKETS"}, r.URL.Query()["type"])
+		suite.Empty(r.URL.Query().Get("days"))
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, jblob)
+	})
+
+	fromTime := time.UnixMilli(1608516536000)
+	toTime := time.UnixMilli(1608603936000)
+	resp, err := mcrSvc.GetMCRTelemetry(ctx, &GetMCRTelemetryRequest{
+		ProductUID: productUID,
+		Types:      []string{"BITS", "PACKETS"},
+		From:       &fromTime,
+		To:         &toTime,
+	})
+	suite.NoError(err)
+	suite.Equal(productUID, resp.ServiceUID)
+}
+
+func (suite *MCRClientTestSuite) TestGetMCRTelemetryValidation() {
+	ctx := context.Background()
+	mcrSvc := suite.client.MCRService
+
+	// Missing ProductUID
+	_, err := mcrSvc.GetMCRTelemetry(ctx, &GetMCRTelemetryRequest{
+		Types: []string{"BITS"},
+		Days:  PtrTo[int32](7),
+	})
+	suite.ErrorIs(err, ErrMCRTelemetryProductUIDRequired)
+
+	// Missing Types
+	_, err = mcrSvc.GetMCRTelemetry(ctx, &GetMCRTelemetryRequest{
+		ProductUID: "some-uid",
+		Days:       PtrTo[int32](7),
+	})
+	suite.ErrorIs(err, ErrMCRTelemetryTypesRequired)
+
+	// Days and From/To mutually exclusive
+	fromTime := time.UnixMilli(1608516536000)
+	_, err = mcrSvc.GetMCRTelemetry(ctx, &GetMCRTelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		Days:       PtrTo[int32](7),
+		From:       &fromTime,
+	})
+	suite.ErrorIs(err, ErrMCRTelemetryTimeExclusive)
+
+	// Days out of range
+	_, err = mcrSvc.GetMCRTelemetry(ctx, &GetMCRTelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		Days:       PtrTo[int32](0),
+	})
+	suite.ErrorIs(err, ErrMCRTelemetryDaysOutOfRange)
+
+	// From without To
+	_, err = mcrSvc.GetMCRTelemetry(ctx, &GetMCRTelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		From:       &fromTime,
+	})
+	suite.ErrorIs(err, ErrMCRTelemetryFromToIncomplete)
+}

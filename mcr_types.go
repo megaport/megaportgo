@@ -1,6 +1,10 @@
 package megaport
 
-import "strconv"
+import (
+	"errors"
+	"strconv"
+	"time"
+)
 
 // MCROrder represents a request to buy an MCR from the Megaport Products API.
 type MCROrder struct {
@@ -246,3 +250,20 @@ func (e *APIMCRPrefixFilterListEntry) ToMCRPrefixFilterListEntry() (*MCRPrefixLi
 		Le:     le,
 	}, nil
 }
+
+// GetMCRTelemetryRequest represents a request to get telemetry data for an MCR.
+type GetMCRTelemetryRequest struct {
+	ProductUID string     // The product UID of the MCR.
+	Types      []string   // Telemetry types to retrieve, e.g. "BITS", "PACKETS", "ERRORS", "SPEED", "BYTES_RATE", "BYTES_VOLUME", "OPTICAL", "OPTICAL_100G".
+	From       *time.Time // Start time. Mutually exclusive with Days.
+	To         *time.Time // End time. Mutually exclusive with Days.
+	Days       *int32     // Number of days of telemetry (1-180). Mutually exclusive with From/To.
+}
+
+var (
+	ErrMCRTelemetryProductUIDRequired = errors.New("product UID is required")
+	ErrMCRTelemetryTypesRequired      = errors.New("at least one telemetry type is required")
+	ErrMCRTelemetryTimeExclusive      = errors.New("days and from/to are mutually exclusive")
+	ErrMCRTelemetryDaysOutOfRange     = errors.New("days must be between 1 and 180")
+	ErrMCRTelemetryFromToIncomplete   = errors.New("both from and to must be provided together")
+)

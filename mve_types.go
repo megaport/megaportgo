@@ -1,5 +1,10 @@
 package megaport
 
+import (
+	"errors"
+	"time"
+)
+
 // MVEOrderConfig represents a request to buy an MVE from the Megaport Products API.
 type MVEOrderConfig struct {
 	LocationID        int                   `json:"locationId"`
@@ -343,3 +348,20 @@ type MVESizeAPIResponse struct {
 	Terms   string     `json:"terms"`
 	Data    []*MVESize `json:"data"`
 }
+
+// GetMVETelemetryRequest represents a request to get telemetry data for an MVE.
+type GetMVETelemetryRequest struct {
+	ProductUID string     // The product UID of the MVE.
+	Types      []string   // Telemetry types to retrieve, e.g. "BITS", "PACKETS", "ERRORS".
+	From       *time.Time // Start time. Mutually exclusive with Days.
+	To         *time.Time // End time. Mutually exclusive with Days.
+	Days       *int32     // Number of days of telemetry (1-180). Mutually exclusive with From/To.
+}
+
+var (
+	ErrMVETelemetryProductUIDRequired = errors.New("product UID is required")
+	ErrMVETelemetryTypesRequired      = errors.New("at least one telemetry type is required")
+	ErrMVETelemetryTimeExclusive      = errors.New("days and from/to are mutually exclusive")
+	ErrMVETelemetryDaysOutOfRange     = errors.New("days must be between 1 and 180")
+	ErrMVETelemetryFromToIncomplete   = errors.New("both from and to must be provided together")
+)

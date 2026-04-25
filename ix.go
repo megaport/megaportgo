@@ -1,12 +1,15 @@
 package megaport
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -30,6 +33,8 @@ type IXService interface {
 
 	// ListIXs lists all Internet Exchanges with optional filters
 	ListIXs(ctx context.Context, req *ListIXsRequest) ([]*IX, error)
+	// GetIXTelemetry returns telemetry metrics for an IX.
+	GetIXTelemetry(ctx context.Context, req *GetIXTelemetryRequest) (*ServiceTelemetryResponse, error)
 }
 
 // IXServiceOp handles communication with the IX related methods of the Megaport API
@@ -421,4 +426,63 @@ func shouldIncludeIX(ix *IX, req *ListIXsRequest) bool {
 	}
 
 	return true
+}
+
+// validateGetIXTelemetryRequest validates the request parameters for getting IX telemetry.
+func validateGetIXTelemetryRequest(req *GetIXTelemetryRequest) error {
+	if req.ProductUID == "" {
+		return ErrIXTelemetryProductUIDRequired
+	}
+	if len(req.Types) == 0 {
+		return ErrIXTelemetryTypesRequired
+	}
+	if req.Days != nil && (req.From != nil || req.To != nil) {
+		return ErrIXTelemetryTimeExclusive
+	}
+	if req.Days != nil && (*req.Days < 1 || *req.Days > 180) {
+		return ErrIXTelemetryDaysOutOfRange
+	}
+	if (req.From != nil) != (req.To != nil) {
+		return ErrIXTelemetryFromToIncomplete
+	}
+	return nil
+}
+
+// GetIXTelemetry returns telemetry data for an IX product.
+func (svc *IXServiceOp) GetIXTelemetry(ctx context.Context, req *GetIXTelemetryRequest) (*ServiceTelemetryResponse, error) {
+	if err := validateGetIXTelemetryRequest(req); err != nil {
+		return nil, err
+	}
+
+	path := fmt.Sprintf("/v2/product/ix/%s/telemetry", url.PathEscape(req.ProductUID))
+
+	params := url.Values{}
+	for _, t := range req.Types {
+		params.Add("type", t)
+	}
+	if req.From != nil {
+		params.Set("from", strconv.FormatInt(req.From.UnixMilli(), 10))
+	}
+	if req.To != nil {
+		params.Set("to", strconv.FormatInt(req.To.UnixMilli(), 10))
+	}
+	if req.Days != nil {
+		params.Set("days", strconv.FormatInt(int64(*req.Days), 10))
+	}
+
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, path+"?"+params.Encode(), nil)
+	if err != nil {
+		return nil, err
+	}
+	var buf bytes.Buffer
+	resp, err := svc.Client.Do(ctx, clientReq, &buf)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	telemetryResp := &ServiceTelemetryResponse{}
+	if err := json.Unmarshal(buf.Bytes(), telemetryResp); err != nil {
+		return nil, err
+	}
+	return telemetryResp, nil
 }

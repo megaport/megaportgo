@@ -1,12 +1,15 @@
 package megaport
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -33,6 +36,8 @@ type MVEService interface {
 	ListMVEResourceTags(ctx context.Context, mveID string) (map[string]string, error)
 	// UpdateMVEResourceTags updates the resource tags for an MVE in the Megaport MVE API.
 	UpdateMVEResourceTags(ctx context.Context, mveID string, tags map[string]string) error
+	// GetMVETelemetry returns telemetry metrics for an MVE.
+	GetMVETelemetry(ctx context.Context, req *GetMVETelemetryRequest) (*ServiceTelemetryResponse, error)
 }
 
 // NewMVEService creates a new instance of the MVE Service.
@@ -407,4 +412,63 @@ func (svc *MVEServiceOp) UpdateMVEResourceTags(ctx context.Context, mveID string
 	return svc.Client.ProductService.UpdateProductResourceTags(ctx, mveID, &UpdateProductResourceTagsRequest{
 		ResourceTags: toProductResourceTags(tags),
 	})
+}
+
+// validateGetMVETelemetryRequest validates the request parameters for getting MVE telemetry.
+func validateGetMVETelemetryRequest(req *GetMVETelemetryRequest) error {
+	if req.ProductUID == "" {
+		return ErrMVETelemetryProductUIDRequired
+	}
+	if len(req.Types) == 0 {
+		return ErrMVETelemetryTypesRequired
+	}
+	if req.Days != nil && (req.From != nil || req.To != nil) {
+		return ErrMVETelemetryTimeExclusive
+	}
+	if req.Days != nil && (*req.Days < 1 || *req.Days > 180) {
+		return ErrMVETelemetryDaysOutOfRange
+	}
+	if (req.From != nil) != (req.To != nil) {
+		return ErrMVETelemetryFromToIncomplete
+	}
+	return nil
+}
+
+// GetMVETelemetry returns telemetry data for an MVE product.
+func (svc *MVEServiceOp) GetMVETelemetry(ctx context.Context, req *GetMVETelemetryRequest) (*ServiceTelemetryResponse, error) {
+	if err := validateGetMVETelemetryRequest(req); err != nil {
+		return nil, err
+	}
+
+	path := fmt.Sprintf("/v2/product/mve/%s/telemetry", url.PathEscape(req.ProductUID))
+
+	params := url.Values{}
+	for _, t := range req.Types {
+		params.Add("type", t)
+	}
+	if req.From != nil {
+		params.Set("from", strconv.FormatInt(req.From.UnixMilli(), 10))
+	}
+	if req.To != nil {
+		params.Set("to", strconv.FormatInt(req.To.UnixMilli(), 10))
+	}
+	if req.Days != nil {
+		params.Set("days", strconv.FormatInt(int64(*req.Days), 10))
+	}
+
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, path+"?"+params.Encode(), nil)
+	if err != nil {
+		return nil, err
+	}
+	var buf bytes.Buffer
+	resp, err := svc.Client.Do(ctx, clientReq, &buf)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	telemetryResp := &ServiceTelemetryResponse{}
+	if err := json.Unmarshal(buf.Bytes(), telemetryResp); err != nil {
+		return nil, err
+	}
+	return telemetryResp, nil
 }

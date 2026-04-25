@@ -1,6 +1,7 @@
 package megaport
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -38,6 +40,8 @@ type PortService interface {
 	ListPortResourceTags(ctx context.Context, portID string) (map[string]string, error)
 	// UpdatePortResourceTags updates the resource tags for a port in the Megaport Port API.
 	UpdatePortResourceTags(ctx context.Context, portID string, tags map[string]string) error
+	// GetPortTelemetry returns telemetry metrics for a Port.
+	GetPortTelemetry(ctx context.Context, req *GetPortTelemetryRequest) (*ServiceTelemetryResponse, error)
 }
 
 // NewPortService creates a new instance of the Port Service.
@@ -500,4 +504,63 @@ func (svc *PortServiceOp) UpdatePortResourceTags(ctx context.Context, portID str
 	return svc.Client.ProductService.UpdateProductResourceTags(ctx, portID, &UpdateProductResourceTagsRequest{
 		ResourceTags: productTags,
 	})
+}
+
+// validateGetPortTelemetryRequest validates the request parameters for getting Port telemetry.
+func validateGetPortTelemetryRequest(req *GetPortTelemetryRequest) error {
+	if req.ProductUID == "" {
+		return ErrPortTelemetryProductUIDRequired
+	}
+	if len(req.Types) == 0 {
+		return ErrPortTelemetryTypesRequired
+	}
+	if req.Days != nil && (req.From != nil || req.To != nil) {
+		return ErrPortTelemetryTimeExclusive
+	}
+	if req.Days != nil && (*req.Days < 1 || *req.Days > 180) {
+		return ErrPortTelemetryDaysOutOfRange
+	}
+	if (req.From != nil) != (req.To != nil) {
+		return ErrPortTelemetryFromToIncomplete
+	}
+	return nil
+}
+
+// GetPortTelemetry returns telemetry data for a Port product.
+func (svc *PortServiceOp) GetPortTelemetry(ctx context.Context, req *GetPortTelemetryRequest) (*ServiceTelemetryResponse, error) {
+	if err := validateGetPortTelemetryRequest(req); err != nil {
+		return nil, err
+	}
+
+	path := fmt.Sprintf("/v2/product/megaport/%s/telemetry", url.PathEscape(req.ProductUID))
+
+	params := url.Values{}
+	for _, t := range req.Types {
+		params.Add("type", t)
+	}
+	if req.From != nil {
+		params.Set("from", strconv.FormatInt(req.From.UnixMilli(), 10))
+	}
+	if req.To != nil {
+		params.Set("to", strconv.FormatInt(req.To.UnixMilli(), 10))
+	}
+	if req.Days != nil {
+		params.Set("days", strconv.FormatInt(int64(*req.Days), 10))
+	}
+
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, path+"?"+params.Encode(), nil)
+	if err != nil {
+		return nil, err
+	}
+	var buf bytes.Buffer
+	resp, err := svc.Client.Do(ctx, clientReq, &buf)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	telemetryResp := &ServiceTelemetryResponse{}
+	if err := json.Unmarshal(buf.Bytes(), telemetryResp); err != nil {
+		return nil, err
+	}
+	return telemetryResp, nil
 }
