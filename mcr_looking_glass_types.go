@@ -1,5 +1,7 @@
 package megaport
 
+import "errors"
+
 // RouteProtocol represents the protocol type for a route.
 type RouteProtocol string
 
@@ -202,3 +204,89 @@ type AsyncBGPNeighborRoutesData struct {
 	Status LookingGlassAsyncStatus         `json:"status"`
 	Routes []*LookingGlassBGPNeighborRoute `json:"routes"`
 }
+
+// MCRPingRequest represents a request to ping a destination from an MCR.
+type MCRPingRequest struct {
+	MCRID              string
+	DestinationAddress string // required
+	SourceAddress      string // optional
+	PacketCount        *int32 // optional, 1-60
+	PacketSize         *int32 // optional, 1-9186
+}
+
+// MCRTracerouteRequest represents a request to traceroute from an MCR.
+type MCRTracerouteRequest struct {
+	MCRID              string
+	DestinationAddress string // required
+	SourceAddress      string // optional
+}
+
+// LookingGlassPingStatistics holds RTT and packet stats from a ping.
+type LookingGlassPingStatistics struct {
+	Duplicates         int     `json:"duplicates"`
+	Errors             int     `json:"errors"`
+	PacketLossPct      float64 `json:"packetLossPct"`
+	PacketsReceived    int     `json:"packetsReceived"`
+	PacketsTransmitted int     `json:"packetsTransmitted"`
+	RTTAvgMs           float64 `json:"rttAvgMs"`
+	RTTMaxMs           float64 `json:"rttMaxMs"`
+	RTTMdevMs          float64 `json:"rttMdevMs"`
+	RTTMinMs           float64 `json:"rttMinMs"`
+	TotalTimeMs        float64 `json:"totalTimeMs"`
+}
+
+// LookingGlassPingResult is the result of a ping operation.
+type LookingGlassPingResult struct {
+	Error      string                      `json:"error,omitempty"`
+	RawOutput  string                      `json:"rawOutput,omitempty"`
+	Statistics *LookingGlassPingStatistics `json:"statistics,omitempty"`
+}
+
+// LookingGlassTracerouteProbe is a single probe result within a traceroute hop.
+type LookingGlassTracerouteProbe struct {
+	Host  string  `json:"host,omitempty"`
+	RTTMs float64 `json:"rttMs,omitempty"`
+}
+
+// LookingGlassTracerouteHop is one hop in a traceroute result.
+type LookingGlassTracerouteHop struct {
+	Hop    string                         `json:"hop"`
+	Probes []*LookingGlassTracerouteProbe `json:"probes"`
+}
+
+// LookingGlassTracerouteResult is the result of a traceroute operation.
+type LookingGlassTracerouteResult struct {
+	RawOutput string                       `json:"rawOutput,omitempty"`
+	Hops      []*LookingGlassTracerouteHop `json:"hops"`
+}
+
+// mcrDiagnosticsStringResponse is the API envelope for diagnostic submit responses.
+type mcrDiagnosticsStringResponse struct {
+	Message string `json:"message"`
+	Terms   string `json:"terms"`
+	Data    string `json:"data"`
+}
+
+// mcrDiagnosticsPingResultResponse is the API envelope for ping operation poll responses.
+type mcrDiagnosticsPingResultResponse struct {
+	Message string                  `json:"message"`
+	Terms   string                  `json:"terms"`
+	Data    *LookingGlassPingResult `json:"data"`
+}
+
+// mcrDiagnosticsTracerouteResultResponse is the API envelope for traceroute operation poll responses.
+type mcrDiagnosticsTracerouteResultResponse struct {
+	Message string                        `json:"message"`
+	Terms   string                        `json:"terms"`
+	Data    *LookingGlassTracerouteResult `json:"data"`
+}
+
+// Errors for MCR diagnostics operations.
+var (
+	ErrMCRPingDestinationRequired      = errors.New("destination address is required")
+	ErrMCRPingPacketCountOutOfRange     = errors.New("packet_count must be between 1 and 60")
+	ErrMCRPingPacketSizeOutOfRange      = errors.New("packet_size must be between 1 and 9186")
+	ErrMCRTracerouteDestinationRequired = errors.New("destination address is required")
+	ErrMCRDiagnosticsOperationEmpty     = errors.New("operation ID is required")
+	ErrMCRDiagnosticsTimeout           = errors.New("timed out waiting for diagnostics operation to complete")
+)

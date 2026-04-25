@@ -887,3 +887,174 @@ func (suite *MCRLookingGlassClientTestSuite) TestWaitForAsyncBGPNeighborRoutesFa
 	suite.Error(err)
 	suite.Contains(err.Error(), "failed")
 }
+
+// TestPingMCR tests the PingMCR method happy path.
+func (suite *MCRLookingGlassClientTestSuite) TestPingMCR() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+	mcrUID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	jblob := `{
+		"message": "Ping operation submitted",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": "op-id-ping-123"
+	}`
+
+	path := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/ping", mcrUID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		suite.Equal("8.8.8.8", r.URL.Query().Get("destination_address"))
+		fmt.Fprint(w, jblob)
+	})
+
+	operationID, err := lgSvc.PingMCR(ctx, &MCRPingRequest{
+		MCRID:              mcrUID,
+		DestinationAddress: "8.8.8.8",
+	})
+	suite.NoError(err)
+	suite.Equal("op-id-ping-123", operationID)
+}
+
+// TestTracerouteMCR tests the TracerouteMCR method happy path.
+func (suite *MCRLookingGlassClientTestSuite) TestTracerouteMCR() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+	mcrUID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	jblob := `{
+		"message": "Traceroute operation submitted",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": "op-id-traceroute-456"
+	}`
+
+	path := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/traceroute", mcrUID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		suite.Equal("1.1.1.1", r.URL.Query().Get("destination_address"))
+		fmt.Fprint(w, jblob)
+	})
+
+	operationID, err := lgSvc.TracerouteMCR(ctx, &MCRTracerouteRequest{
+		MCRID:              mcrUID,
+		DestinationAddress: "1.1.1.1",
+	})
+	suite.NoError(err)
+	suite.Equal("op-id-traceroute-456", operationID)
+}
+
+// TestGetMCRPingResult tests the GetMCRPingResult method with a complete result.
+func (suite *MCRLookingGlassClientTestSuite) TestGetMCRPingResult() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+	mcrUID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	operationID := "op-id-ping-123"
+
+	jblob := `{
+		"message": "Operation complete",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": {
+			"rawOutput": "PING 8.8.8.8: 56 data bytes",
+			"statistics": {
+				"duplicates": 0,
+				"errors": 0,
+				"packetLossPct": 0.0,
+				"packetsReceived": 3,
+				"packetsTransmitted": 3,
+				"rttAvgMs": 1.5,
+				"rttMaxMs": 2.0,
+				"rttMdevMs": 0.2,
+				"rttMinMs": 1.2,
+				"totalTimeMs": 5.0
+			}
+		}
+	}`
+
+	path := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes/operation", mcrUID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		suite.Equal(operationID, r.URL.Query().Get("operationId"))
+		fmt.Fprint(w, jblob)
+	})
+
+	result, err := lgSvc.GetMCRPingResult(ctx, mcrUID, operationID)
+	suite.NoError(err)
+	suite.NotNil(result)
+	suite.Equal("PING 8.8.8.8: 56 data bytes", result.RawOutput)
+	suite.NotNil(result.Statistics)
+	suite.Equal(3, result.Statistics.PacketsReceived)
+	suite.Equal(3, result.Statistics.PacketsTransmitted)
+	suite.Equal(0.0, result.Statistics.PacketLossPct)
+	suite.Equal(1.5, result.Statistics.RTTAvgMs)
+}
+
+// TestGetMCRTracerouteResult tests the GetMCRTracerouteResult method with a complete result.
+func (suite *MCRLookingGlassClientTestSuite) TestGetMCRTracerouteResult() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+	mcrUID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	operationID := "op-id-traceroute-456"
+
+	jblob := `{
+		"message": "Operation complete",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": {
+			"rawOutput": "traceroute to 1.1.1.1",
+			"hops": [
+				{
+					"hop": "1",
+					"probes": [
+						{"host": "192.168.1.1", "rttMs": 0.5},
+						{"host": "192.168.1.1", "rttMs": 0.4}
+					]
+				},
+				{
+					"hop": "2",
+					"probes": [
+						{"host": "1.1.1.1", "rttMs": 1.2}
+					]
+				}
+			]
+		}
+	}`
+
+	path := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes/operation", mcrUID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		suite.Equal(operationID, r.URL.Query().Get("operationId"))
+		fmt.Fprint(w, jblob)
+	})
+
+	result, err := lgSvc.GetMCRTracerouteResult(ctx, mcrUID, operationID)
+	suite.NoError(err)
+	suite.NotNil(result)
+	suite.Equal("traceroute to 1.1.1.1", result.RawOutput)
+	suite.Len(result.Hops, 2)
+	suite.Equal("1", result.Hops[0].Hop)
+	suite.Len(result.Hops[0].Probes, 2)
+	suite.Equal("192.168.1.1", result.Hops[0].Probes[0].Host)
+	suite.Equal(0.5, result.Hops[0].Probes[0].RTTMs)
+	suite.Equal("2", result.Hops[1].Hop)
+	suite.Equal("1.1.1.1", result.Hops[1].Probes[0].Host)
+}
+
+// TestPingMCRValidation tests that PingMCR returns an error when DestinationAddress is empty.
+func (suite *MCRLookingGlassClientTestSuite) TestPingMCRValidation() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+
+	_, err := lgSvc.PingMCR(ctx, &MCRPingRequest{
+		MCRID: "36b3f68e-2f54-4331-bf94-f8984449365f",
+	})
+	suite.ErrorIs(err, ErrMCRPingDestinationRequired)
+}
+
+// TestTracerouteMCRValidation tests that TracerouteMCR returns an error when DestinationAddress is empty.
+func (suite *MCRLookingGlassClientTestSuite) TestTracerouteMCRValidation() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+
+	_, err := lgSvc.TracerouteMCR(ctx, &MCRTracerouteRequest{
+		MCRID: "36b3f68e-2f54-4331-bf94-f8984449365f",
+	})
+	suite.ErrorIs(err, ErrMCRTracerouteDestinationRequired)
+}
