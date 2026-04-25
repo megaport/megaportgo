@@ -671,6 +671,53 @@ func (suite *IXClientTestSuite) TestListIXs() {
 	}
 }
 
+// TestListIXPs tests the ListIXPs method.
+func (suite *IXClientTestSuite) TestListIXPs() {
+	ctx := context.Background()
+	ixSvc := suite.client.IXService
+
+	jblob := `{
+		"message": "Found 2 Internet Exchange Points",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": [
+			{
+				"id": 1234,
+				"asn": 58941,
+				"name": "Sydney IX",
+				"metro": "Sydney",
+				"ipv4_network": "103.26.68.0/23",
+				"ipv6_network": "2001:dea:0:10::/64"
+			},
+			{
+				"id": 5678,
+				"asn": 12345,
+				"name": "Los Angeles IX",
+				"metro": "Los Angeles",
+				"ipv4_network": "206.53.168.0/22",
+				"ipv6_network": "2001:504:30::/64"
+			}
+		]
+	}`
+
+	suite.mux.HandleFunc("/v2/ixp", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, jblob)
+	})
+
+	got, err := ixSvc.ListIXPs(ctx)
+	suite.NoError(err)
+	suite.Len(got, 2)
+
+	first := got[0]
+	suite.Equal(1234, first.ID)
+	suite.Equal(58941, first.ASN)
+	suite.Equal("Sydney IX", first.Name)
+	suite.Equal("Sydney", first.Metro)
+	suite.Equal("103.26.68.0/23", first.IPv4Network)
+	suite.Equal("2001:dea:0:10::/64", first.IPv6Network)
+}
+
 // TestListIXsDeduplication tests that duplicate IXs are properly deduplicated
 func (suite *IXClientTestSuite) TestListIXsDeduplication() {
 	// Define mock response with duplicated IX

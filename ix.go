@@ -30,6 +30,9 @@ type IXService interface {
 
 	// ListIXs lists all Internet Exchanges with optional filters
 	ListIXs(ctx context.Context, req *ListIXsRequest) ([]*IX, error)
+
+	// ListIXPs returns all globally available Internet Exchange Points.
+	ListIXPs(ctx context.Context) ([]*InternetExchange, error)
 }
 
 // IXServiceOp handles communication with the IX related methods of the Megaport API
@@ -365,6 +368,34 @@ func (svc *IXServiceOp) ListIXs(ctx context.Context, req *ListIXsRequest) ([]*IX
 	}
 
 	return ixs, nil
+}
+
+// ListIXPs returns all globally available Internet Exchange Points from the Megaport API.
+func (svc *IXServiceOp) ListIXPs(ctx context.Context) ([]*InternetExchange, error) {
+	url := svc.Client.BaseURL.JoinPath("/v2/ixp").String()
+
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := svc.Client.Do(ctx, clientReq, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var ixpResponse listIXPsResponse
+	if err = json.Unmarshal(body, &ixpResponse); err != nil {
+		return nil, err
+	}
+
+	return ixpResponse.Data, nil
 }
 
 // Helper function to determine if an IX matches the filter criteria

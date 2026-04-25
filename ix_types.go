@@ -130,6 +130,26 @@ func ConvertBuyIXRequestToIXOrder(req BuyIXRequest) []IXOrder {
 	}}
 }
 
+// InternetExchange represents an available Internet Exchange Point.
+type InternetExchange struct {
+	ID          int    `json:"id"`
+	ASN         int    `json:"asn"`
+	Name        string `json:"name"`
+	Metro       string `json:"metro"`
+	IPv4Network string `json:"ipv4_network"`
+	IPv6Network string `json:"ipv6_network"`
+}
+
+// ListIXPsRequest is the request type for ListIXPs; reserved for future filtering.
+type ListIXPsRequest struct{}
+
+// listIXPsResponse is the private envelope for the GET /v2/ixp response.
+type listIXPsResponse struct {
+	Message string              `json:"message"`
+	Terms   string              `json:"terms"`
+	Data    []*InternetExchange `json:"data"`
+}
+
 // IXUpdate represents the structure for updating an IX
 type IXUpdate struct {
 	Name           string `json:"name,omitempty"`
