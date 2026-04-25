@@ -285,6 +285,64 @@ func (suite *ProductClientTestSuite) TestManageProductLuck() {
 	suite.Equal(wantRes, gotRes)
 }
 
+// TestGetProductPricing tests the GetProductPricing method.
+func (suite *ProductClientTestSuite) TestGetProductPricing() {
+	ctx := context.Background()
+	productSvc := suite.client.ProductService
+
+	jblob := `{
+		"message": "OK",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": {
+			"productType": "VXC",
+			"currency": "USD",
+			"monthlyRate": 100.0,
+			"monthlyRackRate": 150.0,
+			"prices": [
+				{
+					"chargeReason": "CORE",
+					"frequency": "MONTHLY",
+					"amount": 100.0
+				}
+			],
+			"discounts": []
+		}
+	}`
+
+	suite.mux.HandleFunc("/v4/pricebook/product", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPost)
+		fmt.Fprint(w, jblob)
+	})
+
+	req := &VXCPriceBookRequest{
+		ProductType: "VXC",
+		ALocationID: 1,
+		BLocationID: 2,
+		Speed:       1000,
+	}
+
+	got, err := productSvc.GetProductPricing(ctx, req)
+	suite.NoError(err)
+	suite.NotNil(got)
+	suite.Equal("USD", got.Currency)
+	suite.Equal(100.0, got.MonthlyRate)
+	suite.Equal(150.0, got.MonthlyRackRate)
+	suite.Len(got.Prices, 1)
+	suite.Equal(PriceBookChargeReasonCore, got.Prices[0].ChargeReason)
+	suite.Equal(PricingFrequencyMonthly, got.Prices[0].Frequency)
+	suite.Equal(100.0, got.Prices[0].Amount)
+}
+
+// TestGetProductPricingNilRequest tests that GetProductPricing returns an error for a nil request.
+func (suite *ProductClientTestSuite) TestGetProductPricingNilRequest() {
+	ctx := context.Background()
+	productSvc := suite.client.ProductService
+
+	got, err := productSvc.GetProductPricing(ctx, nil)
+	suite.ErrorIs(err, ErrPricingRequestNil)
+	suite.Nil(got)
+}
+
 func (suite *ProductClientTestSuite) TestListProductResourceTags() {
 	ctx := context.Background()
 	productSvc := suite.client.ProductService

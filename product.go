@@ -32,6 +32,8 @@ type ProductService interface {
 	UpdateProductResourceTags(ctx context.Context, productUID string, tagsReq *UpdateProductResourceTagsRequest) error
 	// GetProductType returns the type of the product based on the Product UID. If no product is found, it returns an error.
 	GetProductType(ctx context.Context, productUID string) (string, error)
+	// GetProductPricing fetches pricing for a product configuration.
+	GetProductPricing(ctx context.Context, req PriceBookRequest) (*PriceBookDto, error)
 }
 
 // ProductServiceOp handles communication with Product methods of the Megaport API.
@@ -413,6 +415,25 @@ func fromProductResourceTags(in []ResourceTag) map[string]string {
 		tags[tag.Key] = tag.Value
 	}
 	return tags
+}
+
+// GetProductPricing fetches pricing for a product configuration via POST /v4/pricebook/product.
+func (svc *ProductServiceOp) GetProductPricing(ctx context.Context, req PriceBookRequest) (*PriceBookDto, error) {
+	if req == nil {
+		return nil, ErrPricingRequestNil
+	}
+	path := "/v4/pricebook/product"
+	url := svc.Client.BaseURL.JoinPath(path).String()
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodPost, url, req)
+	if err != nil {
+		return nil, err
+	}
+	var envelope productPricingResponse
+	_, err = svc.Client.Do(ctx, clientReq, &envelope)
+	if err != nil {
+		return nil, err
+	}
+	return envelope.Data, nil
 }
 
 // GetProductType returns the type of the product based on the Product UID. If no product is found, it returns an error.
