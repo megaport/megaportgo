@@ -1021,11 +1021,19 @@ func (suite *MCRClientTestSuite) TestGetMCRTelemetryValidation() {
 	})
 	suite.ErrorIs(err, ErrMCRTelemetryTimeExclusive)
 
-	// Days out of range
+	// Days out of range (too low)
 	_, err = mcrSvc.GetMCRTelemetry(ctx, &GetMCRTelemetryRequest{
 		ProductUID: "some-uid",
 		Types:      []string{"BITS"},
 		Days:       PtrTo[int32](0),
+	})
+	suite.ErrorIs(err, ErrMCRTelemetryDaysOutOfRange)
+
+	// Days out of range (too high)
+	_, err = mcrSvc.GetMCRTelemetry(ctx, &GetMCRTelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		Days:       PtrTo[int32](181),
 	})
 	suite.ErrorIs(err, ErrMCRTelemetryDaysOutOfRange)
 

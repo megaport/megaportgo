@@ -899,11 +899,19 @@ func (suite *IXClientTestSuite) TestGetIXTelemetryValidation() {
 	})
 	suite.ErrorIs(err, ErrIXTelemetryTimeExclusive)
 
-	// Days out of range
+	// Days out of range (too low)
 	_, err = ixSvc.GetIXTelemetry(ctx, &GetIXTelemetryRequest{
 		ProductUID: "some-uid",
 		Types:      []string{"BITS"},
 		Days:       PtrTo[int32](0),
+	})
+	suite.ErrorIs(err, ErrIXTelemetryDaysOutOfRange)
+
+	// Days out of range (too high)
+	_, err = ixSvc.GetIXTelemetry(ctx, &GetIXTelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		Days:       PtrTo[int32](181),
 	})
 	suite.ErrorIs(err, ErrIXTelemetryDaysOutOfRange)
 
@@ -914,4 +922,34 @@ func (suite *IXClientTestSuite) TestGetIXTelemetryValidation() {
 		From:       &fromTime,
 	})
 	suite.ErrorIs(err, ErrIXTelemetryFromToIncomplete)
+}
+
+// TestGetIXTelemetryWithPeerUID tests that peerUid is decoded from the response.
+func (suite *IXClientTestSuite) TestGetIXTelemetryWithPeerUID() {
+	ctx := context.Background()
+	ixSvc := suite.client.IXService
+	productUID := "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+	peerUID := "3f4a1c2e-8d9b-4e5f-a6c7-1b2d3e4f5a6b"
+
+	jblob := `{
+		"serviceUid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+		"peerUid": "3f4a1c2e-8d9b-4e5f-a6c7-1b2d3e4f5a6b",
+		"type": "BITS",
+		"timeFrame": {"from": 1608516536000, "to": 1608603936000},
+		"data": []
+	}`
+
+	path := fmt.Sprintf("/v2/product/ix/%s/telemetry", productUID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, jblob)
+	})
+
+	resp, err := ixSvc.GetIXTelemetry(ctx, &GetIXTelemetryRequest{
+		ProductUID: productUID,
+		Types:      []string{"BITS"},
+		Days:       PtrTo[int32](7),
+	})
+	suite.NoError(err)
+	suite.Equal(peerUID, resp.PeerUID)
 }

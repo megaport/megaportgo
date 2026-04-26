@@ -699,11 +699,19 @@ func (suite *PortClientTestSuite) TestGetPortTelemetryValidation() {
 	})
 	suite.ErrorIs(err, ErrPortTelemetryTimeExclusive)
 
-	// Days out of range
+	// Days out of range (too low)
 	_, err = portSvc.GetPortTelemetry(ctx, &GetPortTelemetryRequest{
 		ProductUID: "some-uid",
 		Types:      []string{"BITS"},
 		Days:       PtrTo[int32](0),
+	})
+	suite.ErrorIs(err, ErrPortTelemetryDaysOutOfRange)
+
+	// Days out of range (too high)
+	_, err = portSvc.GetPortTelemetry(ctx, &GetPortTelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		Days:       PtrTo[int32](181),
 	})
 	suite.ErrorIs(err, ErrPortTelemetryDaysOutOfRange)
 

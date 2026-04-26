@@ -879,11 +879,19 @@ func (suite *MVEClientTestSuite) TestGetMVETelemetryValidation() {
 	})
 	suite.ErrorIs(err, ErrMVETelemetryTimeExclusive)
 
-	// Days out of range
+	// Days out of range (too low)
 	_, err = mveSvc.GetMVETelemetry(ctx, &GetMVETelemetryRequest{
 		ProductUID: "some-uid",
 		Types:      []string{"BITS"},
 		Days:       PtrTo[int32](0),
+	})
+	suite.ErrorIs(err, ErrMVETelemetryDaysOutOfRange)
+
+	// Days out of range (too high)
+	_, err = mveSvc.GetMVETelemetry(ctx, &GetMVETelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		Days:       PtrTo[int32](181),
 	})
 	suite.ErrorIs(err, ErrMVETelemetryDaysOutOfRange)
 
