@@ -158,7 +158,11 @@ func findActiveMCRLocation(ctx context.Context, c *Client, marketCode, diversity
 		probeCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		probeAddOns := make([]MCRAddOn, len(addOns))
 		for i, a := range addOns {
-			cp := *a.(*MCRAddOnIPsecConfig)
+			ipSecAddon, ok := a.(*MCRAddOnIPsecConfig)
+			if !ok {
+				continue
+			}
+			cp := *ipSecAddon
 			probeAddOns[i] = &cp
 		}
 		err := c.MCRService.ValidateMCROrder(probeCtx, &BuyMCRRequest{
