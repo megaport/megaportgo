@@ -19,9 +19,11 @@ type NATGatewayVXCIntegrationTestSuite IntegrationTestSuite
 
 func TestNATGatewayVXCIntegrationTestSuite(t *testing.T) {
 	t.Parallel()
-	if *runIntegrationTests {
-		suite.Run(t, new(NATGatewayVXCIntegrationTestSuite))
+	if !*runIntegrationTests {
+		return
 	}
+	acquireAccTestSlot(t)
+	suite.Run(t, new(NATGatewayVXCIntegrationTestSuite))
 }
 
 func (suite *NATGatewayVXCIntegrationTestSuite) SetupSuite() {

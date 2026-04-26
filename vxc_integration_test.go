@@ -968,16 +968,11 @@ func (suite *VXCIntegrationTestSuite) TestBuyAzureExpressRoute() {
 
 	azure := pickAzureServiceKey(suite.T(), suite.client)
 
-	testLocation, locationErr := findActivePortLocation(ctx, suite.T(), suite.client, MCR_LOCATION, 1000)
-	if locationErr != nil {
-		suite.FailNowf("cannot find port location", "cannot find port location %v", locationErr)
-	}
-
 	logger.InfoContext(ctx, "buying azure expressroute port a end")
 
 	aEndPortRes, portErr := portSvc.BuyPort(ctx, &BuyPortRequest{
 		Name:                  "Azure ExpressRoute Test Port",
-		LocationId:            testLocation.ID,
+		LocationId:            azure.LocationID,
 		PortSpeed:             1000,
 		Term:                  1,
 		Market:                "AU",
@@ -1100,17 +1095,12 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnect() {
 
 	gcp := pickGCPPairingKey(suite.T(), suite.client)
 
-	testLocation, locErr := findActivePortLocation(ctx, suite.T(), suite.client, MCR_LOCATION, 1000)
-	if locErr != nil {
-		suite.FailNowf("cannot find port location", "cannot find port location %v", locErr)
-	}
-
 	logger.InfoContext(ctx, "buying google interconnect port a end")
 
 	portRes, portErr := portSvc.BuyPort(ctx, &BuyPortRequest{
 		Name:                  "Google Interconnect Test Port",
 		Term:                  1,
-		LocationId:            testLocation.ID,
+		LocationId:            gcp.LocationID,
 		PortSpeed:             1000,
 		Market:                "AU",
 		MarketPlaceVisibility: true,
