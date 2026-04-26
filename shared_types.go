@@ -32,9 +32,6 @@ const (
 	CONNECT_TYPE_AWS_VIF               = "AWS"
 	CONNECT_TYPE_AWS_HOSTED_CONNECTION = "AWSHC"
 
-	// Interface types for VXC vRouter / NAT Gateway A-End partner configs.
-	InterfaceTypeSubInterface = "subInterface"
-	InterfaceTypeIPSecTunnel  = "ipSecTunnel"
 )
 
 var (

@@ -158,9 +158,7 @@ func (suite *NATGatewayVXCIntegrationTestSuite) TestVXCAttachedToNATGateway() {
 			PartnerConfig: VXCOrderVrouterPartnerConfig{
 				Interfaces: []PartnerConfigInterface{
 					{
-						Description:   "nat-gw-to-port",
-						InterfaceType: InterfaceTypeSubInterface,
-						IpAddresses:   []string{"10.0.0.1/30"},
+						IpAddresses: []string{"10.0.0.1/30"},
 						// natIpAddresses is rejected on the NAT Gateway A-End
 						// — NAT IPs are managed by the gateway itself, not
 						// configured per VXC interface.
