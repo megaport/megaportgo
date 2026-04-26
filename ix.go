@@ -378,6 +378,9 @@ func (svc *IXServiceOp) ListIXPs(ctx context.Context, req *ListIXPsRequest) ([]*
 	var buf bytes.Buffer
 	response, err := svc.Client.Do(ctx, clientReq, &buf)
 	if err != nil {
+		if response != nil {
+			response.Body.Close()
+		}
 		return nil, err
 	}
 	defer response.Body.Close()
