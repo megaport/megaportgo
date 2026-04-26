@@ -136,7 +136,7 @@ func (r *MegaportPriceBookRequest) pricingProductType() string { return "MEGAPOR
 // MVEPriceBookRequest is a pricing request for an MVE.
 type MVEPriceBookRequest struct {
 	Currency   string                          `json:"currency,omitempty"`
-	LocationID int                             `json:"locationId,omitempty"`
+	LocationID int                             `json:"locationId"`
 	Size       string                          `json:"size,omitempty"`
 	MVELabel   string                          `json:"mveLabel,omitempty"`
 	Term       int                             `json:"term,omitempty"`
@@ -192,16 +192,16 @@ type productPricingResponse struct {
 
 var (
 	ErrPricingRequestNil           = errors.New("pricing request is required")
-	ErrPricingVXCLocationRequired  = errors.New("VXC pricing requires aLocationId and bLocationId")
-	ErrPricingVXCSpeedRequired     = errors.New("VXC pricing requires speed")
+	ErrPricingVXCLocationRequired  = errors.New("vxc pricing requires aLocationId and bLocationId")
+	ErrPricingVXCSpeedRequired     = errors.New("vxc pricing requires speed")
 	ErrPricingLocationRequired     = errors.New("pricing requires locationId")
 	ErrPricingSpeedRequired        = errors.New("pricing requires speed")
-	ErrPricingIXTypeRequired       = errors.New("IX pricing requires ixType")
-	ErrPricingIXLocationRequired   = errors.New("IX pricing requires portLocationId")
-	ErrPricingNATSessionRequired   = errors.New("NAT Gateway pricing requires sessionCount")
-	ErrPricingIPBlockRequired      = errors.New("IP Address pricing requires ipBlock")
-	ErrPricingIPLocationRequired   = errors.New("IP Address pricing requires locationId")
+	ErrPricingIXTypeRequired       = errors.New("ix pricing requires ixType")
+	ErrPricingIXLocationRequired   = errors.New("ix pricing requires portLocationId")
+	ErrPricingNATSessionRequired   = errors.New("nat gateway pricing requires sessionCount")
+	ErrPricingIPBlockRequired      = errors.New("ip address pricing requires ipBlock")
+	ErrPricingIPLocationRequired   = errors.New("ip address pricing requires locationId")
 	ErrPricingCompanyIDAndUIDSet   = errors.New("companyId and companyUid are mutually exclusive; set only one")
-	ErrPricingMVELocationRequired  = errors.New("MVE pricing requires locationId")
+	ErrPricingMVELocationRequired  = errors.New("mve pricing requires locationId")
 	ErrProductPricingResponseEmpty = errors.New("product pricing response missing data")
 )

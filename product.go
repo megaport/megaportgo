@@ -420,12 +420,9 @@ func fromProductResourceTags(in []ResourceTag) map[string]string {
 	return tags
 }
 
-// GetProductPricing fetches pricing for a product configuration via POST /v4/pricebook/product.
-func (svc *ProductServiceOp) GetProductPricing(ctx context.Context, req PriceBookRequest) (*PriceBookDTO, error) {
-	if err := validatePriceBookRequest(req); err != nil {
-		return nil, err
-	}
-	// Inject productType from the interface so callers don't have to set it manually.
+// buildPriceBookRequestBody marshals req, injects the productType field, and
+// returns the combined map ready to be used as an HTTP request body.
+func buildPriceBookRequestBody(req PriceBookRequest) (map[string]json.RawMessage, error) {
 	rawJSON, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
@@ -439,6 +436,18 @@ func (svc *ProductServiceOp) GetProductPricing(ctx context.Context, req PriceBoo
 		return nil, err
 	}
 	body["productType"] = ptJSON
+	return body, nil
+}
+
+// GetProductPricing fetches pricing for a product configuration via POST /v4/pricebook/product.
+func (svc *ProductServiceOp) GetProductPricing(ctx context.Context, req PriceBookRequest) (*PriceBookDTO, error) {
+	if err := validatePriceBookRequest(req); err != nil {
+		return nil, err
+	}
+	body, err := buildPriceBookRequestBody(req)
+	if err != nil {
+		return nil, err
+	}
 
 	path := "/v4/pricebook/product"
 	reqURL := svc.Client.BaseURL.JoinPath(path).String()
@@ -472,19 +481,10 @@ func (svc *ProductServiceOp) GetProductPricingForCompany(ctx context.Context, pr
 	if err := validatePriceBookRequest(pricingReq.Req); err != nil {
 		return nil, err
 	}
-	rawJSON, err := json.Marshal(pricingReq.Req)
+	body, err := buildPriceBookRequestBody(pricingReq.Req)
 	if err != nil {
 		return nil, err
 	}
-	var body map[string]json.RawMessage
-	if err := json.Unmarshal(rawJSON, &body); err != nil {
-		return nil, err
-	}
-	ptJSON, err := json.Marshal(pricingReq.Req.pricingProductType())
-	if err != nil {
-		return nil, err
-	}
-	body["productType"] = ptJSON
 
 	baseURL := svc.Client.BaseURL.JoinPath("/v4/pricebook/product")
 	q := baseURL.Query()
