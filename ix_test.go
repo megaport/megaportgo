@@ -756,6 +756,12 @@ func (suite *IXClientTestSuite) TestListIXPsMetroFilter() {
 	suite.NoError(err)
 	suite.Len(got, 1)
 	suite.Equal("Sydney IX", got[0].Name)
+
+	// Partial match ("syd") should return the same result as the full match.
+	got, err = ixSvc.ListIXPs(ctx, &ListIXPsRequest{Metro: "syd"})
+	suite.NoError(err)
+	suite.Len(got, 1)
+	suite.Equal("Sydney IX", got[0].Name)
 }
 
 // TestListIXPsError tests that ListIXPs propagates API errors.

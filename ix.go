@@ -198,9 +198,6 @@ func (svc *IXServiceOp) GetIX(ctx context.Context, id string) (*IX, error) {
 	var buf bytes.Buffer
 	resp, err := svc.Client.Do(ctx, clientReq, &buf)
 	if err != nil {
-		if resp != nil && resp.Body != nil {
-			resp.Body.Close()
-		}
 		return nil, err
 	}
 	defer resp.Body.Close()
@@ -271,9 +268,6 @@ func (svc *IXServiceOp) UpdateIX(ctx context.Context, id string, req *UpdateIXRe
 	var buf bytes.Buffer
 	resp, err := svc.Client.Do(ctx, clientReq, &buf)
 	if err != nil {
-		if resp != nil && resp.Body != nil {
-			resp.Body.Close()
-		}
 		return nil, err
 	}
 	defer resp.Body.Close()
@@ -378,9 +372,6 @@ func (svc *IXServiceOp) ListIXPs(ctx context.Context, req *ListIXPsRequest) ([]*
 	var buf bytes.Buffer
 	response, err := svc.Client.Do(ctx, clientReq, &buf)
 	if err != nil {
-		if response != nil {
-			response.Body.Close()
-		}
 		return nil, err
 	}
 	defer response.Body.Close()
