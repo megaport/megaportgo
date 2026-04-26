@@ -584,6 +584,12 @@ func validatePriceBookRequest(req PriceBookRequest) error {
 		if r.IPBlock == "" {
 			return ErrPricingIPBlockRequired
 		}
+	case *MVEPriceBookRequest:
+		if r.LocationID == 0 {
+			return ErrPricingMVELocationRequired
+		}
+	default:
+		return fmt.Errorf("unsupported pricing request type: %T", req)
 	}
 	return nil
 }

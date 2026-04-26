@@ -384,7 +384,8 @@ func (suite *ProductClientTestSuite) TestGetProductPricingMVE() {
 	})
 
 	got, err := productSvc.GetProductPricing(ctx, &MVEPriceBookRequest{
-		MVELabel: "MVE_2_8",
+		LocationID: 1,
+		MVELabel:   "MVE_2_8",
 	})
 	suite.NoError(err)
 	suite.NotNil(got)
@@ -637,6 +638,10 @@ func (suite *ProductClientTestSuite) TestGetProductPricingValidation() {
 	// IP Address missing location
 	_, err = productSvc.GetProductPricing(ctx, &IPAddressPriceBookRequest{IPBlock: "/24"})
 	suite.ErrorIs(err, ErrPricingIPLocationRequired)
+
+	// MVE missing location
+	_, err = productSvc.GetProductPricing(ctx, &MVEPriceBookRequest{MVELabel: "MVE_2_8"})
+	suite.ErrorIs(err, ErrPricingMVELocationRequired)
 }
 
 func (suite *ProductClientTestSuite) TestListProductResourceTags() {
