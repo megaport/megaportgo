@@ -558,6 +558,9 @@ func (svc *PortServiceOp) GetPortTelemetry(ctx context.Context, req *GetPortTele
 	var buf bytes.Buffer
 	resp, err := svc.Client.Do(ctx, clientReq, &buf)
 	if err != nil {
+		if resp != nil && resp.Body != nil {
+			resp.Body.Close()
+		}
 		return nil, err
 	}
 	defer resp.Body.Close()

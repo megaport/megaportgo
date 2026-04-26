@@ -480,6 +480,9 @@ func (svc *IXServiceOp) GetIXTelemetry(ctx context.Context, req *GetIXTelemetryR
 	var buf bytes.Buffer
 	resp, err := svc.Client.Do(ctx, clientReq, &buf)
 	if err != nil {
+		if resp != nil && resp.Body != nil {
+			resp.Body.Close()
+		}
 		return nil, err
 	}
 	defer resp.Body.Close()
