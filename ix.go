@@ -196,10 +196,14 @@ func (svc *IXServiceOp) GetIX(ctx context.Context, id string) (*IX, error) {
 	}
 
 	var buf bytes.Buffer
-	_, err = svc.Client.Do(ctx, clientReq, &buf)
+	resp, err := svc.Client.Do(ctx, clientReq, &buf)
 	if err != nil {
+		if resp != nil && resp.Body != nil {
+			resp.Body.Close()
+		}
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	ixResponse := IXResponse{}
 	if err = json.Unmarshal(buf.Bytes(), &ixResponse); err != nil {
@@ -265,10 +269,14 @@ func (svc *IXServiceOp) UpdateIX(ctx context.Context, id string, req *UpdateIXRe
 	}
 
 	var buf bytes.Buffer
-	_, err = svc.Client.Do(ctx, clientReq, &buf)
+	resp, err := svc.Client.Do(ctx, clientReq, &buf)
 	if err != nil {
+		if resp != nil && resp.Body != nil {
+			resp.Body.Close()
+		}
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	// Parse the response
 	ixResponse := IXResponse{}
