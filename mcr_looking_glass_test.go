@@ -1281,6 +1281,9 @@ func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRPingPending() {
 	mcrUID := "36b3f68e-2f54-4331-bf94-f8984449365f"
 	operationID := "op-id-ping-pending"
 
+	// Use a fast poll interval so the test completes instantly without real-time waits.
+	lgSvc.(*MCRLookingGlassServiceOp).pollInterval = 5 * time.Millisecond
+
 	pendingBlob := `{"message":"pending","terms":"","data":null}`
 	doneBlob := `{
 		"message": "Operation complete",
@@ -1300,6 +1303,7 @@ func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRPingPending() {
 	path := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes/operation", mcrUID)
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
+		suite.Equal(operationID, r.URL.Query().Get("operationId"))
 		calls.Add(1)
 		if calls.Load() == 1 {
 			fmt.Fprint(w, pendingBlob)
@@ -1308,7 +1312,7 @@ func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRPingPending() {
 		}
 	})
 
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
 	result, err := lgSvc.WaitForMCRPing(ctx, mcrUID, operationID)
@@ -1325,6 +1329,9 @@ func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRTraceroutePending() {
 	mcrUID := "36b3f68e-2f54-4331-bf94-f8984449365f"
 	operationID := "op-id-traceroute-pending"
 
+	// Use a fast poll interval so the test completes instantly without real-time waits.
+	lgSvc.(*MCRLookingGlassServiceOp).pollInterval = 5 * time.Millisecond
+
 	pendingBlob := `{"message":"pending","terms":"","data":null}`
 	doneBlob := `{
 		"message": "Operation complete",
@@ -1339,6 +1346,7 @@ func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRTraceroutePending() {
 	path := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes/operation", mcrUID)
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
+		suite.Equal(operationID, r.URL.Query().Get("operationId"))
 		calls.Add(1)
 		if calls.Load() == 1 {
 			fmt.Fprint(w, pendingBlob)
@@ -1347,7 +1355,7 @@ func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRTraceroutePending() {
 		}
 	})
 
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
 	result, err := lgSvc.WaitForMCRTraceroute(ctx, mcrUID, operationID)

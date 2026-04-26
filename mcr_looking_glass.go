@@ -78,12 +78,60 @@ const mcrDiagnosticsPollInterval = 3 * time.Second
 // MCRLookingGlassServiceOp handles communication with MCR Looking Glass methods of the Megaport API.
 type MCRLookingGlassServiceOp struct {
 	Client *Client
+	// pollInterval overrides mcrDiagnosticsPollInterval when non-zero.
+	// Intended for tests that want to avoid real-time waits.
+	pollInterval time.Duration
 }
 
 // NewMCRLookingGlassService creates a new instance of the MCR Looking Glass Service.
 func NewMCRLookingGlassService(c *Client) *MCRLookingGlassServiceOp {
 	return &MCRLookingGlassServiceOp{
 		Client: c,
+	}
+}
+
+// diagnosticsPollInterval returns the effective poll interval for MCR diagnostics.
+func (svc *MCRLookingGlassServiceOp) diagnosticsPollInterval() time.Duration {
+	if svc.pollInterval != 0 {
+		return svc.pollInterval
+	}
+	return mcrDiagnosticsPollInterval
+}
+
+// pollMCRDiagnostics is a generic helper that polls fetch until it returns a
+// non-nil result, pollCtx is done, or pollDoneErr fires. It performs an
+// immediate poll before starting the ticker so callers receive results without
+// delay when the operation is already complete.
+func pollMCRDiagnostics[T any](
+	pollCtx context.Context,
+	pollDoneErr func() error,
+	fetch func(context.Context) (*T, error),
+	interval time.Duration,
+) (*T, error) {
+	result, err := fetch(pollCtx)
+	if err != nil {
+		return nil, err
+	}
+	if result != nil {
+		return result, nil
+	}
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-pollCtx.Done():
+			return nil, pollDoneErr()
+		case <-ticker.C:
+			result, err = fetch(pollCtx)
+			if err != nil {
+				return nil, err
+			}
+			if result != nil {
+				return result, nil
+			}
+		}
 	}
 }
 
@@ -658,32 +706,14 @@ func (svc *MCRLookingGlassServiceOp) WaitForMCRPing(ctx context.Context, mcrUID,
 		return ErrMCRDiagnosticsTimeout // SDK-managed timeout fired
 	}
 
-	// Poll immediately — return without delay when the result is already available.
-	result, err := svc.GetMCRPingResult(pollCtx, mcrUID, operationID)
-	if err != nil {
-		return nil, err
-	}
-	if result != nil {
-		return result, nil
-	}
-
-	ticker := time.NewTicker(mcrDiagnosticsPollInterval)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-pollCtx.Done():
-			return nil, pollDoneErr()
-		case <-ticker.C:
-			result, err := svc.GetMCRPingResult(pollCtx, mcrUID, operationID)
-			if err != nil {
-				return nil, err
-			}
-			if result != nil {
-				return result, nil
-			}
-		}
-	}
+	return pollMCRDiagnostics(
+		pollCtx,
+		pollDoneErr,
+		func(c context.Context) (*LookingGlassPingResult, error) {
+			return svc.GetMCRPingResult(c, mcrUID, operationID)
+		},
+		svc.diagnosticsPollInterval(),
+	)
 }
 
 // WaitForMCRTraceroute polls until the traceroute result is available or context is cancelled.
@@ -712,32 +742,14 @@ func (svc *MCRLookingGlassServiceOp) WaitForMCRTraceroute(ctx context.Context, m
 		return ErrMCRDiagnosticsTimeout // SDK-managed timeout fired
 	}
 
-	// Poll immediately — return without delay when the result is already available.
-	result, err := svc.GetMCRTracerouteResult(pollCtx, mcrUID, operationID)
-	if err != nil {
-		return nil, err
-	}
-	if result != nil {
-		return result, nil
-	}
-
-	ticker := time.NewTicker(mcrDiagnosticsPollInterval)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-pollCtx.Done():
-			return nil, pollDoneErr()
-		case <-ticker.C:
-			result, err := svc.GetMCRTracerouteResult(pollCtx, mcrUID, operationID)
-			if err != nil {
-				return nil, err
-			}
-			if result != nil {
-				return result, nil
-			}
-		}
-	}
+	return pollMCRDiagnostics(
+		pollCtx,
+		pollDoneErr,
+		func(c context.Context) (*LookingGlassTracerouteResult, error) {
+			return svc.GetMCRTracerouteResult(c, mcrUID, operationID)
+		},
+		svc.diagnosticsPollInterval(),
+	)
 }
 
 // WaitForAsyncBGPNeighborRoutes polls for async BGP neighbor routes results
