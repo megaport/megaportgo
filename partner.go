@@ -23,6 +23,8 @@ type PartnerService interface {
 	FilterPartnerMegaportByLocationId(ctx context.Context, partners []*PartnerMegaport, locationId int) ([]*PartnerMegaport, error)
 	// FilterPartnerMegaportByDiversityZone filters a list of partner megaports by diversity zone in the Megaport API.
 	FilterPartnerMegaportByDiversityZone(ctx context.Context, partners []*PartnerMegaport, diversityZone string) ([]*PartnerMegaport, error)
+	// FilterPartnerMegaportByMetro filters a list of partner megaports by metro name, using the client's LocationService to resolve metro-to-location-ID mapping.
+	FilterPartnerMegaportByMetro(ctx context.Context, partners []*PartnerMegaport, metro string) ([]*PartnerMegaport, error)
 }
 
 // NewPartnerService creates a new instance of the PartnerService.
@@ -178,6 +180,59 @@ func (svc *PartnerServiceOp) FilterPartnerMegaportByDiversityZone(ctx context.Co
 			toReturn = append(toReturn, partner)
 		}
 	}
+	if len(toReturn) == 0 {
+		return nil, ErrNoPartnerPortsFound
+	}
+	return toReturn, nil
+}
+
+// FilterPartnerMegaportByMetro filters a list of partner megaports by metro name,
+// using the client's LocationService to resolve which location IDs belong to the given metro.
+// When metro is empty, all VXC-permitted partners are returned without calling the LocationService.
+func (svc *PartnerServiceOp) FilterPartnerMegaportByMetro(ctx context.Context, partners []*PartnerMegaport, metro string) ([]*PartnerMegaport, error) {
+	if metro == "" {
+		toReturn := []*PartnerMegaport{}
+		for _, partner := range partners {
+			if partner.VXCPermitted {
+				toReturn = append(toReturn, partner)
+			}
+		}
+		if len(toReturn) == 0 {
+			return nil, ErrNoPartnerPortsFound
+		}
+		return toReturn, nil
+	}
+
+	hasPermitted := false
+	for _, p := range partners {
+		if p.VXCPermitted {
+			hasPermitted = true
+			break
+		}
+	}
+	if !hasPermitted {
+		return nil, ErrNoPartnerPortsFound
+	}
+
+	locations, err := svc.Client.LocationService.ListLocationsV3(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	metroLocationIDs := make(map[int]struct{})
+	for _, loc := range locations {
+		if loc.Metro == metro {
+			metroLocationIDs[loc.ID] = struct{}{}
+		}
+	}
+
+	toReturn := []*PartnerMegaport{}
+	for _, partner := range partners {
+		if _, ok := metroLocationIDs[partner.LocationId]; partner.VXCPermitted && ok {
+			toReturn = append(toReturn, partner)
+		}
+	}
+
 	if len(toReturn) == 0 {
 		return nil, ErrNoPartnerPortsFound
 	}
