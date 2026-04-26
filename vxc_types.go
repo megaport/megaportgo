@@ -328,14 +328,16 @@ type VXCOrderConfirmation struct {
 
 // PartnerConfigInterface represents the configuration of a partner interface.
 type PartnerConfigInterface struct {
-	IpAddresses    []string              `json:"ipAddresses,omitempty"`
-	IpRoutes       []IpRoute             `json:"ipRoutes,omitempty"`
-	NatIpAddresses []string              `json:"natIpAddresses,omitempty"`
-	Bfd            BfdConfig             `json:"bfd,omitempty"`
-	BgpConnections []BgpConnectionConfig `json:"bgpConnections,omitempty"`
-	VLAN           int                   `json:"vlan,omitempty"`
-	IpMtu          int                   `json:"ipMtu,omitempty"`
-	IpsecTunnels   []IPsecTunnelConfig   `json:"ipsecTunnels,omitempty"`
+	IpAddresses     []string              `json:"ipAddresses,omitempty"`
+	IpRoutes        []IpRoute             `json:"ipRoutes,omitempty"`
+	NatIpAddresses  []string              `json:"natIpAddresses,omitempty"`
+	Bfd             BfdConfig             `json:"bfd,omitempty"`
+	BgpConnections  []BgpConnectionConfig `json:"bgpConnections,omitempty"`
+	VLAN            int                   `json:"vlan,omitempty"`
+	IpMtu           int                   `json:"ipMtu,omitempty"`
+	IpsecTunnels    []IPsecTunnelConfig   `json:"ipsecTunnels,omitempty"`
+	PacketFilterIn  *int64                `json:"packetFilterIn,omitempty"`  // NAT Gateway packet filter ID to apply to inbound packets.
+	PacketFilterOut *int64                `json:"packetFilterOut,omitempty"` // NAT Gateway packet filter ID to apply to outbound packets.
 }
 
 // IPsec start action values used by IPsecTunnelConfig.StartAction.
@@ -686,7 +688,7 @@ func (c *CSPConnection) UnmarshalJSON(data []byte) error {
 				return err
 			}
 			c.CSPConnection = append(c.CSPConnection, vr)
-		case "TRANSIT":
+		case connectTypeTransit:
 			marshaled, err := json.Marshal(cn)
 			if err != nil {
 				return err
@@ -777,7 +779,7 @@ func (c *CSPConnection) UnmarshalJSON(data []byte) error {
 					return err
 				}
 				c.CSPConnection = append(c.CSPConnection, vr)
-			case "TRANSIT":
+			case connectTypeTransit:
 				marshaled, err := json.Marshal(cn)
 				if err != nil {
 					return err

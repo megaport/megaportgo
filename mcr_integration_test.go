@@ -109,11 +109,20 @@ func (suite *MCRIntegrationTestSuite) TestMCRLifecycle() {
 	}
 	suite.EqualValues(newMCRName, mcr.Name)
 
-	// MCR product type does not support CANCEL (soft-delete / scheduled
-	// end-of-term cancellation) at the API layer — the staging backend
-	// returns 409 "Action [CANCEL] not allowed for product type: MCR".
-	// The terraform provider's MCR resource mirrors this by always using
-	// DeleteNow: true, so this test only exercises hard-delete.
+	// Testing MCR Cancel - MCR products do not support cancel later (only CANCEL_NOW)
+	logger.InfoContext(ctx, "Attempting to schedule MCR for deletion (cancel later) - this should fail.", slog.String("mcr_id", mcrId))
+
+	// Attempt soft delete - this should now fail because MCR only supports CANCEL_NOW
+	_, deleteErr := mcrSvc.DeleteMCR(ctx, &DeleteMCRRequest{
+		MCRID:     mcrId,
+		DeleteNow: false,
+	})
+	// Expect error since MCR does not support cancel later
+	suite.Require().Error(deleteErr, "expected error when attempting to cancel MCR later")
+	suite.Require().ErrorIs(deleteErr, ErrMCRCancelLaterNotAllowed, "expected ErrMCRCancelLaterNotAllowed error")
+	logger.DebugContext(ctx, "MCR cancel later correctly rejected", slog.String("error", deleteErr.Error()))
+
+	// Testing MCR Delete
 	logger.InfoContext(ctx, "Deleting MCR now.")
 
 	hardDeleteRes, deleteErr := mcrSvc.DeleteMCR(ctx, &DeleteMCRRequest{

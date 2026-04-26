@@ -46,6 +46,10 @@ type MCRService interface {
 	UpdateMCRWithAddOn(ctx context.Context, mcrID string, req MCRAddOnRequest) error
 	// UpdateMCRIPsecAddOn updates an existing IPsec add-on on an MCR. Setting tunnelCount to 0 will disable IPsec.
 	UpdateMCRIPsecAddOn(ctx context.Context, mcrID string, addOnUID string, tunnelCount int) error
+	// WaitForMCRReady polls until the MCR reaches a ready provisioning state.
+	// A zero timeout defaults to 5 minutes. Returns ErrMCRNotFound or ErrMCRDecommissioned
+	// if the MCR is deleted or decommissioned while polling.
+	WaitForMCRReady(ctx context.Context, mcrID string, timeout time.Duration) error
 
 	// GetMCRPrefixFilterLists returns prefix filter lists for the specified MCR2.
 	//
@@ -79,7 +83,7 @@ type BuyMCRRequest struct {
 	AddOns        []MCRAddOn        `json:"addOns,omitempty"`
 
 	WaitForProvision bool          // Wait until the MCR provisions before returning
-	WaitForTime      time.Duration // How long to wait for the MCR to provision if WaitForProvision is true (default is 5 minutes)
+	WaitForTime      time.Duration // How long to wait for the MCR to provision if WaitForProvision is true (default is 5 minutes; must be at least 30 seconds for the poller to fire)
 }
 
 // BuyMCRResponse represents a response from buying an MCR
@@ -113,7 +117,7 @@ type ModifyMCRRequest struct {
 	ContractTermMonths    *int
 
 	WaitForUpdate bool          // Wait until the MCR updates before returning
-	WaitForTime   time.Duration // How long to wait for the MCR to update if WaitForUpdate is true (default is 5 minutes)
+	WaitForTime   time.Duration // How long to wait for the MCR to update if WaitForUpdate is true (default is 5 minutes; must be at least 30 seconds for the poller to fire)
 }
 
 // ModifyMCRResponse represents a response from modifying an MCR
@@ -150,6 +154,9 @@ type DeleteMCRPrefixFilterListResponse struct {
 
 type MCRAddOnRequest struct {
 	AddOn MCRAddOn
+
+	WaitForProvision bool          // Wait until the MCR reaches a ready state before returning
+	WaitForTime      time.Duration // How long to wait if WaitForProvision is true (default is 5 minutes; must be at least 30 seconds for the poller to fire)
 }
 
 // BuyMCR purchases an MCR from the Megaport MCR API.
@@ -195,7 +202,7 @@ func (svc *MCRServiceOp) BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMC
 			case <-timer.C:
 				return nil, fmt.Errorf("time expired waiting for MCR %s to provision", toReturn.TechnicalServiceUID)
 			case <-ctx.Done():
-				return nil, fmt.Errorf("context expired waiting for MCR %s to provision", toReturn.TechnicalServiceUID)
+				return nil, fmt.Errorf("context expired waiting for MCR %s to provision: %w", toReturn.TechnicalServiceUID, ctx.Err())
 			case <-ticker.C:
 				mcrDetails, err := svc.GetMCR(ctx, toReturn.TechnicalServiceUID)
 				if err != nil {
@@ -517,7 +524,7 @@ func (svc *MCRServiceOp) ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (
 			case <-timer.C:
 				return nil, fmt.Errorf("time expired waiting for MCR %s to update", req.MCRID)
 			case <-ctx.Done():
-				return nil, fmt.Errorf("context expired waiting for MCR %s to update", req.MCRID)
+				return nil, fmt.Errorf("context expired waiting for MCR %s to update: %w", req.MCRID, ctx.Err())
 			case <-ticker.C:
 				mcrDetails, err := svc.GetMCR(ctx, req.MCRID)
 				if err != nil {
@@ -567,10 +574,21 @@ func (svc *MCRServiceOp) ModifyMCRPrefixFilterList(ctx context.Context, mcrID st
 }
 
 // DeleteMCR deletes an MCR in the Megaport MCR API.
+// Note: MCR products only support immediate deletion (CANCEL_NOW). Requests with
+// DeleteNow=false are rejected with ErrMCRCancelLaterNotAllowed, and accepted
+// requests always call the underlying API with DeleteNow=true.
 func (svc *MCRServiceOp) DeleteMCR(ctx context.Context, req *DeleteMCRRequest) (*DeleteMCRResponse, error) {
+	if req == nil {
+		return nil, ErrDeleteMCRRequestNil
+	}
+	// Enforce MCR lifecycle restriction: only CANCEL_NOW is allowed
+	if !req.DeleteNow {
+		return nil, ErrMCRCancelLaterNotAllowed
+	}
+
 	_, err := svc.Client.ProductService.DeleteProduct(ctx, &DeleteProductRequest{
 		ProductID:  req.MCRID,
-		DeleteNow:  req.DeleteNow,
+		DeleteNow:  true, // Always use CANCEL_NOW for MCR
 		SafeDelete: req.SafeDelete,
 	})
 	if err != nil {
@@ -635,10 +653,18 @@ func (svc *MCRServiceOp) UpdateMCRWithAddOn(ctx context.Context, mcrID string, r
 			return err
 		}
 		_, err = svc.Client.Do(ctx, clientReq, nil)
-		return err
+		if err != nil {
+			return err
+		}
 	default:
 		return ErrInvalidAddOnType
 	}
+
+	if req.WaitForProvision {
+		return svc.WaitForMCRReady(ctx, mcrID, req.WaitForTime)
+	}
+
+	return nil
 }
 
 // UpdateMCRIPsecAddOn updates an existing IPsec add-on on an MCR.
@@ -663,4 +689,51 @@ func (svc *MCRServiceOp) UpdateMCRIPsecAddOn(ctx context.Context, mcrID string, 
 	}
 	_, err = svc.Client.Do(ctx, clientReq, nil)
 	return err
+}
+
+// WaitForMCRReady polls until the MCR identified by mcrID reaches a ready
+// provisioning state. A zero timeout defaults to 5 minutes.
+// Returns ErrMCRNotFound if the MCR is deleted while polling, or
+// ErrMCRDecommissioned if it has been decommissioned.
+func (svc *MCRServiceOp) WaitForMCRReady(ctx context.Context, mcrID string, timeout time.Duration) error {
+	if timeout == 0 {
+		timeout = 5 * time.Minute
+	}
+
+	check := func() (bool, error) {
+		mcr, err := svc.GetMCR(ctx, mcrID)
+		if err != nil {
+			if IsServiceNotFoundError(err) {
+				return false, ErrMCRNotFound
+			}
+			return false, err
+		}
+		if mcr.ProvisioningStatus == STATUS_DECOMMISSIONED {
+			return false, ErrMCRDecommissioned
+		}
+		return slices.Contains(SERVICE_STATE_READY, mcr.ProvisioningStatus), nil
+	}
+
+	// Immediate pre-check before starting the ticker.
+	if ready, err := check(); err != nil || ready {
+		return err
+	}
+
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-timer.C:
+			return fmt.Errorf("time expired waiting for MCR %s to reach a ready state", mcrID)
+		case <-ticker.C:
+			if ready, err := check(); err != nil || ready {
+				return err
+			}
+		}
+	}
 }

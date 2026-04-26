@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -595,6 +596,24 @@ func (suite *MCRClientTestSuite) TestDeleteMCR() {
 	suite.Equal(want, got)
 }
 
+// TestDeleteMCRCancelLaterNotAllowed verifies that DeleteMCR rejects DeleteNow=false.
+func (suite *MCRClientTestSuite) TestDeleteMCRCancelLaterNotAllowed() {
+	ctx := context.Background()
+	req := &DeleteMCRRequest{
+		MCRID:     "36b3f68e-2f54-4331-bf94-f8984449365f",
+		DeleteNow: false,
+	}
+	_, err := suite.client.MCRService.DeleteMCR(ctx, req)
+	suite.ErrorIs(err, ErrMCRCancelLaterNotAllowed)
+}
+
+// TestDeleteMCRNilRequest verifies that DeleteMCR rejects a nil request.
+func (suite *MCRClientTestSuite) TestDeleteMCRNilRequest() {
+	ctx := context.Background()
+	_, err := suite.client.MCRService.DeleteMCR(ctx, nil)
+	suite.ErrorIs(err, ErrDeleteMCRRequestNil)
+}
+
 // TestRestoreMCR tests the RestoreMCR method.
 func (suite *MCRClientTestSuite) TestRestoreMCR() {
 	ctx := context.Background()
@@ -745,6 +764,62 @@ func (suite *MCRClientTestSuite) TestBuyMCRWithIPsecValidation() {
 	got, err := mcrSvc.BuyMCR(ctx, reqValid)
 	suite.NoError(err)
 	suite.Equal(productUid, got.TechnicalServiceUID)
+}
+
+// TestUpdateMCRWithAddOn tests that UpdateMCRWithAddOn posts the correct payload without waiting.
+func (suite *MCRClientTestSuite) TestUpdateMCRWithAddOn() {
+	ctx := context.Background()
+	mcrSvc := suite.client.MCRService
+	mcrID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	suite.mux.HandleFunc(fmt.Sprintf("/v3/product/%s/addon", mcrID), func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPost)
+
+		v := make(map[string]interface{})
+		err := json.NewDecoder(r.Body).Decode(&v)
+		if err != nil {
+			suite.FailNowf("could not decode json", "could not decode json %v", err)
+		}
+		suite.Equal(AddOnTypeIPsec, v["addOnType"])
+		suite.Equal(float64(10), v["tunnelCount"])
+
+		fmt.Fprint(w, `{"message":"ok"}`)
+	})
+
+	err := mcrSvc.UpdateMCRWithAddOn(ctx, mcrID, MCRAddOnRequest{
+		AddOn: &MCRAddOnIPsecConfig{
+			AddOnType:   AddOnTypeIPsec,
+			TunnelCount: 10,
+		},
+	})
+	suite.NoError(err)
+}
+
+// TestUpdateMCRWithAddOnWaitTimeout tests that WaitForProvision returns an error on timeout.
+func (suite *MCRClientTestSuite) TestUpdateMCRWithAddOnWaitTimeout() {
+	ctx := context.Background()
+	mcrSvc := suite.client.MCRService
+	mcrID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	suite.mux.HandleFunc(fmt.Sprintf("/v3/product/%s/addon", mcrID), func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPost)
+		fmt.Fprint(w, `{"message":"ok"}`)
+	})
+	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/%s", mcrID), func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprintf(w, `{"data":{"productUid":%q,"provisioningStatus":"CONFIGURING"}}`, mcrID)
+	})
+
+	err := mcrSvc.UpdateMCRWithAddOn(ctx, mcrID, MCRAddOnRequest{
+		AddOn: &MCRAddOnIPsecConfig{
+			AddOnType:   AddOnTypeIPsec,
+			TunnelCount: 10,
+		},
+		WaitForProvision: true,
+		WaitForTime:      100 * time.Millisecond,
+	})
+	suite.Error(err)
+	suite.Contains(err.Error(), "time expired")
 }
 
 // TestUpdateMCRIPsecAddOn tests the UpdateMCRIPsecAddOn method
