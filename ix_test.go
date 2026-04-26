@@ -718,6 +718,22 @@ func (suite *IXClientTestSuite) TestListIXPs() {
 	suite.Equal("2001:dea:0:10::/64", first.IPv6Network)
 }
 
+// TestListIXPsError tests that ListIXPs propagates API errors.
+func (suite *IXClientTestSuite) TestListIXPsError() {
+	ctx := context.Background()
+	ixSvc := suite.client.IXService
+
+	suite.mux.HandleFunc("/v2/ixp", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, `{"message":"internal server error","data":null}`)
+	})
+
+	got, err := ixSvc.ListIXPs(ctx)
+	suite.Error(err)
+	suite.Nil(got)
+}
+
 // TestListIXsDeduplication tests that duplicate IXs are properly deduplicated
 func (suite *IXClientTestSuite) TestListIXsDeduplication() {
 	// Define mock response with duplicated IX

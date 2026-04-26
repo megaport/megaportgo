@@ -140,9 +140,6 @@ type InternetExchange struct {
 	IPv6Network string `json:"ipv6_network"`
 }
 
-// ListIXPsRequest is the request type for ListIXPs; reserved for future filtering.
-type ListIXPsRequest struct{}
-
 // listIXPsResponse is the private envelope for the GET /v2/ixp response.
 type listIXPsResponse struct {
 	Message string              `json:"message"`
