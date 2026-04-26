@@ -201,4 +201,5 @@ var (
 	ErrPricingNATSessionRequired  = errors.New("NAT Gateway pricing requires sessionCount")
 	ErrPricingIPBlockRequired     = errors.New("IP Address pricing requires ipBlock")
 	ErrPricingIPLocationRequired  = errors.New("IP Address pricing requires locationId")
+	ErrPricingCompanyIDAndUIDSet  = errors.New("companyId and companyUid are mutually exclusive; set only one")
 )

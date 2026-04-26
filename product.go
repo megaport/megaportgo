@@ -422,9 +422,6 @@ func fromProductResourceTags(in []ResourceTag) map[string]string {
 
 // GetProductPricing fetches pricing for a product configuration via POST /v4/pricebook/product.
 func (svc *ProductServiceOp) GetProductPricing(ctx context.Context, req PriceBookRequest) (*PriceBookDto, error) {
-	if req == nil || reflect.ValueOf(req).IsNil() {
-		return nil, ErrPricingRequestNil
-	}
 	if err := validatePriceBookRequest(req); err != nil {
 		return nil, err
 	}
@@ -464,9 +461,14 @@ func (svc *ProductServiceOp) GetProductPricing(ctx context.Context, req PriceBoo
 // GetProductPricingForCompany fetches pricing scoped to a specific company.
 // Use when pricing as a partner or reseller for another company.
 func (svc *ProductServiceOp) GetProductPricingForCompany(ctx context.Context, pricingReq *GetProductPricingRequest) (*PriceBookDto, error) {
-	if pricingReq == nil || pricingReq.Req == nil {
+	if pricingReq == nil {
 		return nil, ErrPricingRequestNil
 	}
+	// CompanyID and CompanyUID are mutually exclusive — reject early if both are set.
+	if pricingReq.CompanyID != 0 && pricingReq.CompanyUID != "" {
+		return nil, ErrPricingCompanyIDAndUIDSet
+	}
+	// validatePriceBookRequest also guards against nil / typed-nil Req values.
 	if err := validatePriceBookRequest(pricingReq.Req); err != nil {
 		return nil, err
 	}
@@ -511,7 +513,12 @@ func (svc *ProductServiceOp) GetProductPricingForCompany(ctx context.Context, pr
 }
 
 // validatePriceBookRequest validates required fields for a pricing request.
+// It also guards against nil and typed-nil interface values so callers don't
+// have to repeat the reflect-based check at every call site.
 func validatePriceBookRequest(req PriceBookRequest) error {
+	if req == nil || reflect.ValueOf(req).IsNil() {
+		return ErrPricingRequestNil
+	}
 	switch r := req.(type) {
 	case *VXCPriceBookRequest:
 		if r.ALocationID == 0 || r.BLocationID == 0 {

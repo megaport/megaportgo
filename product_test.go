@@ -530,6 +530,51 @@ func (suite *ProductClientTestSuite) TestGetProductPricingForCompany() {
 	suite.NotNil(got)
 }
 
+// TestGetProductPricingForCompanyNilRequest tests that GetProductPricingForCompany rejects a nil wrapper.
+func (suite *ProductClientTestSuite) TestGetProductPricingForCompanyNilRequest() {
+	ctx := context.Background()
+	productSvc := suite.client.ProductService
+
+	got, err := productSvc.GetProductPricingForCompany(ctx, nil)
+	suite.ErrorIs(err, ErrPricingRequestNil)
+	suite.Nil(got)
+}
+
+// TestGetProductPricingForCompanyNilInnerRequest tests that GetProductPricingForCompany rejects
+// a wrapper containing a nil PriceBookRequest, including the typed-nil case.
+func (suite *ProductClientTestSuite) TestGetProductPricingForCompanyNilInnerRequest() {
+	ctx := context.Background()
+	productSvc := suite.client.ProductService
+
+	got, err := productSvc.GetProductPricingForCompany(ctx, &GetProductPricingRequest{Req: nil, CompanyID: 1})
+	suite.ErrorIs(err, ErrPricingRequestNil)
+	suite.Nil(got)
+
+	var typedNil *VXCPriceBookRequest
+	got, err = productSvc.GetProductPricingForCompany(ctx, &GetProductPricingRequest{Req: typedNil, CompanyID: 1})
+	suite.ErrorIs(err, ErrPricingRequestNil)
+	suite.Nil(got)
+}
+
+// TestGetProductPricingForCompanyMutuallyExclusiveCompanyIdentifiers tests that setting both
+// CompanyID and CompanyUID returns an error rather than sending both query parameters.
+func (suite *ProductClientTestSuite) TestGetProductPricingForCompanyMutuallyExclusiveCompanyIdentifiers() {
+	ctx := context.Background()
+	productSvc := suite.client.ProductService
+
+	got, err := productSvc.GetProductPricingForCompany(ctx, &GetProductPricingRequest{
+		Req: &VXCPriceBookRequest{
+			ALocationID: 1,
+			BLocationID: 2,
+			Speed:       1000,
+		},
+		CompanyID:  42,
+		CompanyUID: "abc-123",
+	})
+	suite.ErrorIs(err, ErrPricingCompanyIDAndUIDSet)
+	suite.Nil(got)
+}
+
 // TestGetProductPricingNilRequest tests that GetProductPricing returns an error for a nil request.
 func (suite *ProductClientTestSuite) TestGetProductPricingNilRequest() {
 	ctx := context.Background()
