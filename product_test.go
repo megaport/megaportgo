@@ -531,6 +531,30 @@ func (suite *ProductClientTestSuite) TestGetProductPricingForCompany() {
 	suite.NotNil(got)
 }
 
+// TestGetProductPricingForCompanyUID tests that companyUid is passed as a query param when CompanyUID is set.
+func (suite *ProductClientTestSuite) TestGetProductPricingForCompanyUID() {
+	ctx := context.Background()
+	productSvc := suite.client.ProductService
+
+	suite.mux.HandleFunc("/v4/pricebook/product", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPost)
+		suite.Equal("abc-def-123", r.URL.Query().Get("companyUid"))
+		suite.Equal("", r.URL.Query().Get("companyId"))
+		fmt.Fprint(w, pricebookJSONResponse("VXC"))
+	})
+
+	got, err := productSvc.GetProductPricingForCompany(ctx, &GetProductPricingRequest{
+		Req: &VXCPriceBookRequest{
+			ALocationID: 1,
+			BLocationID: 2,
+			Speed:       1000,
+		},
+		CompanyUID: "abc-def-123",
+	})
+	suite.NoError(err)
+	suite.NotNil(got)
+}
+
 // TestGetProductPricingForCompanyNilRequest tests that GetProductPricingForCompany rejects a nil wrapper.
 func (suite *ProductClientTestSuite) TestGetProductPricingForCompanyNilRequest() {
 	ctx := context.Background()

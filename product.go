@@ -453,7 +453,7 @@ func (svc *ProductServiceOp) GetProductPricing(ctx context.Context, req PriceBoo
 	}
 	defer resp.Body.Close()
 	if envelope.Data == nil {
-		return nil, fmt.Errorf("product pricing response missing data")
+		return nil, ErrProductPricingResponseEmpty
 	}
 	return envelope.Data, nil
 }
@@ -507,7 +507,7 @@ func (svc *ProductServiceOp) GetProductPricingForCompany(ctx context.Context, pr
 	}
 	defer resp.Body.Close()
 	if envelope.Data == nil {
-		return nil, fmt.Errorf("product pricing response missing data")
+		return nil, ErrProductPricingResponseEmpty
 	}
 	return envelope.Data, nil
 }
