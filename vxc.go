@@ -260,8 +260,16 @@ func (svc *VXCServiceOp) UpdateVXCResourceTags(ctx context.Context, vxcID string
 }
 
 func createVXCOrder(req *BuyVXCRequest) []VXCOrder {
+	// If PortUID is not set but AEndConfiguration.ProductUID is, use that fallback
+	// value when populating VXCOrder.PortID. This improves the developer
+	// experience by not requiring the same value in two places.
+	portUID := req.PortUID
+	if portUID == "" && req.AEndConfiguration.ProductUID != "" {
+		portUID = req.AEndConfiguration.ProductUID
+	}
+
 	return []VXCOrder{{
-		PortID: req.PortUID,
+		PortID: portUID,
 		AssociatedVXCs: []VXCOrderConfiguration{
 			{
 				Name:         req.VXCName,
@@ -286,8 +294,52 @@ func (svc *VXCServiceOp) ValidateVXCOrder(ctx context.Context, req *BuyVXCReques
 	return svc.Client.ProductService.ValidateProductOrder(ctx, buyOrder)
 }
 
+// connectTypeTransit is the CSP connect type for Transit VXCs (Megaport Internet).
+const connectTypeTransit = "TRANSIT"
+
+// isTransitVXC checks if a VXC is a Transit VXC (Megaport Internet) by examining
+// its CSP connection resources. A VXC is considered a Transit VXC if any
+// CSPConnection entry has ConnectType "TRANSIT".
+func isTransitVXC(vxc *VXC) bool {
+	if vxc == nil || vxc.Resources == nil || vxc.Resources.CSPConnection == nil {
+		return false
+	}
+
+	for _, csp := range vxc.Resources.CSPConnection.CSPConnection {
+		switch v := csp.(type) {
+		case CSPConnectionTransit:
+			if v.ConnectType == connectTypeTransit {
+				return true
+			}
+		case *CSPConnectionTransit:
+			if v != nil && v.ConnectType == connectTypeTransit {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // DeleteVXC deletes a VXC in the Megaport VXC API.
+// Note: Transit VXCs (Megaport Internet) only support immediate deletion (CANCEL_NOW).
+// Attempting to schedule deletion (DeleteNow=false) for Transit VXCs will return an error.
+// When DeleteNow is false, an additional GetVXC call is made to check for Transit VXC status.
 func (svc *VXCServiceOp) DeleteVXC(ctx context.Context, id string, req *DeleteVXCRequest) error {
+	if req == nil {
+		return ErrDeleteVXCRequestNil
+	}
+	// Only validate Transit VXC restriction when scheduling deletion.
+	// Immediate deletions skip the extra API call entirely.
+	if !req.DeleteNow {
+		vxc, err := svc.GetVXC(ctx, id)
+		if err != nil {
+			return err
+		}
+		if isTransitVXC(vxc) {
+			return ErrTransitVXCCancelLaterNotAllowed
+		}
+	}
+
 	_, err := svc.Client.ProductService.DeleteProduct(ctx, &DeleteProductRequest{
 		ProductID: id,
 		DeleteNow: req.DeleteNow,
