@@ -49,6 +49,18 @@ type MCRLookingGlassService interface {
 	// the context has no deadline, a default of defaultAsyncJobTimeout is
 	// applied.
 	WaitForAsyncBGPNeighborRoutes(ctx context.Context, mcrUID string, jobID string) ([]*LookingGlassBGPNeighborRoute, error)
+	// PingMCR initiates an ICMP ping from the MCR and returns the operation ID to poll with GetMCRPingResult.
+	PingMCR(ctx context.Context, req *MCRPingRequest) (string, error)
+	// TracerouteMCR initiates a traceroute from the MCR and returns the operation ID to poll with GetMCRTracerouteResult.
+	TracerouteMCR(ctx context.Context, req *MCRTracerouteRequest) (string, error)
+	// GetMCRPingResult retrieves the result of a pending ping operation. Returns nil result when still pending.
+	GetMCRPingResult(ctx context.Context, mcrUID, operationID string) (*LookingGlassPingResult, error)
+	// GetMCRTracerouteResult retrieves the result of a pending traceroute operation. Returns nil result when still pending.
+	GetMCRTracerouteResult(ctx context.Context, mcrUID, operationID string) (*LookingGlassTracerouteResult, error)
+	// WaitForMCRPing polls until the ping result is available or context is cancelled.
+	WaitForMCRPing(ctx context.Context, mcrUID, operationID string) (*LookingGlassPingResult, error)
+	// WaitForMCRTraceroute polls until the traceroute result is available or context is cancelled.
+	WaitForMCRTraceroute(ctx context.Context, mcrUID, operationID string) (*LookingGlassTracerouteResult, error)
 }
 
 // defaultAsyncJobTimeout is applied to WaitForAsync* calls when the caller
@@ -56,15 +68,70 @@ type MCRLookingGlassService interface {
 // Looking Glass async job never transitions out of a pending state.
 const defaultAsyncJobTimeout = 5 * time.Minute
 
+// mcrDiagnosticsPollTimeout is the SDK-managed timeout for WaitForMCRPing and
+// WaitForMCRTraceroute when the caller does not provide a context with a deadline.
+const mcrDiagnosticsPollTimeout = 5 * time.Minute
+
+// mcrDiagnosticsPollInterval is the interval between poll attempts for MCR diagnostics.
+const mcrDiagnosticsPollInterval = 3 * time.Second
+
 // MCRLookingGlassServiceOp handles communication with MCR Looking Glass methods of the Megaport API.
 type MCRLookingGlassServiceOp struct {
 	Client *Client
+	// pollInterval overrides mcrDiagnosticsPollInterval when non-zero.
+	// Intended for tests that want to avoid real-time waits.
+	pollInterval time.Duration
 }
 
 // NewMCRLookingGlassService creates a new instance of the MCR Looking Glass Service.
 func NewMCRLookingGlassService(c *Client) *MCRLookingGlassServiceOp {
 	return &MCRLookingGlassServiceOp{
 		Client: c,
+	}
+}
+
+// diagnosticsPollInterval returns the effective poll interval for MCR diagnostics.
+func (svc *MCRLookingGlassServiceOp) diagnosticsPollInterval() time.Duration {
+	if svc.pollInterval != 0 {
+		return svc.pollInterval
+	}
+	return mcrDiagnosticsPollInterval
+}
+
+// pollMCRDiagnostics is a generic helper that polls fetch until it returns a
+// non-nil result, pollCtx is done, or pollDoneErr fires. It performs an
+// immediate poll before starting the ticker so callers receive results without
+// delay when the operation is already complete.
+func pollMCRDiagnostics[T any](
+	pollCtx context.Context,
+	pollDoneErr func() error,
+	fetch func(context.Context) (*T, error),
+	interval time.Duration,
+) (*T, error) {
+	result, err := fetch(pollCtx)
+	if err != nil {
+		return nil, err
+	}
+	if result != nil {
+		return result, nil
+	}
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-pollCtx.Done():
+			return nil, pollDoneErr()
+		case <-ticker.C:
+			result, err = fetch(pollCtx)
+			if err != nil {
+				return nil, err
+			}
+			if result != nil {
+				return result, nil
+			}
+		}
 	}
 }
 
@@ -445,6 +512,244 @@ func (svc *MCRLookingGlassServiceOp) WaitForAsyncIPRoutes(ctx context.Context, m
 			}
 		}
 	}
+}
+
+// PingMCR initiates an ICMP ping from the MCR and returns the operation ID.
+func (svc *MCRLookingGlassServiceOp) PingMCR(ctx context.Context, req *MCRPingRequest) (string, error) {
+	if req == nil {
+		return "", fmt.Errorf("ping request cannot be nil")
+	}
+	if req.MCRID == "" {
+		return "", ErrMCRDiagnosticsMCRUIDRequired
+	}
+	if req.DestinationAddress == "" {
+		return "", ErrMCRPingDestinationRequired
+	}
+	if req.PacketCount != nil && (*req.PacketCount < 1 || *req.PacketCount > 60) {
+		return "", ErrMCRPingPacketCountOutOfRange
+	}
+	if req.PacketSize != nil && (*req.PacketSize < 1 || *req.PacketSize > 9186) {
+		return "", ErrMCRPingPacketSizeOutOfRange
+	}
+
+	path := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/ping", url.PathEscape(req.MCRID))
+	params := url.Values{}
+	params.Set("destination_address", req.DestinationAddress)
+	if req.SourceAddress != "" {
+		params.Set("source_address", req.SourceAddress)
+	}
+	if req.PacketCount != nil {
+		params.Set("packet_count", fmt.Sprintf("%d", *req.PacketCount))
+	}
+	if req.PacketSize != nil {
+		params.Set("packet_size", fmt.Sprintf("%d", *req.PacketSize))
+	}
+	path = path + "?" + params.Encode()
+
+	clientReq, err := svc.Client.NewRequest(ctx, "GET", path, nil)
+	if err != nil {
+		return "", err
+	}
+
+	var buf bytes.Buffer
+	response, err := svc.Client.Do(ctx, clientReq, &buf)
+	if err != nil {
+		return "", err
+	}
+	defer response.Body.Close()
+
+	apiResponse := &mcrDiagnosticsStringResponse{}
+	if err := json.Unmarshal(buf.Bytes(), apiResponse); err != nil {
+		return "", err
+	}
+	if apiResponse.Data == "" {
+		return "", ErrMCRDiagnosticsOperationEmpty
+	}
+
+	return apiResponse.Data, nil
+}
+
+// TracerouteMCR initiates a traceroute from the MCR and returns the operation ID.
+func (svc *MCRLookingGlassServiceOp) TracerouteMCR(ctx context.Context, req *MCRTracerouteRequest) (string, error) {
+	if req == nil {
+		return "", fmt.Errorf("traceroute request cannot be nil")
+	}
+	if req.MCRID == "" {
+		return "", ErrMCRDiagnosticsMCRUIDRequired
+	}
+	if req.DestinationAddress == "" {
+		return "", ErrMCRTracerouteDestinationRequired
+	}
+
+	path := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/traceroute", url.PathEscape(req.MCRID))
+	params := url.Values{}
+	params.Set("destination_address", req.DestinationAddress)
+	if req.SourceAddress != "" {
+		params.Set("source_address", req.SourceAddress)
+	}
+	path = path + "?" + params.Encode()
+
+	clientReq, err := svc.Client.NewRequest(ctx, "GET", path, nil)
+	if err != nil {
+		return "", err
+	}
+
+	var buf bytes.Buffer
+	response, err := svc.Client.Do(ctx, clientReq, &buf)
+	if err != nil {
+		return "", err
+	}
+	defer response.Body.Close()
+
+	apiResponse := &mcrDiagnosticsStringResponse{}
+	if err := json.Unmarshal(buf.Bytes(), apiResponse); err != nil {
+		return "", err
+	}
+	if apiResponse.Data == "" {
+		return "", ErrMCRDiagnosticsOperationEmpty
+	}
+
+	return apiResponse.Data, nil
+}
+
+// GetMCRPingResult retrieves the result of a pending ping operation. Returns nil when still pending.
+func (svc *MCRLookingGlassServiceOp) GetMCRPingResult(ctx context.Context, mcrUID, operationID string) (*LookingGlassPingResult, error) {
+	if mcrUID == "" {
+		return nil, ErrMCRDiagnosticsMCRUIDRequired
+	}
+	if operationID == "" {
+		return nil, ErrMCRDiagnosticsOperationEmpty
+	}
+
+	path := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes/operation", url.PathEscape(mcrUID))
+	params := url.Values{}
+	params.Set("operationId", operationID)
+	path = path + "?" + params.Encode()
+
+	clientReq, err := svc.Client.NewRequest(ctx, "GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	response, err := svc.Client.Do(ctx, clientReq, &buf)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	apiResponse := &mcrDiagnosticsPingResultResponse{}
+	if err := json.Unmarshal(buf.Bytes(), apiResponse); err != nil {
+		return nil, err
+	}
+
+	return apiResponse.Data, nil
+}
+
+// GetMCRTracerouteResult retrieves the result of a pending traceroute operation. Returns nil when still pending.
+func (svc *MCRLookingGlassServiceOp) GetMCRTracerouteResult(ctx context.Context, mcrUID, operationID string) (*LookingGlassTracerouteResult, error) {
+	if mcrUID == "" {
+		return nil, ErrMCRDiagnosticsMCRUIDRequired
+	}
+	if operationID == "" {
+		return nil, ErrMCRDiagnosticsOperationEmpty
+	}
+
+	path := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes/operation", url.PathEscape(mcrUID))
+	params := url.Values{}
+	params.Set("operationId", operationID)
+	path = path + "?" + params.Encode()
+
+	clientReq, err := svc.Client.NewRequest(ctx, "GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	response, err := svc.Client.Do(ctx, clientReq, &buf)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	apiResponse := &mcrDiagnosticsTracerouteResultResponse{}
+	if err := json.Unmarshal(buf.Bytes(), apiResponse); err != nil {
+		return nil, err
+	}
+
+	return apiResponse.Data, nil
+}
+
+// WaitForMCRPing polls until the ping result is available or context is cancelled.
+// If the context has no deadline, mcrDiagnosticsPollTimeout is applied.
+func (svc *MCRLookingGlassServiceOp) WaitForMCRPing(ctx context.Context, mcrUID, operationID string) (*LookingGlassPingResult, error) {
+	if mcrUID == "" {
+		return nil, ErrMCRDiagnosticsMCRUIDRequired
+	}
+	if operationID == "" {
+		return nil, ErrMCRDiagnosticsOperationEmpty
+	}
+
+	// pollCtx carries the SDK-managed deadline; ctx is the caller's original
+	// context. pollDoneErr distinguishes caller cancellation from SDK timeout.
+	pollCtx := ctx
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		pollCtx, cancel = context.WithTimeout(ctx, mcrDiagnosticsPollTimeout)
+		defer cancel()
+	}
+
+	pollDoneErr := func() error {
+		if err := ctx.Err(); err != nil {
+			return err // caller cancelled or deadline exceeded
+		}
+		return ErrMCRDiagnosticsTimeout // SDK-managed timeout fired
+	}
+
+	return pollMCRDiagnostics(
+		pollCtx,
+		pollDoneErr,
+		func(c context.Context) (*LookingGlassPingResult, error) {
+			return svc.GetMCRPingResult(c, mcrUID, operationID)
+		},
+		svc.diagnosticsPollInterval(),
+	)
+}
+
+// WaitForMCRTraceroute polls until the traceroute result is available or context is cancelled.
+// If the context has no deadline, mcrDiagnosticsPollTimeout is applied.
+func (svc *MCRLookingGlassServiceOp) WaitForMCRTraceroute(ctx context.Context, mcrUID, operationID string) (*LookingGlassTracerouteResult, error) {
+	if mcrUID == "" {
+		return nil, ErrMCRDiagnosticsMCRUIDRequired
+	}
+	if operationID == "" {
+		return nil, ErrMCRDiagnosticsOperationEmpty
+	}
+
+	// pollCtx carries the SDK-managed deadline; ctx is the caller's original
+	// context. pollDoneErr distinguishes caller cancellation from SDK timeout.
+	pollCtx := ctx
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		pollCtx, cancel = context.WithTimeout(ctx, mcrDiagnosticsPollTimeout)
+		defer cancel()
+	}
+
+	pollDoneErr := func() error {
+		if err := ctx.Err(); err != nil {
+			return err // caller cancelled or deadline exceeded
+		}
+		return ErrMCRDiagnosticsTimeout // SDK-managed timeout fired
+	}
+
+	return pollMCRDiagnostics(
+		pollCtx,
+		pollDoneErr,
+		func(c context.Context) (*LookingGlassTracerouteResult, error) {
+			return svc.GetMCRTracerouteResult(c, mcrUID, operationID)
+		},
+		svc.diagnosticsPollInterval(),
+	)
 }
 
 // WaitForAsyncBGPNeighborRoutes polls for async BGP neighbor routes results
