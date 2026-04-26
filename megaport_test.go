@@ -119,7 +119,7 @@ func findActivePortLocation(ctx context.Context, svc LocationService, marketCode
 	if len(candidates) == 0 {
 		return nil, fmt.Errorf("no active %s location advertises %d Mbps port capacity", marketCode, speedMbps)
 	}
-	return candidates[GenerateRandomNumber(0, len(candidates))], nil
+	return candidates[rand.Intn(len(candidates))], nil
 }
 
 // findActiveMCRLocation returns an ACTIVE location in the given market that
@@ -155,15 +155,22 @@ func findActiveMCRLocation(ctx context.Context, c *Client, marketCode, diversity
 	r.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
 
 	for _, loc := range shuffled {
-		err := c.MCRService.ValidateMCROrder(ctx, &BuyMCRRequest{
+		probeCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		probeAddOns := make([]MCRAddOn, len(addOns))
+		for i, a := range addOns {
+			cp := *a.(*MCRAddOnIPsecConfig)
+			probeAddOns[i] = &cp
+		}
+		err := c.MCRService.ValidateMCROrder(probeCtx, &BuyMCRRequest{
 			LocationID:    loc.ID,
 			Name:          "probe",
 			Term:          1,
 			PortSpeed:     speedMbps,
 			MCRAsn:        0,
 			DiversityZone: diversityZone,
-			AddOns:        addOns,
+			AddOns:        probeAddOns,
 		})
+		cancel()
 		if err == nil {
 			return loc, nil
 		}
