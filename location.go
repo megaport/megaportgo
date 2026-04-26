@@ -153,29 +153,33 @@ type LocationV3CrossConnect struct {
 	Type      *string `json:"type,omitempty"`
 }
 
-// LocationsResponse represents the response from the Megaport Locations API.
-type LocationResponse struct {
+// locationResponse represents the response from the Megaport Locations API.
+// Used internally for JSON unmarshalling.
+type locationResponse struct {
 	Message string      `json:"message"`
 	Terms   string      `json:"terms"`
 	Data    []*Location `json:"data"`
 }
 
-// LocationV3Response represents the response from the Megaport Locations API v3.
-type LocationV3Response struct {
+// locationV3Response represents the response from the Megaport Locations API v3.
+// Used internally for JSON unmarshalling.
+type locationV3Response struct {
 	Message string        `json:"message"`
 	Terms   string        `json:"terms"`
 	Data    []*LocationV3 `json:"data"`
 }
 
-// CountryResponse represents the response from the Megaport Network Regions API.
-type CountryResponse struct {
+// countryResponse represents the response from the Megaport Network Regions API.
+// Used internally for JSON unmarshalling.
+type countryResponse struct {
 	Message string                  `json:"message"`
 	Terms   string                  `json:"terms"`
-	Data    []*CountryInnerResponse `json:"data"`
+	Data    []*countryInnerResponse `json:"data"`
 }
 
-// CountriesInnerResponse represents the inner response from the Megaport Network Regions API.
-type CountryInnerResponse struct {
+// countryInnerResponse represents the inner response from the Megaport Network Regions API.
+// Used internally for JSON unmarshalling.
+type countryInnerResponse struct {
 	Countries     []*Country `json:"countries"`
 	NetworkRegion string     `json:"networkRegion"`
 }
@@ -225,14 +229,14 @@ func (svc *LocationServiceOp) ListLocationsV3(ctx context.Context) ([]*LocationV
 		return nil, fileErr
 	}
 
-	locationResponse := &LocationV3Response{}
+	resp := &locationV3Response{}
 
-	unmarshalErr := json.Unmarshal(body, locationResponse)
+	unmarshalErr := json.Unmarshal(body, resp)
 	if unmarshalErr != nil {
 		return nil, unmarshalErr
 	}
 
-	return locationResponse.Data, nil
+	return resp.Data, nil
 }
 
 // GetLocationByIDV3 returns a location by its ID using the v3 API.
@@ -541,9 +545,9 @@ func (svc *LocationServiceOp) ListCountries(ctx context.Context) ([]*Country, er
 		return nil, fileErr
 	}
 
-	countryResponse := CountryResponse{}
+	resp := countryResponse{}
 
-	unmarshalErr := json.Unmarshal(body, &countryResponse)
+	unmarshalErr := json.Unmarshal(body, &resp)
 
 	if unmarshalErr != nil {
 		return nil, unmarshalErr
@@ -551,9 +555,9 @@ func (svc *LocationServiceOp) ListCountries(ctx context.Context) ([]*Country, er
 
 	allCountries := make([]*Country, 0)
 
-	for i := 0; i < len(countryResponse.Data); i++ {
-		if countryResponse.Data[i].NetworkRegion == "MP1" {
-			allCountries = countryResponse.Data[i].Countries
+	for i := 0; i < len(resp.Data); i++ {
+		if resp.Data[i].NetworkRegion == "MP1" {
+			allCountries = resp.Data[i].Countries
 		}
 	}
 

@@ -145,14 +145,14 @@ func (svc *LocationServiceOp) ListLocations(ctx context.Context) ([]*Location, e
 		return nil, fileErr
 	}
 
-	locationResponse := &LocationResponse{}
+	resp := &locationResponse{}
 
-	unmarshalErr := json.Unmarshal(body, locationResponse)
+	unmarshalErr := json.Unmarshal(body, resp)
 	if unmarshalErr != nil {
 		return nil, unmarshalErr
 	}
 
-	return locationResponse.Data, nil
+	return resp.Data, nil
 }
 
 // GetLocationByID returns a location by its ID in the Megaport Locations API.

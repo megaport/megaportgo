@@ -88,8 +88,9 @@ type ManageProductLockRequest struct {
 // ManageProductLockResponse represents a response from the Megaport Products API after locking or unlocking a product.
 type ManageProductLockResponse struct{}
 
-// ParsedProductsResponse represents a response from the Megaport Products API prior to parsing the response.
-type ParsedProductsResponse struct {
+// parsedProductsResponse represents a response from the Megaport Products API prior to parsing the response.
+// Used internally for JSON unmarshalling.
+type parsedProductsResponse struct {
 	Message string            `json:"message"`
 	Terms   string            `json:"terms"`
 	Data    []json.RawMessage `json:"data"`
@@ -104,25 +105,28 @@ type Product interface {
 	GetAssociatedIXs() []*IX
 }
 
-type GetProductResponse struct {
+// getProductResponse represents the response from the Megaport Products API for a single product.
+// Used internally for JSON unmarshalling.
+type getProductResponse struct {
 	Message string        `json:"message"`
 	Terms   string        `json:"terms"`
-	Data    ParsedProduct `json:"data"`
+	Data    parsedProduct `json:"data"`
 }
 
-type ParsedProduct struct {
+type parsedProduct struct {
 	Type           string `json:"productType"`
 	AssociatedVXCs []*VXC `json:"associatedVxcs"`
 }
 
-// ResourceTagsResponse represents a response from the Megaport Products API after retrieving the resource tags for a product.
-type ResourceTagsResponse struct {
+// resourceTagsResponse represents a response from the Megaport Products API after retrieving the resource tags for a product.
+// Used internally for JSON unmarshalling.
+type resourceTagsResponse struct {
 	Message string                    `json:"message"`
 	Terms   string                    `json:"terms"`
-	Data    *ResourceTagsResponseData `json:"data"`
+	Data    *resourceTagsResponseData `json:"data"`
 }
 
-type ResourceTagsResponseData struct {
+type resourceTagsResponseData struct {
 	ResourceTags []ResourceTag `json:"resourceTags"`
 }
 
@@ -194,7 +198,7 @@ func (svc *ProductServiceOp) ListProducts(ctx context.Context) ([]Product, error
 	defer response.Body.Close()
 
 	// Parse response into a structure with raw JSON messages
-	var parsed ParsedProductsResponse
+	var parsed parsedProductsResponse
 
 	if err := json.NewDecoder(response.Body).Decode(&parsed); err != nil {
 		return nil, err
@@ -204,15 +208,15 @@ func (svc *ProductServiceOp) ListProducts(ctx context.Context) ([]Product, error
 
 	for i, rawProduct := range parsed.Data {
 		// First extract just the type field
-		var parsedProduct ParsedProduct
+		var productMeta parsedProduct
 
-		if err := json.Unmarshal(rawProduct, &parsedProduct); err != nil {
+		if err := json.Unmarshal(rawProduct, &productMeta); err != nil {
 			svc.Client.Logger.WarnContext(ctx, fmt.Sprintf("Item %d: Could not extract product type: %v", i, err))
 			continue
 		}
 
 		// Then unmarshal into the appropriate struct based on type
-		switch strings.ToLower(parsedProduct.Type) {
+		switch strings.ToLower(productMeta.Type) {
 		case PRODUCT_MEGAPORT:
 			var port Port
 			if err := json.Unmarshal(rawProduct, &port); err != nil {
@@ -368,7 +372,7 @@ func (svc *ProductServiceOp) ListProductResourceTags(ctx context.Context, produc
 	}
 
 	defer response.Body.Close()
-	tagsResponse := &ResourceTagsResponse{}
+	tagsResponse := &resourceTagsResponse{}
 	body, fileErr := io.ReadAll(response.Body)
 	if fileErr != nil {
 		return nil, fileErr
@@ -439,16 +443,16 @@ func (svc *ProductServiceOp) GetProductType(ctx context.Context, productUID stri
 	// and then return that type.
 	// The response body is expected to be in JSON format.
 
-	var getProductResponse GetProductResponse
-	err = json.NewDecoder(response.Body).Decode(&getProductResponse)
+	var productResp getProductResponse
+	err = json.NewDecoder(response.Body).Decode(&productResp)
 	if err != nil {
 		return "", fmt.Errorf("failed to decode response: %w", err)
 	}
-	parsedProduct := getProductResponse.Data
+	productData := productResp.Data
 
-	if parsedProduct.Type == "" {
+	if productData.Type == "" {
 		return "", fmt.Errorf("product %s type not found in response", productUID)
 	}
 
-	return parsedProduct.Type, nil
+	return productData.Type, nil
 }

@@ -32,13 +32,17 @@ type ManagedAccountRequest struct {
 	AccountRef  string `json:"accountRef"`  // A required string that specifies a reference ID for the managed account. The accountRef is typically an identifier used in partner systems (for example, CRM or billing). This value is shown on the invoices as the Managed Account Reference. The accountRef also identifies the account in email notifications. (The accountRef value maps to the Managed Account UID in the Portal interface.)
 }
 
-type ManagedAccountAPIResponse struct {
+// managedAccountAPIResponse represents the API response for a single managed account.
+// Used internally for JSON unmarshalling.
+type managedAccountAPIResponse struct {
 	Message string          `json:"message"`
 	Terms   string          `json:"terms"`
 	Data    *ManagedAccount `json:"data"`
 }
 
-type ManagedAccountListAPIResponse struct {
+// managedAccountListAPIResponse represents the API response for a list of managed accounts.
+// Used internally for JSON unmarshalling.
+type managedAccountListAPIResponse struct {
 	Message string            `json:"message"`
 	Terms   string            `json:"terms"`
 	Data    []*ManagedAccount `json:"data"`
@@ -70,7 +74,7 @@ func (svc *ManagedAccountServiceOp) ListManagedAccounts(ctx context.Context) ([]
 		return nil, fileErr
 	}
 
-	var apiResponse *ManagedAccountListAPIResponse
+	var apiResponse *managedAccountListAPIResponse
 
 	if err := json.Unmarshal(body, &apiResponse); err != nil {
 		return nil, err
@@ -94,7 +98,7 @@ func (svc *ManagedAccountServiceOp) CreateManagedAccount(ctx context.Context, re
 	if err != nil {
 		return nil, err
 	}
-	var createManagedAccountResponse *ManagedAccountAPIResponse
+	var createManagedAccountResponse *managedAccountAPIResponse
 	if err := json.Unmarshal(body, &createManagedAccountResponse); err != nil {
 		return nil, err
 	}
@@ -116,7 +120,7 @@ func (svc *ManagedAccountServiceOp) UpdateManagedAccount(ctx context.Context, co
 	if err != nil {
 		return nil, err
 	}
-	var updateManagedAccountResponse *ManagedAccountAPIResponse
+	var updateManagedAccountResponse *managedAccountAPIResponse
 	if err := json.Unmarshal(body, &updateManagedAccountResponse); err != nil {
 		return nil, err
 	}
