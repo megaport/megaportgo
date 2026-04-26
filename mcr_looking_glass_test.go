@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -1295,12 +1296,12 @@ func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRPingPending() {
 		}
 	}`
 
-	calls := 0
+	var calls atomic.Int32
 	path := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes/operation", mcrUID)
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
-		calls++
-		if calls == 1 {
+		calls.Add(1)
+		if calls.Load() == 1 {
 			fmt.Fprint(w, pendingBlob)
 		} else {
 			fmt.Fprint(w, doneBlob)
@@ -1314,7 +1315,7 @@ func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRPingPending() {
 	suite.NoError(err)
 	suite.NotNil(result)
 	suite.Equal("PING 8.8.8.8: 56 data bytes", result.RawOutput)
-	suite.GreaterOrEqual(calls, 2)
+	suite.GreaterOrEqual(calls.Load(), int32(2))
 }
 
 // TestWaitForMCRTraceroutePending tests WaitForMCRTraceroute when the first poll returns pending and the second returns the result.
@@ -1334,12 +1335,12 @@ func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRTraceroutePending() {
 		}
 	}`
 
-	calls := 0
+	var calls atomic.Int32
 	path := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes/operation", mcrUID)
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
-		calls++
-		if calls == 1 {
+		calls.Add(1)
+		if calls.Load() == 1 {
 			fmt.Fprint(w, pendingBlob)
 		} else {
 			fmt.Fprint(w, doneBlob)
@@ -1353,7 +1354,7 @@ func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRTraceroutePending() {
 	suite.NoError(err)
 	suite.NotNil(result)
 	suite.Equal("traceroute to 1.1.1.1", result.RawOutput)
-	suite.GreaterOrEqual(calls, 2)
+	suite.GreaterOrEqual(calls.Load(), int32(2))
 }
 
 // TestWaitForMCRPingContextCancellation tests that WaitForMCRPing respects context cancellation.
