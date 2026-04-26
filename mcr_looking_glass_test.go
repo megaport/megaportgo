@@ -1139,8 +1139,8 @@ func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRPingSuccess() {
 		fmt.Fprint(w, jblob)
 	})
 
-	// Use a context with a short deadline so the initial delay doesn't slow the test.
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	// Use a timeout context to bound the total wait time and prevent the test from hanging.
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	result, err := lgSvc.WaitForMCRPing(ctx, mcrUID, operationID)
@@ -1178,7 +1178,8 @@ func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRTracerouteSuccess() {
 		fmt.Fprint(w, jblob)
 	})
 
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	// Use a timeout context to bound the total wait time and prevent the test from hanging.
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	result, err := lgSvc.WaitForMCRTraceroute(ctx, mcrUID, operationID)
@@ -1306,7 +1307,7 @@ func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRPingPending() {
 		}
 	})
 
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	result, err := lgSvc.WaitForMCRPing(ctx, mcrUID, operationID)
@@ -1345,7 +1346,7 @@ func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRTraceroutePending() {
 		}
 	})
 
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	result, err := lgSvc.WaitForMCRTraceroute(ctx, mcrUID, operationID)

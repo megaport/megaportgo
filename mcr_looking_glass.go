@@ -75,9 +75,6 @@ const mcrDiagnosticsPollTimeout = 5 * time.Minute
 // mcrDiagnosticsPollInterval is the interval between poll attempts for MCR diagnostics.
 const mcrDiagnosticsPollInterval = 3 * time.Second
 
-// mcrDiagnosticsPollInitialDelay is the initial delay before the first poll for MCR diagnostics.
-const mcrDiagnosticsPollInitialDelay = 2 * time.Second
-
 // MCRLookingGlassServiceOp handles communication with MCR Looking Glass methods of the Megaport API.
 type MCRLookingGlassServiceOp struct {
 	Client *Client
@@ -645,41 +642,46 @@ func (svc *MCRLookingGlassServiceOp) WaitForMCRPing(ctx context.Context, mcrUID,
 		return nil, ErrMCRDiagnosticsOperationEmpty
 	}
 
+	// pollCtx carries the SDK-managed deadline; ctx is the caller's original
+	// context. pollDoneErr distinguishes caller cancellation from SDK timeout.
+	pollCtx := ctx
 	if _, ok := ctx.Deadline(); !ok {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, mcrDiagnosticsPollTimeout)
+		pollCtx, cancel = context.WithTimeout(ctx, mcrDiagnosticsPollTimeout)
 		defer cancel()
 	}
 
 	pollDoneErr := func() error {
 		if err := ctx.Err(); err != nil {
-			return err
+			return err // caller cancelled or deadline exceeded
 		}
-		return ErrMCRDiagnosticsTimeout
+		return ErrMCRDiagnosticsTimeout // SDK-managed timeout fired
 	}
 
-	// Initial delay before first poll.
-	select {
-	case <-ctx.Done():
-		return nil, pollDoneErr()
-	case <-time.After(mcrDiagnosticsPollInitialDelay):
+	// Poll immediately — return without delay when the result is already available.
+	result, err := svc.GetMCRPingResult(pollCtx, mcrUID, operationID)
+	if err != nil {
+		return nil, err
+	}
+	if result != nil {
+		return result, nil
 	}
 
 	ticker := time.NewTicker(mcrDiagnosticsPollInterval)
 	defer ticker.Stop()
 
 	for {
-		result, err := svc.GetMCRPingResult(ctx, mcrUID, operationID)
-		if err != nil {
-			return nil, err
-		}
-		if result != nil {
-			return result, nil
-		}
 		select {
-		case <-ctx.Done():
+		case <-pollCtx.Done():
 			return nil, pollDoneErr()
 		case <-ticker.C:
+			result, err := svc.GetMCRPingResult(pollCtx, mcrUID, operationID)
+			if err != nil {
+				return nil, err
+			}
+			if result != nil {
+				return result, nil
+			}
 		}
 	}
 }
@@ -694,41 +696,46 @@ func (svc *MCRLookingGlassServiceOp) WaitForMCRTraceroute(ctx context.Context, m
 		return nil, ErrMCRDiagnosticsOperationEmpty
 	}
 
+	// pollCtx carries the SDK-managed deadline; ctx is the caller's original
+	// context. pollDoneErr distinguishes caller cancellation from SDK timeout.
+	pollCtx := ctx
 	if _, ok := ctx.Deadline(); !ok {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, mcrDiagnosticsPollTimeout)
+		pollCtx, cancel = context.WithTimeout(ctx, mcrDiagnosticsPollTimeout)
 		defer cancel()
 	}
 
 	pollDoneErr := func() error {
 		if err := ctx.Err(); err != nil {
-			return err
+			return err // caller cancelled or deadline exceeded
 		}
-		return ErrMCRDiagnosticsTimeout
+		return ErrMCRDiagnosticsTimeout // SDK-managed timeout fired
 	}
 
-	// Initial delay before first poll.
-	select {
-	case <-ctx.Done():
-		return nil, pollDoneErr()
-	case <-time.After(mcrDiagnosticsPollInitialDelay):
+	// Poll immediately — return without delay when the result is already available.
+	result, err := svc.GetMCRTracerouteResult(pollCtx, mcrUID, operationID)
+	if err != nil {
+		return nil, err
+	}
+	if result != nil {
+		return result, nil
 	}
 
 	ticker := time.NewTicker(mcrDiagnosticsPollInterval)
 	defer ticker.Stop()
 
 	for {
-		result, err := svc.GetMCRTracerouteResult(ctx, mcrUID, operationID)
-		if err != nil {
-			return nil, err
-		}
-		if result != nil {
-			return result, nil
-		}
 		select {
-		case <-ctx.Done():
+		case <-pollCtx.Done():
 			return nil, pollDoneErr()
 		case <-ticker.C:
+			result, err := svc.GetMCRTracerouteResult(pollCtx, mcrUID, operationID)
+			if err != nil {
+				return nil, err
+			}
+			if result != nil {
+				return result, nil
+			}
 		}
 	}
 }
