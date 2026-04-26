@@ -22,8 +22,8 @@ var accTestSemaphore = make(chan struct{}, maxConcurrentAccTests)
 // unset so `go test ./...` without credentials doesn't block.
 func acquireAccTestSlot(t *testing.T) {
 	t.Helper()
-	if os.Getenv("MEGAPORT_ACCESS_KEY") == "" {
-		t.Skip("integration test helper requires MEGAPORT_ACCESS_KEY to be set")
+	if os.Getenv("MEGAPORT_ACCESS_KEY") == "" || os.Getenv("MEGAPORT_SECRET_KEY") == "" {
+		t.Skip("integration test helper requires MEGAPORT_ACCESS_KEY and MEGAPORT_SECRET_KEY to be set")
 	}
 	accTestSemaphore <- struct{}{}
 	t.Cleanup(func() { <-accTestSemaphore })

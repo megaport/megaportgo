@@ -31,6 +31,10 @@ const (
 	// AWS VXC Types
 	CONNECT_TYPE_AWS_VIF               = "AWS"
 	CONNECT_TYPE_AWS_HOSTED_CONNECTION = "AWSHC"
+
+	// Interface types for PartnerConfigInterface.InterfaceType.
+	InterfaceTypeSubInterface = "SUBINTERFACE"
+	InterfaceTypeIPSecTunnel  = "IPSEC_TUNNEL"
 )
 
 var (

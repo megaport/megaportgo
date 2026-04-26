@@ -93,7 +93,7 @@ func GetRandomLocation(ctx context.Context, svc LocationService, marketCode stri
 	if len(filteredByMCR) == 0 {
 		return nil, fmt.Errorf("no MCR-capable locations in market %s", marketCode)
 	}
-	testLocation := filteredByMCR[GenerateRandomNumber(0, len(filteredByMCR))]
+	testLocation := filteredByMCR[rand.Intn(len(filteredByMCR))]
 	return testLocation, nil
 }
 
@@ -143,6 +143,10 @@ func findActivePortLocation(ctx context.Context, t *testing.T, c *Client, market
 	//nolint:gosec // test-only shuffle; cryptographic randomness not required
 	rPort := rand.New(rand.NewSource(time.Now().UnixNano()))
 	rPort.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
+
+	if len(shuffled) == 0 {
+		return nil, fmt.Errorf("no active %s locations advertise a %d Mbps port (metro=%q)", marketCode, speedMbps, opt.Metro)
+	}
 
 	for _, loc := range shuffled {
 		err := c.PortService.ValidatePortOrder(ctx, &BuyPortRequest{
