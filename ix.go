@@ -1,10 +1,10 @@
 package megaport
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"slices"
 	"strings"
@@ -31,8 +31,8 @@ type IXService interface {
 	// ListIXs lists all Internet Exchanges with optional filters
 	ListIXs(ctx context.Context, req *ListIXsRequest) ([]*IX, error)
 
-	// ListIXPs returns all globally available Internet Exchange Points.
-	ListIXPs(ctx context.Context) ([]*InternetExchange, error)
+	// ListIXPs returns all globally available Internet Exchange Points with optional filters.
+	ListIXPs(ctx context.Context, req *ListIXPsRequest) ([]*IXP, error)
 }
 
 // IXServiceOp handles communication with the IX related methods of the Megaport API
@@ -195,22 +195,15 @@ func (svc *IXServiceOp) GetIX(ctx context.Context, id string) (*IX, error) {
 		return nil, err
 	}
 
-	response, err := svc.Client.Do(ctx, clientReq, nil)
+	var buf bytes.Buffer
+	_, err = svc.Client.Do(ctx, clientReq, &buf)
 	if err != nil {
 		return nil, err
 	}
-	defer response.Body.Close()
-
-	body, fileErr := io.ReadAll(response.Body)
-	if fileErr != nil {
-		return nil, fileErr
-	}
 
 	ixResponse := IXResponse{}
-
-	unmarshalErr := json.Unmarshal(body, &ixResponse)
-	if unmarshalErr != nil {
-		return nil, unmarshalErr
+	if err = json.Unmarshal(buf.Bytes(), &ixResponse); err != nil {
+		return nil, err
 	}
 
 	return &ixResponse.Data, nil
@@ -271,20 +264,15 @@ func (svc *IXServiceOp) UpdateIX(ctx context.Context, id string, req *UpdateIXRe
 		return nil, err
 	}
 
-	response, err := svc.Client.Do(ctx, clientReq, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer response.Body.Close()
-
-	body, err := io.ReadAll(response.Body)
+	var buf bytes.Buffer
+	_, err = svc.Client.Do(ctx, clientReq, &buf)
 	if err != nil {
 		return nil, err
 	}
 
 	// Parse the response
 	ixResponse := IXResponse{}
-	if err = json.Unmarshal(body, &ixResponse); err != nil {
+	if err = json.Unmarshal(buf.Bytes(), &ixResponse); err != nil {
 		return nil, err
 	}
 
@@ -371,31 +359,38 @@ func (svc *IXServiceOp) ListIXs(ctx context.Context, req *ListIXsRequest) ([]*IX
 }
 
 // ListIXPs returns all globally available Internet Exchange Points from the Megaport API.
-func (svc *IXServiceOp) ListIXPs(ctx context.Context) ([]*InternetExchange, error) {
-	url := svc.Client.BaseURL.JoinPath("/v2/ixp").String()
+func (svc *IXServiceOp) ListIXPs(ctx context.Context, req *ListIXPsRequest) ([]*IXP, error) {
+	reqURL := svc.Client.BaseURL.JoinPath("/v2/ixp").String()
 
-	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, url, nil)
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, reqURL, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	response, err := svc.Client.Do(ctx, clientReq, nil)
+	var buf bytes.Buffer
+	response, err := svc.Client.Do(ctx, clientReq, &buf)
 	if err != nil {
 		return nil, err
 	}
 	defer response.Body.Close()
 
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		return nil, err
-	}
-
 	var ixpResponse listIXPsResponse
-	if err = json.Unmarshal(body, &ixpResponse); err != nil {
+	if err = json.Unmarshal(buf.Bytes(), &ixpResponse); err != nil {
 		return nil, err
 	}
 
-	return ixpResponse.Data, nil
+	if req == nil || req.Metro == "" {
+		return ixpResponse.Data, nil
+	}
+
+	metro := strings.ToLower(req.Metro)
+	var filtered []*IXP
+	for _, ixp := range ixpResponse.Data {
+		if strings.Contains(strings.ToLower(ixp.Metro), metro) {
+			filtered = append(filtered, ixp)
+		}
+	}
+	return filtered, nil
 }
 
 // Helper function to determine if an IX matches the filter criteria
