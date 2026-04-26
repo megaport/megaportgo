@@ -671,6 +671,115 @@ func (suite *IXClientTestSuite) TestListIXs() {
 	}
 }
 
+// TestListIXPs tests the ListIXPs method.
+func (suite *IXClientTestSuite) TestListIXPs() {
+	ctx := context.Background()
+	ixSvc := suite.client.IXService
+
+	jblob := `{
+		"message": "Found 2 Internet Exchange Points",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": [
+			{
+				"id": 1234,
+				"asn": 58941,
+				"name": "Sydney IX",
+				"metro": "Sydney",
+				"ipv4_network": "103.26.68.0/23",
+				"ipv6_network": "2001:dea:0:10::/64"
+			},
+			{
+				"id": 5678,
+				"asn": 12345,
+				"name": "Los Angeles IX",
+				"metro": "Los Angeles",
+				"ipv4_network": "206.53.168.0/22",
+				"ipv6_network": "2001:504:30::/64"
+			}
+		]
+	}`
+
+	suite.mux.HandleFunc("/v2/ixp", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, jblob)
+	})
+
+	got, err := ixSvc.ListIXPs(ctx, nil)
+	suite.NoError(err)
+	suite.Len(got, 2)
+
+	first := got[0]
+	suite.Equal(1234, first.ID)
+	suite.Equal(58941, first.ASN)
+	suite.Equal("Sydney IX", first.Name)
+	suite.Equal("Sydney", first.Metro)
+	suite.Equal("103.26.68.0/23", first.IPv4Network)
+	suite.Equal("2001:dea:0:10::/64", first.IPv6Network)
+}
+
+// TestListIXPsMetroFilter tests that ListIXPs filters by metro when requested.
+func (suite *IXClientTestSuite) TestListIXPsMetroFilter() {
+	ctx := context.Background()
+	ixSvc := suite.client.IXService
+
+	jblob := `{
+		"message": "Found 2 Internet Exchange Points",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": [
+			{
+				"id": 1234,
+				"asn": 58941,
+				"name": "Sydney IX",
+				"metro": "Sydney",
+				"ipv4_network": "103.26.68.0/23",
+				"ipv6_network": "2001:dea:0:10::/64"
+			},
+			{
+				"id": 5678,
+				"asn": 12345,
+				"name": "Los Angeles IX",
+				"metro": "Los Angeles",
+				"ipv4_network": "206.53.168.0/22",
+				"ipv6_network": "2001:504:30::/64"
+			}
+		]
+	}`
+
+	suite.mux.HandleFunc("/v2/ixp", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, jblob)
+	})
+
+	got, err := ixSvc.ListIXPs(ctx, &ListIXPsRequest{Metro: "sydney"})
+	suite.NoError(err)
+	suite.Len(got, 1)
+	suite.Equal("Sydney IX", got[0].Name)
+
+	// Partial match ("syd") should return the same result as the full match.
+	got, err = ixSvc.ListIXPs(ctx, &ListIXPsRequest{Metro: "syd"})
+	suite.NoError(err)
+	suite.Len(got, 1)
+	suite.Equal("Sydney IX", got[0].Name)
+}
+
+// TestListIXPsError tests that ListIXPs propagates API errors.
+func (suite *IXClientTestSuite) TestListIXPsError() {
+	ctx := context.Background()
+	ixSvc := suite.client.IXService
+
+	suite.mux.HandleFunc("/v2/ixp", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, `{"message":"internal server error","data":null}`)
+	})
+
+	got, err := ixSvc.ListIXPs(ctx, nil)
+	suite.Error(err)
+	suite.Nil(got)
+}
+
 // TestListIXsDeduplication tests that duplicate IXs are properly deduplicated
 func (suite *IXClientTestSuite) TestListIXsDeduplication() {
 	// Define mock response with duplicated IX
