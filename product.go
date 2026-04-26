@@ -34,6 +34,8 @@ type ProductService interface {
 	GetProductType(ctx context.Context, productUID string) (string, error)
 	// GetProductPricing fetches pricing for a product configuration.
 	GetProductPricing(ctx context.Context, req PriceBookRequest) (*PriceBookDto, error)
+	// GetProductPricingForCompany fetches pricing scoped to a specific company.
+	GetProductPricingForCompany(ctx context.Context, req *GetProductPricingRequest) (*PriceBookDto, error)
 }
 
 // ProductServiceOp handles communication with Product methods of the Megaport API.
@@ -422,9 +424,27 @@ func (svc *ProductServiceOp) GetProductPricing(ctx context.Context, req PriceBoo
 	if req == nil {
 		return nil, ErrPricingRequestNil
 	}
+	if err := validatePriceBookRequest(req); err != nil {
+		return nil, err
+	}
+	// Inject productType from the interface so callers don't have to set it manually.
+	rawJSON, err := json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	var body map[string]json.RawMessage
+	if err := json.Unmarshal(rawJSON, &body); err != nil {
+		return nil, err
+	}
+	ptJSON, err := json.Marshal(req.pricingProductType())
+	if err != nil {
+		return nil, err
+	}
+	body["productType"] = ptJSON
+
 	path := "/v4/pricebook/product"
-	url := svc.Client.BaseURL.JoinPath(path).String()
-	clientReq, err := svc.Client.NewRequest(ctx, http.MethodPost, url, req)
+	reqURL := svc.Client.BaseURL.JoinPath(path).String()
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodPost, reqURL, body)
 	if err != nil {
 		return nil, err
 	}
@@ -434,6 +454,106 @@ func (svc *ProductServiceOp) GetProductPricing(ctx context.Context, req PriceBoo
 		return nil, err
 	}
 	return envelope.Data, nil
+}
+
+// GetProductPricingForCompany fetches pricing scoped to a specific company.
+// Use when pricing as a partner or reseller for another company.
+func (svc *ProductServiceOp) GetProductPricingForCompany(ctx context.Context, pricingReq *GetProductPricingRequest) (*PriceBookDto, error) {
+	if pricingReq == nil || pricingReq.Req == nil {
+		return nil, ErrPricingRequestNil
+	}
+	if err := validatePriceBookRequest(pricingReq.Req); err != nil {
+		return nil, err
+	}
+	rawJSON, err := json.Marshal(pricingReq.Req)
+	if err != nil {
+		return nil, err
+	}
+	var body map[string]json.RawMessage
+	if err := json.Unmarshal(rawJSON, &body); err != nil {
+		return nil, err
+	}
+	ptJSON, err := json.Marshal(pricingReq.Req.pricingProductType())
+	if err != nil {
+		return nil, err
+	}
+	body["productType"] = ptJSON
+
+	baseURL := svc.Client.BaseURL.JoinPath("/v4/pricebook/product")
+	q := baseURL.Query()
+	if pricingReq.CompanyID != 0 {
+		q.Set("companyId", fmt.Sprintf("%d", pricingReq.CompanyID))
+	}
+	if pricingReq.CompanyUID != "" {
+		q.Set("companyUid", pricingReq.CompanyUID)
+	}
+	baseURL.RawQuery = q.Encode()
+
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodPost, baseURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+	var envelope productPricingResponse
+	_, err = svc.Client.Do(ctx, clientReq, &envelope)
+	if err != nil {
+		return nil, err
+	}
+	return envelope.Data, nil
+}
+
+// validatePriceBookRequest validates required fields for a pricing request.
+func validatePriceBookRequest(req PriceBookRequest) error {
+	switch r := req.(type) {
+	case *VXCPriceBookRequest:
+		if r.ALocationID == 0 || r.BLocationID == 0 {
+			return ErrPricingVXCLocationRequired
+		}
+		if r.Speed == 0 {
+			return ErrPricingVXCSpeedRequired
+		}
+	case *MCRPriceBookRequest:
+		if r.LocationID == 0 {
+			return ErrPricingLocationRequired
+		}
+		if r.Speed == 0 {
+			return ErrPricingSpeedRequired
+		}
+	case *MegaportPriceBookRequest:
+		if r.LocationID == 0 {
+			return ErrPricingLocationRequired
+		}
+		if r.Speed == 0 {
+			return ErrPricingSpeedRequired
+		}
+	case *IXPriceBookRequest:
+		if r.PortLocationID == 0 {
+			return ErrPricingIXLocationRequired
+		}
+		if r.IXType == "" {
+			return ErrPricingIXTypeRequired
+		}
+		if r.Speed == 0 {
+			return ErrPricingSpeedRequired
+		}
+	case *NATGatewayPriceBookRequest:
+		if r.LocationID == 0 {
+			return ErrPricingLocationRequired
+		}
+		if r.Speed == 0 {
+			return ErrPricingSpeedRequired
+		}
+		if r.SessionCount == 0 {
+			return ErrPricingNATSessionRequired
+		}
+	case *IPAddressPriceBookRequest:
+		if r.LocationID == 0 {
+			return ErrPricingIPLocationRequired
+		}
+		if r.IPBlock == "" {
+			return ErrPricingIPBlockRequired
+		}
+	}
+	return nil
 }
 
 // GetProductType returns the type of the product based on the Product UID. If no product is found, it returns an error.
