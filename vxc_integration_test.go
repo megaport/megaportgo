@@ -1105,7 +1105,7 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnect() {
 		suite.FailNowf("cannot find port location", "cannot find port location %v", locErr)
 	}
 
-	logger.InfoContext(ctx, "buying google interconect port a end")
+	logger.InfoContext(ctx, "buying google interconnect port a end")
 
 	portRes, portErr := portSvc.BuyPort(ctx, &BuyPortRequest{
 		Name:                  "Google Interconnect Test Port",

@@ -37,14 +37,14 @@ type cspPickResult struct {
 // has available VXC capacity. Calls t.Skip if no usable key is found.
 func pickAzureServiceKey(t *testing.T, client *Client) cspPickResult {
 	t.Helper()
-	return pickCSPKey(t, client, PARTNER_AZURE, "azure")
+	return pickCSPKey(t, client, PARTNER_AZURE, PARTNER_AZURE)
 }
 
 // pickGCPPairingKey returns the first GCP pairing key from the pool that has
 // available VXC capacity. Calls t.Skip if no usable key is found.
 func pickGCPPairingKey(t *testing.T, client *Client) cspPickResult {
 	t.Helper()
-	return pickCSPKey(t, client, PARTNER_GOOGLE, "google")
+	return pickCSPKey(t, client, PARTNER_GOOGLE, PARTNER_GOOGLE)
 }
 
 // cspClaimedKeys tracks CSP keys and partner port UIDs already handed out so
