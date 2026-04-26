@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"reflect"
 	"strings"
 )
 
@@ -421,7 +422,7 @@ func fromProductResourceTags(in []ResourceTag) map[string]string {
 
 // GetProductPricing fetches pricing for a product configuration via POST /v4/pricebook/product.
 func (svc *ProductServiceOp) GetProductPricing(ctx context.Context, req PriceBookRequest) (*PriceBookDto, error) {
-	if req == nil {
+	if req == nil || reflect.ValueOf(req).IsNil() {
 		return nil, ErrPricingRequestNil
 	}
 	if err := validatePriceBookRequest(req); err != nil {
@@ -449,9 +450,13 @@ func (svc *ProductServiceOp) GetProductPricing(ctx context.Context, req PriceBoo
 		return nil, err
 	}
 	var envelope productPricingResponse
-	_, err = svc.Client.Do(ctx, clientReq, &envelope)
+	resp, err := svc.Client.Do(ctx, clientReq, &envelope)
 	if err != nil {
 		return nil, err
+	}
+	defer resp.Body.Close()
+	if envelope.Data == nil {
+		return nil, fmt.Errorf("product pricing response missing data")
 	}
 	return envelope.Data, nil
 }
@@ -494,9 +499,13 @@ func (svc *ProductServiceOp) GetProductPricingForCompany(ctx context.Context, pr
 		return nil, err
 	}
 	var envelope productPricingResponse
-	_, err = svc.Client.Do(ctx, clientReq, &envelope)
+	resp, err := svc.Client.Do(ctx, clientReq, &envelope)
 	if err != nil {
 		return nil, err
+	}
+	defer resp.Body.Close()
+	if envelope.Data == nil {
+		return nil, fmt.Errorf("product pricing response missing data")
 	}
 	return envelope.Data, nil
 }

@@ -540,6 +540,18 @@ func (suite *ProductClientTestSuite) TestGetProductPricingNilRequest() {
 	suite.Nil(got)
 }
 
+// TestGetProductPricingTypedNilRequest tests that GetProductPricing catches a typed-nil request,
+// which passes the req == nil interface check but wraps a nil concrete pointer.
+func (suite *ProductClientTestSuite) TestGetProductPricingTypedNilRequest() {
+	ctx := context.Background()
+	productSvc := suite.client.ProductService
+
+	var typedNil *VXCPriceBookRequest
+	got, err := productSvc.GetProductPricing(ctx, typedNil)
+	suite.ErrorIs(err, ErrPricingRequestNil)
+	suite.Nil(got)
+}
+
 // TestGetProductPricingValidation tests required-field validation per request type.
 func (suite *ProductClientTestSuite) TestGetProductPricingValidation() {
 	ctx := context.Background()

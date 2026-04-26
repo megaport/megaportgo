@@ -95,15 +95,15 @@ type GetProductPricingRequest struct {
 
 // VXCPriceBookRequest is a pricing request for a VXC.
 type VXCPriceBookRequest struct {
-	Currency        string                         `json:"currency,omitempty"`
-	ALocationID     int                            `json:"aLocationId"`
-	BLocationID     int                            `json:"bLocationId"`
-	Speed           int                            `json:"speed"`
-	AEndProductType string                         `json:"aEndProductType,omitempty"`
-	ConnectType     string                         `json:"connectType,omitempty"`
-	Term            int                            `json:"term,omitempty"`
-	ProductUID      string                         `json:"productUid,omitempty"`
-	BuyoutPort      bool                           `json:"buyoutPort,omitempty"`
+	Currency        string                          `json:"currency,omitempty"`
+	ALocationID     int                             `json:"aLocationId"`
+	BLocationID     int                             `json:"bLocationId"`
+	Speed           int                             `json:"speed"`
+	AEndProductType string                          `json:"aEndProductType,omitempty"`
+	ConnectType     string                          `json:"connectType,omitempty"`
+	Term            int                             `json:"term,omitempty"`
+	ProductUID      string                          `json:"productUid,omitempty"`
+	BuyoutPort      bool                            `json:"buyoutPort,omitempty"`
 	AddOns          []*ProductAddOnPriceBookRequest `json:"addOns,omitempty"`
 }
 
@@ -111,11 +111,11 @@ func (r *VXCPriceBookRequest) pricingProductType() string { return "VXC" }
 
 // MCRPriceBookRequest is a pricing request for an MCR.
 type MCRPriceBookRequest struct {
-	Currency   string                         `json:"currency,omitempty"`
-	LocationID int                            `json:"locationId"`
-	Speed      int                            `json:"speed"`
-	Term       int                            `json:"term,omitempty"`
-	ProductUID string                         `json:"productUid,omitempty"`
+	Currency   string                          `json:"currency,omitempty"`
+	LocationID int                             `json:"locationId"`
+	Speed      int                             `json:"speed"`
+	Term       int                             `json:"term,omitempty"`
+	ProductUID string                          `json:"productUid,omitempty"`
 	AddOns     []*ProductAddOnPriceBookRequest `json:"addOns,omitempty"`
 }
 
@@ -123,11 +123,11 @@ func (r *MCRPriceBookRequest) pricingProductType() string { return "MCR2" }
 
 // MegaportPriceBookRequest is a pricing request for a Port.
 type MegaportPriceBookRequest struct {
-	Currency   string                         `json:"currency,omitempty"`
-	LocationID int                            `json:"locationId"`
-	Speed      int                            `json:"speed"`
-	Term       int                            `json:"term,omitempty"`
-	ProductUID string                         `json:"productUid,omitempty"`
+	Currency   string                          `json:"currency,omitempty"`
+	LocationID int                             `json:"locationId"`
+	Speed      int                             `json:"speed"`
+	Term       int                             `json:"term,omitempty"`
+	ProductUID string                          `json:"productUid,omitempty"`
 	AddOns     []*ProductAddOnPriceBookRequest `json:"addOns,omitempty"`
 }
 
@@ -135,12 +135,12 @@ func (r *MegaportPriceBookRequest) pricingProductType() string { return "MEGAPOR
 
 // MVEPriceBookRequest is a pricing request for an MVE.
 type MVEPriceBookRequest struct {
-	Currency   string                         `json:"currency,omitempty"`
-	LocationID int                            `json:"locationId,omitempty"`
-	Size       string                         `json:"size,omitempty"`
-	MVELabel   string                         `json:"mveLabel,omitempty"`
-	Term       int                            `json:"term,omitempty"`
-	ProductUID string                         `json:"productUid,omitempty"`
+	Currency   string                          `json:"currency,omitempty"`
+	LocationID int                             `json:"locationId,omitempty"`
+	Size       string                          `json:"size,omitempty"`
+	MVELabel   string                          `json:"mveLabel,omitempty"`
+	Term       int                             `json:"term,omitempty"`
+	ProductUID string                          `json:"productUid,omitempty"`
 	AddOns     []*ProductAddOnPriceBookRequest `json:"addOns,omitempty"`
 }
 
@@ -148,12 +148,12 @@ func (r *MVEPriceBookRequest) pricingProductType() string { return "MVE" }
 
 // IXPriceBookRequest is a pricing request for an IX.
 type IXPriceBookRequest struct {
-	Currency       string                         `json:"currency,omitempty"`
-	PortLocationID int                            `json:"portLocationId"`
-	IXType         string                         `json:"ixType"`
-	Speed          int                            `json:"speed"`
-	Term           int                            `json:"term,omitempty"`
-	ProductUID     string                         `json:"productUid,omitempty"`
+	Currency       string                          `json:"currency,omitempty"`
+	PortLocationID int                             `json:"portLocationId"`
+	IXType         string                          `json:"ixType"`
+	Speed          int                             `json:"speed"`
+	Term           int                             `json:"term,omitempty"`
+	ProductUID     string                          `json:"productUid,omitempty"`
 	AddOns         []*ProductAddOnPriceBookRequest `json:"addOns,omitempty"`
 }
 
@@ -161,12 +161,12 @@ func (r *IXPriceBookRequest) pricingProductType() string { return "IX" }
 
 // NATGatewayPriceBookRequest is a pricing request for a NAT Gateway.
 type NATGatewayPriceBookRequest struct {
-	Currency     string                         `json:"currency,omitempty"`
-	LocationID   int                            `json:"locationId"`
-	Speed        int                            `json:"speed"`
-	SessionCount int                            `json:"sessionCount"`
-	Term         int                            `json:"term,omitempty"`
-	ProductUID   string                         `json:"productUid,omitempty"`
+	Currency     string                          `json:"currency,omitempty"`
+	LocationID   int                             `json:"locationId"`
+	Speed        int                             `json:"speed"`
+	SessionCount int                             `json:"sessionCount"`
+	Term         int                             `json:"term,omitempty"`
+	ProductUID   string                          `json:"productUid,omitempty"`
 	AddOns       []*ProductAddOnPriceBookRequest `json:"addOns,omitempty"`
 }
 
@@ -174,10 +174,10 @@ func (r *NATGatewayPriceBookRequest) pricingProductType() string { return "NAT_G
 
 // IPAddressPriceBookRequest is a pricing request for an IP Address block.
 type IPAddressPriceBookRequest struct {
-	Currency   string                         `json:"currency,omitempty"`
-	LocationID int                            `json:"locationId"`
-	IPBlock    string                         `json:"ipBlock"` // e.g. "/24"
-	ProductUID string                         `json:"productUid,omitempty"`
+	Currency   string                          `json:"currency,omitempty"`
+	LocationID int                             `json:"locationId"`
+	IPBlock    string                          `json:"ipBlock"` // e.g. "/24"
+	ProductUID string                          `json:"productUid,omitempty"`
 	AddOns     []*ProductAddOnPriceBookRequest `json:"addOns,omitempty"`
 }
 
