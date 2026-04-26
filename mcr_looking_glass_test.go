@@ -1282,7 +1282,9 @@ func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRPingPending() {
 	operationID := "op-id-ping-pending"
 
 	// Use a fast poll interval so the test completes instantly without real-time waits.
-	lgSvc.(*MCRLookingGlassServiceOp).pollInterval = 5 * time.Millisecond
+	op, ok := lgSvc.(*MCRLookingGlassServiceOp)
+	suite.Require().True(ok)
+	op.pollInterval = 5 * time.Millisecond
 
 	pendingBlob := `{"message":"pending","terms":"","data":null}`
 	doneBlob := `{
@@ -1330,7 +1332,9 @@ func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRTraceroutePending() {
 	operationID := "op-id-traceroute-pending"
 
 	// Use a fast poll interval so the test completes instantly without real-time waits.
-	lgSvc.(*MCRLookingGlassServiceOp).pollInterval = 5 * time.Millisecond
+	op, ok := lgSvc.(*MCRLookingGlassServiceOp)
+	suite.Require().True(ok)
+	op.pollInterval = 5 * time.Millisecond
 
 	pendingBlob := `{"message":"pending","terms":"","data":null}`
 	doneBlob := `{
