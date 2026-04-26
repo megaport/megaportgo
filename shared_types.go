@@ -33,6 +33,9 @@ const (
 	CONNECT_TYPE_AWS_HOSTED_CONNECTION = "AWSHC"
 
 	// Interface types for PartnerConfigInterface.InterfaceType.
+	// These values match the Megaport API exactly (uppercase); earlier
+	// drafts of this SDK used "subInterface"/"ipSecTunnel" but those
+	// were never the canonical API values.
 	InterfaceTypeSubInterface = "SUBINTERFACE"
 	InterfaceTypeIPSecTunnel  = "IPSEC_TUNNEL"
 )

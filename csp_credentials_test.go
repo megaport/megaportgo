@@ -65,8 +65,12 @@ func pickCSPKey(t *testing.T, client *Client, partner, connectType string) cspPi
 	t.Helper()
 	creds, err := loadCSPCredentials()
 	if err != nil {
-		t.Skipf("skipping: %v", err)
-		return cspPickResult{}
+		if errors.Is(err, os.ErrNotExist) {
+			t.Skipf("skipping: %v", err)
+			return cspPickResult{}
+		}
+		t.Fatalf("failed to load CSP credentials: %v", err)
+		return cspPickResult{} // unreachable
 	}
 
 	var keys []string
