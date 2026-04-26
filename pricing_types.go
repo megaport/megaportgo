@@ -57,8 +57,8 @@ type PriceBookDiscountElement struct {
 	DiscountDetails *DiscountDetails `json:"discountDetails,omitempty"`
 }
 
-// PriceBookDto is the pricing response for a single product.
-type PriceBookDto struct {
+// PriceBookDTO is the pricing response for a single product.
+type PriceBookDTO struct {
 	ProductType     string                      `json:"productType"`
 	Currency        string                      `json:"currency"`
 	MonthlyRate     float64                     `json:"monthlyRate"`
@@ -187,7 +187,7 @@ func (r *IPAddressPriceBookRequest) pricingProductType() string { return "IP_ADD
 type productPricingResponse struct {
 	Message string        `json:"message"`
 	Terms   string        `json:"terms"`
-	Data    *PriceBookDto `json:"data"`
+	Data    *PriceBookDTO `json:"data"`
 }
 
 var (

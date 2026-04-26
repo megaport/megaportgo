@@ -34,9 +34,9 @@ type ProductService interface {
 	// GetProductType returns the type of the product based on the Product UID. If no product is found, it returns an error.
 	GetProductType(ctx context.Context, productUID string) (string, error)
 	// GetProductPricing fetches pricing for a product configuration.
-	GetProductPricing(ctx context.Context, req PriceBookRequest) (*PriceBookDto, error)
+	GetProductPricing(ctx context.Context, req PriceBookRequest) (*PriceBookDTO, error)
 	// GetProductPricingForCompany fetches pricing scoped to a specific company.
-	GetProductPricingForCompany(ctx context.Context, req *GetProductPricingRequest) (*PriceBookDto, error)
+	GetProductPricingForCompany(ctx context.Context, req *GetProductPricingRequest) (*PriceBookDTO, error)
 }
 
 // ProductServiceOp handles communication with Product methods of the Megaport API.
@@ -421,7 +421,7 @@ func fromProductResourceTags(in []ResourceTag) map[string]string {
 }
 
 // GetProductPricing fetches pricing for a product configuration via POST /v4/pricebook/product.
-func (svc *ProductServiceOp) GetProductPricing(ctx context.Context, req PriceBookRequest) (*PriceBookDto, error) {
+func (svc *ProductServiceOp) GetProductPricing(ctx context.Context, req PriceBookRequest) (*PriceBookDTO, error) {
 	if err := validatePriceBookRequest(req); err != nil {
 		return nil, err
 	}
@@ -460,7 +460,7 @@ func (svc *ProductServiceOp) GetProductPricing(ctx context.Context, req PriceBoo
 
 // GetProductPricingForCompany fetches pricing scoped to a specific company.
 // Use when pricing as a partner or reseller for another company.
-func (svc *ProductServiceOp) GetProductPricingForCompany(ctx context.Context, pricingReq *GetProductPricingRequest) (*PriceBookDto, error) {
+func (svc *ProductServiceOp) GetProductPricingForCompany(ctx context.Context, pricingReq *GetProductPricingRequest) (*PriceBookDTO, error) {
 	if pricingReq == nil {
 		return nil, ErrPricingRequestNil
 	}
@@ -512,11 +512,27 @@ func (svc *ProductServiceOp) GetProductPricingForCompany(ctx context.Context, pr
 	return envelope.Data, nil
 }
 
+// isNilPriceBookRequest reports whether req is nil or a typed nil pointer/interface.
+// reflect.Value.IsNil panics for non-nilable kinds (struct, int, …), so the kind
+// is checked first before calling IsNil.
+func isNilPriceBookRequest(req PriceBookRequest) bool {
+	if req == nil {
+		return true
+	}
+	v := reflect.ValueOf(req)
+	switch v.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Map, reflect.Ptr, reflect.Interface, reflect.Slice:
+		return v.IsNil()
+	default:
+		return false
+	}
+}
+
 // validatePriceBookRequest validates required fields for a pricing request.
 // It also guards against nil and typed-nil interface values so callers don't
 // have to repeat the reflect-based check at every call site.
 func validatePriceBookRequest(req PriceBookRequest) error {
-	if req == nil || reflect.ValueOf(req).IsNil() {
+	if isNilPriceBookRequest(req) {
 		return ErrPricingRequestNil
 	}
 	switch r := req.(type) {
