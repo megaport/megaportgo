@@ -1058,3 +1058,156 @@ func (suite *MCRLookingGlassClientTestSuite) TestTracerouteMCRValidation() {
 	})
 	suite.ErrorIs(err, ErrMCRTracerouteDestinationRequired)
 }
+
+// TestPingMCRPacketCountValidation tests out-of-range packet_count values.
+func (suite *MCRLookingGlassClientTestSuite) TestPingMCRPacketCountValidation() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+	mcrUID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	tooLow := int32(0)
+	_, err := lgSvc.PingMCR(ctx, &MCRPingRequest{
+		MCRID:              mcrUID,
+		DestinationAddress: "8.8.8.8",
+		PacketCount:        &tooLow,
+	})
+	suite.ErrorIs(err, ErrMCRPingPacketCountOutOfRange)
+
+	tooHigh := int32(61)
+	_, err = lgSvc.PingMCR(ctx, &MCRPingRequest{
+		MCRID:              mcrUID,
+		DestinationAddress: "8.8.8.8",
+		PacketCount:        &tooHigh,
+	})
+	suite.ErrorIs(err, ErrMCRPingPacketCountOutOfRange)
+}
+
+// TestPingMCRPacketSizeValidation tests out-of-range packet_size values.
+func (suite *MCRLookingGlassClientTestSuite) TestPingMCRPacketSizeValidation() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+	mcrUID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	tooLow := int32(0)
+	_, err := lgSvc.PingMCR(ctx, &MCRPingRequest{
+		MCRID:              mcrUID,
+		DestinationAddress: "8.8.8.8",
+		PacketSize:         &tooLow,
+	})
+	suite.ErrorIs(err, ErrMCRPingPacketSizeOutOfRange)
+
+	tooHigh := int32(9187)
+	_, err = lgSvc.PingMCR(ctx, &MCRPingRequest{
+		MCRID:              mcrUID,
+		DestinationAddress: "8.8.8.8",
+		PacketSize:         &tooHigh,
+	})
+	suite.ErrorIs(err, ErrMCRPingPacketSizeOutOfRange)
+}
+
+// TestWaitForMCRPingSuccess tests WaitForMCRPing when the result is ready on the first poll.
+func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRPingSuccess() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+	mcrUID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	operationID := "op-id-ping-123"
+
+	jblob := `{
+		"message": "Operation complete",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": {
+			"rawOutput": "PING 8.8.8.8: 56 data bytes",
+			"statistics": {
+				"duplicates": 0,
+				"errors": 0,
+				"packetLossPct": 0.0,
+				"packetsReceived": 3,
+				"packetsTransmitted": 3,
+				"rttAvgMs": 1.5,
+				"rttMaxMs": 2.0,
+				"rttMdevMs": 0.2,
+				"rttMinMs": 1.2,
+				"totalTimeMs": 5.0
+			}
+		}
+	}`
+
+	path := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes/operation", mcrUID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		suite.Equal(operationID, r.URL.Query().Get("operationId"))
+		fmt.Fprint(w, jblob)
+	})
+
+	// Use a context with a short deadline so the initial delay doesn't slow the test.
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	result, err := lgSvc.WaitForMCRPing(ctx, mcrUID, operationID)
+	suite.NoError(err)
+	suite.NotNil(result)
+	suite.Equal("PING 8.8.8.8: 56 data bytes", result.RawOutput)
+	suite.Equal(3, result.Statistics.PacketsReceived)
+}
+
+// TestWaitForMCRTracerouteSuccess tests WaitForMCRTraceroute when the result is ready on the first poll.
+func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRTracerouteSuccess() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+	mcrUID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	operationID := "op-id-traceroute-456"
+
+	jblob := `{
+		"message": "Operation complete",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": {
+			"rawOutput": "traceroute to 1.1.1.1",
+			"hops": [
+				{
+					"hop": "1",
+					"probes": [{"host": "192.168.1.1", "rttMs": 0.5}]
+				}
+			]
+		}
+	}`
+
+	path := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes/operation", mcrUID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		suite.Equal(operationID, r.URL.Query().Get("operationId"))
+		fmt.Fprint(w, jblob)
+	})
+
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	result, err := lgSvc.WaitForMCRTraceroute(ctx, mcrUID, operationID)
+	suite.NoError(err)
+	suite.NotNil(result)
+	suite.Equal("traceroute to 1.1.1.1", result.RawOutput)
+	suite.Len(result.Hops, 1)
+}
+
+// TestWaitForMCRPingValidation tests that WaitForMCRPing returns sentinel errors for invalid inputs.
+func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRPingValidation() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+
+	_, err := lgSvc.WaitForMCRPing(ctx, "", "op-id")
+	suite.ErrorIs(err, ErrMCRDiagnosticsMCRUIDRequired)
+
+	_, err = lgSvc.WaitForMCRPing(ctx, "36b3f68e-2f54-4331-bf94-f8984449365f", "")
+	suite.ErrorIs(err, ErrMCRDiagnosticsOperationEmpty)
+}
+
+// TestWaitForMCRTracerouteValidation tests that WaitForMCRTraceroute returns sentinel errors for invalid inputs.
+func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRTracerouteValidation() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+
+	_, err := lgSvc.WaitForMCRTraceroute(ctx, "", "op-id")
+	suite.ErrorIs(err, ErrMCRDiagnosticsMCRUIDRequired)
+
+	_, err = lgSvc.WaitForMCRTraceroute(ctx, "36b3f68e-2f54-4331-bf94-f8984449365f", "")
+	suite.ErrorIs(err, ErrMCRDiagnosticsOperationEmpty)
+}

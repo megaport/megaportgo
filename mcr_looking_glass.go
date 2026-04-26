@@ -558,7 +558,7 @@ func (svc *MCRLookingGlassServiceOp) TracerouteMCR(ctx context.Context, req *MCR
 // GetMCRPingResult retrieves the result of a pending ping operation. Returns nil when still pending.
 func (svc *MCRLookingGlassServiceOp) GetMCRPingResult(ctx context.Context, mcrUID, operationID string) (*LookingGlassPingResult, error) {
 	if mcrUID == "" {
-		return nil, fmt.Errorf("MCR UID is required")
+		return nil, ErrMCRDiagnosticsMCRUIDRequired
 	}
 	if operationID == "" {
 		return nil, ErrMCRDiagnosticsOperationEmpty
@@ -592,7 +592,7 @@ func (svc *MCRLookingGlassServiceOp) GetMCRPingResult(ctx context.Context, mcrUI
 // GetMCRTracerouteResult retrieves the result of a pending traceroute operation. Returns nil when still pending.
 func (svc *MCRLookingGlassServiceOp) GetMCRTracerouteResult(ctx context.Context, mcrUID, operationID string) (*LookingGlassTracerouteResult, error) {
 	if mcrUID == "" {
-		return nil, fmt.Errorf("MCR UID is required")
+		return nil, ErrMCRDiagnosticsMCRUIDRequired
 	}
 	if operationID == "" {
 		return nil, ErrMCRDiagnosticsOperationEmpty
@@ -627,14 +627,17 @@ func (svc *MCRLookingGlassServiceOp) GetMCRTracerouteResult(ctx context.Context,
 // If the context has no deadline, mcrDiagnosticsPollTimeout is applied.
 func (svc *MCRLookingGlassServiceOp) WaitForMCRPing(ctx context.Context, mcrUID, operationID string) (*LookingGlassPingResult, error) {
 	if mcrUID == "" {
-		return nil, fmt.Errorf("MCR UID is required")
+		return nil, ErrMCRDiagnosticsMCRUIDRequired
 	}
 	if operationID == "" {
 		return nil, ErrMCRDiagnosticsOperationEmpty
 	}
 
-	pollCtx, cancel := context.WithTimeout(ctx, mcrDiagnosticsPollTimeout)
-	defer cancel()
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, mcrDiagnosticsPollTimeout)
+		defer cancel()
+	}
 
 	pollDoneErr := func() error {
 		if err := ctx.Err(); err != nil {
@@ -645,7 +648,7 @@ func (svc *MCRLookingGlassServiceOp) WaitForMCRPing(ctx context.Context, mcrUID,
 
 	// Initial delay before first poll.
 	select {
-	case <-pollCtx.Done():
+	case <-ctx.Done():
 		return nil, pollDoneErr()
 	case <-time.After(mcrDiagnosticsPollInitialDelay):
 	}
@@ -654,7 +657,7 @@ func (svc *MCRLookingGlassServiceOp) WaitForMCRPing(ctx context.Context, mcrUID,
 	defer ticker.Stop()
 
 	for {
-		result, err := svc.GetMCRPingResult(pollCtx, mcrUID, operationID)
+		result, err := svc.GetMCRPingResult(ctx, mcrUID, operationID)
 		if err != nil {
 			return nil, err
 		}
@@ -662,7 +665,7 @@ func (svc *MCRLookingGlassServiceOp) WaitForMCRPing(ctx context.Context, mcrUID,
 			return result, nil
 		}
 		select {
-		case <-pollCtx.Done():
+		case <-ctx.Done():
 			return nil, pollDoneErr()
 		case <-ticker.C:
 		}
@@ -673,14 +676,17 @@ func (svc *MCRLookingGlassServiceOp) WaitForMCRPing(ctx context.Context, mcrUID,
 // If the context has no deadline, mcrDiagnosticsPollTimeout is applied.
 func (svc *MCRLookingGlassServiceOp) WaitForMCRTraceroute(ctx context.Context, mcrUID, operationID string) (*LookingGlassTracerouteResult, error) {
 	if mcrUID == "" {
-		return nil, fmt.Errorf("MCR UID is required")
+		return nil, ErrMCRDiagnosticsMCRUIDRequired
 	}
 	if operationID == "" {
 		return nil, ErrMCRDiagnosticsOperationEmpty
 	}
 
-	pollCtx, cancel := context.WithTimeout(ctx, mcrDiagnosticsPollTimeout)
-	defer cancel()
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, mcrDiagnosticsPollTimeout)
+		defer cancel()
+	}
 
 	pollDoneErr := func() error {
 		if err := ctx.Err(); err != nil {
@@ -691,7 +697,7 @@ func (svc *MCRLookingGlassServiceOp) WaitForMCRTraceroute(ctx context.Context, m
 
 	// Initial delay before first poll.
 	select {
-	case <-pollCtx.Done():
+	case <-ctx.Done():
 		return nil, pollDoneErr()
 	case <-time.After(mcrDiagnosticsPollInitialDelay):
 	}
@@ -700,7 +706,7 @@ func (svc *MCRLookingGlassServiceOp) WaitForMCRTraceroute(ctx context.Context, m
 	defer ticker.Stop()
 
 	for {
-		result, err := svc.GetMCRTracerouteResult(pollCtx, mcrUID, operationID)
+		result, err := svc.GetMCRTracerouteResult(ctx, mcrUID, operationID)
 		if err != nil {
 			return nil, err
 		}
@@ -708,7 +714,7 @@ func (svc *MCRLookingGlassServiceOp) WaitForMCRTraceroute(ctx context.Context, m
 			return result, nil
 		}
 		select {
-		case <-pollCtx.Done():
+		case <-ctx.Done():
 			return nil, pollDoneErr()
 		case <-ticker.C:
 		}

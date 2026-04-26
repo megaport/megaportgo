@@ -287,6 +287,7 @@ var (
 	ErrMCRPingPacketCountOutOfRange     = errors.New("packet_count must be between 1 and 60")
 	ErrMCRPingPacketSizeOutOfRange      = errors.New("packet_size must be between 1 and 9186")
 	ErrMCRTracerouteDestinationRequired = errors.New("destination address is required")
+	ErrMCRDiagnosticsMCRUIDRequired     = errors.New("MCR UID is required")
 	ErrMCRDiagnosticsOperationEmpty     = errors.New("operation ID is required")
 	ErrMCRDiagnosticsTimeout            = errors.New("timed out waiting for diagnostics operation to complete")
 )
