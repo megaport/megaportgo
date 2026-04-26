@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -765,4 +766,153 @@ func (suite *MVEClientTestSuite) TestDeleteMVE() {
 	got, err := mveSvc.DeleteMVE(ctx, req)
 	suite.NoError(err)
 	suite.Equal(want, got)
+}
+
+func (suite *MVEClientTestSuite) TestGetMVETelemetry() {
+	ctx := context.Background()
+	mveSvc := suite.client.MVEService
+	productUID := "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+
+	jblob := `{
+		"serviceUid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+		"type": "BITS",
+		"timeFrame": {"from": 1608516536000, "to": 1608603936000},
+		"data": [
+			{
+				"type": "BITS",
+				"subtype": "IN",
+				"samples": [[1608516536000, 125.5], [1608517536000, 130.2]],
+				"unit": {"name": "Mbps", "fullName": "Megabits per second"}
+			}
+		]
+	}`
+
+	path := fmt.Sprintf("/v2/product/mve/%s/telemetry", productUID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.Equal(http.MethodGet, r.Method)
+		suite.Equal("7", r.URL.Query().Get("days"))
+		suite.Equal([]string{"BITS"}, r.URL.Query()["type"])
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, jblob)
+	})
+
+	resp, err := mveSvc.GetMVETelemetry(ctx, &GetMVETelemetryRequest{
+		ProductUID: productUID,
+		Types:      []string{"BITS"},
+		Days:       PtrTo[int32](7),
+	})
+	suite.NoError(err)
+	suite.Equal(productUID, resp.ServiceUID)
+	suite.Equal("BITS", resp.Type)
+	suite.Equal(int64(1608516536000), resp.TimeFrame.From)
+	suite.Equal(int64(1608603936000), resp.TimeFrame.To)
+	suite.Len(resp.Data, 1)
+	suite.Equal("BITS", resp.Data[0].Type)
+	suite.Equal("IN", resp.Data[0].Subtype)
+	suite.Len(resp.Data[0].Samples, 2)
+	suite.Equal(int64(1608516536000), resp.Data[0].Samples[0].Timestamp)
+	suite.Equal(125.5, resp.Data[0].Samples[0].Value)
+	suite.Equal("Mbps", resp.Data[0].Unit.Name)
+	suite.Equal("Megabits per second", resp.Data[0].Unit.FullName)
+}
+
+func (suite *MVEClientTestSuite) TestGetMVETelemetryWithFromTo() {
+	ctx := context.Background()
+	mveSvc := suite.client.MVEService
+	productUID := "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+
+	jblob := `{
+		"serviceUid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+		"type": "BITS",
+		"timeFrame": {"from": 1608516536000, "to": 1608603936000},
+		"data": []
+	}`
+
+	path := fmt.Sprintf("/v2/product/mve/%s/telemetry", productUID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.Equal(http.MethodGet, r.Method)
+		suite.Equal("1608516536000", r.URL.Query().Get("from"))
+		suite.Equal("1608603936000", r.URL.Query().Get("to"))
+		suite.Equal([]string{"BITS", "PACKETS"}, r.URL.Query()["type"])
+		suite.Empty(r.URL.Query().Get("days"))
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, jblob)
+	})
+
+	fromTime := time.UnixMilli(1608516536000)
+	toTime := time.UnixMilli(1608603936000)
+	resp, err := mveSvc.GetMVETelemetry(ctx, &GetMVETelemetryRequest{
+		ProductUID: productUID,
+		Types:      []string{"BITS", "PACKETS"},
+		From:       &fromTime,
+		To:         &toTime,
+	})
+	suite.NoError(err)
+	suite.Equal(productUID, resp.ServiceUID)
+}
+
+func (suite *MVEClientTestSuite) TestGetMVETelemetryValidation() {
+	ctx := context.Background()
+	mveSvc := suite.client.MVEService
+
+	// Missing ProductUID
+	_, err := mveSvc.GetMVETelemetry(ctx, &GetMVETelemetryRequest{
+		Types: []string{"BITS"},
+		Days:  PtrTo[int32](7),
+	})
+	suite.ErrorIs(err, ErrMVETelemetryProductUIDRequired)
+
+	// Missing Types
+	_, err = mveSvc.GetMVETelemetry(ctx, &GetMVETelemetryRequest{
+		ProductUID: "some-uid",
+		Days:       PtrTo[int32](7),
+	})
+	suite.ErrorIs(err, ErrMVETelemetryTypesRequired)
+
+	// Days and From/To mutually exclusive
+	fromTime := time.UnixMilli(1608516536000)
+	_, err = mveSvc.GetMVETelemetry(ctx, &GetMVETelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		Days:       PtrTo[int32](7),
+		From:       &fromTime,
+	})
+	suite.ErrorIs(err, ErrMVETelemetryTimeExclusive)
+
+	// Days out of range (too low)
+	_, err = mveSvc.GetMVETelemetry(ctx, &GetMVETelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		Days:       PtrTo[int32](0),
+	})
+	suite.ErrorIs(err, ErrMVETelemetryDaysOutOfRange)
+
+	// Days out of range (too high)
+	_, err = mveSvc.GetMVETelemetry(ctx, &GetMVETelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		Days:       PtrTo[int32](181),
+	})
+	suite.ErrorIs(err, ErrMVETelemetryDaysOutOfRange)
+
+	// From without To
+	_, err = mveSvc.GetMVETelemetry(ctx, &GetMVETelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		From:       &fromTime,
+	})
+	suite.ErrorIs(err, ErrMVETelemetryFromToIncomplete)
+
+	// To without From
+	toTime := time.UnixMilli(1608603936000)
+	_, err = mveSvc.GetMVETelemetry(ctx, &GetMVETelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		To:         &toTime,
+	})
+	suite.ErrorIs(err, ErrMVETelemetryFromToIncomplete)
+
+	// Nil request
+	_, err = mveSvc.GetMVETelemetry(ctx, nil)
+	suite.ErrorIs(err, ErrMVETelemetryRequestRequired)
 }

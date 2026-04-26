@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -1874,4 +1875,162 @@ func (suite *VXCClientTestSuite) TestListVXCsWithDifferentProductTypes() {
 	for uid, found := range expectedUIDs {
 		suite.True(found, "VXC with UID %s was not found", uid)
 	}
+}
+
+func (suite *VXCClientTestSuite) TestGetVXCTelemetry() {
+	ctx := context.Background()
+	vxcSvc := suite.client.VXCService
+	productUID := "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+
+	jblob := `{
+		"serviceUid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+		"type": "A_BITS",
+		"timeFrame": {"from": 1608516536000, "to": 1608603936000},
+		"data": [
+			{
+				"type": "A_BITS",
+				"subtype": "IN",
+				"samples": [[1608516536000, 125.5], [1608517536000, 130.2]],
+				"unit": {"name": "Mbps", "fullName": "Megabits per second"}
+			}
+		]
+	}`
+
+	path := fmt.Sprintf("/v2/product/vxc/%s/telemetry", productUID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.Equal(http.MethodGet, r.Method)
+		suite.Equal("7", r.URL.Query().Get("days"))
+		suite.Equal([]string{"A_BITS"}, r.URL.Query()["type"])
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, jblob)
+	})
+
+	resp, err := vxcSvc.GetVXCTelemetry(ctx, &GetVXCTelemetryRequest{
+		ProductUID: productUID,
+		Types:      []string{"A_BITS"},
+		Days:       PtrTo[int32](7),
+	})
+	suite.NoError(err)
+	suite.Equal(productUID, resp.ServiceUID)
+	suite.Equal("A_BITS", resp.Type)
+	suite.Equal(int64(1608516536000), resp.TimeFrame.From)
+	suite.Equal(int64(1608603936000), resp.TimeFrame.To)
+	suite.Len(resp.Data, 1)
+	suite.Equal("A_BITS", resp.Data[0].Type)
+	suite.Equal("IN", resp.Data[0].Subtype)
+	suite.Len(resp.Data[0].Samples, 2)
+	suite.Equal(int64(1608516536000), resp.Data[0].Samples[0].Timestamp)
+	suite.Equal(125.5, resp.Data[0].Samples[0].Value)
+	suite.Equal(int64(1608517536000), resp.Data[0].Samples[1].Timestamp)
+	suite.Equal(130.2, resp.Data[0].Samples[1].Value)
+	suite.Equal("Mbps", resp.Data[0].Unit.Name)
+	suite.Equal("Megabits per second", resp.Data[0].Unit.FullName)
+}
+
+// TestGetVXCTelemetryFromTo tests GetVXCTelemetry with a from/to time range.
+func (suite *VXCClientTestSuite) TestGetVXCTelemetryFromTo() {
+	ctx := context.Background()
+	vxcSvc := suite.client.VXCService
+	productUID := "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+
+	jblob := `{
+		"serviceUid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+		"type": "A_BITS",
+		"timeFrame": {"from": 1608516536000, "to": 1608603936000},
+		"data": [
+			{
+				"type": "A_BITS",
+				"subtype": "IN",
+				"samples": [[1608516536000, 125.5]],
+				"unit": {"name": "Mbps", "fullName": "Megabits per second"}
+			}
+		]
+	}`
+
+	path := fmt.Sprintf("/v2/product/vxc/%s/telemetry", productUID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.Equal(http.MethodGet, r.Method)
+		suite.Equal("1608516536000", r.URL.Query().Get("from"))
+		suite.Equal("1608603936000", r.URL.Query().Get("to"))
+		suite.Equal([]string{"A_BITS"}, r.URL.Query()["type"])
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, jblob)
+	})
+
+	from := time.UnixMilli(1608516536000)
+	to := time.UnixMilli(1608603936000)
+	resp, err := vxcSvc.GetVXCTelemetry(ctx, &GetVXCTelemetryRequest{
+		ProductUID: productUID,
+		Types:      []string{"A_BITS"},
+		From:       &from,
+		To:         &to,
+	})
+	suite.NoError(err)
+	suite.NotNil(resp)
+	suite.Equal(int64(1608516536000), resp.TimeFrame.From)
+	suite.Equal(int64(1608603936000), resp.TimeFrame.To)
+}
+
+func (suite *VXCClientTestSuite) TestGetVXCTelemetryValidation() {
+	ctx := context.Background()
+	vxcSvc := suite.client.VXCService
+
+	// Missing ProductUID
+	_, err := vxcSvc.GetVXCTelemetry(ctx, &GetVXCTelemetryRequest{
+		Types: []string{"A_BITS"},
+		Days:  PtrTo[int32](7),
+	})
+	suite.ErrorIs(err, ErrVXCTelemetryProductUIDRequired)
+
+	// Missing Types
+	_, err = vxcSvc.GetVXCTelemetry(ctx, &GetVXCTelemetryRequest{
+		ProductUID: "some-uid",
+		Days:       PtrTo[int32](7),
+	})
+	suite.ErrorIs(err, ErrVXCTelemetryTypesRequired)
+
+	// Days and From/To mutually exclusive
+	_, err = vxcSvc.GetVXCTelemetry(ctx, &GetVXCTelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"A_BITS"},
+		Days:       PtrTo[int32](7),
+		From:       PtrTo(time.UnixMilli(1608516536000)),
+	})
+	suite.ErrorIs(err, ErrVXCTelemetryTimeExclusive)
+
+	// Days out of range (too low)
+	_, err = vxcSvc.GetVXCTelemetry(ctx, &GetVXCTelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"A_BITS"},
+		Days:       PtrTo[int32](0),
+	})
+	suite.ErrorIs(err, ErrVXCTelemetryDaysOutOfRange)
+
+	// Days out of range (too high)
+	_, err = vxcSvc.GetVXCTelemetry(ctx, &GetVXCTelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"A_BITS"},
+		Days:       PtrTo[int32](181),
+	})
+	suite.ErrorIs(err, ErrVXCTelemetryDaysOutOfRange)
+
+	// Only From without To
+	_, err = vxcSvc.GetVXCTelemetry(ctx, &GetVXCTelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"A_BITS"},
+		From:       PtrTo(time.UnixMilli(1608516536000)),
+	})
+	suite.ErrorIs(err, ErrVXCTelemetryFromToIncomplete)
+
+	// Only To without From
+	_, err = vxcSvc.GetVXCTelemetry(ctx, &GetVXCTelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"A_BITS"},
+		To:         PtrTo(time.UnixMilli(1608603936000)),
+	})
+	suite.ErrorIs(err, ErrVXCTelemetryFromToIncomplete)
+
+	// Nil request
+	_, err = vxcSvc.GetVXCTelemetry(ctx, nil)
+	suite.ErrorIs(err, ErrVXCTelemetryRequestRequired)
 }
