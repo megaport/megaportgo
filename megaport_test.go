@@ -171,7 +171,7 @@ func findActiveMCRLocation(ctx context.Context, c *Client, marketCode, diversity
 			slog.Int("location_id", loc.ID),
 			slog.String("location_name", loc.Name),
 			slog.String("diversity_zone", diversityZone),
-			slog.String("error", err.Error()))
+			slog.Any("error", err))
 	}
 	return nil, fmt.Errorf("no active %s location accepted a %d Mbps MCR validate probe (zone=%q)", marketCode, speedMbps, diversityZone)
 }
