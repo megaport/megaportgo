@@ -1475,10 +1475,16 @@ func (suite *VXCClientTestSuite) TestMCRVXCWithIPsecTunnel() {
 	}
 	raw, err = json.Marshal(minimal)
 	suite.NoError(err)
-	suite.NotContains(string(raw), "startAction")
-	suite.NotContains(string(raw), "phase1Lifetime")
-	suite.NotContains(string(raw), "phase2Lifetime")
-	suite.NotContains(string(raw), "description")
+	var minimalGot struct {
+		IpsecTunnels []map[string]any `json:"ipsecTunnels"`
+	}
+	suite.NoError(json.Unmarshal(raw, &minimalGot))
+	suite.Require().Len(minimalGot.IpsecTunnels, 1)
+	minimalTunnel := minimalGot.IpsecTunnels[0]
+	for _, key := range []string{"startAction", "phase1Lifetime", "phase2Lifetime", "description"} {
+		_, ok := minimalTunnel[key]
+		suite.False(ok, "expected key %q to be absent", key)
+	}
 }
 
 // TestListVXCs tests the ListVXCs method with various filters
