@@ -50,7 +50,7 @@ var (
 
 // ServiceTelemetryResponse is the API response for service telemetry data.
 // This response is NOT wrapped in the standard message/terms/data envelope.
-// It is shared across Port, MCR, MVE, VXC, and IX services.
+// It is shared across Port, MCR, MVE, VXC, IX, and NAT Gateway services.
 type ServiceTelemetryResponse struct {
 	ServiceUID string                 `json:"serviceUid"`
 	Type       string                 `json:"type"`
