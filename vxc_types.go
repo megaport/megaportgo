@@ -820,6 +820,9 @@ type GetVXCTelemetryRequest struct {
 	Days       *int32     // 1-180; mutually exclusive with From/To
 }
 
+// ErrVXCTelemetryRequestRequired is returned when a nil request is provided.
+var ErrVXCTelemetryRequestRequired = errors.New("VXC telemetry request is required")
+
 // ErrVXCTelemetryProductUIDRequired is returned when a ProductUID is not provided.
 var ErrVXCTelemetryProductUIDRequired = errors.New("product UID is required")
 

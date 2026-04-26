@@ -160,6 +160,7 @@ type GetIXTelemetryRequest struct {
 }
 
 var (
+	ErrIXTelemetryRequestRequired    = errors.New("IX telemetry request is required")
 	ErrIXTelemetryProductUIDRequired = errors.New("product UID is required")
 	ErrIXTelemetryTypesRequired      = errors.New("at least one telemetry type is required")
 	ErrIXTelemetryTimeExclusive      = errors.New("days and from/to are mutually exclusive")

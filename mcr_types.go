@@ -261,6 +261,7 @@ type GetMCRTelemetryRequest struct {
 }
 
 var (
+	ErrMCRTelemetryRequestRequired    = errors.New("MCR telemetry request is required")
 	ErrMCRTelemetryProductUIDRequired = errors.New("product UID is required")
 	ErrMCRTelemetryTypesRequired      = errors.New("at least one telemetry type is required")
 	ErrMCRTelemetryTimeExclusive      = errors.New("days and from/to are mutually exclusive")

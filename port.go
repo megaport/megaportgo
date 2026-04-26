@@ -508,6 +508,9 @@ func (svc *PortServiceOp) UpdatePortResourceTags(ctx context.Context, portID str
 
 // validateGetPortTelemetryRequest validates the request parameters for getting Port telemetry.
 func validateGetPortTelemetryRequest(req *GetPortTelemetryRequest) error {
+	if req == nil {
+		return ErrPortTelemetryRequestRequired
+	}
 	if req.ProductUID == "" {
 		return ErrPortTelemetryProductUIDRequired
 	}
@@ -532,7 +535,7 @@ func (svc *PortServiceOp) GetPortTelemetry(ctx context.Context, req *GetPortTele
 		return nil, err
 	}
 
-	path := fmt.Sprintf("/v2/product/megaport/%s/telemetry", url.PathEscape(req.ProductUID))
+	path := fmt.Sprintf("/v2/product/%s/%s/telemetry", PRODUCT_MEGAPORT, url.PathEscape(req.ProductUID))
 
 	params := url.Values{}
 	for _, t := range req.Types {

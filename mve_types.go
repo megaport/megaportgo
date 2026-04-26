@@ -359,6 +359,7 @@ type GetMVETelemetryRequest struct {
 }
 
 var (
+	ErrMVETelemetryRequestRequired    = errors.New("MVE telemetry request is required")
 	ErrMVETelemetryProductUIDRequired = errors.New("product UID is required")
 	ErrMVETelemetryTypesRequired      = errors.New("at least one telemetry type is required")
 	ErrMVETelemetryTimeExclusive      = errors.New("days and from/to are mutually exclusive")

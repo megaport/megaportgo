@@ -902,4 +902,17 @@ func (suite *MVEClientTestSuite) TestGetMVETelemetryValidation() {
 		From:       &fromTime,
 	})
 	suite.ErrorIs(err, ErrMVETelemetryFromToIncomplete)
+
+	// To without From
+	toTime := time.UnixMilli(1608603936000)
+	_, err = mveSvc.GetMVETelemetry(ctx, &GetMVETelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		To:         &toTime,
+	})
+	suite.ErrorIs(err, ErrMVETelemetryFromToIncomplete)
+
+	// Nil request
+	_, err = mveSvc.GetMVETelemetry(ctx, nil)
+	suite.ErrorIs(err, ErrMVETelemetryRequestRequired)
 }

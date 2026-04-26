@@ -745,6 +745,9 @@ func (svc *MCRServiceOp) WaitForMCRReady(ctx context.Context, mcrID string, time
 
 // validateGetMCRTelemetryRequest validates the request parameters for getting MCR telemetry.
 func validateGetMCRTelemetryRequest(req *GetMCRTelemetryRequest) error {
+	if req == nil {
+		return ErrMCRTelemetryRequestRequired
+	}
 	if req.ProductUID == "" {
 		return ErrMCRTelemetryProductUIDRequired
 	}
@@ -769,7 +772,7 @@ func (svc *MCRServiceOp) GetMCRTelemetry(ctx context.Context, req *GetMCRTelemet
 		return nil, err
 	}
 
-	path := fmt.Sprintf("/v2/product/mcr2/%s/telemetry", url.PathEscape(req.ProductUID))
+	path := fmt.Sprintf("/v2/product/%s/%s/telemetry", PRODUCT_MCR, url.PathEscape(req.ProductUID))
 
 	params := url.Values{}
 	for _, t := range req.Types {

@@ -430,6 +430,9 @@ func shouldIncludeIX(ix *IX, req *ListIXsRequest) bool {
 
 // validateGetIXTelemetryRequest validates the request parameters for getting IX telemetry.
 func validateGetIXTelemetryRequest(req *GetIXTelemetryRequest) error {
+	if req == nil {
+		return ErrIXTelemetryRequestRequired
+	}
 	if req.ProductUID == "" {
 		return ErrIXTelemetryProductUIDRequired
 	}
@@ -454,7 +457,7 @@ func (svc *IXServiceOp) GetIXTelemetry(ctx context.Context, req *GetIXTelemetryR
 		return nil, err
 	}
 
-	path := fmt.Sprintf("/v2/product/ix/%s/telemetry", url.PathEscape(req.ProductUID))
+	path := fmt.Sprintf("/v2/product/%s/%s/telemetry", PRODUCT_IX, url.PathEscape(req.ProductUID))
 
 	params := url.Values{}
 	for _, t := range req.Types {

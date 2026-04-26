@@ -1044,4 +1044,17 @@ func (suite *MCRClientTestSuite) TestGetMCRTelemetryValidation() {
 		From:       &fromTime,
 	})
 	suite.ErrorIs(err, ErrMCRTelemetryFromToIncomplete)
+
+	// To without From
+	toTime := time.UnixMilli(1608603936000)
+	_, err = mcrSvc.GetMCRTelemetry(ctx, &GetMCRTelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		To:         &toTime,
+	})
+	suite.ErrorIs(err, ErrMCRTelemetryFromToIncomplete)
+
+	// Nil request
+	_, err = mcrSvc.GetMCRTelemetry(ctx, nil)
+	suite.ErrorIs(err, ErrMCRTelemetryRequestRequired)
 }

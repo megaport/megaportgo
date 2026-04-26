@@ -189,6 +189,7 @@ type GetPortTelemetryRequest struct {
 }
 
 var (
+	ErrPortTelemetryRequestRequired    = errors.New("port telemetry request is required")
 	ErrPortTelemetryProductUIDRequired = errors.New("product UID is required")
 	ErrPortTelemetryTypesRequired      = errors.New("at least one telemetry type is required")
 	ErrPortTelemetryTimeExclusive      = errors.New("days and from/to are mutually exclusive")

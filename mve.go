@@ -416,6 +416,9 @@ func (svc *MVEServiceOp) UpdateMVEResourceTags(ctx context.Context, mveID string
 
 // validateGetMVETelemetryRequest validates the request parameters for getting MVE telemetry.
 func validateGetMVETelemetryRequest(req *GetMVETelemetryRequest) error {
+	if req == nil {
+		return ErrMVETelemetryRequestRequired
+	}
 	if req.ProductUID == "" {
 		return ErrMVETelemetryProductUIDRequired
 	}
@@ -440,7 +443,7 @@ func (svc *MVEServiceOp) GetMVETelemetry(ctx context.Context, req *GetMVETelemet
 		return nil, err
 	}
 
-	path := fmt.Sprintf("/v2/product/mve/%s/telemetry", url.PathEscape(req.ProductUID))
+	path := fmt.Sprintf("/v2/product/%s/%s/telemetry", PRODUCT_MVE, url.PathEscape(req.ProductUID))
 
 	params := url.Values{}
 	for _, t := range req.Types {

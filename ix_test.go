@@ -922,6 +922,19 @@ func (suite *IXClientTestSuite) TestGetIXTelemetryValidation() {
 		From:       &fromTime,
 	})
 	suite.ErrorIs(err, ErrIXTelemetryFromToIncomplete)
+
+	// To without From
+	toTime := time.UnixMilli(1608603936000)
+	_, err = ixSvc.GetIXTelemetry(ctx, &GetIXTelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		To:         &toTime,
+	})
+	suite.ErrorIs(err, ErrIXTelemetryFromToIncomplete)
+
+	// Nil request
+	_, err = ixSvc.GetIXTelemetry(ctx, nil)
+	suite.ErrorIs(err, ErrIXTelemetryRequestRequired)
 }
 
 // TestGetIXTelemetryWithPeerUID tests that peerUid is decoded from the response.

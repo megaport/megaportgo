@@ -722,4 +722,17 @@ func (suite *PortClientTestSuite) TestGetPortTelemetryValidation() {
 		From:       &fromTime,
 	})
 	suite.ErrorIs(err, ErrPortTelemetryFromToIncomplete)
+
+	// To without From
+	toTime := time.UnixMilli(1608603936000)
+	_, err = portSvc.GetPortTelemetry(ctx, &GetPortTelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		To:         &toTime,
+	})
+	suite.ErrorIs(err, ErrPortTelemetryFromToIncomplete)
+
+	// Nil request
+	_, err = portSvc.GetPortTelemetry(ctx, nil)
+	suite.ErrorIs(err, ErrPortTelemetryRequestRequired)
 }

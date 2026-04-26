@@ -637,6 +637,9 @@ func shouldIncludeVXC(vxc *VXC, req *ListVXCsRequest) bool {
 
 // validateGetVXCTelemetryRequest validates the request parameters.
 func validateGetVXCTelemetryRequest(req *GetVXCTelemetryRequest) error {
+	if req == nil {
+		return ErrVXCTelemetryRequestRequired
+	}
 	if req.ProductUID == "" {
 		return ErrVXCTelemetryProductUIDRequired
 	}
@@ -661,7 +664,7 @@ func (svc *VXCServiceOp) GetVXCTelemetry(ctx context.Context, req *GetVXCTelemet
 		return nil, err
 	}
 
-	path := fmt.Sprintf("/v2/product/vxc/%s/telemetry", url.PathEscape(req.ProductUID))
+	path := fmt.Sprintf("/v2/product/%s/%s/telemetry", PRODUCT_VXC, url.PathEscape(req.ProductUID))
 
 	params := url.Values{}
 	for _, t := range req.Types {
