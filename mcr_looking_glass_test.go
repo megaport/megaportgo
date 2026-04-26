@@ -1211,3 +1211,170 @@ func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRTracerouteValidation(
 	_, err = lgSvc.WaitForMCRTraceroute(ctx, "36b3f68e-2f54-4331-bf94-f8984449365f", "")
 	suite.ErrorIs(err, ErrMCRDiagnosticsOperationEmpty)
 }
+
+// TestPingMCREmptyMCRID tests that PingMCR returns ErrMCRDiagnosticsMCRUIDRequired when MCRID is empty.
+func (suite *MCRLookingGlassClientTestSuite) TestPingMCREmptyMCRID() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+
+	_, err := lgSvc.PingMCR(ctx, &MCRPingRequest{
+		DestinationAddress: "8.8.8.8",
+	})
+	suite.ErrorIs(err, ErrMCRDiagnosticsMCRUIDRequired)
+}
+
+// TestTracerouteMCREmptyMCRID tests that TracerouteMCR returns ErrMCRDiagnosticsMCRUIDRequired when MCRID is empty.
+func (suite *MCRLookingGlassClientTestSuite) TestTracerouteMCREmptyMCRID() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+
+	_, err := lgSvc.TracerouteMCR(ctx, &MCRTracerouteRequest{
+		DestinationAddress: "1.1.1.1",
+	})
+	suite.ErrorIs(err, ErrMCRDiagnosticsMCRUIDRequired)
+}
+
+// TestPingMCREmptyOperationID tests that PingMCR returns ErrMCRDiagnosticsOperationEmpty when the API returns an empty operation ID.
+func (suite *MCRLookingGlassClientTestSuite) TestPingMCREmptyOperationID() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+	mcrUID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	path := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/ping", mcrUID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":""}`)
+	})
+
+	_, err := lgSvc.PingMCR(ctx, &MCRPingRequest{
+		MCRID:              mcrUID,
+		DestinationAddress: "8.8.8.8",
+	})
+	suite.ErrorIs(err, ErrMCRDiagnosticsOperationEmpty)
+}
+
+// TestTracerouteMCREmptyOperationID tests that TracerouteMCR returns ErrMCRDiagnosticsOperationEmpty when the API returns an empty operation ID.
+func (suite *MCRLookingGlassClientTestSuite) TestTracerouteMCREmptyOperationID() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+	mcrUID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	path := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/traceroute", mcrUID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":""}`)
+	})
+
+	_, err := lgSvc.TracerouteMCR(ctx, &MCRTracerouteRequest{
+		MCRID:              mcrUID,
+		DestinationAddress: "1.1.1.1",
+	})
+	suite.ErrorIs(err, ErrMCRDiagnosticsOperationEmpty)
+}
+
+// TestWaitForMCRPingPending tests WaitForMCRPing when the first poll returns pending (nil) and the second returns the result.
+func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRPingPending() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+	mcrUID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	operationID := "op-id-ping-pending"
+
+	pendingBlob := `{"message":"pending","terms":"","data":null}`
+	doneBlob := `{
+		"message": "Operation complete",
+		"terms": "",
+		"data": {
+			"rawOutput": "PING 8.8.8.8: 56 data bytes",
+			"statistics": {
+				"duplicates": 0, "errors": 0, "packetLossPct": 0.0,
+				"packetsReceived": 3, "packetsTransmitted": 3,
+				"rttAvgMs": 1.5, "rttMaxMs": 2.0, "rttMdevMs": 0.2,
+				"rttMinMs": 1.2, "totalTimeMs": 5.0
+			}
+		}
+	}`
+
+	calls := 0
+	path := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes/operation", mcrUID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		calls++
+		if calls == 1 {
+			fmt.Fprint(w, pendingBlob)
+		} else {
+			fmt.Fprint(w, doneBlob)
+		}
+	})
+
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+
+	result, err := lgSvc.WaitForMCRPing(ctx, mcrUID, operationID)
+	suite.NoError(err)
+	suite.NotNil(result)
+	suite.Equal("PING 8.8.8.8: 56 data bytes", result.RawOutput)
+	suite.GreaterOrEqual(calls, 2)
+}
+
+// TestWaitForMCRTraceroutePending tests WaitForMCRTraceroute when the first poll returns pending and the second returns the result.
+func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRTraceroutePending() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+	mcrUID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	operationID := "op-id-traceroute-pending"
+
+	pendingBlob := `{"message":"pending","terms":"","data":null}`
+	doneBlob := `{
+		"message": "Operation complete",
+		"terms": "",
+		"data": {
+			"rawOutput": "traceroute to 1.1.1.1",
+			"hops": [{"hop": "1", "probes": [{"host": "192.168.1.1", "rttMs": 0.5}]}]
+		}
+	}`
+
+	calls := 0
+	path := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes/operation", mcrUID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		calls++
+		if calls == 1 {
+			fmt.Fprint(w, pendingBlob)
+		} else {
+			fmt.Fprint(w, doneBlob)
+		}
+	})
+
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+
+	result, err := lgSvc.WaitForMCRTraceroute(ctx, mcrUID, operationID)
+	suite.NoError(err)
+	suite.NotNil(result)
+	suite.Equal("traceroute to 1.1.1.1", result.RawOutput)
+	suite.GreaterOrEqual(calls, 2)
+}
+
+// TestWaitForMCRPingContextCancellation tests that WaitForMCRPing respects context cancellation.
+func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRPingContextCancellation() {
+	lgSvc := suite.client.MCRLookingGlassService
+	mcrUID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // cancel immediately
+
+	_, err := lgSvc.WaitForMCRPing(ctx, mcrUID, "op-id")
+	suite.Error(err)
+}
+
+// TestWaitForMCRTracerouteContextCancellation tests that WaitForMCRTraceroute respects context cancellation.
+func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRTracerouteContextCancellation() {
+	lgSvc := suite.client.MCRLookingGlassService
+	mcrUID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // cancel immediately
+
+	_, err := lgSvc.WaitForMCRTraceroute(ctx, mcrUID, "op-id")
+	suite.Error(err)
+}

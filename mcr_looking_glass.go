@@ -474,6 +474,9 @@ func (svc *MCRLookingGlassServiceOp) PingMCR(ctx context.Context, req *MCRPingRe
 	if req == nil {
 		return "", fmt.Errorf("ping request cannot be nil")
 	}
+	if req.MCRID == "" {
+		return "", ErrMCRDiagnosticsMCRUIDRequired
+	}
 	if req.DestinationAddress == "" {
 		return "", ErrMCRPingDestinationRequired
 	}
@@ -514,6 +517,9 @@ func (svc *MCRLookingGlassServiceOp) PingMCR(ctx context.Context, req *MCRPingRe
 	if err := json.Unmarshal(buf.Bytes(), apiResponse); err != nil {
 		return "", err
 	}
+	if apiResponse.Data == "" {
+		return "", ErrMCRDiagnosticsOperationEmpty
+	}
 
 	return apiResponse.Data, nil
 }
@@ -522,6 +528,9 @@ func (svc *MCRLookingGlassServiceOp) PingMCR(ctx context.Context, req *MCRPingRe
 func (svc *MCRLookingGlassServiceOp) TracerouteMCR(ctx context.Context, req *MCRTracerouteRequest) (string, error) {
 	if req == nil {
 		return "", fmt.Errorf("traceroute request cannot be nil")
+	}
+	if req.MCRID == "" {
+		return "", ErrMCRDiagnosticsMCRUIDRequired
 	}
 	if req.DestinationAddress == "" {
 		return "", ErrMCRTracerouteDestinationRequired
@@ -550,6 +559,9 @@ func (svc *MCRLookingGlassServiceOp) TracerouteMCR(ctx context.Context, req *MCR
 	apiResponse := &mcrDiagnosticsStringResponse{}
 	if err := json.Unmarshal(buf.Bytes(), apiResponse); err != nil {
 		return "", err
+	}
+	if apiResponse.Data == "" {
+		return "", ErrMCRDiagnosticsOperationEmpty
 	}
 
 	return apiResponse.Data, nil
