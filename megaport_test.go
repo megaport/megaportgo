@@ -293,16 +293,42 @@ func findActiveMCRLocation(ctx context.Context, t *testing.T, c *Client, marketC
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	r.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
 
+	const maxProbes = 5
+	probeCount := 0
 	for _, loc := range shuffled {
-		err := c.MCRService.ValidateMCROrder(ctx, &BuyMCRRequest{
+		if probeCount >= maxProbes {
+			return nil, fmt.Errorf("exceeded %d probe attempts for MCR location in market %q", maxProbes, marketCode)
+		}
+		if deadline, ok := ctx.Deadline(); ok && time.Until(deadline) < 15*time.Second {
+			return nil, fmt.Errorf("context deadline too close to attempt MCR location probe")
+		}
+		probeCount++
+		probeCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		probeAddOns := make([]MCRAddOn, 0, len(addOns))
+		for _, a := range addOns {
+			switch addon := a.(type) {
+			case *MCRAddOnIPsecConfig:
+				if addon == nil {
+					cancel()
+					return nil, fmt.Errorf("nil *MCRAddOnIPsecConfig in addOns")
+				}
+				cp := *addon
+				probeAddOns = append(probeAddOns, &cp)
+			default:
+				cancel()
+				return nil, fmt.Errorf("unsupported MCRAddOn type %T for probe cloning", a)
+			}
+		}
+		err := c.MCRService.ValidateMCROrder(probeCtx, &BuyMCRRequest{
 			LocationID:    loc.ID,
 			Name:          "probe",
 			Term:          1,
 			PortSpeed:     speedMbps,
 			MCRAsn:        0,
 			DiversityZone: diversityZone,
-			AddOns:        addOns,
+			AddOns:        probeAddOns,
 		})
+		cancel()
 		if err != nil {
 			c.Logger.DebugContext(ctx, "mcr location probe failed, trying next",
 				slog.Int("location_id", loc.ID),
