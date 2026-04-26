@@ -105,10 +105,10 @@ func pickCSPKey(t *testing.T, client *Client, partner, connectType string) cspPi
 	r.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
 
 	mask := func(s string) string {
-		if len(s) <= 4 {
-			return "***"
+		if s == "" {
+			return ""
 		}
-		return "..." + s[len(s)-4:]
+		return "[REDACTED]"
 	}
 
 	for _, key := range shuffled {
@@ -205,7 +205,7 @@ func loadCSPCredentials() (cspCredentials, error) {
 	}
 	data, err := os.ReadFile("testdata/csp_credentials.json")
 	if errors.Is(err, os.ErrNotExist) {
-		return cspCredentials{}, nil
+		return cspCredentials{}, fmt.Errorf("testdata/csp_credentials.json: %w", os.ErrNotExist)
 	}
 	if err != nil {
 		return cspCredentials{}, fmt.Errorf("testdata/csp_credentials.json: %w", err)

@@ -492,17 +492,12 @@ func (suite *VXCIntegrationTestSuite) TestAWSVIFConnectionBuy() {
 
 	awsPartnerPort := pickAWSPartnerPort(suite.T(), suite.client, CONNECT_TYPE_AWS_VIF)
 
-	testLocation, locErr := findActivePortLocation(ctx, suite.T(), suite.client, MCR_LOCATION, 1000)
-	if locErr != nil {
-		suite.FailNowf("cannot find port location", "cannot find port location %v", locErr)
-	}
-
 	logger.InfoContext(ctx, "buying port a end")
 
 	portRes, portErr := portSvc.BuyPort(ctx, &BuyPortRequest{
 		Name:                  "AWS VIF Test Port",
 		Term:                  1,
-		LocationId:            testLocation.ID,
+		LocationId:            awsPartnerPort.LocationId,
 		PortSpeed:             1000,
 		Market:                "AU",
 		MarketPlaceVisibility: true,
@@ -616,15 +611,10 @@ func (suite *VXCIntegrationTestSuite) TestAWSHostedConnectionBuy() {
 
 	awsPartnerPort := pickAWSPartnerPort(suite.T(), suite.client, CONNECT_TYPE_AWS_HOSTED_CONNECTION)
 
-	testLocation, locErr := findActiveMCRLocation(ctx, suite.T(), suite.client, MCR_LOCATION, "", 1000)
-	if locErr != nil {
-		suite.FailNowf("cannot find mcr location", "cannot find mcr location %v", locErr)
-	}
-
 	logger.InfoContext(ctx, "buying mcr (a-end)")
 	mcrRes, mcrErr := mcrSvc.BuyMCR(ctx, &BuyMCRRequest{
 		Name:             "AWS Hosted Connection Test MCR",
-		LocationID:       testLocation.ID,
+		LocationID:       awsPartnerPort.LocationId,
 		Term:             1,
 		PortSpeed:        1000,
 		MCRAsn:           0,
@@ -866,17 +856,14 @@ func (suite *VXCIntegrationTestSuite) TestAWSConnectionBuyDefaults() {
 	logger := suite.client.Logger
 	portSvc := suite.client.PortService
 
-	testLocation, locErr := findActivePortLocation(ctx, suite.T(), suite.client, MCR_LOCATION, 1000)
-	if locErr != nil {
-		suite.FailNowf("cannot find port location", "cannot find port location %v", locErr)
-	}
+	awsPartnerPort := pickAWSPartnerPort(suite.T(), suite.client, CONNECT_TYPE_AWS_VIF)
 
 	logger.InfoContext(ctx, "buying port a end")
 
 	portRes, portErr := portSvc.BuyPort(ctx, &BuyPortRequest{
 		Name:                  "AWS VIF Test Port",
 		Term:                  1,
-		LocationId:            testLocation.ID,
+		LocationId:            awsPartnerPort.LocationId,
 		PortSpeed:             1000,
 		Market:                "AU",
 		MarketPlaceVisibility: true,
@@ -901,7 +888,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSConnectionBuyDefaults() {
 			VLAN: 0,
 		},
 		BEndConfiguration: VXCOrderEndpointConfiguration{
-			ProductUID: "87860c28-81ef-4e79-8cc7-cfc5a4c4bc86",
+			ProductUID: awsPartnerPort.ProductUID,
 			PartnerConfig: VXCPartnerConfigAWS{
 				ConnectType:  "AWS",
 				Type:         "private",
