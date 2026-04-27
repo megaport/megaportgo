@@ -67,8 +67,14 @@ type PriceBookDTO struct {
 	Discounts       []*PriceBookDiscountElement `json:"discounts"`
 }
 
+// PricingAddOnType constants for use with ProductAddOnPriceBookRequest.AddOnType.
+const (
+	PricingAddOnTypeCrossConnect = "CROSS_CONNECT"
+	PricingAddOnTypeIPSec        = "IP_SEC"
+)
+
 // ProductAddOnPriceBookRequest represents a product add-on for pricing requests.
-// Set AddOnType to "CROSS_CONNECT" or "IPSEC" and populate the relevant fields.
+// Set AddOnType to PricingAddOnTypeCrossConnect or PricingAddOnTypeIPSec and populate the relevant fields.
 type ProductAddOnPriceBookRequest struct {
 	AddOnType             string `json:"addOnType"`
 	TunnelCount           int    `json:"tunnelCount,omitempty"`
