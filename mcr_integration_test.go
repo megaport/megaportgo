@@ -147,13 +147,21 @@ func (suite *MCRIntegrationTestSuite) TestPortSpeedValidation() {
 	locSvc := suite.client.LocationService
 	mcrSvc := suite.client.MCRService
 
-	testLocation, locErr := locSvc.GetLocationByName(ctx, "Global Switch Sydney West")
-	if locErr != nil {
-		suite.FailNowf("could not get location", "could not get location %v", locErr)
+	// Any MCR-capable location works — client-side validation rejects the invalid
+	// 500 Mbps speed before any order is submitted.
+	locs, locsErr := locSvc.ListLocationsV3(ctx)
+	if locsErr != nil {
+		suite.FailNowf("could not list locations", "could not list locations: %v", locsErr)
 	}
-	if !suite.NotNil(testLocation) {
-		suite.FailNow("invalid test location")
+	mcrLocs := locSvc.FilterLocationsByMcrAvailabilityV3(ctx, true, locs)
+	mcrLocs, filterErr := locSvc.FilterLocationsByMarketCodeV3(ctx, TEST_MCR_TEST_LOCATION_MARKET, mcrLocs)
+	if filterErr != nil {
+		suite.FailNowf("could not filter locations", "could not filter locations by market code: %v", filterErr)
 	}
+	if len(mcrLocs) == 0 {
+		suite.FailNowf("no MCR location found", "no MCR-capable location in market %s", TEST_MCR_TEST_LOCATION_MARKET)
+	}
+	testLocation := mcrLocs[0]
 	_, buyErr := mcrSvc.BuyMCR(ctx, &BuyMCRRequest{
 		LocationID: testLocation.ID,
 		Name:       "Test MCR",
