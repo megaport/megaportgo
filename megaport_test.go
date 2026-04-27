@@ -93,7 +93,8 @@ func GetRandomLocation(ctx context.Context, svc LocationService, marketCode stri
 	if len(filteredByMCR) == 0 {
 		return nil, fmt.Errorf("no MCR-capable locations in market %s", marketCode)
 	}
-	testLocation := filteredByMCR[rand.Intn(len(filteredByMCR))]
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	testLocation := filteredByMCR[rng.Intn(len(filteredByMCR))]
 	return testLocation, nil
 }
 
