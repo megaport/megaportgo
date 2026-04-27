@@ -306,6 +306,12 @@ func findActiveMCRLocation(ctx context.Context, t *testing.T, c *Client, marketC
 		if probeCount >= maxProbes {
 			return nil, fmt.Errorf("exceeded %d probe attempts for MCR location in market %q", maxProbes, marketCode)
 		}
+		// Claim before probing so a parallel test that already holds this
+		// location doesn't consume a probe attempt. Claim collisions are
+		// free — only actual probe calls count against maxProbes.
+		if !claimMCRLocation(t, loc.ID) {
+			continue
+		}
 		if deadline, ok := ctx.Deadline(); ok && time.Until(deadline) < 15*time.Second {
 			return nil, fmt.Errorf("context deadline too close to attempt MCR location probe")
 		}
@@ -342,9 +348,6 @@ func findActiveMCRLocation(ctx context.Context, t *testing.T, c *Client, marketC
 				slog.String("location_name", loc.Name),
 				slog.String("diversity_zone", diversityZone),
 				slog.String("error", err.Error()))
-			continue
-		}
-		if !claimMCRLocation(t, loc.ID) {
 			continue
 		}
 		return loc, nil
