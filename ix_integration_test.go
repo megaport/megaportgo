@@ -7,8 +7,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/suite"
 )
 
 const (
@@ -19,12 +17,7 @@ const (
 type IXIntegrationTestSuite IntegrationTestSuite
 
 func TestIXIntegrationTestSuite(t *testing.T) {
-	t.Parallel()
-	if !*runIntegrationTests {
-		return
-	}
-	acquireAccTestSlot(t)
-	suite.Run(t, new(IXIntegrationTestSuite))
+	runIntegrationMethods[IXIntegrationTestSuite](t)
 }
 
 func (suite *IXIntegrationTestSuite) SetupSuite() {

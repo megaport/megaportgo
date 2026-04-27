@@ -76,6 +76,7 @@ func provisionNATGatewayForTest(ctx context.Context, suite *NATGatewayIntegratio
 	var (
 		gw           *NATGateway
 		testLocation *LocationV3
+		teardown     func()
 	)
 	for _, loc := range candidates {
 		var createErr error
@@ -103,28 +104,33 @@ func provisionNATGatewayForTest(ctx context.Context, suite *NATGatewayIntegratio
 			slog.String("product_uid", gw.ProductUID),
 			slog.String("provisioning_status", gw.ProvisioningStatus),
 		)
+		candidateTeardown := makeNATGatewayTeardown(ctx, suite, gw.ProductUID)
 		if _, valErr := natSvc.ValidateNATGatewayOrder(ctx, gw.ProductUID); valErr != nil {
 			logger.WarnContext(ctx, "NAT Gateway validation failed, trying next location",
 				slog.Int("location_id", loc.ID),
 				slog.String("error", valErr.Error()),
 			)
-			makeNATGatewayTeardown(ctx, suite, gw.ProductUID)()
+			candidateTeardown()
+			gw = nil
+			continue
+		}
+		if _, buyErr := natSvc.BuyNATGateway(ctx, gw.ProductUID); buyErr != nil {
+			logger.WarnContext(ctx, "NAT Gateway buy failed, trying next location",
+				slog.Int("location_id", loc.ID),
+				slog.String("error", buyErr.Error()),
+			)
+			candidateTeardown()
 			gw = nil
 			continue
 		}
 		testLocation = loc
+		teardown = candidateTeardown
 		break
 	}
 	if gw == nil || testLocation == nil {
-		return nil, fmt.Errorf("could not create NAT Gateway: all %d candidate locations failed", len(candidates))
+		return nil, fmt.Errorf("could not provision NAT Gateway: all %d candidate locations failed", len(candidates))
 	}
 	productUID := gw.ProductUID
-	teardown := makeNATGatewayTeardown(ctx, suite, productUID)
-
-	if _, err := natSvc.BuyNATGateway(ctx, productUID); err != nil {
-		teardown()
-		return nil, fmt.Errorf("could not buy NAT Gateway: %w", err)
-	}
 
 	const (
 		pollInterval = 10 * time.Second

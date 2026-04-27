@@ -7,20 +7,13 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/suite"
 )
 
 // MCRLookingGlassIntegrationTestSuite is the integration test suite for the MCR Looking Glass service.
 type MCRLookingGlassIntegrationTestSuite IntegrationTestSuite
 
 func TestMCRLookingGlassIntegrationTestSuite(t *testing.T) {
-	t.Parallel()
-	if !*runIntegrationTests {
-		return
-	}
-	acquireAccTestSlot(t)
-	suite.Run(t, new(MCRLookingGlassIntegrationTestSuite))
+	runIntegrationMethods[MCRLookingGlassIntegrationTestSuite](t)
 }
 
 func (suite *MCRLookingGlassIntegrationTestSuite) SetupSuite() {

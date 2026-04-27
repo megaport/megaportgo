@@ -5,20 +5,13 @@ import (
 	"log/slog"
 	"os"
 	"testing"
-
-	"github.com/stretchr/testify/suite"
 )
 
 // UserManagementIntegrationTestSuite tests the User Management Service.
 type UserManagementIntegrationTestSuite IntegrationTestSuite
 
 func TestUserManagementIntegrationTestSuite(t *testing.T) {
-	t.Parallel()
-	if !*runIntegrationTests {
-		return
-	}
-	acquireAccTestSlot(t)
-	suite.Run(t, new(UserManagementIntegrationTestSuite))
+	runIntegrationMethods[UserManagementIntegrationTestSuite](t)
 }
 
 func (suite *UserManagementIntegrationTestSuite) SetupSuite() {

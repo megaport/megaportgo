@@ -6,8 +6,6 @@ import (
 	"os"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/suite"
 )
 
 const (
@@ -18,12 +16,7 @@ const (
 type VXCIntegrationTestSuite IntegrationTestSuite
 
 func TestVXCIntegrationTestSuite(t *testing.T) {
-	t.Parallel()
-	if !*runIntegrationTests {
-		return
-	}
-	acquireAccTestSlot(t)
-	suite.Run(t, new(VXCIntegrationTestSuite))
+	runIntegrationMethods[VXCIntegrationTestSuite](t)
 }
 
 func (suite *VXCIntegrationTestSuite) SetupSuite() {

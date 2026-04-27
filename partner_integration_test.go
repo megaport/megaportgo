@@ -5,20 +5,13 @@ import (
 	"log/slog"
 	"os"
 	"testing"
-
-	"github.com/stretchr/testify/suite"
 )
 
 // PartnerIntegrationTestSuite is the integration test suite for the Partner service
 type PartnerIntegrationTestSuite IntegrationTestSuite
 
 func TestPartnerIntegrationTestSuite(t *testing.T) {
-	t.Parallel()
-	if !*runIntegrationTests {
-		return
-	}
-	acquireAccTestSlot(t)
-	suite.Run(t, new(PartnerIntegrationTestSuite))
+	runIntegrationMethods[PartnerIntegrationTestSuite](t)
 }
 
 func (suite *PartnerIntegrationTestSuite) SetupSuite() {

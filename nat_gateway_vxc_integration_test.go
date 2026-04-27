@@ -5,8 +5,6 @@ import (
 	"log/slog"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/suite"
 )
 
 // NATGatewayVXCIntegrationTestSuite is the headline end-to-end test for the
@@ -18,12 +16,7 @@ import (
 type NATGatewayVXCIntegrationTestSuite IntegrationTestSuite
 
 func TestNATGatewayVXCIntegrationTestSuite(t *testing.T) {
-	t.Parallel()
-	if !*runIntegrationTests {
-		return
-	}
-	acquireAccTestSlot(t)
-	suite.Run(t, new(NATGatewayVXCIntegrationTestSuite))
+	runIntegrationMethods[NATGatewayVXCIntegrationTestSuite](t)
 }
 
 func (suite *NATGatewayVXCIntegrationTestSuite) SetupSuite() {

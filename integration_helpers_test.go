@@ -2,9 +2,64 @@ package megaport
 
 import (
 	"os"
+	"reflect"
+	"strings"
 	"sync"
 	"testing"
 )
+
+// ── Method-Level Parallelism for Testify Suites ───────────────────────────────
+//
+// testify's suite.Run drives Test* methods sequentially via reflection and
+// stores the active *testing.T on a single mutable field on the suite. Calling
+// s.T().Parallel() inside a method races that field with sibling methods, so
+// the standard suite shape only permits suite-level parallelism.
+//
+// runIntegrationMethods works around this by replacing suite.Run with explicit
+// per-method dispatch. Each Test* method runs as its own t.Run subtest with
+// t.Parallel(), and each subtest uses a fresh suite instance so SetT/SetupSuite
+// produce per-method state. Combined with acquireAccTestSlot inside each
+// subtest, the 20-slot pool now throttles at method granularity rather than
+// suite granularity — long-running methods no longer block short ones behind
+// them in their parent suite.
+
+// integrationSuite is the lifecycle surface that runIntegrationMethods drives.
+// All *_integration_test.go suite types satisfy this via the embedded testify
+// suite.Suite (SetT) and their own SetupSuite definition.
+type integrationSuite interface {
+	SetT(*testing.T)
+	SetupSuite()
+}
+
+// runIntegrationMethods dispatches every Test* method on suite type S as a
+// parallel subtest. Use it in place of suite.Run(t, new(X)).
+func runIntegrationMethods[S any, PS interface {
+	*S
+	integrationSuite
+}](t *testing.T) {
+	t.Helper()
+	t.Parallel()
+	if !*runIntegrationTests {
+		return
+	}
+	var probe S
+	typ := reflect.TypeOf(PS(&probe))
+	for i := 0; i < typ.NumMethod(); i++ {
+		m := typ.Method(i)
+		if !strings.HasPrefix(m.Name, "Test") {
+			continue
+		}
+		t.Run(m.Name, func(t *testing.T) {
+			t.Parallel()
+			acquireAccTestSlot(t)
+			var s S
+			ps := PS(&s)
+			ps.SetT(t)
+			ps.SetupSuite()
+			m.Func.Call([]reflect.Value{reflect.ValueOf(ps)})
+		})
+	}
+}
 
 // ── Integration Test Rate Limiter ─────────────────────────────────────────────
 
@@ -16,10 +71,11 @@ const maxConcurrentAccTests = 20
 var accTestSemaphore = make(chan struct{}, maxConcurrentAccTests)
 
 // acquireAccTestSlot blocks until a slot is available in the concurrency pool.
-// Intended to be called from the top-level TestXxxIntegrationTestSuite func
-// before suite.Run — releases the slot automatically via t.Cleanup when the
-// suite finishes. No-ops (and skips the caller) when MEGAPORT_ACCESS_KEY is
-// unset so `go test ./...` without credentials doesn't block.
+// runIntegrationMethods calls it from each method-level subtest so the pool
+// throttles at method granularity. Releases the slot automatically via
+// t.Cleanup when the subtest finishes. No-ops (and skips the caller) when
+// MEGAPORT_ACCESS_KEY is unset so `go test ./...` without credentials doesn't
+// block.
 func acquireAccTestSlot(t *testing.T) {
 	t.Helper()
 	if os.Getenv("MEGAPORT_ACCESS_KEY") == "" || os.Getenv("MEGAPORT_SECRET_KEY") == "" {

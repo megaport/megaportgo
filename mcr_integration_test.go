@@ -7,8 +7,6 @@ import (
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/suite"
 )
 
 const (
@@ -19,12 +17,7 @@ const (
 type MCRIntegrationTestSuite IntegrationTestSuite
 
 func TestMCRIntegrationTestSuite(t *testing.T) {
-	t.Parallel()
-	if !*runIntegrationTests {
-		return
-	}
-	acquireAccTestSlot(t)
-	suite.Run(t, new(MCRIntegrationTestSuite))
+	runIntegrationMethods[MCRIntegrationTestSuite](t)
 }
 
 func (suite *MCRIntegrationTestSuite) SetupSuite() {

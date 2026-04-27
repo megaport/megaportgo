@@ -18,12 +18,7 @@ type IntegrationTestSuite struct {
 type ClientIntegrationTestSuite IntegrationTestSuite
 
 func TestClientIntegrationTestSuite(t *testing.T) {
-	t.Parallel()
-	if !*runIntegrationTests {
-		return
-	}
-	acquireAccTestSlot(t)
-	suite.Run(t, new(ClientIntegrationTestSuite))
+	runIntegrationMethods[ClientIntegrationTestSuite](t)
 }
 
 func (suite *ClientIntegrationTestSuite) SetupSuite() {

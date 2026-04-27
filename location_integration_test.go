@@ -5,20 +5,13 @@ import (
 	"log/slog"
 	"os"
 	"testing"
-
-	"github.com/stretchr/testify/suite"
 )
 
 // LocationIntegrationTestSuite is the integration test suite for the Location service
 type LocationIntegrationTestSuite IntegrationTestSuite
 
 func TestLocationIntegrationTestSuite(t *testing.T) {
-	t.Parallel()
-	if !*runIntegrationTests {
-		return
-	}
-	acquireAccTestSlot(t)
-	suite.Run(t, new(LocationIntegrationTestSuite))
+	runIntegrationMethods[LocationIntegrationTestSuite](t)
 }
 
 func (suite *LocationIntegrationTestSuite) SetupSuite() {

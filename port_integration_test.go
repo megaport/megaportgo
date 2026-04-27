@@ -8,8 +8,6 @@ import (
 	"slices"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/suite"
 )
 
 const (
@@ -21,12 +19,7 @@ const (
 type PortIntegrationTestSuite IntegrationTestSuite
 
 func TestPortIntegrationTestSuite(t *testing.T) {
-	t.Parallel()
-	if !*runIntegrationTests {
-		return
-	}
-	acquireAccTestSlot(t)
-	suite.Run(t, new(PortIntegrationTestSuite))
+	runIntegrationMethods[PortIntegrationTestSuite](t)
 }
 
 func (suite *PortIntegrationTestSuite) SetupSuite() {

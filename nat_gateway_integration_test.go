@@ -10,8 +10,6 @@ import (
 	"slices"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/suite"
 )
 
 const (
@@ -22,12 +20,7 @@ const (
 type NATGatewayIntegrationTestSuite IntegrationTestSuite
 
 func TestNATGatewayIntegrationTestSuite(t *testing.T) {
-	t.Parallel()
-	if !*runIntegrationTests {
-		return
-	}
-	acquireAccTestSlot(t)
-	suite.Run(t, new(NATGatewayIntegrationTestSuite))
+	runIntegrationMethods[NATGatewayIntegrationTestSuite](t)
 }
 
 func (suite *NATGatewayIntegrationTestSuite) SetupSuite() {
