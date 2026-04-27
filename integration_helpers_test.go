@@ -103,6 +103,16 @@ func claimMVELocation(t *testing.T, locID int) bool {
 	return true
 }
 
+// releaseMCRLocation immediately removes the claim on locID so other parallel
+// tests may use that location. It is safe to call even if the location is not
+// currently claimed. Use this when a probe fails after a successful claim so
+// that the location re-enters the pool within the same test run.
+func releaseMCRLocation(locID int) {
+	mcrClaimedMu.Lock()
+	delete(mcrClaimedLocations, locID)
+	mcrClaimedMu.Unlock()
+}
+
 // claimNATGatewayLocation behaves like claimMCRLocation but for NAT Gateway.
 func claimNATGatewayLocation(t *testing.T, locID int) bool {
 	t.Helper()

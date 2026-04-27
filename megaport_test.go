@@ -343,6 +343,7 @@ func findActiveMCRLocation(ctx context.Context, t *testing.T, c *Client, marketC
 		})
 		cancel()
 		if err != nil {
+			releaseMCRLocation(loc.ID)
 			c.Logger.DebugContext(ctx, "mcr location probe failed, trying next",
 				slog.Int("location_id", loc.ID),
 				slog.String("location_name", loc.Name),
