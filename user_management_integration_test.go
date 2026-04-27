@@ -5,18 +5,13 @@ import (
 	"log/slog"
 	"os"
 	"testing"
-
-	"github.com/stretchr/testify/suite"
 )
 
 // UserManagementIntegrationTestSuite tests the User Management Service.
 type UserManagementIntegrationTestSuite IntegrationTestSuite
 
 func TestUserManagementIntegrationTestSuite(t *testing.T) {
-	t.Parallel()
-	if *runIntegrationTests {
-		suite.Run(t, new(UserManagementIntegrationTestSuite))
-	}
+	runIntegrationMethods[UserManagementIntegrationTestSuite](t)
 }
 
 func (suite *UserManagementIntegrationTestSuite) SetupSuite() {
@@ -77,7 +72,7 @@ func (suite *UserManagementIntegrationTestSuite) TestUserCRD() {
 			foundNewUser = true
 			suite.Equal("test", u.FirstName)
 			suite.Equal("user staging", u.LastName)
-			suite.Equal("megaport.testuser@abcd.com", u.Email)
+			suite.Equal("megaport.testuser@sink.megaport.com", u.Email)
 			suite.True(u.Active)
 			suite.Equal("Company Admin", u.Position)
 			break
@@ -145,7 +140,7 @@ func (suite *UserManagementIntegrationTestSuite) testCreateUser(c *Client, ctx c
 		FirstName: "test",
 		LastName:  "user staging",
 		Active:    true,
-		Email:     "megaport.testuser@abcd.com",
+		Email:     "megaport.testuser@sink.megaport.com",
 		Phone:     "+14155552671",
 		Position:  USER_POSITION_COMPANY_ADMIN,
 	}
@@ -190,7 +185,7 @@ func (suite *UserManagementIntegrationTestSuite) testReadUser(c *Client, ctx con
 	// Verify user data matches what we created
 	suite.Equal("test", user.FirstName)
 	suite.Equal("user staging", user.LastName)
-	suite.Equal("megaport.testuser@abcd.com", user.Email)
+	suite.Equal("megaport.testuser@sink.megaport.com", user.Email)
 	suite.True(user.Active)
 	suite.Equal("Company Admin", user.Position)
 	suite.Equal(employeeID, user.PartyId)
@@ -225,10 +220,11 @@ func (suite *UserManagementIntegrationTestSuite) testDeactivateUser(c *Client, c
 	suite.Equal(user.FirstName, userAfterDeactivation.FirstName, "FirstName should remain unchanged")
 	suite.Equal(user.LastName, userAfterDeactivation.LastName, "LastName should remain unchanged")
 
-	// Note: When a user is deactivated, Megaport automatically modifies the email by appending "-deactivated-{randomnumber}"
-	// So we should check that the email contains the original email as a prefix
-	suite.Contains(userAfterDeactivation.Email, "megaport.testuser@abcd", "Email should contain the original email prefix")
-	suite.Contains(userAfterDeactivation.Email, "-deactivated-", "Email should contain the deactivated suffix")
+	// Note: When a user is deactivated, Megaport automatically inserts "-deactivated-{randomnumber}"
+	// into the email, e.g. "foo@sink.megaport.com" → "foo@sink-deactivated-abc.megaport.com".
+	// Check the stable prefix up to the "@" rather than the full original address.
+	suite.Contains(userAfterDeactivation.Email, "megaport.testuser@", "Email should contain the original local-part prefix")
+	suite.Contains(userAfterDeactivation.Email, "-deactivated-", "Email should contain the deactivated marker")
 
 	suite.Equal(user.Position, userAfterDeactivation.Position, "Position should remain unchanged")
 

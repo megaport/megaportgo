@@ -4,20 +4,16 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"strings"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/suite"
 )
 
 // MCRLookingGlassIntegrationTestSuite is the integration test suite for the MCR Looking Glass service.
 type MCRLookingGlassIntegrationTestSuite IntegrationTestSuite
 
 func TestMCRLookingGlassIntegrationTestSuite(t *testing.T) {
-	t.Parallel()
-	if *runIntegrationTests {
-		suite.Run(t, new(MCRLookingGlassIntegrationTestSuite))
-	}
+	runIntegrationMethods[MCRLookingGlassIntegrationTestSuite](t)
 }
 
 func (suite *MCRLookingGlassIntegrationTestSuite) SetupSuite() {
@@ -32,6 +28,7 @@ func (suite *MCRLookingGlassIntegrationTestSuite) SetupSuite() {
 		suite.FailNowf("", "could not initialize megaport test client: %s", err.Error())
 	}
 
+	ctx := context.Background()
 	_, err = megaportClient.Authorize(ctx)
 	if err != nil {
 		suite.FailNowf("", "could not authorize megaport test client: %s", err.Error())
@@ -43,6 +40,9 @@ func (suite *MCRLookingGlassIntegrationTestSuite) SetupSuite() {
 // TestLookingGlassWithMCR tests the Looking Glass endpoints with a real MCR.
 // This test creates an MCR, queries the Looking Glass, and then cleans up.
 func (suite *MCRLookingGlassIntegrationTestSuite) TestLookingGlassWithMCR() {
+	if strings.Contains(MEGAPORTURL, "staging") {
+		suite.T().Skip("Looking Glass API endpoints are not available in the staging environment")
+	}
 	ctx := context.Background()
 	logger := suite.client.Logger
 	mcrSvc := suite.client.MCRService

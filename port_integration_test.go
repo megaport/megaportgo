@@ -8,22 +8,18 @@ import (
 	"slices"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/suite"
 )
 
 const (
-	TEST_LOCATION_ID_A = 19 // 	Interactive 437 Williamstown
+	TEST_PORT_LOCATION_MARKET = "AU"
+	TEST_PORT_SPEED           = 10000
 )
 
 // PortIntegrationTestSuite tests the Port Service.
 type PortIntegrationTestSuite IntegrationTestSuite
 
 func TestPortIntegrationTestSuite(t *testing.T) {
-	t.Parallel()
-	if *runIntegrationTests {
-		suite.Run(t, new(PortIntegrationTestSuite))
-	}
+	runIntegrationMethods[PortIntegrationTestSuite](t)
 }
 
 func (suite *PortIntegrationTestSuite) SetupSuite() {
@@ -50,14 +46,13 @@ func (suite *PortIntegrationTestSuite) SetupSuite() {
 func (suite *PortIntegrationTestSuite) TestSinglePort() {
 	ctx := context.Background()
 
-	testLocation, err := suite.client.LocationService.GetLocationByID(ctx, TEST_LOCATION_ID_A)
-
+	testLocation, err := findActivePortLocation(ctx, suite.T(), suite.client, TEST_PORT_LOCATION_MARKET, TEST_PORT_SPEED)
 	suite.NoError(err)
 
 	portsListInitial, err := suite.client.PortService.ListPorts(ctx)
 	suite.NoError(err)
 
-	createRes, portErr := suite.testCreatePort(suite.client, ctx, 0, *testLocation)
+	createRes, portErr := suite.testCreatePort(suite.client, ctx, 0, testLocation)
 	suite.NoError(portErr)
 
 	portID := createRes.TechnicalServiceUIDs[0]
@@ -122,13 +117,13 @@ func (suite *PortIntegrationTestSuite) TestSinglePort() {
 func (suite *PortIntegrationTestSuite) TestLAGPort() {
 	ctx := context.Background()
 
-	testLocation, err := suite.client.LocationService.GetLocationByID(ctx, TEST_LOCATION_ID_A)
+	testLocation, err := findActivePortLocation(ctx, suite.T(), suite.client, TEST_PORT_LOCATION_MARKET, TEST_PORT_SPEED)
 	suite.NoError(err)
 
 	portsListInitial, err := suite.client.PortService.ListPorts(ctx)
 	suite.NoError(err)
 
-	orderRes, portErr := suite.testCreatePort(suite.client, ctx, 2, *testLocation)
+	orderRes, portErr := suite.testCreatePort(suite.client, ctx, 2, testLocation)
 	suite.NoError(portErr)
 
 	mainPortIDs := orderRes.TechnicalServiceUIDs
@@ -178,12 +173,12 @@ func (suite *PortIntegrationTestSuite) TestLAGPort() {
 	suite.testDeletePort(suite.client, ctx, mainPortIDs[0])
 }
 
-func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Context, lagCount int, location Location) (*BuyPortResponse, error) {
+func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Context, lagCount int, location *LocationV3) (*BuyPortResponse, error) {
 	suite.client.Logger.DebugContext(ctx, "Buying Port", slog.Int("lag_count", lagCount))
 	orderRes, err := c.PortService.BuyPort(ctx, &BuyPortRequest{
 		Name:                  "Buy Port (LAG) Test",
 		Term:                  1,
-		PortSpeed:             10000,
+		PortSpeed:             TEST_PORT_SPEED,
 		LocationId:            location.ID,
 		Market:                location.Market,
 		LagCount:              lagCount,
@@ -343,7 +338,25 @@ func (suite *PortIntegrationTestSuite) testCancelPort(c *Client, ctx context.Con
 	suite.EqualValues(STATUS_CANCELLED, portInfo.ProvisioningStatus)
 
 	suite.client.Logger.DebugContext(ctx, "port scheduled for cancellation", slog.String("status", portInfo.ProvisioningStatus), slog.String("port_id", portId))
-	restoreResp, restoreErr := c.PortService.RestorePort(ctx, portId)
+
+	// Staging occasionally 400s UN_CANCEL with "Transaction silently rolled back
+	// because it has been marked as rollback-only" when fired immediately after
+	// CANCEL — the cancel transaction hasn't settled yet. Retry a few times with
+	// backoff before giving up.
+	var restoreResp *RestorePortResponse
+	var restoreErr error
+	for attempt := 1; attempt <= 5; attempt++ {
+		if attempt > 1 {
+			time.Sleep(time.Duration(attempt) * 2 * time.Second)
+		}
+		restoreResp, restoreErr = c.PortService.RestorePort(ctx, portId)
+		if restoreErr == nil {
+			break
+		}
+		suite.client.Logger.DebugContext(ctx, "UN_CANCEL failed, will retry",
+			slog.Int("attempt", attempt),
+			slog.String("error", restoreErr.Error()))
+	}
 	if restoreErr != nil {
 		suite.FailNowf("could not restore port", "could not restore port %v", restoreErr)
 	}

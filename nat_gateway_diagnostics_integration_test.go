@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/suite"
 )
 
 // NATGatewayDiagnosticsIntegrationTestSuite exercises the async
@@ -19,10 +17,7 @@ import (
 type NATGatewayDiagnosticsIntegrationTestSuite IntegrationTestSuite
 
 func TestNATGatewayDiagnosticsIntegrationTestSuite(t *testing.T) {
-	t.Parallel()
-	if *runIntegrationTests {
-		suite.Run(t, new(NATGatewayDiagnosticsIntegrationTestSuite))
-	}
+	runIntegrationMethods[NATGatewayDiagnosticsIntegrationTestSuite](t)
 }
 
 func (suite *NATGatewayDiagnosticsIntegrationTestSuite) SetupSuite() {
