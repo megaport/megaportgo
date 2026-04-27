@@ -314,6 +314,7 @@ func findActiveMCRLocation(ctx context.Context, t *testing.T, c *Client, marketC
 			continue
 		}
 		if deadline, ok := ctx.Deadline(); ok && time.Until(deadline) < 15*time.Second {
+			releaseMCRLocation(loc.ID)
 			return nil, fmt.Errorf("context deadline too close to attempt MCR location probe")
 		}
 		probeCount++
