@@ -163,31 +163,49 @@ func pickCSPKey(t *testing.T, client *Client, partner, connectType string) cspPi
 	return cspPickResult{}
 }
 
+// awsPickResult holds a selected AWS partner port together with the market
+// code of its location. Tests should use Market for BuyPortRequest / BuyMCRRequest
+// so the A-End is always placed in the same market as the partner port.
+type awsPickResult struct {
+	Port   *PartnerMegaport
+	Market string
+}
+
 // pickAWSPartnerPort finds a live AWS partner port in staging matching the
 // given AWS connect type (CONNECT_TYPE_AWS_VIF or
 // CONNECT_TYPE_AWS_HOSTED_CONNECTION). AWS does not need a CSP key from the
-// customer — the B-End is just one of Megaport's AWS partner ports. Calls
-// t.Skip if none found.
-func pickAWSPartnerPort(t *testing.T, client *Client, connectType string) *PartnerMegaport {
+// customer — the B-End is just one of Megaport's AWS partner ports. The
+// returned awsPickResult includes the market code derived from the partner
+// port's location so callers don't need to hardcode a market. Calls t.Skip
+// if none found.
+func pickAWSPartnerPort(t *testing.T, client *Client, connectType string) awsPickResult {
 	t.Helper()
 	ctx := context.Background()
 	partners, err := client.PartnerService.ListPartnerMegaports(ctx)
 	if err != nil {
 		t.Skipf("skipping: could not list partner ports: %v", err)
-		return nil
+		return awsPickResult{}
 	}
 	filtered, err := client.PartnerService.FilterPartnerMegaportByConnectType(ctx, partners, connectType, true)
 	if err != nil {
 		t.Skipf("skipping: could not filter partner ports: %v", err)
-		return nil
+		return awsPickResult{}
 	}
 	if len(filtered) == 0 {
 		t.Skipf("skipping: no %s partner ports available in staging", connectType)
-		return nil
+		return awsPickResult{}
 	}
 	//nolint:gosec // weak random is fine for test selection
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	return filtered[r.Intn(len(filtered))]
+	port := filtered[r.Intn(len(filtered))]
+
+	loc, locErr := client.LocationService.GetLocationByIDV3(ctx, port.LocationId)
+	if locErr != nil {
+		t.Skipf("skipping: could not look up location %d for partner port %s: %v", port.LocationId, port.ProductUID, locErr)
+		return awsPickResult{}
+	}
+
+	return awsPickResult{Port: port, Market: loc.Market}
 }
 
 // loadCSPCredentials reads the CSP credentials pool from the

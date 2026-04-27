@@ -490,7 +490,8 @@ func (suite *VXCIntegrationTestSuite) TestAWSVIFConnectionBuy() {
 	logger := suite.client.Logger
 	portSvc := suite.client.PortService
 
-	awsPartnerPort := pickAWSPartnerPort(suite.T(), suite.client, CONNECT_TYPE_AWS_VIF)
+	aws := pickAWSPartnerPort(suite.T(), suite.client, CONNECT_TYPE_AWS_VIF)
+	awsPartnerPort := aws.Port
 
 	logger.InfoContext(ctx, "buying port a end")
 
@@ -499,7 +500,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSVIFConnectionBuy() {
 		Term:                  1,
 		LocationId:            awsPartnerPort.LocationId,
 		PortSpeed:             1000,
-		Market:                "AU",
+		Market:                aws.Market,
 		MarketPlaceVisibility: true,
 		WaitForProvision:      true,
 		WaitForTime:           5 * time.Minute,
@@ -609,7 +610,8 @@ func (suite *VXCIntegrationTestSuite) TestAWSHostedConnectionBuy() {
 	logger := suite.client.Logger
 	mcrSvc := suite.client.MCRService
 
-	awsPartnerPort := pickAWSPartnerPort(suite.T(), suite.client, CONNECT_TYPE_AWS_HOSTED_CONNECTION)
+	aws := pickAWSPartnerPort(suite.T(), suite.client, CONNECT_TYPE_AWS_HOSTED_CONNECTION)
+	awsPartnerPort := aws.Port
 
 	logger.InfoContext(ctx, "buying mcr (a-end)")
 	mcrRes, mcrErr := mcrSvc.BuyMCR(ctx, &BuyMCRRequest{
@@ -856,7 +858,8 @@ func (suite *VXCIntegrationTestSuite) TestAWSConnectionBuyDefaults() {
 	logger := suite.client.Logger
 	portSvc := suite.client.PortService
 
-	awsPartnerPort := pickAWSPartnerPort(suite.T(), suite.client, CONNECT_TYPE_AWS_VIF)
+	aws := pickAWSPartnerPort(suite.T(), suite.client, CONNECT_TYPE_AWS_VIF)
+	awsPartnerPort := aws.Port
 
 	logger.InfoContext(ctx, "buying port a end")
 
@@ -865,7 +868,7 @@ func (suite *VXCIntegrationTestSuite) TestAWSConnectionBuyDefaults() {
 		Term:                  1,
 		LocationId:            awsPartnerPort.LocationId,
 		PortSpeed:             1000,
-		Market:                "AU",
+		Market:                aws.Market,
 		MarketPlaceVisibility: true,
 		WaitForProvision:      true,
 		WaitForTime:           5 * time.Minute,
