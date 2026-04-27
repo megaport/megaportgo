@@ -226,6 +226,13 @@ func findActiveMVELocation(ctx context.Context, t *testing.T, c *Client, marketC
 // that advertises NAT Gateway capacity at the given speed. Uses the
 // DiversityZones.natGatewaySpeedMbps field surfaced by v3/locations.
 //
+// Unlike findActivePortLocation and findActiveMCRLocation, this helper does NOT
+// issue a probe validate order. The NAT Gateway validate endpoint
+// (POST /v3/networkdesign/validate) requires a productUID of an already-created
+// gateway in DESIGN state; there is no pre-creation location-probe API
+// equivalent to ValidatePortOrder / ValidateMCROrder. The v3/locations
+// advertised-speed field is therefore the authoritative capacity signal here.
+//
 //nolint:unparam // marketCode is parameterised for future non-AU callers.
 func findActiveNATGatewayLocation(ctx context.Context, t *testing.T, c *Client, marketCode string, speedMbps int) (*LocationV3, error) {
 	t.Helper()
