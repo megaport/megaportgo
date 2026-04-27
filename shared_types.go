@@ -32,9 +32,12 @@ const (
 	CONNECT_TYPE_AWS_VIF               = "AWS"
 	CONNECT_TYPE_AWS_HOSTED_CONNECTION = "AWSHC"
 
-	// Interface types for VXC vRouter / NAT Gateway A-End partner configs.
-	InterfaceTypeSubInterface = "subInterface"
-	InterfaceTypeIPSecTunnel  = "ipSecTunnel"
+	// Interface types for PartnerConfigInterface.InterfaceType.
+	// These values match the Megaport API exactly (uppercase); earlier
+	// drafts of this SDK used "subInterface"/"ipSecTunnel" but those
+	// were never the canonical API values.
+	InterfaceTypeSubInterface = "SUBINTERFACE"
+	InterfaceTypeIPSecTunnel  = "IPSEC_TUNNEL"
 )
 
 var (

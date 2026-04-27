@@ -20,9 +20,11 @@ type NATGatewayDiagnosticsIntegrationTestSuite IntegrationTestSuite
 
 func TestNATGatewayDiagnosticsIntegrationTestSuite(t *testing.T) {
 	t.Parallel()
-	if *runIntegrationTests {
-		suite.Run(t, new(NATGatewayDiagnosticsIntegrationTestSuite))
+	if !*runIntegrationTests {
+		return
 	}
+	acquireAccTestSlot(t)
+	suite.Run(t, new(NATGatewayDiagnosticsIntegrationTestSuite))
 }
 
 func (suite *NATGatewayDiagnosticsIntegrationTestSuite) SetupSuite() {

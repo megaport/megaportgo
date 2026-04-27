@@ -19,9 +19,11 @@ type ClientIntegrationTestSuite IntegrationTestSuite
 
 func TestClientIntegrationTestSuite(t *testing.T) {
 	t.Parallel()
-	if *runIntegrationTests {
-		suite.Run(t, new(ClientIntegrationTestSuite))
+	if !*runIntegrationTests {
+		return
 	}
+	acquireAccTestSlot(t)
+	suite.Run(t, new(ClientIntegrationTestSuite))
 }
 
 func (suite *ClientIntegrationTestSuite) SetupSuite() {

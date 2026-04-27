@@ -14,9 +14,11 @@ type LocationIntegrationTestSuite IntegrationTestSuite
 
 func TestLocationIntegrationTestSuite(t *testing.T) {
 	t.Parallel()
-	if *runIntegrationTests {
-		suite.Run(t, new(LocationIntegrationTestSuite))
+	if !*runIntegrationTests {
+		return
 	}
+	acquireAccTestSlot(t)
+	suite.Run(t, new(LocationIntegrationTestSuite))
 }
 
 func (suite *LocationIntegrationTestSuite) SetupSuite() {
@@ -56,36 +58,37 @@ func (suite *LocationIntegrationTestSuite) TestBadNameV3() {
 	suite.Equal(ErrLocationNotFound, nameErr)
 }
 
-// TestGetLocationByIDV3 tests the GetLocationByIDV3 method.
+// TestGetLocationByIDV3 tests that GetLocationByIDV3 round-trips a live
+// location from the list endpoint. Avoids hardcoded ID→name assertions that
+// drift as the staging catalogue changes.
 func (suite *LocationIntegrationTestSuite) TestGetLocationByIDV3() {
 	ctx := context.Background()
 
-	// Make sure our location by id works as expected
-	byId, idErr := suite.client.LocationService.GetLocationByIDV3(ctx, 137)
-	suite.Nil(idErr)
-	suite.Equal("3DC/Telecity Sofia", byId.Name)
+	locations, listErr := suite.client.LocationService.ListLocationsV3(ctx)
+	suite.NoError(listErr)
+	suite.NotEmpty(locations)
 
-	byId, idErr = suite.client.LocationService.GetLocationByIDV3(ctx, 383)
-	suite.Nil(idErr)
-	suite.Equal("NextDC B2", byId.Name)
+	sample := locations[0]
+	byID, idErr := suite.client.LocationService.GetLocationByIDV3(ctx, sample.ID)
+	suite.NoError(idErr)
+	suite.Equal(sample.ID, byID.ID)
+	suite.Equal(sample.Name, byID.Name)
 }
 
-// TestGetLocationByNameV3 tests the GetLocationByNameV3 method.
+// TestGetLocationByNameV3 tests that GetLocationByNameV3 round-trips a live
+// location from the list endpoint.
 func (suite *LocationIntegrationTestSuite) TestGetLocationByNameV3() {
 	ctx := context.Background()
 
-	// Make sure our location by name works as expected
-	byName, nameErr := suite.client.LocationService.GetLocationByNameV3(ctx, "3DC/Telecity Sofia")
-	suite.Nil(nameErr)
-	suite.Equal(137, byName.ID)
+	locations, listErr := suite.client.LocationService.ListLocationsV3(ctx)
+	suite.NoError(listErr)
+	suite.NotEmpty(locations)
 
-	byName, nameErr = suite.client.LocationService.GetLocationByNameV3(ctx, "NextDC B2")
-	suite.Nil(nameErr)
-	suite.Equal(383, byName.ID)
-
-	byName, nameErr = suite.client.LocationService.GetLocationByNameV3(ctx, "Equinix SY3")
-	suite.Nil(nameErr)
-	suite.Equal(6, byName.ID)
+	sample := locations[0]
+	byName, nameErr := suite.client.LocationService.GetLocationByNameV3(ctx, sample.Name)
+	suite.NoError(nameErr)
+	suite.Equal(sample.ID, byName.ID)
+	suite.Equal(sample.Name, byName.Name)
 }
 
 // TestGetLocationByNameFuzzyV3 tests the GetLocationByNameFuzzyV3 method.

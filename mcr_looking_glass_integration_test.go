@@ -15,9 +15,11 @@ type MCRLookingGlassIntegrationTestSuite IntegrationTestSuite
 
 func TestMCRLookingGlassIntegrationTestSuite(t *testing.T) {
 	t.Parallel()
-	if *runIntegrationTests {
-		suite.Run(t, new(MCRLookingGlassIntegrationTestSuite))
+	if !*runIntegrationTests {
+		return
 	}
+	acquireAccTestSlot(t)
+	suite.Run(t, new(MCRLookingGlassIntegrationTestSuite))
 }
 
 func (suite *MCRLookingGlassIntegrationTestSuite) SetupSuite() {
@@ -32,6 +34,7 @@ func (suite *MCRLookingGlassIntegrationTestSuite) SetupSuite() {
 		suite.FailNowf("", "could not initialize megaport test client: %s", err.Error())
 	}
 
+	ctx := context.Background()
 	_, err = megaportClient.Authorize(ctx)
 	if err != nil {
 		suite.FailNowf("", "could not authorize megaport test client: %s", err.Error())

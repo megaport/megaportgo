@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"slices"
@@ -64,24 +65,45 @@ func provisionNATGatewayForTest(ctx context.Context, suite *NATGatewayIntegratio
 	if len(eligible) == 0 {
 		return nil, fmt.Errorf("no location in market %q advertises NAT Gateway speed %d", TEST_NAT_GATEWAY_LOCATION_MARKET, testSpeed)
 	}
-	testLocation := eligible[0]
+
+	// Shuffle candidates so parallel test runs don't all race for the same site.
+	//nolint:gosec // test-only shuffle; cryptographic randomness not required
+	candidates := slices.Clone(eligible)
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	rng.Shuffle(len(candidates), func(i, j int) { candidates[i], candidates[j] = candidates[j], candidates[i] })
 
 	const asn = 64512
-	gw, err := natSvc.CreateNATGateway(ctx, &CreateNATGatewayRequest{
-		AutoRenewTerm: false,
-		Config: NATGatewayNetworkConfig{
-			ASN:                asn,
-			BGPShutdownDefault: false,
-			DiversityZone:      "red",
-			SessionCount:       testSessionCount,
-		},
-		LocationID:  testLocation.ID,
-		ProductName: productName,
-		Speed:       testSpeed,
-		Term:        1,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("could not create NAT Gateway: %w", err)
+	var (
+		gw           *NATGateway
+		testLocation *LocationV3
+	)
+	for _, loc := range candidates {
+		var createErr error
+		gw, createErr = natSvc.CreateNATGateway(ctx, &CreateNATGatewayRequest{
+			AutoRenewTerm: false,
+			Config: NATGatewayNetworkConfig{
+				ASN:                asn,
+				BGPShutdownDefault: false,
+				DiversityZone:      "red",
+				SessionCount:       testSessionCount,
+			},
+			LocationID:  loc.ID,
+			ProductName: productName,
+			Speed:       testSpeed,
+			Term:        1,
+		})
+		if createErr != nil {
+			logger.WarnContext(ctx, "NAT Gateway create failed, trying next location",
+				slog.Int("location_id", loc.ID),
+				slog.String("error", createErr.Error()),
+			)
+			continue
+		}
+		testLocation = loc
+		break
+	}
+	if gw == nil || testLocation == nil {
+		return nil, fmt.Errorf("could not create NAT Gateway: all %d candidate locations failed", len(candidates))
 	}
 	productUID := gw.ProductUID
 	logger.InfoContext(ctx, "NAT Gateway design created",
