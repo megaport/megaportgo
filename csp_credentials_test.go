@@ -24,13 +24,15 @@ type cspCredentials struct {
 	GooglePairingKeys []string `json:"google_pairing_keys"`
 }
 
-// cspPickResult holds a validated CSP key along with the partner port UID and
-// location that the key resolves to. Tests should place their A-End port or
-// MCR at LocationID so the CSP interconnect is reachable.
+// cspPickResult holds a validated CSP key along with the partner port UID,
+// location, and market that the key resolves to. Tests should place their
+// A-End port or MCR at LocationID and use Market for BuyPortRequest /
+// BuyMCRRequest so the A-End is always in the same market as the partner port.
 type cspPickResult struct {
 	Key            string
 	PartnerPortUID string
 	LocationID     int
+	Market         string
 }
 
 // pickAzureServiceKey returns the first Azure service key from the pool that
@@ -136,6 +138,13 @@ func pickCSPKey(t *testing.T, client *Client, partner, connectType string) cspPi
 			continue
 		}
 
+		loc, locErr := client.LocationService.GetLocationByIDV3(ctx, locID)
+		if locErr != nil {
+			t.Logf("pick%sKey: key %s resolved but could not look up location %d: %v", partner, masked, locID, locErr)
+			continue
+		}
+		market := loc.Market
+
 		cspClaimedMu.Lock()
 		if cspClaimedKeys[key] || cspClaimedPorts[resp.ProductUID] {
 			cspClaimedMu.Unlock()
@@ -155,8 +164,8 @@ func pickCSPKey(t *testing.T, client *Client, partner, connectType string) cspPi
 			cspClaimedMu.Unlock()
 		})
 
-		t.Logf("pick%sKey: using key %s (location %d)", partner, masked, locID)
-		return cspPickResult{Key: key, PartnerPortUID: resp.ProductUID, LocationID: locID}
+		t.Logf("pick%sKey: using key %s (location %d, market %s)", partner, masked, locID, market)
+		return cspPickResult{Key: key, PartnerPortUID: resp.ProductUID, LocationID: locID, Market: market}
 	}
 
 	t.Skipf("skipping: no %s key with available capacity found", partner)
