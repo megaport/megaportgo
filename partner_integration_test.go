@@ -79,7 +79,7 @@ func (suite *PartnerIntegrationTestSuite) TestFilterPartnerMegaportByLocationId(
 	if err != nil {
 		suite.FailNowf("could not list partners", "could not list partners %v", err)
 	}
-	suite.NotEmpty(partners, "expected at least one partner megaport for filter test")
+	suite.Require().NotEmpty(partners, "expected at least one partner megaport for filter test")
 
 	// Use a real location id from the partner list so the assertion is never
 	// coupled to a specific site remaining in the staging catalogue.

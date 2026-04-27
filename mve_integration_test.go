@@ -13,7 +13,7 @@ import (
 const (
 	TEST_MVE_TEST_LOCATION_MARKET = "AU"
 	// MVEArubaImageID is the image ID for the Aruba SD-WAN MVE in staging.
-	// Kept in sync with the terraform provider's MVEArubaImageIDMVE.
+	// Kept in sync with the terraform provider's MVEArubaImageID.
 	MVEArubaImageID = 152
 )
 

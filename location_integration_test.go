@@ -66,7 +66,7 @@ func (suite *LocationIntegrationTestSuite) TestGetLocationByIDV3() {
 
 	locations, listErr := suite.client.LocationService.ListLocationsV3(ctx)
 	suite.NoError(listErr)
-	suite.NotEmpty(locations)
+	suite.Require().NotEmpty(locations)
 
 	sample := locations[0]
 	byID, idErr := suite.client.LocationService.GetLocationByIDV3(ctx, sample.ID)
@@ -82,7 +82,7 @@ func (suite *LocationIntegrationTestSuite) TestGetLocationByNameV3() {
 
 	locations, listErr := suite.client.LocationService.ListLocationsV3(ctx)
 	suite.NoError(listErr)
-	suite.NotEmpty(locations)
+	suite.Require().NotEmpty(locations)
 
 	sample := locations[0]
 	byName, nameErr := suite.client.LocationService.GetLocationByNameV3(ctx, sample.Name)
