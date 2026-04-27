@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -46,6 +47,9 @@ func (suite *MCRLookingGlassIntegrationTestSuite) SetupSuite() {
 // TestLookingGlassWithMCR tests the Looking Glass endpoints with a real MCR.
 // This test creates an MCR, queries the Looking Glass, and then cleans up.
 func (suite *MCRLookingGlassIntegrationTestSuite) TestLookingGlassWithMCR() {
+	if strings.Contains(MEGAPORTURL, "staging") {
+		suite.T().Skip("Looking Glass API endpoints are not available in the staging environment")
+	}
 	ctx := context.Background()
 	logger := suite.client.Logger
 	mcrSvc := suite.client.MCRService

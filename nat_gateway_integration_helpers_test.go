@@ -99,6 +99,19 @@ func provisionNATGatewayForTest(ctx context.Context, suite *NATGatewayIntegratio
 			)
 			continue
 		}
+		logger.InfoContext(ctx, "NAT Gateway design created",
+			slog.String("product_uid", gw.ProductUID),
+			slog.String("provisioning_status", gw.ProvisioningStatus),
+		)
+		if _, valErr := natSvc.ValidateNATGatewayOrder(ctx, gw.ProductUID); valErr != nil {
+			logger.WarnContext(ctx, "NAT Gateway validation failed, trying next location",
+				slog.Int("location_id", loc.ID),
+				slog.String("error", valErr.Error()),
+			)
+			makeNATGatewayTeardown(ctx, suite, gw.ProductUID)()
+			gw = nil
+			continue
+		}
 		testLocation = loc
 		break
 	}
@@ -106,17 +119,8 @@ func provisionNATGatewayForTest(ctx context.Context, suite *NATGatewayIntegratio
 		return nil, fmt.Errorf("could not create NAT Gateway: all %d candidate locations failed", len(candidates))
 	}
 	productUID := gw.ProductUID
-	logger.InfoContext(ctx, "NAT Gateway design created",
-		slog.String("product_uid", productUID),
-		slog.String("provisioning_status", gw.ProvisioningStatus),
-	)
-
 	teardown := makeNATGatewayTeardown(ctx, suite, productUID)
 
-	if _, err := natSvc.ValidateNATGatewayOrder(ctx, productUID); err != nil {
-		teardown()
-		return nil, fmt.Errorf("could not validate NAT Gateway: %w", err)
-	}
 	if _, err := natSvc.BuyNATGateway(ctx, productUID); err != nil {
 		teardown()
 		return nil, fmt.Errorf("could not buy NAT Gateway: %w", err)
