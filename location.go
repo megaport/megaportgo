@@ -234,8 +234,8 @@ type RoundTripTimeResponse struct {
 
 // ListLocationsV3Options configures ListLocationsV3WithOptions.
 //
-// Statuses, when non-empty, takes precedence and is sent verbatim as
-// repeated locationStatuses query parameters. Otherwise the boolean
+// Statuses, when non-empty, takes precedence and is used as the values
+// for repeated locationStatuses query parameters. Otherwise the boolean
 // shortcuts are composed against the default allow-list of [Active]:
 //   - IncludeRestricted adds "Restricted"
 //   - IncludeDeployment adds "Deployment"

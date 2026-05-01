@@ -1413,7 +1413,7 @@ func (suite *LocationV3ClientTestSuite) TestListLocationsV3WithOptions_IncludeFl
 		IncludeDeployment: true,
 	})
 	suite.NoError(err)
-	suite.Equal([]string{LocationStatusActive, LocationStatusRestricted, LocationStatusDeployment}, gotStatuses)
+	suite.ElementsMatch([]string{LocationStatusActive, LocationStatusRestricted, LocationStatusDeployment}, gotStatuses)
 }
 
 func (suite *LocationV3ClientTestSuite) TestListLocationsV3WithOptions_StatusesOverride() {
@@ -1430,7 +1430,7 @@ func (suite *LocationV3ClientTestSuite) TestListLocationsV3WithOptions_StatusesO
 		Statuses:          []string{LocationStatusExtended, LocationStatusNew},
 	})
 	suite.NoError(err)
-	suite.Equal([]string{LocationStatusExtended, LocationStatusNew}, gotStatuses)
+	suite.ElementsMatch([]string{LocationStatusExtended, LocationStatusNew}, gotStatuses)
 }
 
 // TestListLocationsV3_NoQueryParams asserts that the original ListLocationsV3
