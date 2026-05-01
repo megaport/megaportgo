@@ -11,11 +11,37 @@ import (
 	"github.com/lithammer/fuzzysearch/fuzzy"
 )
 
+// LocationV3 status values returned by GET /v3/locations.
+// Source: Megaport OpenAPI spec, schema "LocationStatus".
+const (
+	LocationStatusActive     = "Active"
+	LocationStatusDeployment = "Deployment"
+	LocationStatusRestricted = "Restricted"
+	LocationStatusExtended   = "Extended"
+	LocationStatusNew        = "New"
+	LocationStatusExpired    = "Expired"
+)
+
+// LocationProductKind identifies a product whose orderability can be checked
+// against a LocationV3 via IsOrderable.
+type LocationProductKind string
+
+const (
+	LocationProductPort         LocationProductKind = "PORT"
+	LocationProductMCR          LocationProductKind = "MCR"
+	LocationProductMVE          LocationProductKind = "MVE"
+	LocationProductCrossConnect LocationProductKind = "CROSS_CONNECT"
+	LocationProductNATGateway   LocationProductKind = "NAT_GATEWAY"
+)
+
 // LocationService is an interface for interfacing with the Location endpoints of the Megaport API.
 type LocationService interface {
 	// V3 API methods (RECOMMENDED for new code)
 	// ListLocationsV3 returns a list of all locations in the Megaport Locations API v3.
 	ListLocationsV3(ctx context.Context) ([]*LocationV3, error)
+	// ListLocationsV3WithOptions returns locations filtered server-side by
+	// the provided options. A nil opts is equivalent to ListLocationsV3.
+	ListLocationsV3WithOptions(ctx context.Context, opts *ListLocationsV3Options) ([]*LocationV3, error)
 	// GetLocationByIDV3 returns a location by its ID in the Megaport Locations API v3.
 	GetLocationByIDV3(ctx context.Context, locationID int) (*LocationV3, error)
 	// GetLocationByNameV3 returns a location by its name in the Megaport Locations API v3.
@@ -206,11 +232,60 @@ type RoundTripTimeResponse struct {
 // V3 API IMPLEMENTATION METHODS
 // ==========================================
 
+// ListLocationsV3Options configures ListLocationsV3WithOptions.
+//
+// Statuses, when non-empty, takes precedence and is sent verbatim as
+// repeated locationStatuses query parameters. Otherwise the boolean
+// shortcuts are composed against the default allow-list of [Active]:
+//   - IncludeRestricted adds "Restricted"
+//   - IncludeDeployment adds "Deployment"
+//
+// A nil *ListLocationsV3Options is equivalent to calling ListLocationsV3
+// (no filter sent; all statuses returned).
+type ListLocationsV3Options struct {
+	IncludeRestricted bool
+	IncludeDeployment bool
+	Statuses          []string
+}
+
+func (o *ListLocationsV3Options) resolvedStatuses() []string {
+	if len(o.Statuses) > 0 {
+		return o.Statuses
+	}
+	statuses := []string{LocationStatusActive}
+	if o.IncludeRestricted {
+		statuses = append(statuses, LocationStatusRestricted)
+	}
+	if o.IncludeDeployment {
+		statuses = append(statuses, LocationStatusDeployment)
+	}
+	return statuses
+}
+
 // ListLocationsV3 returns a list of all locations using the v3 API.
 func (svc *LocationServiceOp) ListLocationsV3(ctx context.Context) ([]*LocationV3, error) {
+	return svc.ListLocationsV3WithOptions(ctx, nil)
+}
+
+// ListLocationsV3WithOptions returns locations filtered server-side by the
+// provided options. When opts is nil, no filter is applied and the call is
+// equivalent to ListLocationsV3.
+func (svc *LocationServiceOp) ListLocationsV3WithOptions(ctx context.Context, opts *ListLocationsV3Options) ([]*LocationV3, error) {
 	path := "/v3/locations"
-	url := svc.Client.BaseURL.JoinPath(path).String()
-	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, url, nil)
+	u := svc.Client.BaseURL.JoinPath(path)
+
+	if opts != nil {
+		statuses := opts.resolvedStatuses()
+		if len(statuses) > 0 {
+			params := url.Values{}
+			for _, s := range statuses {
+				params.Add("locationStatuses", s)
+			}
+			u.RawQuery = params.Encode()
+		}
+	}
+
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -220,18 +295,14 @@ func (svc *LocationServiceOp) ListLocationsV3(ctx context.Context) ([]*LocationV
 	}
 	defer response.Body.Close()
 	body, fileErr := io.ReadAll(response.Body)
-
 	if fileErr != nil {
 		return nil, fileErr
 	}
 
 	locationResponse := &LocationV3Response{}
-
-	unmarshalErr := json.Unmarshal(body, locationResponse)
-	if unmarshalErr != nil {
-		return nil, unmarshalErr
+	if err := json.Unmarshal(body, locationResponse); err != nil {
+		return nil, err
 	}
-
 	return locationResponse.Data, nil
 }
 
@@ -505,6 +576,36 @@ func (l *LocationV3) GetCrossConnectType() string {
 		return *l.ProductAddOns.CrossConnect.Type
 	}
 	return ""
+}
+
+// IsStatusOrderable reports whether the location's Status permits ordering.
+// Only Active is considered orderable.
+func (l *LocationV3) IsStatusOrderable() bool {
+	return l.Status == LocationStatusActive
+}
+
+// IsOrderable reports whether the location is currently orderable for the
+// given product. A location is orderable only when its Status is Active AND
+// the product-specific availability is set. Unknown LocationProductKind
+// values return false.
+func (l *LocationV3) IsOrderable(product LocationProductKind) bool {
+	if !l.IsStatusOrderable() {
+		return false
+	}
+	switch product {
+	case LocationProductPort:
+		return len(l.GetMegaportSpeeds()) > 0
+	case LocationProductMCR:
+		return l.HasMCRSupport()
+	case LocationProductMVE:
+		return l.HasMVESupport()
+	case LocationProductCrossConnect:
+		return l.HasCrossConnectSupport()
+	case LocationProductNATGateway:
+		return l.HasNATGatewaySupport()
+	default:
+		return false
+	}
 }
 
 // GetDataCenterName returns the data center name.
