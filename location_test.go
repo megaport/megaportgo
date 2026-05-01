@@ -1366,3 +1366,174 @@ func (suite *LocationClientTestSuite) TestGetRoundTripTimesEmptySet() {
 	suite.NoError(err)
 	suite.Equal(want, got)
 }
+
+// emptyV3Body is a minimal but valid /v3/locations response used by the
+// query-param assertion tests below.
+const emptyV3Body = `{"message":"ok","terms":"","data":[]}`
+
+func (suite *LocationV3ClientTestSuite) TestListLocationsV3WithOptions_NilOptions() {
+	ctx := context.Background()
+	locSvc := suite.client.LocationService
+	var gotRawQuery string
+	suite.mux.HandleFunc("/v3/locations", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		gotRawQuery = r.URL.RawQuery
+		fmt.Fprint(w, emptyV3Body)
+	})
+	_, err := locSvc.ListLocationsV3WithOptions(ctx, nil)
+	suite.NoError(err)
+	suite.Equal("", gotRawQuery)
+}
+
+func (suite *LocationV3ClientTestSuite) TestListLocationsV3WithOptions_DefaultActiveOnly() {
+	ctx := context.Background()
+	locSvc := suite.client.LocationService
+	var gotStatuses []string
+	suite.mux.HandleFunc("/v3/locations", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		gotStatuses = r.URL.Query()["locationStatuses"]
+		fmt.Fprint(w, emptyV3Body)
+	})
+	_, err := locSvc.ListLocationsV3WithOptions(ctx, &ListLocationsV3Options{})
+	suite.NoError(err)
+	suite.Equal([]string{LocationStatusActive}, gotStatuses)
+}
+
+func (suite *LocationV3ClientTestSuite) TestListLocationsV3WithOptions_IncludeFlags() {
+	ctx := context.Background()
+	locSvc := suite.client.LocationService
+	var gotStatuses []string
+	suite.mux.HandleFunc("/v3/locations", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		gotStatuses = r.URL.Query()["locationStatuses"]
+		fmt.Fprint(w, emptyV3Body)
+	})
+	_, err := locSvc.ListLocationsV3WithOptions(ctx, &ListLocationsV3Options{
+		IncludeRestricted: true,
+		IncludeDeployment: true,
+	})
+	suite.NoError(err)
+	suite.ElementsMatch([]string{LocationStatusActive, LocationStatusRestricted, LocationStatusDeployment}, gotStatuses)
+}
+
+func (suite *LocationV3ClientTestSuite) TestListLocationsV3WithOptions_StatusesOverride() {
+	ctx := context.Background()
+	locSvc := suite.client.LocationService
+	var gotStatuses []string
+	suite.mux.HandleFunc("/v3/locations", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		gotStatuses = r.URL.Query()["locationStatuses"]
+		fmt.Fprint(w, emptyV3Body)
+	})
+	_, err := locSvc.ListLocationsV3WithOptions(ctx, &ListLocationsV3Options{
+		IncludeRestricted: true, // ignored — Statuses takes precedence
+		Statuses:          []string{LocationStatusExtended, LocationStatusNew},
+	})
+	suite.NoError(err)
+	suite.ElementsMatch([]string{LocationStatusExtended, LocationStatusNew}, gotStatuses)
+}
+
+// TestListLocationsV3_NoQueryParams asserts that the original ListLocationsV3
+// (no opts) issues an unfiltered request — protecting backwards compatibility
+// for callers that have not migrated to the options form.
+func (suite *LocationV3ClientTestSuite) TestListLocationsV3_NoQueryParams() {
+	ctx := context.Background()
+	locSvc := suite.client.LocationService
+	var gotRawQuery string
+	suite.mux.HandleFunc("/v3/locations", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		gotRawQuery = r.URL.RawQuery
+		fmt.Fprint(w, emptyV3Body)
+	})
+	_, err := locSvc.ListLocationsV3(ctx)
+	suite.NoError(err)
+	suite.Equal("", gotRawQuery)
+}
+
+// TestLocationV3IsStatusOrderable validates that only "Active" passes the
+// status gate, across all six documented statuses.
+func (suite *LocationV3ClientTestSuite) TestLocationV3IsStatusOrderable() {
+	cases := []struct {
+		status string
+		want   bool
+	}{
+		{LocationStatusActive, true},
+		{LocationStatusDeployment, false},
+		{LocationStatusRestricted, false},
+		{LocationStatusExtended, false},
+		{LocationStatusNew, false},
+		{LocationStatusExpired, false},
+	}
+	for _, tc := range cases {
+		suite.Run(tc.status, func() {
+			loc := &LocationV3{Status: tc.status}
+			suite.Equal(tc.want, loc.IsStatusOrderable())
+		})
+	}
+}
+
+// TestLocationV3IsOrderable covers the orderability matrix, including the
+// exact regression from ESD-1029: a Restricted site with crossConnect.available
+// must report not-orderable for cross connects.
+func (suite *LocationV3ClientTestSuite) TestLocationV3IsOrderable() {
+	mveCores := 8
+	fullActive := func() *LocationV3 {
+		return &LocationV3{
+			Status: LocationStatusActive,
+			DiversityZones: &LocationV3DiversityZones{
+				Red: &LocationV3DiversityZone{
+					McrSpeedMbps:        []int{1000, 10000},
+					MegaportSpeedMbps:   []int{1000, 10000, 100000},
+					MveAvailable:        true,
+					MveMaxCpuCoreCount:  &mveCores,
+					NATGatewaySpeedMbps: []int{500},
+				},
+			},
+			ProductAddOns: &LocationV3ProductAddOns{
+				CrossConnect: &LocationV3CrossConnect{Available: true},
+			},
+		}
+	}
+
+	// Site-1299-shaped fixture: Restricted + crossConnect unavailable.
+	site1299 := &LocationV3{
+		ID:     1299,
+		Name:   "EdgeConneX Atlanta ATL02",
+		Status: LocationStatusRestricted,
+		ProductAddOns: &LocationV3ProductAddOns{
+			CrossConnect: &LocationV3CrossConnect{Available: false},
+		},
+	}
+
+	// Active + crossConnect.available=false (Active site that can't cross-connect).
+	activeNoXC := fullActive()
+	activeNoXC.ProductAddOns.CrossConnect.Available = false
+
+	cases := []struct {
+		name    string
+		loc     *LocationV3
+		product LocationProductKind
+		want    bool
+	}{
+		{"active full / port", fullActive(), LocationProductPort, true},
+		{"active full / mcr", fullActive(), LocationProductMCR, true},
+		{"active full / mve", fullActive(), LocationProductMVE, true},
+		{"active full / cross connect", fullActive(), LocationProductCrossConnect, true},
+		{"active full / nat gateway", fullActive(), LocationProductNATGateway, true},
+		{"active full / unknown kind", fullActive(), LocationProductKind("UNKNOWN"), false},
+
+		{"active without cross connect / cross connect", activeNoXC, LocationProductCrossConnect, false},
+
+		// site 1299 regression — every product kind must be non-orderable.
+		{"site 1299 restricted / port", site1299, LocationProductPort, false},
+		{"site 1299 restricted / mcr", site1299, LocationProductMCR, false},
+		{"site 1299 restricted / mve", site1299, LocationProductMVE, false},
+		{"site 1299 restricted / cross connect", site1299, LocationProductCrossConnect, false},
+		{"site 1299 restricted / nat gateway", site1299, LocationProductNATGateway, false},
+	}
+	for _, tc := range cases {
+		suite.Run(tc.name, func() {
+			suite.Equal(tc.want, tc.loc.IsOrderable(tc.product))
+		})
+	}
+}
