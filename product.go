@@ -54,6 +54,9 @@ type ModifyProductRequest struct {
 	CostCentre            string `json:"costCentre"`
 	MarketplaceVisibility *bool  `json:"marketplaceVisibility,omitempty"`
 	ContractTermMonths    int    `json:"term,omitempty"`
+	// ASN is currently only meaningful for MCR products. Sent as-is to the
+	// PUT /v2/product/mcr2/{productUid} endpoint when non-nil.
+	ASN *int `json:"asn,omitempty"`
 }
 
 // ModifyProductResponse represents a response from the Megaport Products API after modifying a product.

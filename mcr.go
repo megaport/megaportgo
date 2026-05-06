@@ -115,6 +115,10 @@ type ModifyMCRRequest struct {
 	CostCentre            string
 	MarketplaceVisibility *bool
 	ContractTermMonths    *int
+	// MCRAsn updates the MCR's BGP ASN in place when non-nil. The Megaport
+	// platform supports modifying ASN on a configured/live MCR; setting this
+	// avoids the destroy-and-recreate that callers would otherwise need.
+	MCRAsn *int
 
 	WaitForUpdate bool          // Wait until the MCR updates before returning
 	WaitForTime   time.Duration // How long to wait for the MCR to update if WaitForUpdate is true (default is 5 minutes; must be at least 30 seconds for the poller to fire)
@@ -495,6 +499,7 @@ func (svc *MCRServiceOp) ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (
 		Name:                  req.Name,
 		CostCentre:            req.CostCentre,
 		MarketplaceVisibility: req.MarketplaceVisibility,
+		ASN:                   req.MCRAsn,
 	}
 	if req.ContractTermMonths != nil {
 		modifyReq.ContractTermMonths = *req.ContractTermMonths
