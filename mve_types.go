@@ -96,6 +96,7 @@ type PaloAltoConfig struct {
 	AdminSSHPublicKey string `json:"adminSshPublicKey,omitempty"`
 	SSHPublicKey      string `json:"sshPublicKey,omitempty"`
 	AdminPasswordHash string `json:"adminPasswordHash,omitempty"`
+	AdminPassword     string `json:"adminPassword,omitempty"`
 	LicenseData       string `json:"licenseData,omitempty"`
 }
 

@@ -792,3 +792,29 @@ func (suite *MVEClientTestSuite) TestCiscoConfigAdminPasswordMarshalling() {
 	suite.NoError(err)
 	suite.NotContains(string(emptyRaw), "adminPassword")
 }
+
+// TestPaloAltoConfigAdminPasswordMarshalling verifies that PaloAltoConfig.AdminPassword
+// round-trips through JSON serialisation under the wire-format key "adminPassword".
+// The Megaport API requires this field for Palo Alto MVE buy orders.
+func (suite *MVEClientTestSuite) TestPaloAltoConfigAdminPasswordMarshalling() {
+	cfg := PaloAltoConfig{
+		Vendor:        "palo_alto",
+		ImageID:       1,
+		ProductSize:   "SMALL",
+		AdminPassword: "s3cret-plaintext",
+	}
+
+	raw, err := json.Marshal(cfg)
+	suite.NoError(err)
+	suite.Contains(string(raw), `"adminPassword":"s3cret-plaintext"`)
+
+	var decoded PaloAltoConfig
+	suite.NoError(json.Unmarshal(raw, &decoded))
+	suite.Equal("s3cret-plaintext", decoded.AdminPassword)
+
+	// Empty value must be omitted from the wire payload.
+	empty := PaloAltoConfig{Vendor: "palo_alto", ImageID: 1, ProductSize: "SMALL"}
+	emptyRaw, err := json.Marshal(empty)
+	suite.NoError(err)
+	suite.NotContains(string(emptyRaw), "adminPassword")
+}
