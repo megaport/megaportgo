@@ -67,6 +67,7 @@ type CiscoConfig struct {
 	ManageLocally      bool   `json:"manageLocally,omitempty"`
 	AdminSSHPublicKey  string `json:"adminSshPublicKey,omitempty"`
 	SSHPublicKey       string `json:"sshPublicKey,omitempty"`
+	AdminPassword      string `json:"adminPassword,omitempty"`
 	CloudInit          string `json:"cloudInit,omitempty"`
 	FMCIPAddress       string `json:"fmcIpAddress,omitempty"`
 	FMCRegistrationKey string `json:"fmcRegistrationKey,omitempty"`
@@ -95,6 +96,7 @@ type PaloAltoConfig struct {
 	AdminSSHPublicKey string `json:"adminSshPublicKey,omitempty"`
 	SSHPublicKey      string `json:"sshPublicKey,omitempty"`
 	AdminPasswordHash string `json:"adminPasswordHash,omitempty"`
+	AdminPassword     string `json:"adminPassword,omitempty"`
 	LicenseData       string `json:"licenseData,omitempty"`
 }
 
