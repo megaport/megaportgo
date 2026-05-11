@@ -14,3 +14,5 @@
 *.so
 *.test
 *.out
+
+.worktrees/
