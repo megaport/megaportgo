@@ -116,7 +116,7 @@ func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMV
 		return nil, err
 	}
 
-	orderInfo := MVEOrderResponse{}
+	orderInfo := mveOrderResponse{}
 
 	if err := json.Unmarshal(*resp, &orderInfo); err != nil {
 		return nil, err
@@ -241,7 +241,7 @@ func (svc *MVEServiceOp) GetMVE(ctx context.Context, mveId string) (*MVE, error)
 	if err != nil {
 		return nil, err
 	}
-	mveResp := MVEResponse{}
+	mveResp := mveResponse{}
 	if err := json.Unmarshal(body, &mveResp); err != nil {
 		return nil, err
 	}
@@ -379,7 +379,7 @@ func (svc *MVEServiceOp) ListAvailableMVESizes(ctx context.Context) ([]*MVESize,
 	if err != nil {
 		return nil, err
 	}
-	sizeResp := MVESizeAPIResponse{}
+	sizeResp := mveSizeAPIResponse{}
 	if err := json.Unmarshal(body, &sizeResp); err != nil {
 		return nil, err
 	}
