@@ -130,6 +130,30 @@ func ConvertBuyIXRequestToIXOrder(req BuyIXRequest) []IXOrder {
 	}}
 }
 
+// IXP represents a globally available Internet Exchange Point from GET /v2/ixp.
+// This is distinct from IX, which represents a provisioned IX service on the account.
+type IXP struct {
+	ID          int    `json:"id"`
+	ASN         int    `json:"asn"`
+	Name        string `json:"name"`
+	Metro       string `json:"metro"`
+	IPv4Network string `json:"ipv4_network"`
+	IPv6Network string `json:"ipv6_network"`
+}
+
+// ListIXPsRequest carries optional filters for ListIXPs.
+// All fields are optional; a nil or zero-value request returns all IXPs.
+type ListIXPsRequest struct {
+	Metro string // filter by metro name (case-insensitive substring match)
+}
+
+// listIXPsResponse is the private envelope for the GET /v2/ixp response.
+type listIXPsResponse struct {
+	Message string `json:"message"`
+	Terms   string `json:"terms"`
+	Data    []*IXP `json:"data"`
+}
+
 // IXUpdate represents the structure for updating an IX
 type IXUpdate struct {
 	Name           string `json:"name,omitempty"`
