@@ -412,6 +412,7 @@ func (suite *MCRClientTestSuite) TestModifyMCR() {
 		Name:                  "test-mcr-updated",
 		CostCentre:            "US",
 		MarketplaceVisibility: PtrTo(false),
+		MCRAsn:                PtrTo(64512),
 	}
 	jblobGet := `{
     "message": "Product [36b3f68e-2f54-4331-bf94-f8984449365f] has been updated",
@@ -504,6 +505,7 @@ func (suite *MCRClientTestSuite) TestModifyMCR() {
 		Name:                  req.Name,
 		CostCentre:            req.CostCentre,
 		MarketplaceVisibility: req.MarketplaceVisibility,
+		ASN:                   req.MCRAsn,
 	}
 	path := fmt.Sprintf("/v2/product/%s/%s", PRODUCT_MCR, productUid)
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
