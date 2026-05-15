@@ -3,7 +3,9 @@ package megaport
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"time"
 )
 
 // Partner Providers
@@ -808,3 +810,30 @@ func (c *CSPConnection) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
+
+// GetVXCTelemetryRequest represents a request to get telemetry data for a VXC.
+type GetVXCTelemetryRequest struct {
+	ProductUID string     // required
+	Types      []string   // required; valid values: A_BITS, B_BITS, A_PACKETS, B_PACKETS
+	From       *time.Time // mutually exclusive with Days
+	To         *time.Time // mutually exclusive with Days
+	Days       *int32     // 1-180; mutually exclusive with From/To
+}
+
+// ErrVXCTelemetryRequestRequired is returned when a nil request is provided.
+var ErrVXCTelemetryRequestRequired = errors.New("VXC telemetry request is required")
+
+// ErrVXCTelemetryProductUIDRequired is returned when a ProductUID is not provided.
+var ErrVXCTelemetryProductUIDRequired = errors.New("product UID is required")
+
+// ErrVXCTelemetryTypesRequired is returned when no telemetry types are provided.
+var ErrVXCTelemetryTypesRequired = errors.New("at least one telemetry type is required")
+
+// ErrVXCTelemetryTimeExclusive is returned when both Days and From/To are provided.
+var ErrVXCTelemetryTimeExclusive = errors.New("days and from/to are mutually exclusive")
+
+// ErrVXCTelemetryDaysOutOfRange is returned when Days is not between 1 and 180.
+var ErrVXCTelemetryDaysOutOfRange = errors.New("days must be between 1 and 180")
+
+// ErrVXCTelemetryFromToIncomplete is returned when only one of From/To is provided.
+var ErrVXCTelemetryFromToIncomplete = errors.New("both from and to must be provided together")

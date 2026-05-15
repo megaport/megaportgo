@@ -1,5 +1,10 @@
 package megaport
 
+import (
+	"errors"
+	"time"
+)
+
 // IX represents an Internet Exchange in the Megaport API
 type IX struct {
 	ProductID          int               `json:"productId"`
@@ -144,3 +149,21 @@ type IXUpdate struct {
 	AEndProductUid string `json:"aEndProductUid,omitempty"`
 	Shutdown       *bool  `json:"shutdown,omitempty"`
 }
+
+// GetIXTelemetryRequest represents a request to get telemetry data for an IX.
+type GetIXTelemetryRequest struct {
+	ProductUID string     // The product UID of the IX.
+	Types      []string   // Telemetry types to retrieve, e.g. "BITS", "PACKETS".
+	From       *time.Time // Start time. Mutually exclusive with Days.
+	To         *time.Time // End time. Mutually exclusive with Days.
+	Days       *int32     // Number of days of telemetry (1-180). Mutually exclusive with From/To.
+}
+
+var (
+	ErrIXTelemetryRequestRequired    = errors.New("IX telemetry request is required")
+	ErrIXTelemetryProductUIDRequired = errors.New("product UID is required")
+	ErrIXTelemetryTypesRequired      = errors.New("at least one telemetry type is required")
+	ErrIXTelemetryTimeExclusive      = errors.New("days and from/to are mutually exclusive")
+	ErrIXTelemetryDaysOutOfRange     = errors.New("days must be between 1 and 180")
+	ErrIXTelemetryFromToIncomplete   = errors.New("both from and to must be provided together")
+)
