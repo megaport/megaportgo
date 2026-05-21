@@ -385,6 +385,9 @@ func (svc *PortServiceOp) ModifyPort(ctx context.Context, req *ModifyPortRequest
 // DeleteNow=false are rejected with ErrPortCancelLaterNotAllowed, and accepted
 // requests always call the underlying API with DeleteNow=true.
 func (svc *PortServiceOp) DeletePort(ctx context.Context, req *DeletePortRequest) (*DeletePortResponse, error) {
+	if req == nil {
+		return nil, ErrDeletePortRequestNil
+	}
 	// Enforce Port lifecycle restriction: only CANCEL_NOW is allowed
 	if !req.DeleteNow {
 		return nil, ErrPortCancelLaterNotAllowed
