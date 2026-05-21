@@ -99,6 +99,9 @@ var ErrInvalidYear = errors.New("invalid year, must be between 0 and 99")
 // ErrMCRCancelLaterNotAllowed is returned when attempting to schedule MCR deletion for later (only CANCEL_NOW is allowed)
 var ErrMCRCancelLaterNotAllowed = errors.New("mcr products do not support scheduled deletion (cancel later), only immediate deletion (CANCEL_NOW) is allowed")
 
+// ErrPortCancelLaterNotAllowed is returned when attempting to schedule Port deletion for later (only CANCEL_NOW is allowed)
+var ErrPortCancelLaterNotAllowed = errors.New("port products do not support scheduled deletion (cancel later), only immediate deletion (CANCEL_NOW) is allowed")
+
 // ErrMCRNotFound is returned when an MCR cannot be found (deleted or never existed).
 var ErrMCRNotFound = errors.New("mcr not found or deleted")
 
