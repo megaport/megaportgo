@@ -518,6 +518,12 @@ func (c *Client) RegisterRefCache(cache Invalidatable) {
 	defer c.refCachesMu.Unlock()
 	if reflect.TypeOf(cache).Comparable() {
 		for _, existing := range c.refCaches {
+			if existing == nil || isTypedNil(existing) {
+				continue
+			}
+			if !reflect.TypeOf(existing).Comparable() {
+				continue
+			}
 			if existing == cache {
 				return
 			}
