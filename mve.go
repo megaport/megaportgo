@@ -76,8 +76,10 @@ type ListMVEsRequest struct {
 
 // ModifyMVERequest represents a request to modify an MVE
 type ModifyMVERequest struct {
-	MVEID                 string
-	Name                  string
+	MVEID string
+	Name  string
+	// MarketplaceVisibility is forwarded to the API when non-nil. Leave nil
+	// to leave the current visibility unchanged.
 	MarketplaceVisibility *bool
 	CostCentre            string
 	ContractTermMonths    *int // Contract term in months
@@ -258,7 +260,7 @@ func (svc *MVEServiceOp) ModifyMVE(ctx context.Context, req *ModifyMVERequest) (
 	modifyProductReq := &ModifyProductRequest{
 		ProductID:             req.MVEID,
 		ProductType:           PRODUCT_MVE,
-		MarketplaceVisibility: PtrTo(false),
+		MarketplaceVisibility: req.MarketplaceVisibility,
 	}
 	if req.Name != "" {
 		modifyProductReq.Name = req.Name

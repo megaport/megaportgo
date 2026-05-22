@@ -550,22 +550,27 @@ func (suite *MVEClientTestSuite) TestModifyMVE() {
 	}
 }`
 	wantReq := &ModifyProductRequest{
-		ProductID:             req.MVEID,
-		ProductType:           PRODUCT_MVE,
-		Name:                  req.Name,
-		CostCentre:            "",
-		MarketplaceVisibility: PtrTo(false),
+		ProductID:   req.MVEID,
+		ProductType: PRODUCT_MVE,
+		Name:        req.Name,
+		CostCentre:  "",
 	}
 	path := fmt.Sprintf("/v2/product/%s/%s", PRODUCT_MVE, productUid)
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		v := new(ModifyProductRequest)
-		err := json.NewDecoder(r.Body).Decode(v)
+		body, err := io.ReadAll(r.Body)
 		if err != nil {
-			suite.FailNowf("could not decode json", "could not decode json %V", err)
+			suite.FailNowf("could not read body", "%v", err)
+		}
+		v := new(ModifyProductRequest)
+		if err := json.Unmarshal(body, v); err != nil {
+			suite.FailNowf("could not decode json", "%v", err)
 		}
 		suite.testMethod(r, http.MethodPut)
 		fmt.Fprint(w, jblob)
 		suite.Equal(wantReq, v)
+		// When the caller doesn't set MarketplaceVisibility, it must not
+		// appear on the wire — otherwise the backend would flip visibility.
+		suite.NotContains(string(body), "marketplaceVisibility")
 	})
 	wantRes := &ModifyMVEResponse{
 		MVEUpdated: true,
@@ -573,6 +578,42 @@ func (suite *MVEClientTestSuite) TestModifyMVE() {
 	gotRes, err := mveSvc.ModifyMVE(ctx, req)
 	suite.NoError(err)
 	suite.Equal(wantRes, gotRes)
+}
+
+// TestModifyMVEMarketplaceVisibility verifies the request only carries
+// marketplaceVisibility when the caller sets it explicitly.
+func (suite *MVEClientTestSuite) TestModifyMVEMarketplaceVisibility() {
+	mveSvc := suite.client.MVEService
+	ctx := context.Background()
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	req := &ModifyMVERequest{
+		MVEID:                 productUid,
+		MarketplaceVisibility: PtrTo(true),
+	}
+	jblob := `{"message":"updated","data":{"productUid":"36b3f68e-2f54-4331-bf94-f8984449365f","productType":"MVE"}}`
+	wantReq := &ModifyProductRequest{
+		ProductID:             req.MVEID,
+		ProductType:           PRODUCT_MVE,
+		MarketplaceVisibility: PtrTo(true),
+	}
+	path := fmt.Sprintf("/v2/product/%s/%s", PRODUCT_MVE, productUid)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			suite.FailNowf("could not read body", "%v", err)
+		}
+		v := new(ModifyProductRequest)
+		if err := json.Unmarshal(body, v); err != nil {
+			suite.FailNowf("could not decode json", "%v", err)
+		}
+		suite.testMethod(r, http.MethodPut)
+		fmt.Fprint(w, jblob)
+		suite.Equal(wantReq, v)
+		suite.Contains(string(body), `"marketplaceVisibility":true`)
+	})
+	gotRes, err := mveSvc.ModifyMVE(ctx, req)
+	suite.NoError(err)
+	suite.Equal(&ModifyMVEResponse{MVEUpdated: true}, gotRes)
 }
 
 // TestModifyMVEWithVnics verifies vNIC descriptions are forwarded
@@ -597,9 +638,8 @@ func (suite *MVEClientTestSuite) TestModifyMVEWithVnics() {
 	}
 }`
 	wantReq := &ModifyProductRequest{
-		ProductID:             req.MVEID,
-		ProductType:           PRODUCT_MVE,
-		MarketplaceVisibility: PtrTo(false),
+		ProductID:   req.MVEID,
+		ProductType: PRODUCT_MVE,
 		Vnics: []MVEVnicUpdate{
 			{Description: "Management"},
 			{Description: "Data Plane"},
