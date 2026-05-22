@@ -17,8 +17,9 @@ var (
 	ErrNATGatewayDiagnosticsTimeout          = errors.New("timed out waiting for diagnostics operation to complete")
 )
 
-// diagnosticsPollInterval and diagnosticsPollTimeout are the defaults used by
-// the convenience diagnostics wrappers.
+// Default polling cadence used by the convenience diagnostics wrappers:
+// an initial delay before the first poll, the interval between polls, and
+// the overall timeout for the operation.
 const (
 	diagnosticsPollInitialDelay = 2 * time.Second
 	diagnosticsPollInterval     = 3 * time.Second
