@@ -667,6 +667,24 @@ func (suite *MVEClientTestSuite) TestModifyMVEWithVnics() {
 	suite.Equal(&ModifyMVEResponse{MVEUpdated: true}, gotRes)
 }
 
+// TestModifyMVECostCentreTooLong verifies ModifyMVE rejects a CostCentre
+// over 255 characters before dispatching the HTTP request.
+func (suite *MVEClientTestSuite) TestModifyMVECostCentreTooLong() {
+	mveSvc := suite.client.MVEService
+	ctx := context.Background()
+	path := fmt.Sprintf("/v2/product/%s/%s", PRODUCT_MVE, "36b3f68e-2f54-4331-bf94-f8984449365f")
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.FailNow("ModifyMVE must not call the API when CostCentre is too long")
+	})
+	req := &ModifyMVERequest{
+		MVEID:      "36b3f68e-2f54-4331-bf94-f8984449365f",
+		CostCentre: strings.Repeat("x", 256),
+	}
+	gotRes, err := mveSvc.ModifyMVE(ctx, req)
+	suite.ErrorIs(err, ErrCostCentreTooLong)
+	suite.Nil(gotRes)
+}
+
 func (suite *MVEClientTestSuite) TestListMVEImages() {
 	mveSvc := suite.client.MVEService
 	ctx := context.Background()
