@@ -250,27 +250,25 @@ func (svc *ProductServiceOp) ListProducts(ctx context.Context) ([]Product, error
 // fields to modify are Name, Cost Centre, Marketplace Visibility, Contract Term,
 // ASN (MCR only), and Vnics (MVE only).
 func (svc *ProductServiceOp) ModifyProduct(ctx context.Context, req *ModifyProductRequest) (*ModifyProductResponse, error) {
+	if req.ProductType != PRODUCT_MEGAPORT && req.ProductType != PRODUCT_MCR && req.ProductType != PRODUCT_MVE {
+		return nil, ErrWrongProductModify
+	}
 	if len(req.Vnics) > 0 && req.ProductType != PRODUCT_MVE {
 		return nil, ErrVnicsOnNonMVE
 	}
-	if req.ProductType == PRODUCT_MEGAPORT || req.ProductType == PRODUCT_MCR || req.ProductType == PRODUCT_MVE {
-		path := fmt.Sprintf("/v2/product/%s/%s", req.ProductType, req.ProductID)
-		url := svc.Client.BaseURL.JoinPath(path).String()
 
-		req, err := svc.Client.NewRequest(ctx, http.MethodPut, url, req)
+	path := fmt.Sprintf("/v2/product/%s/%s", req.ProductType, req.ProductID)
+	url := svc.Client.BaseURL.JoinPath(path).String()
 
-		if err != nil {
-			return nil, err
-		}
-
-		_, err = svc.Client.Do(ctx, req, nil)
-		if err != nil {
-			return nil, err
-		}
-		return &ModifyProductResponse{IsUpdated: true}, nil
-	} else {
-		return nil, ErrWrongProductModify
+	httpReq, err := svc.Client.NewRequest(ctx, http.MethodPut, url, req)
+	if err != nil {
+		return nil, err
 	}
+
+	if _, err := svc.Client.Do(ctx, httpReq, nil); err != nil {
+		return nil, err
+	}
+	return &ModifyProductResponse{IsUpdated: true}, nil
 }
 
 // DeleteProduct is responsible for either scheduling a product for deletion "CANCEL" or deleting a product immediately "CANCEL_NOW" in the Megaport Products API.

@@ -211,6 +211,22 @@ func (suite *ProductClientTestSuite) TestModifyProductVnicsOnNonMVE() {
 	}
 }
 
+// TestModifyProductUnknownTypeTakesPrecedence verifies that an unknown
+// ProductType yields ErrWrongProductModify even when Vnics are supplied —
+// the product-type check runs before the vNIC guard.
+func (suite *ProductClientTestSuite) TestModifyProductUnknownTypeTakesPrecedence() {
+	ctx := context.Background()
+	productSvc := suite.client.ProductService
+	req := &ModifyProductRequest{
+		ProductID:   "36b3f68e-2f54-4331-bf94-f8984449365f",
+		ProductType: "MEGAPORT", // uppercase — not one of the known constants
+		Vnics:       []MVEVnicUpdate{{Description: "should-be-irrelevant"}},
+	}
+	gotRes, err := productSvc.ModifyProduct(ctx, req)
+	suite.ErrorIs(err, ErrWrongProductModify)
+	suite.Nil(gotRes)
+}
+
 // TestDeleteProduct tests the DeleteProduct method
 func (suite *ProductClientTestSuite) TestDeleteProduct() {
 	ctx := context.Background()
