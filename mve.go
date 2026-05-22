@@ -84,8 +84,8 @@ type ModifyMVERequest struct {
 	CostCentre            string
 	ContractTermMonths    *int // Contract term in months
 	// Vnics updates the description for each vNIC on the MVE. Order matters —
-	// entries map positionally to the existing vNICs. Leave nil to leave
-	// descriptions unchanged.
+	// entries map positionally to the existing vNICs. Leave nil or empty to
+	// leave descriptions unchanged.
 	Vnics []MVEVnicUpdate
 
 	WaitForUpdate bool          // Wait until the MVE updates before returning
