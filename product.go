@@ -16,7 +16,7 @@ type ProductService interface {
 	ExecuteOrder(ctx context.Context, requestBody interface{}) (*[]byte, error)
 	// ListProducts retrieves a list of products from the Megaport Products API. It returns a slice of Product interfaces, which can be of different types (Port, MCR, MVE). The function handles the parsing of the response and unmarshals it into the appropriate product type based on the product type field.
 	ListProducts(ctx context.Context) ([]Product, error)
-	// ModifyProduct modifies a product in the Megaport Products API. The available fields to modify are Name, Cost Centre, and Marketplace Visibility.
+	// ModifyProduct modifies a product in the Megaport Products API. The available fields to modify are Name, Cost Centre, Marketplace Visibility, Contract Term, ASN (MCR only), and Vnics (MVE only).
 	ModifyProduct(ctx context.Context, req *ModifyProductRequest) (*ModifyProductResponse, error)
 	// DeleteProduct is responsible for either scheduling a product for deletion "CANCEL" or deleting a product immediately "CANCEL_NOW" in the Megaport Products API.
 	DeleteProduct(ctx context.Context, req *DeleteProductRequest) (*DeleteProductResponse, error)
@@ -246,8 +246,13 @@ func (svc *ProductServiceOp) ListProducts(ctx context.Context) ([]Product, error
 	return products, nil
 }
 
-// ModifyProduct modifies a product in the Megaport Products API. The available fields to modify are Name, Cost Centre, and Marketplace Visibility.
+// ModifyProduct modifies a product in the Megaport Products API. The available
+// fields to modify are Name, Cost Centre, Marketplace Visibility, Contract Term,
+// ASN (MCR only), and Vnics (MVE only).
 func (svc *ProductServiceOp) ModifyProduct(ctx context.Context, req *ModifyProductRequest) (*ModifyProductResponse, error) {
+	if len(req.Vnics) > 0 && req.ProductType != PRODUCT_MVE {
+		return nil, ErrVnicsOnNonMVE
+	}
 	if req.ProductType == PRODUCT_MEGAPORT || req.ProductType == PRODUCT_MCR || req.ProductType == PRODUCT_MVE {
 		path := fmt.Sprintf("/v2/product/%s/%s", req.ProductType, req.ProductID)
 		url := svc.Client.BaseURL.JoinPath(path).String()
