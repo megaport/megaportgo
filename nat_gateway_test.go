@@ -8,12 +8,26 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/suite"
 )
+
+// TestErrNATGatewayInvalidTermMessage guards the assumption that the
+// ErrNATGatewayInvalidTerm message is derived from VALID_CONTRACT_TERMS so it
+// stays in sync if that slice ever changes.
+func TestErrNATGatewayInvalidTermMessage(t *testing.T) {
+	t.Parallel()
+	msg := ErrNATGatewayInvalidTerm.Error()
+	for _, term := range VALID_CONTRACT_TERMS {
+		if !strings.Contains(msg, fmt.Sprintf("%d", term)) {
+			t.Fatalf("ErrNATGatewayInvalidTerm message %q does not list term %d", msg, term)
+		}
+	}
+}
 
 // NATGatewayClientTestSuite tests the NAT Gateway Service Client.
 type NATGatewayClientTestSuite struct {
@@ -115,8 +129,12 @@ func (suite *NATGatewayClientTestSuite) TestCreateNATGatewayValidation() {
 	ctx := context.Background()
 	natSvc := suite.client.NATGatewayService
 
+	// Nil request must not panic.
+	_, err := natSvc.CreateNATGateway(ctx, nil)
+	suite.ErrorIs(err, ErrNATGatewayProductNameRequired)
+
 	// Missing ProductName
-	_, err := natSvc.CreateNATGateway(ctx, &CreateNATGatewayRequest{
+	_, err = natSvc.CreateNATGateway(ctx, &CreateNATGatewayRequest{
 		LocationID: 1, Speed: 1000, Term: 1,
 	})
 	suite.ErrorIs(err, ErrNATGatewayProductNameRequired)
@@ -318,8 +336,12 @@ func (suite *NATGatewayClientTestSuite) TestUpdateNATGatewayValidation() {
 	ctx := context.Background()
 	natSvc := suite.client.NATGatewayService
 
+	// Nil request must not panic.
+	_, err := natSvc.UpdateNATGateway(ctx, nil)
+	suite.ErrorIs(err, ErrNATGatewayProductUIDRequired)
+
 	// Missing ProductUID
-	_, err := natSvc.UpdateNATGateway(ctx, &UpdateNATGatewayRequest{
+	_, err = natSvc.UpdateNATGateway(ctx, &UpdateNATGatewayRequest{
 		ProductName: "test", LocationID: 1, Speed: 1000, Term: 1,
 	})
 	suite.ErrorIs(err, ErrNATGatewayProductUIDRequired)
@@ -565,8 +587,12 @@ func (suite *NATGatewayClientTestSuite) TestGetNATGatewayTelemetryValidation() {
 	ctx := context.Background()
 	natSvc := suite.client.NATGatewayService
 
+	// Nil request must not panic.
+	_, err := natSvc.GetNATGatewayTelemetry(ctx, nil)
+	suite.ErrorIs(err, ErrNATGatewayProductUIDRequired)
+
 	// Missing ProductUID
-	_, err := natSvc.GetNATGatewayTelemetry(ctx, &GetNATGatewayTelemetryRequest{
+	_, err = natSvc.GetNATGatewayTelemetry(ctx, &GetNATGatewayTelemetryRequest{
 		Types: []string{"BITS"},
 		Days:  PtrTo[int32](7),
 	})
