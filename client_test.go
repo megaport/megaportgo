@@ -177,6 +177,38 @@ func (suite *ClientTestSuite) TestNewRequest_withResponseLogging() {
 	}
 }
 
+// TestDo_LogResponseBody_DecodesAndChecksAfterDrain is a regression test
+// for a bug where enabling LogResponseBody drained the original response
+// body in-place, leaving subsequent CheckResponse and json.Decode calls
+// reading from an empty reader. Do must keep the body readable for both.
+func (suite *ClientTestSuite) TestDo_LogResponseBody_DecodesAndChecksAfterDrain() {
+	c, err := New(nil, WithLogResponseBody())
+	suite.Require().NoError(err)
+	u, _ := url.Parse(suite.server.URL)
+	c.BaseURL = u
+
+	// Success path: body must decode after being drained for logging.
+	suite.mux.HandleFunc("/ok", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{"A":"decoded"}`)
+	})
+	type payload struct{ A string }
+	req, _ := c.NewRequest(ctx, http.MethodGet, "/ok", nil)
+	var out payload
+	_, err = c.Do(ctx, req, &out)
+	suite.NoError(err)
+	suite.Equal("decoded", out.A, "json.Decode read from resp.Body and got EOF — body was drained by LogResponseBody")
+
+	// Error path: CheckResponse must see the error body so the message
+	// propagates instead of getting an empty error envelope.
+	suite.mux.HandleFunc("/boom", func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, `{"message":"server explosion","data":"boom-details"}`, http.StatusInternalServerError)
+	})
+	req, _ = c.NewRequest(ctx, http.MethodGet, "/boom", nil)
+	_, err = c.Do(ctx, req, nil)
+	suite.Error(err)
+	suite.Contains(err.Error(), "server explosion", "CheckResponse read an empty body — LogResponseBody drained it")
+}
+
 // TestNewRequest_withCustomHeaders tests if the NewRequest function returns a request with custom headers.
 func (suite *ClientTestSuite) TestNewRequest_withCustomHeaders() {
 	expectedIdentity := "identity"
@@ -524,4 +556,49 @@ func (suite *ClientTestSuite) TestTokenProvider_emptyToken() {
 
 	authHeader := req.Header.Get("Authorization")
 	suite.Empty(authHeader, "Authorization header should be empty when provider returns empty token")
+}
+
+// TestRegisterRefCache_IsIdempotent guards against unbounded growth of the
+// reference-data cache registry when the same cache instance is registered
+// more than once (e.g. a service re-running its lazy-init path on a
+// long-lived Client).
+func (suite *ClientTestSuite) TestRegisterRefCache_IsIdempotent() {
+	c := NewClient(nil, nil)
+
+	c.refCachesMu.Lock()
+	baseline := len(c.refCaches)
+	c.refCachesMu.Unlock()
+
+	cache := NewRefCache(time.Hour, func(_ context.Context) (int, error) {
+		return 1, nil
+	})
+
+	c.RegisterRefCache(cache)
+	c.RegisterRefCache(cache)
+	c.RegisterRefCache(cache)
+
+	c.refCachesMu.Lock()
+	defer c.refCachesMu.Unlock()
+	suite.Equal(baseline+1, len(c.refCaches), "registering the same cache instance multiple times must be a no-op")
+}
+
+// nonComparableInvalidatable embeds a slice so the struct is not
+// comparable — equality with == on Invalidatable values backed by this
+// type would panic at runtime.
+type nonComparableInvalidatable struct {
+	_ []int
+}
+
+func (nonComparableInvalidatable) Invalidate() {}
+
+// TestRegisterRefCache_NonComparableDoesNotPanic guards the comparability
+// check inside RegisterRefCache: a registered Invalidatable whose concrete
+// type is non-comparable must not crash the dedup scan. Dedup is skipped
+// for such values; the registration still succeeds.
+func (suite *ClientTestSuite) TestRegisterRefCache_NonComparableDoesNotPanic() {
+	c := NewClient(nil, nil)
+	suite.NotPanics(func() {
+		c.RegisterRefCache(nonComparableInvalidatable{})
+		c.RegisterRefCache(nonComparableInvalidatable{})
+	}, "RegisterRefCache must not panic when comparing non-comparable Invalidatable values")
 }
