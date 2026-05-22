@@ -57,6 +57,10 @@ type ModifyProductRequest struct {
 	// ASN is currently only meaningful for MCR products. Sent as-is to the
 	// PUT /v2/product/mcr2/{productUid} endpoint when non-nil.
 	ASN *int `json:"asn,omitempty"`
+	// Vnics updates vNIC descriptions on PUT /v2/product/mve/{productUid}.
+	// Only set this for MVE products — the API validates vnic entries before
+	// checking product type and will reject non-empty vnics on Port/MCR.
+	Vnics []MVEVnicUpdate `json:"vnics,omitempty"`
 }
 
 // ModifyProductResponse represents a response from the Megaport Products API after modifying a product.

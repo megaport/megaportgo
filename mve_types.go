@@ -154,6 +154,13 @@ type MVENetworkInterface struct {
 	VLAN        int    `json:"vlan"`
 }
 
+// MVEVnicUpdate carries the per-vNIC fields the PUT /v2/product/mve/{uid}
+// endpoint accepts. Description is the only mutable vNIC attribute — VLANs
+// and other vNIC fields are immutable after MVE creation.
+type MVEVnicUpdate struct {
+	Description string `json:"description"`
+}
+
 // InstanceSize encodes the available MVE instance sizes.
 type MVEInstanceSize string
 

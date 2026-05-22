@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -572,6 +573,58 @@ func (suite *MVEClientTestSuite) TestModifyMVE() {
 	gotRes, err := mveSvc.ModifyMVE(ctx, req)
 	suite.NoError(err)
 	suite.Equal(wantRes, gotRes)
+}
+
+// TestModifyMVEWithVnics verifies vNIC descriptions are forwarded
+// through to the PUT /v2/product/mve/{uid} body as the API expects.
+func (suite *MVEClientTestSuite) TestModifyMVEWithVnics() {
+	mveSvc := suite.client.MVEService
+	ctx := context.Background()
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	req := &ModifyMVERequest{
+		MVEID: productUid,
+		Vnics: []MVEVnicUpdate{
+			{Description: "Management"},
+			{Description: "Data Plane"},
+		},
+	}
+	jblob := `{
+	"message": "Product [36b3f68e-2f54-4331-bf94-f8984449365f] has been updated",
+    "terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+	"data": {
+		"productUid": "36b3f68e-2f54-4331-bf94-f8984449365f",
+		"productType": "MVE"
+	}
+}`
+	wantReq := &ModifyProductRequest{
+		ProductID:             req.MVEID,
+		ProductType:           PRODUCT_MVE,
+		MarketplaceVisibility: PtrTo(false),
+		Vnics: []MVEVnicUpdate{
+			{Description: "Management"},
+			{Description: "Data Plane"},
+		},
+	}
+	path := fmt.Sprintf("/v2/product/%s/%s", PRODUCT_MVE, productUid)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			suite.FailNowf("could not read body", "%v", err)
+		}
+		v := new(ModifyProductRequest)
+		if err := json.Unmarshal(body, v); err != nil {
+			suite.FailNowf("could not decode json", "%v", err)
+		}
+		suite.testMethod(r, http.MethodPut)
+		fmt.Fprint(w, jblob)
+		suite.Equal(wantReq, v)
+		// Confirm the wire format matches the public OpenAPI contract:
+		// ServiceUpdateRequest.vnics is an array of {description}.
+		suite.Contains(string(body), `"vnics":[{"description":"Management"},{"description":"Data Plane"}]`)
+	})
+	gotRes, err := mveSvc.ModifyMVE(ctx, req)
+	suite.NoError(err)
+	suite.Equal(&ModifyMVEResponse{MVEUpdated: true}, gotRes)
 }
 
 func (suite *MVEClientTestSuite) TestListMVEImages() {

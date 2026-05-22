@@ -81,6 +81,10 @@ type ModifyMVERequest struct {
 	MarketplaceVisibility *bool
 	CostCentre            string
 	ContractTermMonths    *int // Contract term in months
+	// Vnics updates the description for each vNIC on the MVE. Order matters —
+	// entries map positionally to the existing vNICs. Leave nil to leave
+	// descriptions unchanged.
+	Vnics []MVEVnicUpdate
 
 	WaitForUpdate bool          // Wait until the MCVEupdates before returning
 	WaitForTime   time.Duration // How long to wait for the MVE to update if WaitForUpdate is true (default is 5 minutes)
@@ -264,6 +268,9 @@ func (svc *MVEServiceOp) ModifyMVE(ctx context.Context, req *ModifyMVERequest) (
 	}
 	if req.ContractTermMonths != nil {
 		modifyProductReq.ContractTermMonths = *req.ContractTermMonths
+	}
+	if len(req.Vnics) > 0 {
+		modifyProductReq.Vnics = req.Vnics
 	}
 
 	_, err := svc.Client.ProductService.ModifyProduct(ctx, modifyProductReq)
