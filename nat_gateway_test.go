@@ -849,6 +849,9 @@ func (suite *NATGatewayClientTestSuite) TestCreateNATGatewayPacketFilterValidati
 	_, err := natSvc.CreateNATGatewayPacketFilter(ctx, "", &NATGatewayPacketFilterRequest{Description: "x", Entries: []NATGatewayPacketFilterEntry{{Action: "permit"}}})
 	suite.ErrorIs(err, ErrNATGatewayProductUIDRequired)
 
+	_, err = natSvc.CreateNATGatewayPacketFilter(ctx, "uid", nil)
+	suite.ErrorIs(err, ErrNATGatewayRequestNil)
+
 	_, err = natSvc.CreateNATGatewayPacketFilter(ctx, "uid", &NATGatewayPacketFilterRequest{Entries: []NATGatewayPacketFilterEntry{{Action: "permit"}}})
 	suite.ErrorIs(err, ErrNATGatewayPacketFilterDescriptionEmpty)
 
@@ -994,6 +997,9 @@ func (suite *NATGatewayClientTestSuite) TestCreateNATGatewayPrefixListValidation
 	_, err := natSvc.CreateNATGatewayPrefixList(ctx, "", &NATGatewayPrefixList{Description: "x", AddressFamily: "IPv4", Entries: []NATGatewayPrefixListEntry{{Action: "permit", Prefix: "0.0.0.0/0"}}})
 	suite.ErrorIs(err, ErrNATGatewayProductUIDRequired)
 
+	_, err = natSvc.CreateNATGatewayPrefixList(ctx, "uid", nil)
+	suite.ErrorIs(err, ErrNATGatewayRequestNil)
+
 	_, err = natSvc.CreateNATGatewayPrefixList(ctx, "uid", &NATGatewayPrefixList{AddressFamily: "IPv4", Entries: []NATGatewayPrefixListEntry{{Action: "permit"}}})
 	suite.ErrorIs(err, ErrNATGatewayPrefixListDescriptionEmpty)
 
@@ -1130,7 +1136,10 @@ func (suite *NATGatewayClientTestSuite) TestListNATGatewayBGPNeighborRoutesAsync
 	ctx := context.Background()
 	natSvc := suite.client.NATGatewayService
 
-	_, err := natSvc.ListNATGatewayBGPNeighborRoutesAsync(ctx, &NATGatewayBGPNeighborRoutesRequest{})
+	_, err := natSvc.ListNATGatewayBGPNeighborRoutesAsync(ctx, nil)
+	suite.ErrorIs(err, ErrNATGatewayRequestNil)
+
+	_, err = natSvc.ListNATGatewayBGPNeighborRoutesAsync(ctx, &NATGatewayBGPNeighborRoutesRequest{})
 	suite.ErrorIs(err, ErrNATGatewayProductUIDRequired)
 
 	_, err = natSvc.ListNATGatewayBGPNeighborRoutesAsync(ctx, &NATGatewayBGPNeighborRoutesRequest{ProductUID: "uid"})

@@ -18,7 +18,10 @@ var (
 )
 
 func validateNATGatewayPrefixList(req *NATGatewayPrefixList) error {
-	if req == nil || req.Description == "" {
+	if req == nil {
+		return ErrNATGatewayRequestNil
+	}
+	if req.Description == "" {
 		return ErrNATGatewayPrefixListDescriptionEmpty
 	}
 	if req.AddressFamily == "" {

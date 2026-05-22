@@ -64,7 +64,10 @@ func (svc *NATGatewayServiceOp) ListNATGatewayBGPRoutesAsync(ctx context.Context
 
 // ListNATGatewayBGPNeighborRoutesAsync submits a BGP neighbor routes diagnostics request.
 func (svc *NATGatewayServiceOp) ListNATGatewayBGPNeighborRoutesAsync(ctx context.Context, req *NATGatewayBGPNeighborRoutesRequest) (string, error) {
-	if req == nil || req.ProductUID == "" {
+	if req == nil {
+		return "", ErrNATGatewayRequestNil
+	}
+	if req.ProductUID == "" {
 		return "", ErrNATGatewayProductUIDRequired
 	}
 	if req.PeerIPAddress == "" {

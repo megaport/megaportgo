@@ -16,7 +16,10 @@ var (
 )
 
 func validateNATGatewayPacketFilterRequest(req *NATGatewayPacketFilterRequest) error {
-	if req == nil || req.Description == "" {
+	if req == nil {
+		return ErrNATGatewayRequestNil
+	}
+	if req.Description == "" {
 		return ErrNATGatewayPacketFilterDescriptionEmpty
 	}
 	if len(req.Entries) == 0 {
