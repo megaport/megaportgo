@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -22,9 +23,21 @@ import (
 func TestErrNATGatewayInvalidTermMessage(t *testing.T) {
 	t.Parallel()
 	msg := ErrNATGatewayInvalidTerm.Error()
+	// Pull the comma-separated term list out of the error message so we
+	// can assert exact membership — strings.Contains would happily match
+	// "1" inside "12" and produce a false positive.
+	_, list, ok := strings.Cut(msg, ":")
+	if !ok {
+		t.Fatalf("ErrNATGatewayInvalidTerm message %q has no ':' separator", msg)
+	}
+	got := map[string]bool{}
+	for _, part := range strings.Split(list, ",") {
+		got[strings.TrimSpace(part)] = true
+	}
 	for _, term := range VALID_CONTRACT_TERMS {
-		if !strings.Contains(msg, fmt.Sprintf("%d", term)) {
-			t.Fatalf("ErrNATGatewayInvalidTerm message %q does not list term %d", msg, term)
+		key := strconv.Itoa(term)
+		if !got[key] {
+			t.Fatalf("ErrNATGatewayInvalidTerm message %q does not list term %d (parsed terms: %v)", msg, term, got)
 		}
 	}
 }
@@ -131,7 +144,7 @@ func (suite *NATGatewayClientTestSuite) TestCreateNATGatewayValidation() {
 
 	// Nil request must not panic.
 	_, err := natSvc.CreateNATGateway(ctx, nil)
-	suite.ErrorIs(err, ErrNATGatewayProductNameRequired)
+	suite.ErrorIs(err, ErrNATGatewayRequestNil)
 
 	// Missing ProductName
 	_, err = natSvc.CreateNATGateway(ctx, &CreateNATGatewayRequest{
@@ -338,7 +351,7 @@ func (suite *NATGatewayClientTestSuite) TestUpdateNATGatewayValidation() {
 
 	// Nil request must not panic.
 	_, err := natSvc.UpdateNATGateway(ctx, nil)
-	suite.ErrorIs(err, ErrNATGatewayProductUIDRequired)
+	suite.ErrorIs(err, ErrNATGatewayRequestNil)
 
 	// Missing ProductUID
 	_, err = natSvc.UpdateNATGateway(ctx, &UpdateNATGatewayRequest{
@@ -589,7 +602,7 @@ func (suite *NATGatewayClientTestSuite) TestGetNATGatewayTelemetryValidation() {
 
 	// Nil request must not panic.
 	_, err := natSvc.GetNATGatewayTelemetry(ctx, nil)
-	suite.ErrorIs(err, ErrNATGatewayProductUIDRequired)
+	suite.ErrorIs(err, ErrNATGatewayRequestNil)
 
 	// Missing ProductUID
 	_, err = natSvc.GetNATGatewayTelemetry(ctx, &GetNATGatewayTelemetryRequest{

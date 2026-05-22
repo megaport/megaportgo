@@ -4,9 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"strconv"
-	"strings"
 )
+
+// ErrNATGatewayRequestNil is returned when a nil request is passed to a NAT
+// Gateway validator. The previous code dereferenced these without a guard
+// and would panic on a nil pointer; the validators now return this error
+// instead.
+var ErrNATGatewayRequestNil = errors.New("request must not be nil")
 
 // ErrNATGatewayProductUIDRequired is returned when a ProductUID is not provided.
 var ErrNATGatewayProductUIDRequired = errors.New("product UID is required")
@@ -35,20 +39,12 @@ var ErrNATGatewaySpeedRequired = errors.New("speed must be greater than 0")
 // ErrNATGatewayInvalidTerm is returned when a Term is not a valid contract term.
 // The message is derived from VALID_CONTRACT_TERMS so it stays in sync if the
 // allowed set ever changes.
-var ErrNATGatewayInvalidTerm = fmt.Errorf("term must be one of: %s", formatValidContractTerms())
-
-func formatValidContractTerms() string {
-	parts := make([]string, len(VALID_CONTRACT_TERMS))
-	for i, t := range VALID_CONTRACT_TERMS {
-		parts[i] = strconv.Itoa(t)
-	}
-	return strings.Join(parts, ", ")
-}
+var ErrNATGatewayInvalidTerm = fmt.Errorf("term must be one of: %s", intSliceToString(VALID_CONTRACT_TERMS))
 
 // validateCreateNATGatewayRequest validates the request parameters for creating a NAT Gateway.
 func validateCreateNATGatewayRequest(req *CreateNATGatewayRequest) error {
 	if req == nil {
-		return ErrNATGatewayProductNameRequired
+		return ErrNATGatewayRequestNil
 	}
 	if req.ProductName == "" {
 		return ErrNATGatewayProductNameRequired
@@ -68,7 +64,7 @@ func validateCreateNATGatewayRequest(req *CreateNATGatewayRequest) error {
 // validateUpdateNATGatewayRequest validates the request parameters for updating a NAT Gateway.
 func validateUpdateNATGatewayRequest(req *UpdateNATGatewayRequest) error {
 	if req == nil {
-		return ErrNATGatewayProductUIDRequired
+		return ErrNATGatewayRequestNil
 	}
 	if req.ProductUID == "" {
 		return ErrNATGatewayProductUIDRequired
@@ -91,7 +87,7 @@ func validateUpdateNATGatewayRequest(req *UpdateNATGatewayRequest) error {
 // validateGetNATGatewayTelemetryRequest validates the request parameters.
 func validateGetNATGatewayTelemetryRequest(req *GetNATGatewayTelemetryRequest) error {
 	if req == nil {
-		return ErrNATGatewayProductUIDRequired
+		return ErrNATGatewayRequestNil
 	}
 	if req.ProductUID == "" {
 		return ErrNATGatewayProductUIDRequired
