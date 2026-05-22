@@ -193,6 +193,24 @@ func (suite *ProductClientTestSuite) TestModifyProduct() {
 	suite.Equal(wantRes, gotRes)
 }
 
+// TestModifyProductVnicsOnNonMVE verifies ModifyProduct rejects vNIC updates
+// when the product is not an MVE, without dispatching the HTTP request.
+func (suite *ProductClientTestSuite) TestModifyProductVnicsOnNonMVE() {
+	ctx := context.Background()
+	productSvc := suite.client.ProductService
+
+	for _, productType := range []string{PRODUCT_MEGAPORT, PRODUCT_MCR} {
+		req := &ModifyProductRequest{
+			ProductID:   "36b3f68e-2f54-4331-bf94-f8984449365f",
+			ProductType: productType,
+			Vnics:       []MVEVnicUpdate{{Description: "should-be-rejected"}},
+		}
+		gotRes, err := productSvc.ModifyProduct(ctx, req)
+		suite.ErrorIs(err, ErrVnicsOnNonMVE)
+		suite.Nil(gotRes)
+	}
+}
+
 // TestDeleteProduct tests the DeleteProduct method
 func (suite *ProductClientTestSuite) TestDeleteProduct() {
 	ctx := context.Background()
