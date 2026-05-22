@@ -88,7 +88,7 @@ type ModifyMVERequest struct {
 	// descriptions unchanged.
 	Vnics []MVEVnicUpdate
 
-	WaitForUpdate bool          // Wait until the MCVEupdates before returning
+	WaitForUpdate bool          // Wait until the MVE updates before returning
 	WaitForTime   time.Duration // How long to wait for the MVE to update if WaitForUpdate is true (default is 5 minutes)
 }
 
