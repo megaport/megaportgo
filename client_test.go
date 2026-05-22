@@ -602,3 +602,32 @@ func (suite *ClientTestSuite) TestRegisterRefCache_NonComparableDoesNotPanic() {
 		c.RegisterRefCache(nonComparableInvalidatable{})
 	}, "RegisterRefCache must not panic when comparing non-comparable Invalidatable values")
 }
+
+// TestRegisterRefCache_RejectsTypedNil guards against the typed-nil
+// footgun: a non-nil Invalidatable wrapping a nil pointer must not make it
+// into the registry, otherwise a later 401/403 would call Invalidate on a
+// nil receiver and panic.
+func (suite *ClientTestSuite) TestRegisterRefCache_RejectsTypedNil() {
+	c := NewClient(nil, nil)
+
+	c.refCachesMu.Lock()
+	baseline := len(c.refCaches)
+	c.refCachesMu.Unlock()
+
+	var typedNil *RefCache[int]
+	c.RegisterRefCache(typedNil)
+
+	c.refCachesMu.Lock()
+	suite.Equal(baseline, len(c.refCaches), "typed-nil Invalidatable must not be registered")
+	c.refCachesMu.Unlock()
+
+	// And the matching defensive guard inside the invalidate path: even if
+	// somehow a typed-nil ends up in the slice, invalidation must not
+	// panic.
+	c.refCachesMu.Lock()
+	c.refCaches = append(c.refCaches, typedNil)
+	c.refCachesMu.Unlock()
+	suite.NotPanics(func() {
+		c.invalidateRefCaches()
+	}, "invalidateRefCaches must skip nil and typed-nil entries")
+}

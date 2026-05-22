@@ -268,6 +268,53 @@ func TestNewRefCache_PanicsOnNilFetcher(t *testing.T) {
 	_ = NewRefCache[int](time.Hour, nil)
 }
 
+// TestRefCache_GetOrFetch_RecoversFromFetcherPanic ensures a panicking fetcher
+// does not strand c.inflight or leave call.done unclosed. The panic must
+// propagate to the caller, and a subsequent GetOrFetch must be able to start
+// a fresh fetch rather than blocking forever on the stuck in-flight call.
+func TestRefCache_GetOrFetch_RecoversFromFetcherPanic(t *testing.T) {
+	t.Parallel()
+	var calls atomic.Int32
+	c := NewRefCache(time.Hour, func(ctx context.Context) (int, error) {
+		n := calls.Add(1)
+		if n == 1 {
+			panic("boom")
+		}
+		return 42, nil
+	})
+
+	func() {
+		defer func() {
+			r := recover()
+			if r == nil {
+				t.Fatal("expected panic to propagate from GetOrFetch")
+			}
+			if r != "boom" {
+				t.Fatalf("unexpected panic value: %v", r)
+			}
+		}()
+		_, _ = c.GetOrFetch(context.Background())
+	}()
+
+	done := make(chan int, 1)
+	go func() {
+		v, err := c.GetOrFetch(context.Background())
+		if err != nil {
+			t.Errorf("second call: unexpected error: %v", err)
+		}
+		done <- v
+	}()
+
+	select {
+	case v := <-done:
+		if v != 42 {
+			t.Fatalf("second call: got %d, want 42", v)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("second GetOrFetch deadlocked — panicking fetcher stranded the in-flight slot")
+	}
+}
+
 func TestRefCache_GetOrFetch_SerializesConcurrentCallers(t *testing.T) {
 	t.Parallel()
 	var calls atomic.Int32

@@ -37,6 +37,10 @@ var ErrNATGatewayLocationIDRequired = errors.New("location ID must be greater th
 // ErrNATGatewaySpeedRequired is returned when a Speed is not provided or is invalid.
 var ErrNATGatewaySpeedRequired = errors.New("speed must be greater than 0")
 
+// ErrNATGatewaySessionCountRequired is returned when a session count is not
+// provided or is invalid.
+var ErrNATGatewaySessionCountRequired = errors.New("session count must be greater than 0")
+
 // ErrNATGatewayInvalidTerm is returned when a Term is not a valid contract term.
 // The message is derived from VALID_CONTRACT_TERMS so it stays in sync if the
 // allowed set ever changes.
@@ -115,8 +119,17 @@ func validateGetNATGatewayTelemetryRequest(req *GetNATGatewayTelemetryRequest) e
 
 // ValidateNATGatewaySpeedSession checks the requested speed and session
 // count against the live availability matrix. The matrix is fetched lazily
-// on first call and cached on the service.
+// on first call and cached on the service. Structural pre-checks
+// (speed > 0, sessionCount > 0) run before consulting the matrix so callers
+// see the same sentinels as the structural validators rather than a
+// matrix-shaped "not supported" message.
 func (svc *NATGatewayServiceOp) ValidateNATGatewaySpeedSession(ctx context.Context, speed, sessionCount int) error {
+	if speed < 1 {
+		return ErrNATGatewaySpeedRequired
+	}
+	if sessionCount < 1 {
+		return ErrNATGatewaySessionCountRequired
+	}
 	matrix, err := svc.ensureSessionMatrixCache().GetOrFetch(ctx)
 	if err != nil {
 		return err

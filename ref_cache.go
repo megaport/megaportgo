@@ -2,6 +2,7 @@ package megaport
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 )
@@ -89,30 +90,46 @@ func (c *RefCache[T]) GetOrFetch(ctx context.Context) (T, error) {
 	c.inflight = call
 	c.mu.Unlock()
 
-	v, err := c.fetcher(ctx)
+	var (
+		v   T
+		err error
+	)
+	// Panic-safe cleanup. If the fetcher panics without this defer,
+	// c.inflight stays set and call.done never closes — future callers
+	// would block forever joining a fetch that can't complete.
+	defer func() {
+		r := recover()
+		if r != nil {
+			err = fmt.Errorf("megaport: cache fetcher panicked: %v", r)
+		}
+		c.mu.Lock()
+		call.value, call.err = v, err
+		// Only detach this call from the cache if it is still the active
+		// in-flight pointer. Invalidate may have already cleared c.inflight
+		// (so that post-invalidation joiners start a fresh fetch) — leave it
+		// alone in that case.
+		if c.inflight == call {
+			c.inflight = nil
+		}
+		// Only populate the cache if Invalidate didn't fire while the
+		// fetcher was running. If gen advanced, drop the result. Callers
+		// that joined this call before Invalidate are already waiting on
+		// call.done and receive the in-flight result; that's the standard
+		// singleflight semantic. Callers arriving after Invalidate observe
+		// c.inflight == nil and start a fresh fetch.
+		if r == nil && err == nil && c.gen == startGen {
+			c.value = v
+			c.fetchedAt = time.Now()
+			c.hasValue = true
+		}
+		c.mu.Unlock()
+		close(call.done)
+		if r != nil {
+			panic(r)
+		}
+	}()
 
-	c.mu.Lock()
-	call.value, call.err = v, err
-	// Only detach this call from the cache if it is still the active
-	// in-flight pointer. Invalidate may have already cleared c.inflight
-	// (so that post-invalidation joiners start a fresh fetch) — leave it
-	// alone in that case.
-	if c.inflight == call {
-		c.inflight = nil
-	}
-	// Only populate the cache if Invalidate didn't fire while the
-	// fetcher was running. If gen advanced, drop the result. Callers
-	// that joined this call before Invalidate are already waiting on
-	// call.done and receive the in-flight result; that's the standard
-	// singleflight semantic. Callers arriving after Invalidate observe
-	// c.inflight == nil and start a fresh fetch.
-	if err == nil && c.gen == startGen {
-		c.value = v
-		c.fetchedAt = time.Now()
-		c.hasValue = true
-	}
-	c.mu.Unlock()
-	close(call.done)
+	v, err = c.fetcher(ctx)
 	return v, err
 }
 

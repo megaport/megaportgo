@@ -497,6 +497,10 @@ func (c *Client) SetTokenProvider(tp TokenProvider) {
 // a 401/403 response, so a stale auth context cannot poison cached
 // reference data after re-authentication.
 //
+// Nil and typed-nil values (e.g. an Invalidatable interface wrapping a
+// (*RefCache[T])(nil)) are rejected; otherwise a later invalidation would
+// call Invalidate on a nil receiver and panic.
+//
 // Registration is idempotent for cache values whose concrete type is
 // comparable (pointer types — including the standard *RefCache[T] — are
 // always comparable). Re-registering the same instance is a no-op so the
@@ -507,7 +511,7 @@ func (c *Client) SetTokenProvider(tp TokenProvider) {
 // registrations of that value will accumulate, but Invalidate is
 // expected to be safe to call more than once.
 func (c *Client) RegisterRefCache(cache Invalidatable) {
-	if cache == nil {
+	if cache == nil || isTypedNil(cache) {
 		return
 	}
 	c.refCachesMu.Lock()
@@ -522,12 +526,27 @@ func (c *Client) RegisterRefCache(cache Invalidatable) {
 	c.refCaches = append(c.refCaches, cache)
 }
 
+// isTypedNil reports whether v is a non-nil interface wrapping a nil
+// pointer/map/slice/etc. Such values pass `v == nil` checks but their
+// methods will panic on a nil receiver.
+func isTypedNil(v any) bool {
+	rv := reflect.ValueOf(v)
+	switch rv.Kind() {
+	case reflect.Ptr, reflect.Map, reflect.Slice, reflect.Chan, reflect.Func, reflect.Interface:
+		return rv.IsNil()
+	}
+	return false
+}
+
 func (c *Client) invalidateRefCaches() {
 	c.refCachesMu.Lock()
 	snapshot := make([]Invalidatable, len(c.refCaches))
 	copy(snapshot, c.refCaches)
 	c.refCachesMu.Unlock()
 	for _, ic := range snapshot {
+		if ic == nil || isTypedNil(ic) {
+			continue
+		}
 		ic.Invalidate()
 	}
 }

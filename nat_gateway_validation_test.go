@@ -90,6 +90,32 @@ func (suite *NATGatewayValidationTestSuite) TestValidateSpeedSession_Unsupported
 	suite.Contains(err.Error(), "100")
 }
 
+// TestValidateSpeedSession_StructuralPreChecks ensures non-positive inputs
+// are reported with the same structural sentinels as the create/update
+// validators, instead of being misclassified as "speed not supported" by
+// the matrix lookup. The matrix endpoint is intentionally not registered
+// so these calls must fail before any network access.
+func (suite *NATGatewayValidationTestSuite) TestValidateSpeedSession_StructuralPreChecks() {
+	cases := []struct {
+		name         string
+		speed        int
+		sessionCount int
+		wantErr      error
+	}{
+		{"zero speed", 0, 1000, ErrNATGatewaySpeedRequired},
+		{"negative speed", -1, 1000, ErrNATGatewaySpeedRequired},
+		{"zero session count", 100, 0, ErrNATGatewaySessionCountRequired},
+		{"negative session count", 100, -5, ErrNATGatewaySessionCountRequired},
+	}
+	for _, tc := range cases {
+		tc := tc
+		suite.Run(tc.name, func() {
+			err := suite.matrixValidator().ValidateNATGatewaySpeedSession(context.Background(), tc.speed, tc.sessionCount)
+			suite.True(errors.Is(err, tc.wantErr), "got %v, want %v", err, tc.wantErr)
+		})
+	}
+}
+
 func (suite *NATGatewayValidationTestSuite) TestValidateSpeedSession_CachesMatrix() {
 	var hits atomic.Int32
 	suite.registerMatrix(&hits)
