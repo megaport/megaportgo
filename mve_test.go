@@ -667,6 +667,15 @@ func (suite *MVEClientTestSuite) TestModifyMVEWithVnics() {
 	suite.Equal(&ModifyMVEResponse{MVEUpdated: true}, gotRes)
 }
 
+// TestModifyMVENilRequest verifies ModifyMVE rejects a nil request up front
+// instead of panicking on field access.
+func (suite *MVEClientTestSuite) TestModifyMVENilRequest() {
+	ctx := context.Background()
+	gotRes, err := suite.client.MVEService.ModifyMVE(ctx, nil)
+	suite.ErrorIs(err, ErrModifyMVERequestNil)
+	suite.Nil(gotRes)
+}
+
 // TestModifyMVECostCentreTooLong verifies ModifyMVE rejects a CostCentre
 // over 255 characters before dispatching the HTTP request.
 func (suite *MVEClientTestSuite) TestModifyMVECostCentreTooLong() {

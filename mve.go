@@ -257,6 +257,9 @@ func (svc *MVEServiceOp) GetMVE(ctx context.Context, mveId string) (*MVE, error)
 
 // ModifyMVE modifies an MVE in the Megaport MVE API.
 func (svc *MVEServiceOp) ModifyMVE(ctx context.Context, req *ModifyMVERequest) (*ModifyMVEResponse, error) {
+	if req == nil {
+		return nil, ErrModifyMVERequestNil
+	}
 	if len(req.CostCentre) > 255 {
 		return nil, ErrCostCentreTooLong
 	}
