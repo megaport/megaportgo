@@ -250,6 +250,9 @@ func (svc *ProductServiceOp) ListProducts(ctx context.Context) ([]Product, error
 // fields to modify are Name, Cost Centre, Marketplace Visibility, Contract Term,
 // ASN (MCR only), and Vnics (MVE only).
 func (svc *ProductServiceOp) ModifyProduct(ctx context.Context, req *ModifyProductRequest) (*ModifyProductResponse, error) {
+	if req == nil {
+		return nil, ErrModifyProductRequestNil
+	}
 	if req.ProductType != PRODUCT_MEGAPORT && req.ProductType != PRODUCT_MCR && req.ProductType != PRODUCT_MVE {
 		return nil, ErrWrongProductModify
 	}

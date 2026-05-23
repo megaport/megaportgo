@@ -137,6 +137,9 @@ var ErrDeleteMCRRequestNil = errors.New("delete MCR request cannot be nil")
 // ErrDeletePortRequestNil is returned when DeletePort is called with a nil request.
 var ErrDeletePortRequestNil = errors.New("delete port request cannot be nil")
 
+// ErrModifyProductRequestNil is returned when ModifyProduct is called with a nil request.
+var ErrModifyProductRequestNil = errors.New("modify product request cannot be nil")
+
 // maintenanceStatesToString converts a slice of MaintenanceState to a slice of strings
 func maintenanceStatesToString(states []MaintenanceState) []string {
 	strs := make([]string, len(states))

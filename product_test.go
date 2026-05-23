@@ -211,6 +211,15 @@ func (suite *ProductClientTestSuite) TestModifyProductVnicsOnNonMVE() {
 	}
 }
 
+// TestModifyProductNilRequest verifies ModifyProduct rejects a nil request
+// up front instead of panicking on field access.
+func (suite *ProductClientTestSuite) TestModifyProductNilRequest() {
+	ctx := context.Background()
+	gotRes, err := suite.client.ProductService.ModifyProduct(ctx, nil)
+	suite.ErrorIs(err, ErrModifyProductRequestNil)
+	suite.Nil(gotRes)
+}
+
 // TestModifyProductUnknownTypeTakesPrecedence verifies that an unknown
 // ProductType yields ErrWrongProductModify even when Vnics are supplied —
 // the product-type check runs before the vNIC guard.
