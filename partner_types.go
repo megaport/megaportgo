@@ -1,14 +1,16 @@
 package megaport
 
-// PartnerLookupResponse represents a response from the Megaport API after looking up a Partner Megaport.
-type PartnerLookupResponse struct {
+// partnerLookupResponse represents a response from the Megaport API after looking up a Partner Megaport.
+// Used internally for JSON unmarshalling.
+type partnerLookupResponse struct {
 	Message string        `json:"message"`
 	Data    PartnerLookup `json:"data"`
 	Terms   string        `json:"terms"`
 }
 
-// PartnerMegaportResponse represents a response from the Megaport API after querying a Partner Megaport.
-type PartnerMegaportResponse struct {
+// partnerMegaportResponse represents a response from the Megaport API after querying a Partner Megaport.
+// Used internally for JSON unmarshalling.
+type partnerMegaportResponse struct {
 	Message string             `json:"message"`
 	Terms   string             `json:"terms"`
 	Data    []*PartnerMegaport `json:"data"`
