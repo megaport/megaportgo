@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"slices"
 	"strings"
@@ -195,19 +196,25 @@ func (svc *IXServiceOp) GetIX(ctx context.Context, id string) (*IX, error) {
 		return nil, err
 	}
 
-	var buf bytes.Buffer
-	resp, err := svc.Client.Do(ctx, clientReq, &buf)
+	response, err := svc.Client.Do(ctx, clientReq, nil)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer response.Body.Close()
 
-	ixResponse := IXResponse{}
-	if err = json.Unmarshal(buf.Bytes(), &ixResponse); err != nil {
-		return nil, err
+	body, fileErr := io.ReadAll(response.Body)
+	if fileErr != nil {
+		return nil, fileErr
 	}
 
-	return &ixResponse.Data, nil
+	resp := ixResponse{}
+
+	unmarshalErr := json.Unmarshal(body, &resp)
+	if unmarshalErr != nil {
+		return nil, unmarshalErr
+	}
+
+	return &resp.Data, nil
 }
 
 // UpdateIX updates an existing Internet Exchange
@@ -265,16 +272,20 @@ func (svc *IXServiceOp) UpdateIX(ctx context.Context, id string, req *UpdateIXRe
 		return nil, err
 	}
 
-	var buf bytes.Buffer
-	resp, err := svc.Client.Do(ctx, clientReq, &buf)
+	response, err := svc.Client.Do(ctx, clientReq, nil)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer response.Body.Close()
+
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
 
 	// Parse the response
-	ixResponse := IXResponse{}
-	if err = json.Unmarshal(buf.Bytes(), &ixResponse); err != nil {
+	resp := ixResponse{}
+	if err = json.Unmarshal(body, &resp); err != nil {
 		return nil, err
 	}
 
@@ -309,7 +320,7 @@ func (svc *IXServiceOp) UpdateIX(ctx context.Context, id string, req *UpdateIXRe
 		}
 	} else {
 		// Return without waiting
-		return &ixResponse.Data, nil
+		return &resp.Data, nil
 	}
 }
 
