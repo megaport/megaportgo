@@ -93,13 +93,15 @@ func (req *CreateUserRequest) Validate() error {
 	return nil
 }
 
-// CreateUserAPIResponse represents the API response when creating a new user.
-type CreateUserAPIResponse struct {
+// createUserAPIResponse represents the API response when creating a new user.
+// Used internally for JSON unmarshalling.
+type createUserAPIResponse struct {
 	Message string              `json:"message"`
 	Terms   string              `json:"terms"`
 	Data    *CreateUserResponse `json:"data"`
 }
 
+// CreateUserResponse represents the data returned when creating a new user.
 type CreateUserResponse struct {
 	CompanyID    int `json:"companyId"`
 	EmploymentID int `json:"employmentId"`
@@ -241,7 +243,7 @@ func (svc *UserManagementServiceOp) CreateUser(ctx context.Context, req *CreateU
 		return nil, fmt.Errorf("failed to create user: HTTP %d - %s", response.StatusCode, string(body))
 	}
 
-	var apiResponse *CreateUserAPIResponse
+	var apiResponse *createUserAPIResponse
 	if err := json.Unmarshal(body, &apiResponse); err != nil {
 		return nil, err
 	}
