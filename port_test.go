@@ -466,6 +466,24 @@ func (suite *PortClientTestSuite) TestDeletePort() {
 	suite.Equal(want, got)
 }
 
+// TestDeletePortCancelLaterNotAllowed verifies that DeletePort rejects DeleteNow=false.
+func (suite *PortClientTestSuite) TestDeletePortCancelLaterNotAllowed() {
+	ctx := context.Background()
+	req := &DeletePortRequest{
+		PortID:    "36b3f68e-2f54-4331-bf94-f8984449365f",
+		DeleteNow: false,
+	}
+	_, err := suite.client.PortService.DeletePort(ctx, req)
+	suite.ErrorIs(err, ErrPortCancelLaterNotAllowed)
+}
+
+// TestDeletePortNilRequest verifies that DeletePort rejects a nil request.
+func (suite *PortClientTestSuite) TestDeletePortNilRequest() {
+	ctx := context.Background()
+	_, err := suite.client.PortService.DeletePort(ctx, nil)
+	suite.ErrorIs(err, ErrDeletePortRequestNil)
+}
+
 // TestRestorePort tests the RestorePort method
 func (suite *PortClientTestSuite) TestRestorePort() {
 	ctx := context.Background()

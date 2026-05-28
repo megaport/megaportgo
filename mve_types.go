@@ -67,6 +67,7 @@ type CiscoConfig struct {
 	ManageLocally      bool   `json:"manageLocally,omitempty"`
 	AdminSSHPublicKey  string `json:"adminSshPublicKey,omitempty"`
 	SSHPublicKey       string `json:"sshPublicKey,omitempty"`
+	AdminPassword      string `json:"adminPassword,omitempty"`
 	CloudInit          string `json:"cloudInit,omitempty"`
 	FMCIPAddress       string `json:"fmcIpAddress,omitempty"`
 	FMCRegistrationKey string `json:"fmcRegistrationKey,omitempty"`
@@ -95,6 +96,7 @@ type PaloAltoConfig struct {
 	AdminSSHPublicKey string `json:"adminSshPublicKey,omitempty"`
 	SSHPublicKey      string `json:"sshPublicKey,omitempty"`
 	AdminPasswordHash string `json:"adminPasswordHash,omitempty"`
+	AdminPassword     string `json:"adminPassword,omitempty"`
 	LicenseData       string `json:"licenseData,omitempty"`
 }
 
@@ -252,15 +254,17 @@ type MVEVirtualMachineImage struct {
 	Version string `json:"version"`
 }
 
-// MVEOrderResponse represents the response to an MVE order request.
-type MVEOrderResponse struct {
+// mveOrderResponse represents the response to an MVE order request.
+// Used internally for JSON unmarshalling.
+type mveOrderResponse struct {
 	Message string                  `json:"message"`
 	Terms   string                  `json:"terms"`
 	Data    []*MVEOrderConfirmation `json:"data"`
 }
 
-// MVEResponse represents the response to an MVE request.
-type MVEResponse struct {
+// mveResponse represents the response to an MVE request.
+// Used internally for JSON unmarshalling.
+type mveResponse struct {
 	Message string `json:"message"`
 	Terms   string `json:"terms"`
 	Data    *MVE   `json:"data"`
@@ -337,8 +341,9 @@ type MVESize struct {
 	RamGB        int    `json:"ramGB"`
 }
 
-// MVESizeAPIResponse represents the response to an MVE size request, returning a list of currently available MVE sizes and details for each size.
-type MVESizeAPIResponse struct {
+// mveSizeAPIResponse represents the response to an MVE size request, returning a list of currently available MVE sizes and details for each size.
+// Used internally for JSON unmarshalling.
+type mveSizeAPIResponse struct {
 	Message string     `json:"message"`
 	Terms   string     `json:"terms"`
 	Data    []*MVESize `json:"data"`

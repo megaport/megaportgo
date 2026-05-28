@@ -322,33 +322,18 @@ func (suite *PortIntegrationTestSuite) testModifyPort(c *Client, ctx context.Con
 	suite.EqualValues(newPortName, secondGetPortInfo.Name)
 }
 
-// PortScript tests the remaining lifecycle for a Port (not dependant on port-type), Go-Live, Modification,
-// and Soft/Hard Deletes.
+// testCancelPort verifies that scheduled deletion (cancel later) is rejected.
+// Port products only support immediate deletion (CANCEL_NOW); attempts to
+// schedule deletion must return ErrPortCancelLaterNotAllowed.
 func (suite *PortIntegrationTestSuite) testCancelPort(c *Client, ctx context.Context, portId string) {
-	// Soft Delete
-	suite.client.Logger.DebugContext(ctx, "Scheduling Port for deletion (30 days).", slog.String("port_id", portId))
-	resp, deleteErr := c.PortService.DeletePort(ctx, &DeletePortRequest{
+	suite.client.Logger.DebugContext(ctx, "Attempting to schedule Port for deletion (cancel later) - this should fail.", slog.String("port_id", portId))
+	_, deleteErr := c.PortService.DeletePort(ctx, &DeletePortRequest{
 		PortID:    portId,
 		DeleteNow: false,
 	})
-	if deleteErr != nil {
-		suite.FailNowf("could not cancel port", "could not cancel port %v", deleteErr)
-	}
-	suite.True(resp.IsDeleting)
-
-	portInfo, err := c.PortService.GetPort(ctx, portId)
-	if err != nil {
-		suite.FailNowf("could not find port", "could not find port %v", err)
-	}
-	suite.EqualValues(STATUS_CANCELLED, portInfo.ProvisioningStatus)
-
-	suite.client.Logger.DebugContext(ctx, "port scheduled for cancellation", slog.String("status", portInfo.ProvisioningStatus), slog.String("port_id", portId))
-	restoreResp, restoreErr := c.PortService.RestorePort(ctx, portId)
-	if restoreErr != nil {
-		suite.FailNowf("could not restore port", "could not restore port %v", restoreErr)
-	}
-	suite.True(restoreResp.IsRestored)
-
+	suite.Require().Error(deleteErr, "expected error when attempting to cancel port later")
+	suite.Require().ErrorIs(deleteErr, ErrPortCancelLaterNotAllowed, "expected ErrPortCancelLaterNotAllowed error")
+	suite.client.Logger.DebugContext(ctx, "port cancel later correctly rejected", slog.String("error", deleteErr.Error()))
 }
 
 // testDeletePort tests the deletion of a port, both hard and soft.

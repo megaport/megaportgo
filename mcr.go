@@ -115,6 +115,10 @@ type ModifyMCRRequest struct {
 	CostCentre            string
 	MarketplaceVisibility *bool
 	ContractTermMonths    *int
+	// MCRAsn updates the MCR's BGP ASN in place when non-nil. The Megaport
+	// platform supports modifying ASN on a configured/live MCR; setting this
+	// avoids the destroy-and-recreate that callers would otherwise need.
+	MCRAsn *int
 
 	WaitForUpdate bool          // Wait until the MCR updates before returning
 	WaitForTime   time.Duration // How long to wait for the MCR to update if WaitForUpdate is true (default is 5 minutes; must be at least 30 seconds for the poller to fire)
@@ -174,7 +178,7 @@ func (svc *MCRServiceOp) BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMC
 		return nil, resErr
 	}
 
-	orderInfo := MCROrderResponse{}
+	orderInfo := mcrOrderResponse{}
 	unmarshalErr := json.Unmarshal(*body, &orderInfo)
 
 	if unmarshalErr != nil {
@@ -365,7 +369,7 @@ func (svc *MCRServiceOp) GetMCR(ctx context.Context, mcrId string) (*MCR, error)
 		return nil, fileErr
 	}
 
-	mcrRes := &MCRResponse{}
+	mcrRes := &mcrResponse{}
 	unmarshalErr := json.Unmarshal(body, mcrRes)
 
 	if unmarshalErr != nil {
@@ -397,7 +401,7 @@ func (svc *MCRServiceOp) CreatePrefixFilterList(ctx context.Context, req *Create
 		return nil, fileErr
 	}
 
-	createRes := &APIMCRPrefixFilterListResponse{}
+	createRes := &apiMCRPrefixFilterListResponse{}
 	unmarshalErr := json.Unmarshal(body, createRes)
 	if unmarshalErr != nil {
 		return nil, unmarshalErr
@@ -440,7 +444,7 @@ func (svc *MCRServiceOp) ListMCRPrefixFilterLists(ctx context.Context, mcrId str
 		return nil, fileErr
 	}
 
-	prefixFilterList := &ListMCRPrefixFilterListResponse{}
+	prefixFilterList := &listMCRPrefixFilterListResponse{}
 	unmarshalErr := json.Unmarshal(body, prefixFilterList)
 
 	if unmarshalErr != nil {
@@ -471,7 +475,7 @@ func (svc *MCRServiceOp) GetMCRPrefixFilterList(ctx context.Context, mcrID strin
 		return nil, fileErr
 	}
 
-	apiPrefixFilterList := &APIMCRPrefixFilterListResponse{}
+	apiPrefixFilterList := &apiMCRPrefixFilterListResponse{}
 	unmarshalErr := json.Unmarshal(body, apiPrefixFilterList)
 	if unmarshalErr != nil {
 		return nil, unmarshalErr
@@ -495,6 +499,7 @@ func (svc *MCRServiceOp) ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (
 		Name:                  req.Name,
 		CostCentre:            req.CostCentre,
 		MarketplaceVisibility: req.MarketplaceVisibility,
+		ASN:                   req.MCRAsn,
 	}
 	if req.ContractTermMonths != nil {
 		modifyReq.ContractTermMonths = *req.ContractTermMonths
