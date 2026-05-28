@@ -745,3 +745,517 @@ func (suite *NATGatewayClientTestSuite) TestBuyNATGateway_MissingUID() {
 	_, err := suite.client.NATGatewayService.BuyNATGateway(context.Background(), "")
 	suite.ErrorIs(err, ErrNATGatewayProductUIDRequired)
 }
+
+// --- Packet filters -------------------------------------------------------
+
+func (suite *NATGatewayClientTestSuite) TestListNATGatewayPacketFilters() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "11111111-2222-3333-4444-555555555555"
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/packet_filter_summaries", func(w http.ResponseWriter, r *http.Request) {
+		suite.Equal(http.MethodGet, r.Method)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":[{"id":1,"description":"first"},{"id":2,"description":"second"}]}`)
+	})
+
+	summaries, err := natSvc.ListNATGatewayPacketFilters(ctx, productUID)
+	suite.NoError(err)
+	suite.Len(summaries, 2)
+	suite.Equal(1, summaries[0].ID)
+	suite.Equal("first", summaries[0].Description)
+	suite.Equal(2, summaries[1].ID)
+}
+
+func (suite *NATGatewayClientTestSuite) TestListNATGatewayPacketFiltersValidation() {
+	_, err := suite.client.NATGatewayService.ListNATGatewayPacketFilters(context.Background(), "")
+	suite.ErrorIs(err, ErrNATGatewayProductUIDRequired)
+}
+
+func (suite *NATGatewayClientTestSuite) TestCreateNATGatewayPacketFilter() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "uid-create"
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/packet_filters", func(w http.ResponseWriter, r *http.Request) {
+		suite.Equal(http.MethodPost, r.Method)
+		body, err := io.ReadAll(r.Body)
+		suite.Require().NoError(err)
+		var got NATGatewayPacketFilterRequest
+		suite.Require().NoError(json.Unmarshal(body, &got))
+		suite.Equal("permit-https", got.Description)
+		suite.Len(got.Entries, 1)
+		suite.Equal(PacketFilterActionPermit, got.Entries[0].Action)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":{"id":42,"description":"permit-https","entries":[{"action":"permit","sourceAddress":"0.0.0.0/0","destinationAddress":"10.0.0.0/24","destinationPorts":"443","ipProtocol":6}]}}`)
+	})
+
+	filter, err := natSvc.CreateNATGatewayPacketFilter(ctx, productUID, &NATGatewayPacketFilterRequest{
+		Description: "permit-https",
+		Entries: []NATGatewayPacketFilterEntry{
+			{Action: PacketFilterActionPermit, SourceAddress: "0.0.0.0/0", DestinationAddress: "10.0.0.0/24", DestinationPorts: "443", IPProtocol: 6},
+		},
+	})
+	suite.NoError(err)
+	suite.Equal(42, filter.ID)
+	suite.Equal("permit-https", filter.Description)
+	suite.Len(filter.Entries, 1)
+	suite.Equal(6, filter.Entries[0].IPProtocol)
+}
+
+func (suite *NATGatewayClientTestSuite) TestCreateNATGatewayPacketFilterValidation() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+
+	_, err := natSvc.CreateNATGatewayPacketFilter(ctx, "", &NATGatewayPacketFilterRequest{Description: "x", Entries: []NATGatewayPacketFilterEntry{{Action: "permit"}}})
+	suite.ErrorIs(err, ErrNATGatewayProductUIDRequired)
+
+	_, err = natSvc.CreateNATGatewayPacketFilter(ctx, "uid", &NATGatewayPacketFilterRequest{Entries: []NATGatewayPacketFilterEntry{{Action: "permit"}}})
+	suite.ErrorIs(err, ErrNATGatewayPacketFilterDescriptionEmpty)
+
+	_, err = natSvc.CreateNATGatewayPacketFilter(ctx, "uid", &NATGatewayPacketFilterRequest{Description: "x"})
+	suite.ErrorIs(err, ErrNATGatewayPacketFilterEntriesEmpty)
+}
+
+func (suite *NATGatewayClientTestSuite) TestGetNATGatewayPacketFilter() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "uid-get"
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/packet_filters/7", func(w http.ResponseWriter, r *http.Request) {
+		suite.Equal(http.MethodGet, r.Method)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":{"id":7,"description":"d","entries":[{"action":"deny","sourceAddress":"1.1.1.1/32","destinationAddress":"2.2.2.2/32"}]}}`)
+	})
+
+	filter, err := natSvc.GetNATGatewayPacketFilter(ctx, productUID, 7)
+	suite.NoError(err)
+	suite.Equal(7, filter.ID)
+	suite.Equal(PacketFilterActionDeny, filter.Entries[0].Action)
+}
+
+func (suite *NATGatewayClientTestSuite) TestGetNATGatewayPacketFilterValidation() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+
+	_, err := natSvc.GetNATGatewayPacketFilter(ctx, "", 1)
+	suite.ErrorIs(err, ErrNATGatewayProductUIDRequired)
+
+	_, err = natSvc.GetNATGatewayPacketFilter(ctx, "uid", 0)
+	suite.ErrorIs(err, ErrNATGatewayPacketFilterIDRequired)
+}
+
+func (suite *NATGatewayClientTestSuite) TestUpdateNATGatewayPacketFilter() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "uid-upd"
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/packet_filters/12", func(w http.ResponseWriter, r *http.Request) {
+		suite.Equal(http.MethodPut, r.Method)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":{"id":12,"description":"updated","entries":[{"action":"permit","sourceAddress":"0.0.0.0/0","destinationAddress":"0.0.0.0/0"}]}}`)
+	})
+
+	filter, err := natSvc.UpdateNATGatewayPacketFilter(ctx, productUID, 12, &NATGatewayPacketFilterRequest{
+		Description: "updated",
+		Entries:     []NATGatewayPacketFilterEntry{{Action: PacketFilterActionPermit, SourceAddress: "0.0.0.0/0", DestinationAddress: "0.0.0.0/0"}},
+	})
+	suite.NoError(err)
+	suite.Equal("updated", filter.Description)
+}
+
+func (suite *NATGatewayClientTestSuite) TestDeleteNATGatewayPacketFilter() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "uid-del"
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/packet_filters/9", func(w http.ResponseWriter, r *http.Request) {
+		suite.Equal(http.MethodDelete, r.Method)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"deleted","terms":""}`)
+	})
+
+	err := natSvc.DeleteNATGatewayPacketFilter(ctx, productUID, 9)
+	suite.NoError(err)
+}
+
+func (suite *NATGatewayClientTestSuite) TestDeleteNATGatewayPacketFilterValidation() {
+	err := suite.client.NATGatewayService.DeleteNATGatewayPacketFilter(context.Background(), "", 1)
+	suite.ErrorIs(err, ErrNATGatewayProductUIDRequired)
+
+	err = suite.client.NATGatewayService.DeleteNATGatewayPacketFilter(context.Background(), "uid", 0)
+	suite.ErrorIs(err, ErrNATGatewayPacketFilterIDRequired)
+}
+
+// --- Prefix lists ---------------------------------------------------------
+
+func (suite *NATGatewayClientTestSuite) TestListNATGatewayPrefixLists() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "uid-list"
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/prefix_list_summaries", func(w http.ResponseWriter, r *http.Request) {
+		suite.Equal(http.MethodGet, r.Method)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":[{"id":1,"description":"v4-list","addressFamily":"IPv4"}]}`)
+	})
+
+	summaries, err := natSvc.ListNATGatewayPrefixLists(ctx, productUID)
+	suite.NoError(err)
+	suite.Len(summaries, 1)
+	suite.Equal(AddressFamilyIPv4, summaries[0].AddressFamily)
+}
+
+func (suite *NATGatewayClientTestSuite) TestListNATGatewayPrefixListsValidation() {
+	_, err := suite.client.NATGatewayService.ListNATGatewayPrefixLists(context.Background(), "")
+	suite.ErrorIs(err, ErrNATGatewayProductUIDRequired)
+}
+
+func (suite *NATGatewayClientTestSuite) TestCreateNATGatewayPrefixList() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "uid-pl-create"
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/prefix_lists", func(w http.ResponseWriter, r *http.Request) {
+		suite.Equal(http.MethodPost, r.Method)
+		body, err := io.ReadAll(r.Body)
+		suite.Require().NoError(err)
+		// Verify request body uses string ge/le on the wire.
+		var got map[string]interface{}
+		suite.Require().NoError(json.Unmarshal(body, &got))
+		entries, ok := got["entries"].([]interface{})
+		suite.Require().True(ok)
+		suite.Require().Len(entries, 1)
+		entry, ok := entries[0].(map[string]interface{})
+		suite.Require().True(ok)
+		suite.Equal("24", entry["ge"])
+		suite.Equal("32", entry["le"])
+		w.Header().Set("Content-Type", "application/json")
+		// API returns ge/le as strings.
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":{"id":11,"description":"private","addressFamily":"IPv4","entries":[{"action":"permit","prefix":"10.0.0.0/8","ge":"24","le":"32"}]}}`)
+	})
+
+	pl, err := natSvc.CreateNATGatewayPrefixList(ctx, productUID, &NATGatewayPrefixList{
+		Description:   "private",
+		AddressFamily: AddressFamilyIPv4,
+		Entries: []NATGatewayPrefixListEntry{
+			{Action: PrefixListActionPermit, Prefix: "10.0.0.0/8", Ge: 24, Le: 32},
+		},
+	})
+	suite.NoError(err)
+	suite.Equal(11, pl.ID)
+	suite.Equal(24, pl.Entries[0].Ge)
+	suite.Equal(32, pl.Entries[0].Le)
+}
+
+func (suite *NATGatewayClientTestSuite) TestCreateNATGatewayPrefixListValidation() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+
+	_, err := natSvc.CreateNATGatewayPrefixList(ctx, "", &NATGatewayPrefixList{Description: "x", AddressFamily: "IPv4", Entries: []NATGatewayPrefixListEntry{{Action: "permit", Prefix: "0.0.0.0/0"}}})
+	suite.ErrorIs(err, ErrNATGatewayProductUIDRequired)
+
+	_, err = natSvc.CreateNATGatewayPrefixList(ctx, "uid", &NATGatewayPrefixList{AddressFamily: "IPv4", Entries: []NATGatewayPrefixListEntry{{Action: "permit"}}})
+	suite.ErrorIs(err, ErrNATGatewayPrefixListDescriptionEmpty)
+
+	_, err = natSvc.CreateNATGatewayPrefixList(ctx, "uid", &NATGatewayPrefixList{Description: "x", Entries: []NATGatewayPrefixListEntry{{Action: "permit"}}})
+	suite.ErrorIs(err, ErrNATGatewayPrefixListAddressFamilyEmpty)
+
+	_, err = natSvc.CreateNATGatewayPrefixList(ctx, "uid", &NATGatewayPrefixList{Description: "x", AddressFamily: "IPv4"})
+	suite.ErrorIs(err, ErrNATGatewayPrefixListEntriesEmpty)
+}
+
+func (suite *NATGatewayClientTestSuite) TestGetNATGatewayPrefixList() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "uid-pl-get"
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/prefix_lists/3", func(w http.ResponseWriter, r *http.Request) {
+		suite.Equal(http.MethodGet, r.Method)
+		w.Header().Set("Content-Type", "application/json")
+		// Entry omits ge/le entirely (zero-value case).
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":{"id":3,"description":"v6","addressFamily":"IPv6","entries":[{"action":"deny","prefix":"::/0"}]}}`)
+	})
+
+	pl, err := natSvc.GetNATGatewayPrefixList(ctx, productUID, 3)
+	suite.NoError(err)
+	suite.Equal(AddressFamilyIPv6, pl.AddressFamily)
+	suite.Equal(0, pl.Entries[0].Ge)
+	suite.Equal(0, pl.Entries[0].Le)
+	suite.Equal(PrefixListActionDeny, pl.Entries[0].Action)
+}
+
+func (suite *NATGatewayClientTestSuite) TestGetNATGatewayPrefixListInvalidGe() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "uid-pl-bad"
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/prefix_lists/4", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":{"id":4,"description":"x","addressFamily":"IPv4","entries":[{"action":"permit","prefix":"10.0.0.0/8","ge":"not-a-number"}]}}`)
+	})
+
+	_, err := natSvc.GetNATGatewayPrefixList(ctx, productUID, 4)
+	suite.Error(err)
+}
+
+func (suite *NATGatewayClientTestSuite) TestGetNATGatewayPrefixListValidation() {
+	_, err := suite.client.NATGatewayService.GetNATGatewayPrefixList(context.Background(), "", 1)
+	suite.ErrorIs(err, ErrNATGatewayProductUIDRequired)
+
+	_, err = suite.client.NATGatewayService.GetNATGatewayPrefixList(context.Background(), "uid", 0)
+	suite.ErrorIs(err, ErrNATGatewayPrefixListIDRequired)
+}
+
+func (suite *NATGatewayClientTestSuite) TestUpdateNATGatewayPrefixList() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "uid-pl-upd"
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/prefix_lists/5", func(w http.ResponseWriter, r *http.Request) {
+		suite.Equal(http.MethodPut, r.Method)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":{"id":5,"description":"updated","addressFamily":"IPv4","entries":[{"action":"permit","prefix":"172.16.0.0/12"}]}}`)
+	})
+
+	pl, err := natSvc.UpdateNATGatewayPrefixList(ctx, productUID, 5, &NATGatewayPrefixList{
+		Description:   "updated",
+		AddressFamily: AddressFamilyIPv4,
+		Entries:       []NATGatewayPrefixListEntry{{Action: PrefixListActionPermit, Prefix: "172.16.0.0/12"}},
+	})
+	suite.NoError(err)
+	suite.Equal("updated", pl.Description)
+}
+
+func (suite *NATGatewayClientTestSuite) TestDeleteNATGatewayPrefixList() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "uid-pl-del"
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/prefix_lists/8", func(w http.ResponseWriter, r *http.Request) {
+		suite.Equal(http.MethodDelete, r.Method)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"deleted","terms":""}`)
+	})
+
+	err := natSvc.DeleteNATGatewayPrefixList(ctx, productUID, 8)
+	suite.NoError(err)
+}
+
+func (suite *NATGatewayClientTestSuite) TestDeleteNATGatewayPrefixListValidation() {
+	err := suite.client.NATGatewayService.DeleteNATGatewayPrefixList(context.Background(), "", 1)
+	suite.ErrorIs(err, ErrNATGatewayProductUIDRequired)
+
+	err = suite.client.NATGatewayService.DeleteNATGatewayPrefixList(context.Background(), "uid", 0)
+	suite.ErrorIs(err, ErrNATGatewayPrefixListIDRequired)
+}
+
+// --- Diagnostics ----------------------------------------------------------
+
+func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesAsync() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "uid-diag-ip"
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/ip", func(w http.ResponseWriter, r *http.Request) {
+		suite.Equal(http.MethodGet, r.Method)
+		suite.Equal("10.0.0.1", r.URL.Query().Get("ip_address"))
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":"op-uuid-123"}`)
+	})
+
+	opID, err := natSvc.ListNATGatewayIPRoutesAsync(ctx, productUID, "10.0.0.1")
+	suite.NoError(err)
+	suite.Equal("op-uuid-123", opID)
+}
+
+func (suite *NATGatewayClientTestSuite) TestListNATGatewayBGPRoutesAsync() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "uid-diag-bgp"
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/bgp", func(w http.ResponseWriter, r *http.Request) {
+		suite.Equal(http.MethodGet, r.Method)
+		// No filter when ipAddress is empty.
+		suite.Empty(r.URL.RawQuery)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":"op-uuid-bgp"}`)
+	})
+
+	opID, err := natSvc.ListNATGatewayBGPRoutesAsync(ctx, productUID, "")
+	suite.NoError(err)
+	suite.Equal("op-uuid-bgp", opID)
+}
+
+func (suite *NATGatewayClientTestSuite) TestListNATGatewayBGPNeighborRoutesAsyncValidation() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+
+	_, err := natSvc.ListNATGatewayBGPNeighborRoutesAsync(ctx, &NATGatewayBGPNeighborRoutesRequest{})
+	suite.ErrorIs(err, ErrNATGatewayProductUIDRequired)
+
+	_, err = natSvc.ListNATGatewayBGPNeighborRoutesAsync(ctx, &NATGatewayBGPNeighborRoutesRequest{ProductUID: "uid"})
+	suite.ErrorIs(err, ErrNATGatewayDiagnosticsPeerIPRequired)
+
+	_, err = natSvc.ListNATGatewayBGPNeighborRoutesAsync(ctx, &NATGatewayBGPNeighborRoutesRequest{ProductUID: "uid", PeerIPAddress: "10.0.0.2"})
+	suite.ErrorIs(err, ErrNATGatewayDiagnosticsDirectionInvalid)
+
+	_, err = natSvc.ListNATGatewayBGPNeighborRoutesAsync(ctx, &NATGatewayBGPNeighborRoutesRequest{ProductUID: "uid", PeerIPAddress: "10.0.0.2", Direction: "INVALID"})
+	suite.ErrorIs(err, ErrNATGatewayDiagnosticsDirectionInvalid)
+}
+
+func (suite *NATGatewayClientTestSuite) TestListNATGatewayBGPNeighborRoutesAsync() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "uid-diag-nbr"
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/bgp/neighbor", func(w http.ResponseWriter, r *http.Request) {
+		suite.Equal(http.MethodGet, r.Method)
+		suite.Equal(BGPRouteDirectionReceived, r.URL.Query().Get("direction"))
+		suite.Equal("10.0.0.2", r.URL.Query().Get("peer_ip_address"))
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":"op-nbr"}`)
+	})
+
+	opID, err := natSvc.ListNATGatewayBGPNeighborRoutesAsync(ctx, &NATGatewayBGPNeighborRoutesRequest{
+		ProductUID:    productUID,
+		PeerIPAddress: "10.0.0.2",
+		Direction:     BGPRouteDirectionReceived,
+	})
+	suite.NoError(err)
+	suite.Equal("op-nbr", opID)
+}
+
+func (suite *NATGatewayClientTestSuite) TestGetNATGatewayDiagnosticsRoutesIP() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "uid-op-ip"
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/operation", func(w http.ResponseWriter, r *http.Request) {
+		suite.Equal("op-1", r.URL.Query().Get("operationId"))
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":[
+			{"prefix":"10.0.0.0/24","protocol":"STATIC","nextHop":{"ip":"10.0.0.1","vxc":{"id":"vxc-1","name":"vxc-name"}}}
+		]}`)
+	})
+
+	routes, err := natSvc.GetNATGatewayDiagnosticsRoutes(ctx, productUID, "op-1")
+	suite.NoError(err)
+	suite.Len(routes, 1)
+	suite.Require().NotNil(routes[0].IP)
+	suite.Nil(routes[0].BGP)
+	suite.Equal("10.0.0.0/24", routes[0].IP.Prefix)
+	suite.Equal("STATIC", routes[0].IP.Protocol)
+	suite.Equal("vxc-1", routes[0].IP.NextHop.VXC.ID)
+}
+
+func (suite *NATGatewayClientTestSuite) TestGetNATGatewayDiagnosticsRoutesBGP() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "uid-op-bgp"
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/operation", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":[
+			{"prefix":"192.168.0.0/16","asPath":"65000 65001","origin":"IGP","localPref":100,"best":true,"nextHop":{"ip":"10.0.0.2","vxc":{"id":"vxc-2","name":"v2"}}}
+		]}`)
+	})
+
+	routes, err := natSvc.GetNATGatewayDiagnosticsRoutes(ctx, productUID, "op-2")
+	suite.NoError(err)
+	suite.Len(routes, 1)
+	suite.Nil(routes[0].IP)
+	suite.Require().NotNil(routes[0].BGP)
+	suite.Equal("192.168.0.0/16", routes[0].BGP.Prefix)
+	suite.Equal("65000 65001", routes[0].BGP.ASPath)
+	suite.Equal(100, routes[0].BGP.LocalPref)
+	suite.True(routes[0].BGP.Best)
+}
+
+func (suite *NATGatewayClientTestSuite) TestGetNATGatewayDiagnosticsRoutesValidation() {
+	_, err := suite.client.NATGatewayService.GetNATGatewayDiagnosticsRoutes(context.Background(), "", "op")
+	suite.ErrorIs(err, ErrNATGatewayProductUIDRequired)
+
+	_, err = suite.client.NATGatewayService.GetNATGatewayDiagnosticsRoutes(context.Background(), "uid", "")
+	suite.ErrorIs(err, ErrNATGatewayDiagnosticsOperationEmpty)
+}
+
+func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesPolling() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "uid-poll"
+
+	var opCalls atomic.Int32
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/ip", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":"op-poll"}`)
+	})
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/operation", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		// First call returns empty (still processing); subsequent calls return data.
+		if opCalls.Add(1) == 1 {
+			fmt.Fprint(w, `{"message":"ok","terms":"","data":[]}`)
+			return
+		}
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":[
+			{"prefix":"10.0.0.0/24","protocol":"STATIC","nextHop":{"ip":"10.0.0.1","vxc":{"id":"vxc-1","name":"v1"}}},
+			{"prefix":"192.168.0.0/16","asPath":"65000","origin":"IGP","best":true,"nextHop":{"ip":"10.0.0.2","vxc":{"id":"vxc-2","name":"v2"}}}
+		]}`)
+	})
+
+	// Bypass the long polling defaults by polling directly via the async + Get methods,
+	// so this test stays fast. The poll timeout/interval are package-level constants
+	// and not worth plumbing through a setter just for testing.
+	opID, err := natSvc.ListNATGatewayIPRoutesAsync(ctx, productUID, "")
+	suite.Require().NoError(err)
+	suite.Equal("op-poll", opID)
+
+	// Drain the empty response then the populated one.
+	routes, err := natSvc.GetNATGatewayDiagnosticsRoutes(ctx, productUID, opID)
+	suite.Require().NoError(err)
+	suite.Empty(routes)
+
+	routes, err = natSvc.GetNATGatewayDiagnosticsRoutes(ctx, productUID, opID)
+	suite.Require().NoError(err)
+	suite.Len(routes, 2)
+
+	// Discriminator: one IP, one BGP.
+	var ipCount, bgpCount int
+	for _, r := range routes {
+		if r.IP != nil {
+			ipCount++
+		}
+		if r.BGP != nil {
+			bgpCount++
+		}
+	}
+	suite.Equal(1, ipCount)
+	suite.Equal(1, bgpCount)
+}
+
+// --- Prefix list round-trip ----------------------------------------------
+
+func (suite *NATGatewayClientTestSuite) TestPrefixListGeLeRoundTrip() {
+	pl := &NATGatewayPrefixList{
+		Description:   "rt",
+		AddressFamily: AddressFamilyIPv4,
+		Entries: []NATGatewayPrefixListEntry{
+			{Action: PrefixListActionPermit, Prefix: "10.0.0.0/8", Ge: 24, Le: 32},
+			{Action: PrefixListActionDeny, Prefix: "0.0.0.0/0"}, // ge/le omitted
+		},
+	}
+
+	api := pl.toAPI()
+	suite.Equal("24", api.Entries[0].Ge)
+	suite.Equal("32", api.Entries[0].Le)
+	suite.Equal("", api.Entries[1].Ge)
+	suite.Equal("", api.Entries[1].Le)
+
+	back, err := api.toPrefixList()
+	suite.Require().NoError(err)
+	suite.Equal(24, back.Entries[0].Ge)
+	suite.Equal(32, back.Entries[0].Le)
+	suite.Equal(0, back.Entries[1].Ge)
+	suite.Equal(0, back.Entries[1].Le)
+}

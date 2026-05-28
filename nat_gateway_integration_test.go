@@ -458,3 +458,224 @@ PollLoop:
 		slog.String("provisioning_status", postDelete.ProvisioningStatus),
 	)
 }
+
+// TestNATGatewayPacketFilterLifecycle exercises the packet filter CRUD
+// surface against a live, provisioned NAT Gateway: create with two entries,
+// fetch + verify, list (assert summary present), update (third entry,
+// changed description), delete, list (assert gone).
+func (suite *NATGatewayIntegrationTestSuite) TestNATGatewayPacketFilterLifecycle() {
+	ctx := context.Background()
+	logger := suite.client.Logger
+	natSvc := suite.client.NATGatewayService
+
+	prov, err := provisionNATGatewayForTest(ctx, suite, "Integration Test NAT Gateway (Packet Filter)")
+	if err != nil {
+		suite.FailNowf("could not provision NAT Gateway", "%v", err)
+	}
+	defer prov.Teardown()
+	productUID := prov.ProductUID
+
+	// Create — 2 entries: permit TCP/443 inbound, deny everything else.
+	createReq := &NATGatewayPacketFilterRequest{
+		Description: "integration-test-filter",
+		Entries: []NATGatewayPacketFilterEntry{
+			{
+				Action:             PacketFilterActionPermit,
+				Description:        "permit https",
+				SourceAddress:      "0.0.0.0/0",
+				DestinationAddress: "0.0.0.0/0",
+				DestinationPorts:   "443",
+				IPProtocol:         6, // TCP
+			},
+			{
+				Action:             PacketFilterActionDeny,
+				Description:        "deny everything else",
+				SourceAddress:      "0.0.0.0/0",
+				DestinationAddress: "0.0.0.0/0",
+			},
+		},
+	}
+	created, err := natSvc.CreateNATGatewayPacketFilter(ctx, productUID, createReq)
+	if err != nil {
+		suite.FailNowf("could not create packet filter", "%v", err)
+	}
+	suite.NotZero(created.ID)
+	suite.Equal("integration-test-filter", created.Description)
+	suite.Len(created.Entries, 2)
+	logger.InfoContext(ctx, "packet filter created", slog.Int("packet_filter_id", created.ID))
+
+	// Get.
+	fetched, err := natSvc.GetNATGatewayPacketFilter(ctx, productUID, created.ID)
+	if err != nil {
+		suite.FailNowf("could not get packet filter", "%v", err)
+	}
+	suite.Equal(created.ID, fetched.ID)
+	suite.Equal(createReq.Description, fetched.Description)
+	suite.Len(fetched.Entries, 2)
+
+	// List — must include the new filter.
+	summaries, err := natSvc.ListNATGatewayPacketFilters(ctx, productUID)
+	if err != nil {
+		suite.FailNowf("could not list packet filters", "%v", err)
+	}
+	found := false
+	for _, s := range summaries {
+		if s.ID == created.ID {
+			found = true
+			suite.Equal("integration-test-filter", s.Description)
+			break
+		}
+	}
+	suite.True(found, "created packet filter not present in summary list")
+
+	// Update — append a third entry, change description.
+	updateReq := &NATGatewayPacketFilterRequest{
+		Description: "integration-test-filter [updated]",
+		Entries: append(append([]NATGatewayPacketFilterEntry{},
+			createReq.Entries...),
+			NATGatewayPacketFilterEntry{
+				Action:             PacketFilterActionPermit,
+				Description:        "permit dns",
+				SourceAddress:      "0.0.0.0/0",
+				DestinationAddress: "0.0.0.0/0",
+				DestinationPorts:   "53",
+				IPProtocol:         17, // UDP
+			},
+		),
+	}
+	updated, err := natSvc.UpdateNATGatewayPacketFilter(ctx, productUID, created.ID, updateReq)
+	if err != nil {
+		suite.FailNowf("could not update packet filter", "%v", err)
+	}
+	suite.Equal("integration-test-filter [updated]", updated.Description)
+	suite.Len(updated.Entries, 3)
+
+	// Delete.
+	if err := natSvc.DeleteNATGatewayPacketFilter(ctx, productUID, created.ID); err != nil {
+		suite.FailNowf("could not delete packet filter", "%v", err)
+	}
+
+	// List — must NOT include the deleted filter.
+	postDelete, err := natSvc.ListNATGatewayPacketFilters(ctx, productUID)
+	if err != nil {
+		suite.FailNowf("could not list packet filters post-delete", "%v", err)
+	}
+	for _, s := range postDelete {
+		suite.NotEqual(created.ID, s.ID, "deleted packet filter %d still in summary list", created.ID)
+	}
+	logger.InfoContext(ctx, "packet filter lifecycle complete", slog.Int("packet_filter_id", created.ID))
+}
+
+// TestNATGatewayPrefixListLifecycle exercises the prefix list CRUD surface
+// against a provisioned NAT Gateway, once for IPv4 (with ge/le) and once
+// for IPv6 (without). Confirms the string<->int conversion round-trips.
+func (suite *NATGatewayIntegrationTestSuite) TestNATGatewayPrefixListLifecycle() {
+	ctx := context.Background()
+	logger := suite.client.Logger
+	natSvc := suite.client.NATGatewayService
+
+	prov, err := provisionNATGatewayForTest(ctx, suite, "Integration Test NAT Gateway (Prefix List)")
+	if err != nil {
+		suite.FailNowf("could not provision NAT Gateway", "%v", err)
+	}
+	defer prov.Teardown()
+	productUID := prov.ProductUID
+
+	cases := []struct {
+		name               string
+		create             *NATGatewayPrefixList
+		expectGe, expectLe int
+		// extraPrefix is appended on update — must differ from the create
+		// entries' prefix to avoid the API's duplicate-prefix rejection.
+		extraPrefix string
+	}{
+		{
+			name: "ipv4-with-ge-le",
+			create: &NATGatewayPrefixList{
+				Description:   "integration-test-v4",
+				AddressFamily: AddressFamilyIPv4,
+				Entries: []NATGatewayPrefixListEntry{
+					{Action: PrefixListActionPermit, Prefix: "10.0.0.0/8", Ge: 24, Le: 32},
+				},
+			},
+			expectGe:    24,
+			expectLe:    32,
+			extraPrefix: "172.16.0.0/12",
+		},
+		{
+			name: "ipv6-no-ge-le",
+			create: &NATGatewayPrefixList{
+				Description:   "integration-test-v6",
+				AddressFamily: AddressFamilyIPv6,
+				Entries: []NATGatewayPrefixListEntry{
+					{Action: PrefixListActionDeny, Prefix: "2001:db8::/32"},
+				},
+			},
+			extraPrefix: "2001:db8:1::/48",
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		suite.Run(tc.name, func() {
+			created, err := natSvc.CreateNATGatewayPrefixList(ctx, productUID, tc.create)
+			if err != nil {
+				suite.FailNowf("could not create prefix list", "%v", err)
+			}
+			suite.NotZero(created.ID)
+			suite.Equal(tc.create.AddressFamily, created.AddressFamily)
+			suite.Len(created.Entries, 1)
+			suite.Equal(tc.expectGe, created.Entries[0].Ge)
+			suite.Equal(tc.expectLe, created.Entries[0].Le)
+			logger.InfoContext(ctx, "prefix list created",
+				slog.Int("prefix_list_id", created.ID),
+				slog.String("address_family", created.AddressFamily),
+			)
+
+			// Get.
+			fetched, err := natSvc.GetNATGatewayPrefixList(ctx, productUID, created.ID)
+			if err != nil {
+				suite.FailNowf("could not get prefix list", "%v", err)
+			}
+			suite.Equal(created.ID, fetched.ID)
+			suite.Equal(tc.expectGe, fetched.Entries[0].Ge)
+			suite.Equal(tc.expectLe, fetched.Entries[0].Le)
+
+			// List.
+			summaries, err := natSvc.ListNATGatewayPrefixLists(ctx, productUID)
+			if err != nil {
+				suite.FailNowf("could not list prefix lists", "%v", err)
+			}
+			found := false
+			for _, s := range summaries {
+				if s.ID == created.ID {
+					found = true
+					suite.Equal(tc.create.AddressFamily, s.AddressFamily)
+					break
+				}
+			}
+			suite.True(found, "created prefix list not present in summary list")
+
+			// Update — keep the original entry and append a second one with a
+			// distinct prefix (the API rejects duplicates).
+			updateReq := &NATGatewayPrefixList{
+				Description:   tc.create.Description + " [updated]",
+				AddressFamily: tc.create.AddressFamily,
+				Entries: []NATGatewayPrefixListEntry{
+					tc.create.Entries[0],
+					{Action: PrefixListActionPermit, Prefix: tc.extraPrefix},
+				},
+			}
+			updated, err := natSvc.UpdateNATGatewayPrefixList(ctx, productUID, created.ID, updateReq)
+			if err != nil {
+				suite.FailNowf("could not update prefix list", "%v", err)
+			}
+			suite.Len(updated.Entries, 2)
+
+			// Delete.
+			if err := natSvc.DeleteNATGatewayPrefixList(ctx, productUID, created.ID); err != nil {
+				suite.FailNowf("could not delete prefix list", "%v", err)
+			}
+		})
+	}
+}

@@ -12,6 +12,77 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+// TestCreateVXCOrder_PortUIDAutoPopulation tests that PortUID is automatically
+// populated from AEndConfiguration.ProductUID when PortUID is not set.
+func TestCreateVXCOrder_PortUIDAutoPopulation(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		req            *BuyVXCRequest
+		expectedPortID string
+	}{
+		{
+			name: "PortUID is set explicitly - should use PortUID",
+			req: &BuyVXCRequest{
+				PortUID: "explicit-port-uid",
+				VXCName: "test-vxc",
+				AEndConfiguration: VXCOrderEndpointConfiguration{
+					ProductUID: "a-end-product-uid",
+				},
+			},
+			expectedPortID: "explicit-port-uid",
+		},
+		{
+			name: "PortUID is empty but AEndConfiguration.ProductUID is set - should use AEndConfiguration.ProductUID",
+			req: &BuyVXCRequest{
+				PortUID: "",
+				VXCName: "test-vxc",
+				AEndConfiguration: VXCOrderEndpointConfiguration{
+					ProductUID: "a-end-product-uid",
+				},
+			},
+			expectedPortID: "a-end-product-uid",
+		},
+		{
+			name: "Both PortUID and AEndConfiguration.ProductUID are empty - should remain empty",
+			req: &BuyVXCRequest{
+				PortUID: "",
+				VXCName: "test-vxc",
+				AEndConfiguration: VXCOrderEndpointConfiguration{
+					ProductUID: "",
+				},
+			},
+			expectedPortID: "",
+		},
+		{
+			name: "PortUID is set and AEndConfiguration.ProductUID is empty - should use PortUID",
+			req: &BuyVXCRequest{
+				PortUID: "explicit-port-uid",
+				VXCName: "test-vxc",
+				AEndConfiguration: VXCOrderEndpointConfiguration{
+					ProductUID: "",
+				},
+			},
+			expectedPortID: "explicit-port-uid",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			orders := createVXCOrder(tt.req)
+
+			if len(orders) != 1 {
+				t.Fatalf("expected exactly one VXC order, got %d", len(orders))
+			}
+			if orders[0].PortID != tt.expectedPortID {
+				t.Errorf("PortID mismatch: got %q, want %q", orders[0].PortID, tt.expectedPortID)
+			}
+		})
+	}
+}
+
 // VXCClientTestSuite tests the VXC service.
 type VXCClientTestSuite struct {
 	ClientTestSuite
@@ -1081,21 +1152,233 @@ func (suite *VXCClientTestSuite) TestDeleteVXC() {
 		DeleteNow: true,
 	}
 
-	jblob := `{
+	deleteBlob := `{
 		"message": "Action [CANCEL_NOW Service 36b3f68e-2f54-4331-bf94-f8984449365f] has been done.",
 		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"
 	}`
 
-	path := "/v3/product/" + productUid + "/action/CANCEL_NOW"
+	deletePath := "/v3/product/" + productUid + "/action/CANCEL_NOW"
 
-	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc(deletePath, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodPost)
-		fmt.Fprint(w, jblob)
+		fmt.Fprint(w, deleteBlob)
 	})
 
 	err := vxcSvc.DeleteVXC(ctx, productUid, req)
 
 	suite.NoError(err)
+}
+
+// TestDeleteVXCNilRequest verifies that DeleteVXC rejects a nil request.
+func (suite *VXCClientTestSuite) TestDeleteVXCNilRequest() {
+	ctx := context.Background()
+	err := suite.client.VXCService.DeleteVXC(ctx, "some-id", nil)
+	suite.ErrorIs(err, ErrDeleteVXCRequestNil)
+}
+
+// TestDeleteTransitVXCWithCancelLater tests that attempting to schedule deletion (cancel later) for a Transit VXC returns an error
+func (suite *VXCClientTestSuite) TestDeleteTransitVXCWithCancelLater() {
+	ctx := context.Background()
+
+	vxcSvc := suite.client.VXCService
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	req := &DeleteVXCRequest{
+		DeleteNow: false, // Attempt to schedule deletion
+	}
+
+	// Mock GetVXC call returning a Transit VXC
+	getVxcBlob := `{
+		"message": "Found Product 36b3f68e-2f54-4331-bf94-f8984449365f",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": {
+			"productId": 1,
+			"productUid": "36b3f68e-2f54-4331-bf94-f8984449365f",
+			"productName": "test-transit-vxc",
+			"productType": "VXC",
+			"rateLimit": 50,
+			"provisioningStatus": "LIVE",
+			"resources": {
+				"csp_connection": {
+					"connectType": "TRANSIT",
+					"resource_name": "csp_connection",
+					"resource_type": "csp_connection",
+					"customer_ip4_address": "203.0.113.1/30",
+					"ipv4_gateway_address": "203.0.113.2"
+				}
+			}
+		}
+	}`
+
+	getPath := "/v2/product/" + productUid
+	suite.mux.HandleFunc(getPath, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, getVxcBlob)
+	})
+
+	err := vxcSvc.DeleteVXC(ctx, productUid, req)
+
+	suite.Error(err, "expected error when attempting to cancel Transit VXC later")
+	suite.ErrorIs(err, ErrTransitVXCCancelLaterNotAllowed, "expected ErrTransitVXCCancelLaterNotAllowed")
+}
+
+// TestDeleteTransitVXCWithDeleteNow tests that immediate deletion of a Transit VXC succeeds
+func (suite *VXCClientTestSuite) TestDeleteTransitVXCWithDeleteNow() {
+	ctx := context.Background()
+
+	vxcSvc := suite.client.VXCService
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	req := &DeleteVXCRequest{
+		DeleteNow: true, // Immediate deletion
+	}
+
+	deleteBlob := `{
+		"message": "Action [CANCEL_NOW Service 36b3f68e-2f54-4331-bf94-f8984449365f] has been done.",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"
+	}`
+
+	deletePath := "/v3/product/" + productUid + "/action/CANCEL_NOW"
+
+	suite.mux.HandleFunc(deletePath, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPost)
+		fmt.Fprint(w, deleteBlob)
+	})
+
+	err := vxcSvc.DeleteVXC(ctx, productUid, req)
+
+	suite.NoError(err, "expected no error when deleting Transit VXC with DeleteNow=true")
+}
+
+// TestDeleteNonTransitVXCWithCancelLater tests that scheduling deletion for a non-Transit VXC succeeds.
+func (suite *VXCClientTestSuite) TestDeleteNonTransitVXCWithCancelLater() {
+	ctx := context.Background()
+
+	vxcSvc := suite.client.VXCService
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	req := &DeleteVXCRequest{
+		DeleteNow: false,
+	}
+
+	// Mock GetVXC returning a non-Transit VXC (AWS)
+	getVxcBlob := `{
+		"message": "Found Product 36b3f68e-2f54-4331-bf94-f8984449365f",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": {
+			"productId": 1,
+			"productUid": "36b3f68e-2f54-4331-bf94-f8984449365f",
+			"productName": "test-vxc",
+			"productType": "VXC",
+			"rateLimit": 50,
+			"provisioningStatus": "LIVE",
+			"resources": {
+				"csp_connection": {
+					"connectType": "AWS",
+					"resource_name": "csp_connection",
+					"resource_type": "csp_connection"
+				}
+			}
+		}
+	}`
+
+	suite.mux.HandleFunc("/v2/product/"+productUid, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, getVxcBlob)
+	})
+
+	deleteBlob := `{
+		"message": "Action [CANCEL Service 36b3f68e-2f54-4331-bf94-f8984449365f] has been done.",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"
+	}`
+
+	suite.mux.HandleFunc("/v3/product/"+productUid+"/action/CANCEL", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPost)
+		fmt.Fprint(w, deleteBlob)
+	})
+
+	err := vxcSvc.DeleteVXC(ctx, productUid, req)
+	suite.NoError(err, "expected no error when scheduling deletion for non-Transit VXC")
+}
+
+// TestIsTransitVXC tests the isTransitVXC helper function with various VXC types
+func (suite *VXCClientTestSuite) TestIsTransitVXC() {
+	// Test nil VXC
+	suite.False(isTransitVXC(nil), "nil VXC should return false")
+
+	// Test VXC with no resources
+	vxc := &VXC{}
+	suite.False(isTransitVXC(vxc), "VXC with no resources should return false")
+
+	// Test VXC with no CSP connection
+	vxc.Resources = &VXCResources{}
+	suite.False(isTransitVXC(vxc), "VXC with no CSP connection should return false")
+
+	// Test Transit VXC
+	transitVXC := &VXC{
+		Resources: &VXCResources{
+			CSPConnection: &CSPConnection{
+				CSPConnection: []CSPConnectionConfig{
+					CSPConnectionTransit{
+						ConnectType:        connectTypeTransit,
+						ResourceName:       "csp_connection",
+						ResourceType:       "csp_connection",
+						CustomerIP4Address: "203.0.113.1/30",
+						IPv4GatewayAddress: "203.0.113.2",
+					},
+				},
+			},
+		},
+	}
+	suite.True(isTransitVXC(transitVXC), "VXC with TRANSIT connectType should return true")
+
+	// Test AWS VXC (non-Transit)
+	awsVXC := &VXC{
+		Resources: &VXCResources{
+			CSPConnection: &CSPConnection{
+				CSPConnection: []CSPConnectionConfig{
+					CSPConnectionAWS{
+						ConnectType:  "AWS",
+						ResourceName: "csp_connection",
+						ResourceType: "csp_connection",
+					},
+				},
+			},
+		},
+	}
+	suite.False(isTransitVXC(awsVXC), "VXC with AWS connectType should return false")
+
+	// Test Azure VXC (non-Transit)
+	azureVXC := &VXC{
+		Resources: &VXCResources{
+			CSPConnection: &CSPConnection{
+				CSPConnection: []CSPConnectionConfig{
+					CSPConnectionAzure{
+						ConnectType:  "AZURE",
+						ResourceName: "csp_connection",
+						ResourceType: "csp_connection",
+					},
+				},
+			},
+		},
+	}
+	suite.False(isTransitVXC(azureVXC), "VXC with AZURE connectType should return false")
+
+	// Test Google VXC (non-Transit)
+	googleVXC := &VXC{
+		Resources: &VXCResources{
+			CSPConnection: &CSPConnection{
+				CSPConnection: []CSPConnectionConfig{
+					CSPConnectionGoogle{
+						ConnectType:  "GOOGLE",
+						ResourceName: "csp_connection",
+						ResourceType: "csp_connection",
+					},
+				},
+			},
+		},
+	}
+	suite.False(isTransitVXC(googleVXC), "VXC with GOOGLE connectType should return false")
 }
 
 // TestDeleteVXC tests to see if the custom unmarshalling works for decommed VXCs.

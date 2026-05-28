@@ -93,6 +93,8 @@ type Client struct {
 	BillingMarketService BillingMarketService
 	// NATGatewayService provides methods for interacting with the NAT Gateway API
 	NATGatewayService NATGatewayService
+	// MCRLookingGlassService provides methods for interacting with the MCR Looking Glass API
+	MCRLookingGlassService MCRLookingGlassService
 	// OrderApprovalService provides methods for interacting with the Order Approvals API
 	OrderApprovalService OrderApprovalService
 
@@ -110,8 +112,9 @@ type Client struct {
 	authMux sync.Mutex
 }
 
-// AccessTokenResponse is the response structure for the Login method containing the access token and expiration time.
-type AccessTokenResponse struct {
+// accessTokenResponse is the response structure for the Login method containing the access token and expiration time.
+// Used internally for JSON unmarshalling.
+type accessTokenResponse struct {
 	AccessToken  string `json:"access_token"`
 	TokenType    string `json:"token_type"`
 	ExpiresIn    int    `json:"expires_in"`
@@ -194,6 +197,7 @@ func NewClient(httpClient *http.Client, base *url.URL) *Client {
 	c.BillingMarketService = NewBillingMarketService(c)
 	c.NATGatewayService = NewNATGatewayService(c)
 	c.UserManagementService = NewUserManagementService(c)
+	c.MCRLookingGlassService = NewMCRLookingGlassService(c)
 	c.OrderApprovalService = NewOrderApprovalService(c)
 
 	c.headers = make(map[string]string)
@@ -556,7 +560,7 @@ func (c *Client) Authorize(ctx context.Context) (*AuthInfo, error) {
 	}
 
 	// Parse the response JSON to extract the access token and expiration time
-	authResponse := AccessTokenResponse{}
+	authResponse := accessTokenResponse{}
 	if err := json.Unmarshal(body, &authResponse); err != nil {
 		return nil, err
 	}

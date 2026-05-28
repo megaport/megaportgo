@@ -197,15 +197,17 @@ type VXCUpdate struct {
 	BEndPartnerConfig VXCPartnerConfiguration `json:"bEndConfig,omitempty"`
 }
 
-// VXCOrderResponse represents the response from the VXC Order API.
-type VXCOrderResponse struct {
+// vxcOrderResponse represents the response from the VXC Order API.
+// Used internally for JSON unmarshalling.
+type vxcOrderResponse struct {
 	Message string                 `json:"message"`
 	Terms   string                 `json:"terms"`
 	Data    []VXCOrderConfirmation `json:"data"`
 }
 
-// VXCResponse represents the response from the VXC API.
-type VXCResponse struct {
+// vxcResponse represents the response from the VXC API.
+// Used internally for JSON unmarshalling.
+type vxcResponse struct {
 	Message string `json:"message"`
 	Terms   string `json:"terms"`
 	Data    VXC    `json:"data"`
@@ -328,13 +330,17 @@ type VXCOrderConfirmation struct {
 
 // PartnerConfigInterface represents the configuration of a partner interface.
 type PartnerConfigInterface struct {
-	IpAddresses    []string              `json:"ipAddresses,omitempty"`
-	IpRoutes       []IpRoute             `json:"ipRoutes,omitempty"`
-	NatIpAddresses []string              `json:"natIpAddresses,omitempty"`
-	Bfd            BfdConfig             `json:"bfd,omitempty"`
-	BgpConnections []BgpConnectionConfig `json:"bgpConnections,omitempty"`
-	VLAN           int                   `json:"vlan,omitempty"`
-	IpMtu          int                   `json:"ipMtu,omitempty"`
+	Description     string                `json:"description,omitempty"`
+	InterfaceType   string                `json:"interfaceType,omitempty"` // InterfaceTypeSubInterface (default) or InterfaceTypeIPSecTunnel.
+	IpAddresses     []string              `json:"ipAddresses,omitempty"`
+	IpRoutes        []IpRoute             `json:"ipRoutes,omitempty"`
+	NatIpAddresses  []string              `json:"natIpAddresses,omitempty"`
+	Bfd             BfdConfig             `json:"bfd,omitempty"`
+	BgpConnections  []BgpConnectionConfig `json:"bgpConnections,omitempty"`
+	VLAN            int                   `json:"vlan,omitempty"`
+	IpMtu           int                   `json:"ipMtu,omitempty"`
+	PacketFilterIn  *int64                `json:"packetFilterIn,omitempty"`  // NAT Gateway packet filter ID to apply to inbound packets.
+	PacketFilterOut *int64                `json:"packetFilterOut,omitempty"` // NAT Gateway packet filter ID to apply to outbound packets.
 }
 
 // IpRoute represents an IP route.
@@ -666,7 +672,7 @@ func (c *CSPConnection) UnmarshalJSON(data []byte) error {
 				return err
 			}
 			c.CSPConnection = append(c.CSPConnection, vr)
-		case "TRANSIT":
+		case connectTypeTransit:
 			marshaled, err := json.Marshal(cn)
 			if err != nil {
 				return err
@@ -757,7 +763,7 @@ func (c *CSPConnection) UnmarshalJSON(data []byte) error {
 					return err
 				}
 				c.CSPConnection = append(c.CSPConnection, vr)
-			case "TRANSIT":
+			case connectTypeTransit:
 				marshaled, err := json.Marshal(cn)
 				if err != nil {
 					return err
