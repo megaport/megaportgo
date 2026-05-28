@@ -104,8 +104,9 @@ type AssociatedIXOrder struct {
 	PromoCode          string `json:"promoCode,omitempty"` // Optional promotion code for discounts
 }
 
-// IXResponse represents a response from the Megaport IX API after querying an IX.
-type IXResponse struct {
+// ixResponse represents a response from the Megaport IX API after querying an IX.
+// Used internally for JSON unmarshalling.
+type ixResponse struct {
 	Message string `json:"message"`
 	Terms   string `json:"terms"`
 	Data    IX     `json:"data"`
