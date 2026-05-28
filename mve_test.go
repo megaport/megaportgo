@@ -766,3 +766,55 @@ func (suite *MVEClientTestSuite) TestDeleteMVE() {
 	suite.NoError(err)
 	suite.Equal(want, got)
 }
+
+// TestCiscoConfigAdminPasswordMarshalling verifies that CiscoConfig.AdminPassword
+// round-trips through JSON serialisation under the wire-format key "adminPassword".
+// The Megaport API requires this field for Cisco FTDv MVE buy orders.
+func (suite *MVEClientTestSuite) TestCiscoConfigAdminPasswordMarshalling() {
+	cfg := CiscoConfig{
+		Vendor:        "cisco",
+		ImageID:       1,
+		ProductSize:   "SMALL",
+		AdminPassword: "s3cret-plaintext",
+	}
+
+	raw, err := json.Marshal(cfg)
+	suite.NoError(err)
+	suite.Contains(string(raw), `"adminPassword":"s3cret-plaintext"`)
+
+	var decoded CiscoConfig
+	suite.NoError(json.Unmarshal(raw, &decoded))
+	suite.Equal("s3cret-plaintext", decoded.AdminPassword)
+
+	// Empty value must be omitted from the wire payload.
+	empty := CiscoConfig{Vendor: "cisco", ImageID: 1, ProductSize: "SMALL"}
+	emptyRaw, err := json.Marshal(empty)
+	suite.NoError(err)
+	suite.NotContains(string(emptyRaw), "adminPassword")
+}
+
+// TestPaloAltoConfigAdminPasswordMarshalling verifies that PaloAltoConfig.AdminPassword
+// round-trips through JSON serialisation under the wire-format key "adminPassword".
+// The Megaport API requires this field for Palo Alto MVE buy orders.
+func (suite *MVEClientTestSuite) TestPaloAltoConfigAdminPasswordMarshalling() {
+	cfg := PaloAltoConfig{
+		Vendor:        "palo_alto",
+		ImageID:       1,
+		ProductSize:   "SMALL",
+		AdminPassword: "s3cret-plaintext",
+	}
+
+	raw, err := json.Marshal(cfg)
+	suite.NoError(err)
+	suite.Contains(string(raw), `"adminPassword":"s3cret-plaintext"`)
+
+	var decoded PaloAltoConfig
+	suite.NoError(json.Unmarshal(raw, &decoded))
+	suite.Equal("s3cret-plaintext", decoded.AdminPassword)
+
+	// Empty value must be omitted from the wire payload.
+	empty := PaloAltoConfig{Vendor: "palo_alto", ImageID: 1, ProductSize: "SMALL"}
+	emptyRaw, err := json.Marshal(empty)
+	suite.NoError(err)
+	suite.NotContains(string(emptyRaw), "adminPassword")
+}
