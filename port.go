@@ -27,6 +27,8 @@ type PortService interface {
 	// ModifyPort modifies a port in the Megaport Port API.
 	ModifyPort(ctx context.Context, req *ModifyPortRequest) (*ModifyPortResponse, error)
 	// DeletePort deletes a port in the Megaport Port API.
+	// Note: Port products only support immediate deletion (CANCEL_NOW). Requests
+	// with DeleteNow=false are rejected with ErrPortCancelLaterNotAllowed.
 	DeletePort(ctx context.Context, req *DeletePortRequest) (*DeletePortResponse, error)
 	// RestorePort restores a port in the Megaport Port API.
 	RestorePort(ctx context.Context, portId string) (*RestorePortResponse, error)
@@ -103,6 +105,9 @@ type ModifyPortResponse struct {
 }
 
 // DeletePortRequest represents a request to delete a port.
+//
+// DeleteNow must be true: ports only support immediate deletion (CANCEL_NOW).
+// Requests with DeleteNow=false are rejected with ErrPortCancelLaterNotAllowed.
 type DeletePortRequest struct {
 	PortID     string
 	DeleteNow  bool
@@ -380,10 +385,21 @@ func (svc *PortServiceOp) ModifyPort(ctx context.Context, req *ModifyPortRequest
 }
 
 // DeletePort deletes a port in the Megaport Port API.
+// Note: Port products only support immediate deletion (CANCEL_NOW). Requests with
+// DeleteNow=false are rejected with ErrPortCancelLaterNotAllowed, and accepted
+// requests always call the underlying API with DeleteNow=true.
 func (svc *PortServiceOp) DeletePort(ctx context.Context, req *DeletePortRequest) (*DeletePortResponse, error) {
+	if req == nil {
+		return nil, ErrDeletePortRequestNil
+	}
+	// Enforce Port lifecycle restriction: only CANCEL_NOW is allowed
+	if !req.DeleteNow {
+		return nil, ErrPortCancelLaterNotAllowed
+	}
+
 	_, err := svc.Client.ProductService.DeleteProduct(ctx, &DeleteProductRequest{
 		ProductID:  req.PortID,
-		DeleteNow:  req.DeleteNow,
+		DeleteNow:  true, // Always use CANCEL_NOW for Port
 		SafeDelete: req.SafeDelete,
 	})
 	if err != nil {
