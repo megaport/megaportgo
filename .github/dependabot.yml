@@ -4,3 +4,26 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+    # Let releases bake before bumping — guards against picking up a
+    # freshly-pushed, potentially compromised version.
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    ignore:
+      # Major bumps land as deliberate human decisions; minor/patch only.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    # Same rationale as gomod; the github-actions ecosystem only supports
+    # default-days (semver-*-days keys are gomod/npm-only).
+    cooldown:
+      default-days: 7
