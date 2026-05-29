@@ -603,6 +603,30 @@ func (suite *ClientTestSuite) TestRegisterRefCache_NonComparableDoesNotPanic() {
 	}, "RegisterRefCache must not panic when comparing non-comparable Invalidatable values")
 }
 
+// TestRegisterRefCache_ComparableAfterNonComparableDoesNotPanic guards the
+// mixed-type case: once a non-comparable Invalidatable is already in the
+// registry, later registration of a comparable cache must not panic while
+// scanning for duplicates.
+func (suite *ClientTestSuite) TestRegisterRefCache_ComparableAfterNonComparableDoesNotPanic() {
+	c := NewClient(nil, nil)
+	c.refCachesMu.Lock()
+	baseline := len(c.refCaches)
+	c.refCachesMu.Unlock()
+	cache := NewRefCache(time.Hour, func(_ context.Context) (int, error) {
+		return 1, nil
+	})
+
+	suite.NotPanics(func() {
+		c.RegisterRefCache(nonComparableInvalidatable{})
+		c.RegisterRefCache(cache)
+		c.RegisterRefCache(cache)
+	}, "RegisterRefCache must skip non-comparable existing entries during dedup")
+
+	c.refCachesMu.Lock()
+	defer c.refCachesMu.Unlock()
+	suite.Equal(baseline+2, len(c.refCaches), "comparable cache should dedup even when a non-comparable entry is present")
+}
+
 // TestRegisterRefCache_RejectsTypedNil guards against the typed-nil
 // footgun: a non-nil Invalidatable wrapping a nil pointer must not make it
 // into the registry, otherwise a later 401/403 would call Invalidate on a
