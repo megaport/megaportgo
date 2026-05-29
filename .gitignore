@@ -18,4 +18,4 @@ testdata/csp_credentials.json
 *.test
 *.out
 
-.megaport-tools/
+.worktrees/
