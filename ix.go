@@ -371,7 +371,9 @@ func (svc *IXServiceOp) ListIXs(ctx context.Context, req *ListIXsRequest) ([]*IX
 	return ixs, nil
 }
 
-// ListIXPs returns all globally available Internet Exchange Points from the Megaport API.
+// ListIXPs returns globally available Internet Exchange Points. A nil req (or
+// empty Metro) returns all IXPs; otherwise results are filtered to those whose
+// metro contains req.Metro (case-insensitive).
 func (svc *IXServiceOp) ListIXPs(ctx context.Context, req *ListIXPsRequest) ([]*IXP, error) {
 	reqURL := svc.Client.BaseURL.JoinPath("/v2/ixp").String()
 
