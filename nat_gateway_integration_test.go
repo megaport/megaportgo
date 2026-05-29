@@ -10,8 +10,6 @@ import (
 	"slices"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/suite"
 )
 
 const (
@@ -22,10 +20,7 @@ const (
 type NATGatewayIntegrationTestSuite IntegrationTestSuite
 
 func TestNATGatewayIntegrationTestSuite(t *testing.T) {
-	t.Parallel()
-	if *runIntegrationTests {
-		suite.Run(t, new(NATGatewayIntegrationTestSuite))
-	}
+	runIntegrationMethods[NATGatewayIntegrationTestSuite](t)
 }
 
 func (suite *NATGatewayIntegrationTestSuite) SetupSuite() {
@@ -69,10 +64,10 @@ func (suite *NATGatewayIntegrationTestSuite) TestNATGatewayLifecycle() {
 		slog.Int("session_count", testSessionCount),
 	)
 
-	// Step 2: Pick a location.
-	testLocation, locErr := GetRandomLocation(ctx, suite.client.LocationService, TEST_NAT_GATEWAY_LOCATION_MARKET)
+	// Step 2: Pick a location that advertises NAT Gateway support at the chosen speed.
+	testLocation, locErr := findActiveNATGatewayLocation(ctx, suite.T(), suite.client, TEST_NAT_GATEWAY_LOCATION_MARKET, testSpeed)
 	if locErr != nil {
-		suite.FailNowf("could not get random location", "could not get random location: %v", locErr)
+		suite.FailNowf("could not get nat gateway location", "could not get nat gateway location: %v", locErr)
 	}
 	suite.NotNil(testLocation)
 	logger.DebugContext(ctx, "Test location determined", slog.String("location", testLocation.Name), slog.Int("location_id", testLocation.ID))
