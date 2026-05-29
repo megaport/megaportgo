@@ -786,3 +786,24 @@ func (suite *IXClientTestSuite) TestListIXsDeduplication() {
 		suite.Equal(65101, result[0].ASN, "Expected correct IX ASN")
 	}
 }
+
+// TestIXNilRequestGuards verifies that the IX service methods reject a nil
+// request with a sentinel error instead of panicking.
+func (suite *IXClientTestSuite) TestIXNilRequestGuards() {
+	ctx := context.Background()
+	tests := []struct {
+		name string
+		call func() error
+		want error
+	}{
+		{"BuyIX", func() error { _, err := suite.client.IXService.BuyIX(ctx, nil); return err }, ErrBuyIXRequestNil},
+		{"ValidateIXOrder", func() error { return suite.client.IXService.ValidateIXOrder(ctx, nil) }, ErrBuyIXRequestNil},
+		{"UpdateIX", func() error { _, err := suite.client.IXService.UpdateIX(ctx, "id", nil); return err }, ErrUpdateIXRequestNil},
+		{"DeleteIX", func() error { return suite.client.IXService.DeleteIX(ctx, "id", nil) }, ErrDeleteIXRequestNil},
+	}
+	for _, tt := range tests {
+		suite.Run(tt.name, func() {
+			suite.ErrorIs(tt.call(), tt.want)
+		})
+	}
+}

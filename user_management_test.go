@@ -261,3 +261,42 @@ func (suite *UserManagementClientTestSuite) TestGetUserActivity() {
 	suite.Equal("User logged in", activities[0].Description)
 	suite.Equal("Login", activities[0].Name)
 }
+
+// TestUserManagementNilRequestGuards verifies required-request methods reject a nil request.
+func (suite *UserManagementClientTestSuite) TestUserManagementNilRequestGuards() {
+	ctx := context.Background()
+	tests := []struct {
+		name    string
+		call    func() error
+		wantErr error
+	}{
+		{
+			name:    "CreateUser",
+			call:    func() error { _, err := suite.client.UserManagementService.CreateUser(ctx, nil); return err },
+			wantErr: ErrCreateUserRequestNil,
+		},
+		{
+			name:    "UpdateUser",
+			call:    func() error { return suite.client.UserManagementService.UpdateUser(ctx, 9012, nil) },
+			wantErr: ErrUpdateUserRequestNil,
+		},
+	}
+	for _, tt := range tests {
+		suite.Run(tt.name, func() {
+			suite.ErrorIs(tt.call(), tt.wantErr)
+		})
+	}
+}
+
+// TestGetUserActivityNilRequest verifies a nil request is treated as no filter.
+func (suite *UserManagementClientTestSuite) TestGetUserActivityNilRequest() {
+	ctx := context.Background()
+	suite.mux.HandleFunc("/v3/activity", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, `[]`)
+	})
+
+	activities, err := suite.client.UserManagementService.GetUserActivity(ctx, nil)
+	suite.NoError(err)
+	suite.Empty(activities)
+}

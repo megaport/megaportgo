@@ -177,6 +177,9 @@ func (svc *IXServiceOp) BuyIX(ctx context.Context, req *BuyIXRequest) (*BuyIXRes
 
 // ValidateIXOrder validates an Internet Exchange order without submitting it
 func (svc *IXServiceOp) ValidateIXOrder(ctx context.Context, req *BuyIXRequest) error {
+	if req == nil {
+		return ErrBuyIXRequestNil
+	}
 	ixOrder := ConvertBuyIXRequestToIXOrder(*req)
 
 	return svc.Client.ProductService.ValidateProductOrder(ctx, ixOrder)
@@ -215,6 +218,9 @@ func (svc *IXServiceOp) GetIX(ctx context.Context, id string) (*IX, error) {
 
 // UpdateIX updates an existing Internet Exchange
 func (svc *IXServiceOp) UpdateIX(ctx context.Context, id string, req *UpdateIXRequest) (*IX, error) {
+	if req == nil {
+		return nil, ErrUpdateIXRequestNil
+	}
 	// Validate inputs
 	if req.CostCentre != nil && len(*req.CostCentre) > 255 {
 		return nil, ErrCostCentreTooLong
@@ -322,6 +328,9 @@ func (svc *IXServiceOp) UpdateIX(ctx context.Context, id string, req *UpdateIXRe
 
 // DeleteIX deletes an Internet Exchange
 func (svc *IXServiceOp) DeleteIX(ctx context.Context, id string, req *DeleteIXRequest) error {
+	if req == nil {
+		return ErrDeleteIXRequestNil
+	}
 	_, err := svc.Client.ProductService.DeleteProduct(ctx, &DeleteProductRequest{
 		ProductID: id,
 		DeleteNow: req.DeleteNow,

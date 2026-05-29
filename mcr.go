@@ -227,6 +227,9 @@ func (svc *MCRServiceOp) BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMC
 
 // validateBuyMCRRequest validates the BuyMCRRequest for a valid term and port speed.
 func validateBuyMCRRequest(order *BuyMCRRequest) error {
+	if order == nil {
+		return ErrBuyMCRRequestNil
+	}
 	if !slices.Contains(VALID_CONTRACT_TERMS, order.Term) {
 		return ErrInvalidTerm
 	}
@@ -324,6 +327,9 @@ func (svc *MCRServiceOp) ValidateMCROrder(ctx context.Context, req *BuyMCRReques
 
 // ListMCRs lists all MCRs in the Megaport API.
 func (svc *MCRServiceOp) ListMCRs(ctx context.Context, req *ListMCRsRequest) ([]*MCR, error) {
+	if req == nil {
+		req = &ListMCRsRequest{}
+	}
 	allProducts, err := svc.Client.ProductService.ListProducts(ctx)
 	if err != nil {
 		return nil, err
@@ -381,6 +387,9 @@ func (svc *MCRServiceOp) GetMCR(ctx context.Context, mcrId string) (*MCR, error)
 
 // CreatePrefixFilterList creates a Prefix Filter List on an MCR from the Megaport MCR API.
 func (svc *MCRServiceOp) CreatePrefixFilterList(ctx context.Context, req *CreateMCRPrefixFilterListRequest) (*CreateMCRPrefixFilterListResponse, error) {
+	if req == nil {
+		return nil, ErrCreateMCRPrefixFilterListRequestNil
+	}
 	url := "/v2/product/mcr2/" + req.MCRID + "/prefixList"
 
 	clientReq, err := svc.Client.NewRequest(ctx, "POST", url, req.PrefixFilterList)
@@ -490,6 +499,9 @@ func (svc *MCRServiceOp) GetMCRPrefixFilterList(ctx context.Context, mcrID strin
 
 // ModifyMCR modifies an MCR in the Megaport MCR API.
 func (svc *MCRServiceOp) ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (*ModifyMCRResponse, error) {
+	if req == nil {
+		return nil, ErrModifyMCRRequestNil
+	}
 	if len(req.CostCentre) > 255 {
 		return nil, ErrCostCentreTooLong
 	}

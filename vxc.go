@@ -157,6 +157,9 @@ type ListVXCsRequest struct {
 
 // BuyVXC buys a VXC from the Megaport VXC API.
 func (svc *VXCServiceOp) BuyVXC(ctx context.Context, req *BuyVXCRequest) (*BuyVXCResponse, error) {
+	if req == nil {
+		return nil, ErrBuyVXCRequestNil
+	}
 	if !slices.Contains(VALID_CONTRACT_TERMS, req.Term) {
 		return nil, ErrInvalidTerm
 	}
@@ -289,6 +292,9 @@ func createVXCOrder(req *BuyVXCRequest) []VXCOrder {
 
 // ValidateVXCOrder validates a VXC order in the Megaport VXC API.
 func (svc *VXCServiceOp) ValidateVXCOrder(ctx context.Context, req *BuyVXCRequest) error {
+	if req == nil {
+		return ErrBuyVXCRequestNil
+	}
 	buyOrder := createVXCOrder(req)
 
 	return svc.Client.ProductService.ValidateProductOrder(ctx, buyOrder)
@@ -352,6 +358,9 @@ func (svc *VXCServiceOp) DeleteVXC(ctx context.Context, id string, req *DeleteVX
 
 // UpdateVXC updates a VXC in the Megaport VXC API.
 func (svc *VXCServiceOp) UpdateVXC(ctx context.Context, id string, req *UpdateVXCRequest) (*VXC, error) {
+	if req == nil {
+		return nil, ErrUpdateVXCRequestNil
+	}
 	if req.Term != nil && !slices.Contains(VALID_CONTRACT_TERMS, *req.Term) {
 		return nil, ErrInvalidTerm
 	}
@@ -474,6 +483,9 @@ func (svc *VXCServiceOp) UpdateVXC(ctx context.Context, id string, req *UpdateVX
 
 // LookupPartnerPorts looks up available partner ports in the Megaport VXC API.
 func (svc *VXCServiceOp) LookupPartnerPorts(ctx context.Context, req *LookupPartnerPortsRequest) (*LookupPartnerPortsResponse, error) {
+	if req == nil {
+		return nil, ErrLookupPartnerPortsRequestNil
+	}
 	lookupUrl := "/v2/secure/" + strings.ToLower(req.Partner) + "/" + req.Key
 	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, lookupUrl, nil)
 	if err != nil {
@@ -518,6 +530,9 @@ func (svc *VXCServiceOp) LookupPartnerPorts(ctx context.Context, req *LookupPart
 
 // LookupPartnerPorts looks up available partner ports in the Megaport VXC API.
 func (svc *VXCServiceOp) ListPartnerPorts(ctx context.Context, req *ListPartnerPortsRequest) (*ListPartnerPortsResponse, error) {
+	if req == nil {
+		return nil, ErrListPartnerPortsRequestNil
+	}
 	lookupUrl := "/v2/secure/" + strings.ToLower(req.Partner) + "/" + req.Key
 	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, lookupUrl, nil)
 	if err != nil {

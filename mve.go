@@ -198,6 +198,9 @@ func createMVEOrder(req *BuyMVERequest) []*MVEOrderConfig {
 
 // ListMVEs lists all MVEs in the Megaport API.
 func (svc *MVEServiceOp) ListMVEs(ctx context.Context, req *ListMVEsRequest) ([]*MVE, error) {
+	if req == nil {
+		req = &ListMVEsRequest{}
+	}
 	allProducts, err := svc.Client.ProductService.ListProducts(ctx)
 	if err != nil {
 		return nil, err
@@ -251,6 +254,9 @@ func (svc *MVEServiceOp) GetMVE(ctx context.Context, mveId string) (*MVE, error)
 
 // ModifyMVE modifies an MVE in the Megaport MVE API.
 func (svc *MVEServiceOp) ModifyMVE(ctx context.Context, req *ModifyMVERequest) (*ModifyMVEResponse, error) {
+	if req == nil {
+		return nil, ErrModifyMVERequestNil
+	}
 	modifyProductReq := &ModifyProductRequest{
 		ProductID:             req.MVEID,
 		ProductType:           PRODUCT_MVE,
@@ -310,6 +316,9 @@ func (svc *MVEServiceOp) ModifyMVE(ctx context.Context, req *ModifyMVERequest) (
 
 // DeleteMVE deletes an MVE in the Megaport MVE API.
 func (svc *MVEServiceOp) DeleteMVE(ctx context.Context, req *DeleteMVERequest) (*DeleteMVEResponse, error) {
+	if req == nil {
+		return nil, ErrDeleteMVERequestNil
+	}
 	_, err := svc.Client.ProductService.DeleteProduct(ctx, &DeleteProductRequest{
 		ProductID:  req.MVEID,
 		DeleteNow:  true,
@@ -388,6 +397,9 @@ func (svc *MVEServiceOp) ListAvailableMVESizes(ctx context.Context) ([]*MVESize,
 
 // validateBuyMVERequest validates a BuyMVERequest for proper term length.
 func validateBuyMVERequest(req *BuyMVERequest) error {
+	if req == nil {
+		return ErrBuyMVERequestNil
+	}
 	if !slices.Contains(VALID_CONTRACT_TERMS, req.Term) {
 		return ErrInvalidTerm
 	}
