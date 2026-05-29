@@ -9,9 +9,13 @@
 .mpt_test_credentials
 .envrc
 
+testdata/csp_credentials.json
+
 *.exe
 *.exe~
 *.dll
 *.so
 *.test
 *.out
+
+.megaport-tools/

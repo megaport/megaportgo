@@ -5,18 +5,13 @@ import (
 	"log/slog"
 	"os"
 	"testing"
-
-	"github.com/stretchr/testify/suite"
 )
 
 // PartnerIntegrationTestSuite is the integration test suite for the Partner service
 type PartnerIntegrationTestSuite IntegrationTestSuite
 
 func TestPartnerIntegrationTestSuite(t *testing.T) {
-	t.Parallel()
-	if *runIntegrationTests {
-		suite.Run(t, new(PartnerIntegrationTestSuite))
-	}
+	runIntegrationMethods[PartnerIntegrationTestSuite](t)
 }
 
 func (suite *PartnerIntegrationTestSuite) SetupSuite() {
@@ -71,23 +66,23 @@ func (suite *PartnerIntegrationTestSuite) TestFilterPartnerMegaportByCompanyName
 // TestFilterPartnerMegaportByLocationId tests the FilterPartnerMegaportByLocationId method.
 func (suite *PartnerIntegrationTestSuite) TestFilterPartnerMegaportByLocationId() {
 	partnerSvc := suite.client.PartnerService
-	locSvc := suite.client.LocationService
 	ctx := context.Background()
 
 	partners, err := partnerSvc.ListPartnerMegaports(ctx)
 	if err != nil {
 		suite.FailNowf("could not list partners", "could not list partners %v", err)
 	}
-	location, err := locSvc.GetLocationByName(ctx, "Equinix SY3")
-	if err != nil {
-		suite.FailNowf("could not get location", "could not get location %v", err)
-	}
-	filtered, err := partnerSvc.FilterPartnerMegaportByLocationId(ctx, partners, location.ID)
+	suite.Require().NotEmpty(partners, "expected at least one partner megaport for filter test")
+
+	// Use a real location id from the partner list so the assertion is never
+	// coupled to a specific site remaining in the staging catalogue.
+	targetLocationID := partners[0].LocationId
+	filtered, err := partnerSvc.FilterPartnerMegaportByLocationId(ctx, partners, targetLocationID)
 	if err != nil {
 		suite.FailNowf("could not filter partners", "could not filter partners %v", err)
 	}
 	for _, partner := range filtered {
-		suite.Equal(partner.LocationId, location.ID)
+		suite.Equal(partner.LocationId, targetLocationID)
 	}
 }
 
