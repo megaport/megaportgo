@@ -8,12 +8,39 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/suite"
 )
+
+// TestErrNATGatewayInvalidTermMessage guards the assumption that the
+// ErrNATGatewayInvalidTerm message is derived from VALID_CONTRACT_TERMS so it
+// stays in sync if that slice ever changes.
+func TestErrNATGatewayInvalidTermMessage(t *testing.T) {
+	t.Parallel()
+	msg := ErrNATGatewayInvalidTerm.Error()
+	// Pull the comma-separated term list out of the error message so we
+	// can assert exact membership — strings.Contains would happily match
+	// "1" inside "12" and produce a false positive.
+	_, list, ok := strings.Cut(msg, ":")
+	if !ok {
+		t.Fatalf("ErrNATGatewayInvalidTerm message %q has no ':' separator", msg)
+	}
+	got := map[string]bool{}
+	for _, part := range strings.Split(list, ",") {
+		got[strings.TrimSpace(part)] = true
+	}
+	for _, term := range VALID_CONTRACT_TERMS {
+		key := strconv.Itoa(term)
+		if !got[key] {
+			t.Fatalf("ErrNATGatewayInvalidTerm message %q does not list term %d (parsed terms: %v)", msg, term, got)
+		}
+	}
+}
 
 // NATGatewayClientTestSuite tests the NAT Gateway Service Client.
 type NATGatewayClientTestSuite struct {
@@ -115,8 +142,12 @@ func (suite *NATGatewayClientTestSuite) TestCreateNATGatewayValidation() {
 	ctx := context.Background()
 	natSvc := suite.client.NATGatewayService
 
+	// Nil request must not panic.
+	_, err := natSvc.CreateNATGateway(ctx, nil)
+	suite.ErrorIs(err, ErrNATGatewayRequestNil)
+
 	// Missing ProductName
-	_, err := natSvc.CreateNATGateway(ctx, &CreateNATGatewayRequest{
+	_, err = natSvc.CreateNATGateway(ctx, &CreateNATGatewayRequest{
 		LocationID: 1, Speed: 1000, Term: 1,
 	})
 	suite.ErrorIs(err, ErrNATGatewayProductNameRequired)
@@ -318,8 +349,12 @@ func (suite *NATGatewayClientTestSuite) TestUpdateNATGatewayValidation() {
 	ctx := context.Background()
 	natSvc := suite.client.NATGatewayService
 
+	// Nil request must not panic.
+	_, err := natSvc.UpdateNATGateway(ctx, nil)
+	suite.ErrorIs(err, ErrNATGatewayRequestNil)
+
 	// Missing ProductUID
-	_, err := natSvc.UpdateNATGateway(ctx, &UpdateNATGatewayRequest{
+	_, err = natSvc.UpdateNATGateway(ctx, &UpdateNATGatewayRequest{
 		ProductName: "test", LocationID: 1, Speed: 1000, Term: 1,
 	})
 	suite.ErrorIs(err, ErrNATGatewayProductUIDRequired)
@@ -565,8 +600,12 @@ func (suite *NATGatewayClientTestSuite) TestGetNATGatewayTelemetryValidation() {
 	ctx := context.Background()
 	natSvc := suite.client.NATGatewayService
 
+	// Nil request must not panic.
+	_, err := natSvc.GetNATGatewayTelemetry(ctx, nil)
+	suite.ErrorIs(err, ErrNATGatewayRequestNil)
+
 	// Missing ProductUID
-	_, err := natSvc.GetNATGatewayTelemetry(ctx, &GetNATGatewayTelemetryRequest{
+	_, err = natSvc.GetNATGatewayTelemetry(ctx, &GetNATGatewayTelemetryRequest{
 		Types: []string{"BITS"},
 		Days:  PtrTo[int32](7),
 	})
@@ -810,6 +849,9 @@ func (suite *NATGatewayClientTestSuite) TestCreateNATGatewayPacketFilterValidati
 	_, err := natSvc.CreateNATGatewayPacketFilter(ctx, "", &NATGatewayPacketFilterRequest{Description: "x", Entries: []NATGatewayPacketFilterEntry{{Action: "permit"}}})
 	suite.ErrorIs(err, ErrNATGatewayProductUIDRequired)
 
+	_, err = natSvc.CreateNATGatewayPacketFilter(ctx, "uid", nil)
+	suite.ErrorIs(err, ErrNATGatewayRequestNil)
+
 	_, err = natSvc.CreateNATGatewayPacketFilter(ctx, "uid", &NATGatewayPacketFilterRequest{Entries: []NATGatewayPacketFilterEntry{{Action: "permit"}}})
 	suite.ErrorIs(err, ErrNATGatewayPacketFilterDescriptionEmpty)
 
@@ -955,6 +997,9 @@ func (suite *NATGatewayClientTestSuite) TestCreateNATGatewayPrefixListValidation
 	_, err := natSvc.CreateNATGatewayPrefixList(ctx, "", &NATGatewayPrefixList{Description: "x", AddressFamily: "IPv4", Entries: []NATGatewayPrefixListEntry{{Action: "permit", Prefix: "0.0.0.0/0"}}})
 	suite.ErrorIs(err, ErrNATGatewayProductUIDRequired)
 
+	_, err = natSvc.CreateNATGatewayPrefixList(ctx, "uid", nil)
+	suite.ErrorIs(err, ErrNATGatewayRequestNil)
+
 	_, err = natSvc.CreateNATGatewayPrefixList(ctx, "uid", &NATGatewayPrefixList{AddressFamily: "IPv4", Entries: []NATGatewayPrefixListEntry{{Action: "permit"}}})
 	suite.ErrorIs(err, ErrNATGatewayPrefixListDescriptionEmpty)
 
@@ -1091,7 +1136,10 @@ func (suite *NATGatewayClientTestSuite) TestListNATGatewayBGPNeighborRoutesAsync
 	ctx := context.Background()
 	natSvc := suite.client.NATGatewayService
 
-	_, err := natSvc.ListNATGatewayBGPNeighborRoutesAsync(ctx, &NATGatewayBGPNeighborRoutesRequest{})
+	_, err := natSvc.ListNATGatewayBGPNeighborRoutesAsync(ctx, nil)
+	suite.ErrorIs(err, ErrNATGatewayRequestNil)
+
+	_, err = natSvc.ListNATGatewayBGPNeighborRoutesAsync(ctx, &NATGatewayBGPNeighborRoutesRequest{})
 	suite.ErrorIs(err, ErrNATGatewayProductUIDRequired)
 
 	_, err = natSvc.ListNATGatewayBGPNeighborRoutesAsync(ctx, &NATGatewayBGPNeighborRoutesRequest{ProductUID: "uid"})
