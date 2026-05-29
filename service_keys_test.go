@@ -185,6 +185,7 @@ func (suite *ServiceKeyClientTestSuite) TestListServiceKeys() {
 	}}
 	suite.mux.HandleFunc("/v2/service/key", func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
+		suite.Equal(productUid, r.URL.Query().Get("productIdOrUid"))
 		fmt.Fprint(w, jblob)
 	})
 	listRes, err := suite.client.ServiceKeyService.ListServiceKeys(ctx, listReq)
