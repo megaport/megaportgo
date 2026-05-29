@@ -5,8 +5,6 @@ import (
 	"log/slog"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/suite"
 )
 
 // NATGatewayVXCIntegrationTestSuite is the headline end-to-end test for the
@@ -18,10 +16,7 @@ import (
 type NATGatewayVXCIntegrationTestSuite IntegrationTestSuite
 
 func TestNATGatewayVXCIntegrationTestSuite(t *testing.T) {
-	t.Parallel()
-	if *runIntegrationTests {
-		suite.Run(t, new(NATGatewayVXCIntegrationTestSuite))
-	}
+	runIntegrationMethods[NATGatewayVXCIntegrationTestSuite](t)
 }
 
 func (suite *NATGatewayVXCIntegrationTestSuite) SetupSuite() {
@@ -158,9 +153,7 @@ func (suite *NATGatewayVXCIntegrationTestSuite) TestVXCAttachedToNATGateway() {
 			PartnerConfig: VXCOrderVrouterPartnerConfig{
 				Interfaces: []PartnerConfigInterface{
 					{
-						Description:   "nat-gw-to-port",
-						InterfaceType: InterfaceTypeSubInterface,
-						IpAddresses:   []string{"10.0.0.1/30"},
+						IpAddresses: []string{"10.0.0.1/30"},
 						// natIpAddresses is rejected on the NAT Gateway A-End
 						// — NAT IPs are managed by the gateway itself, not
 						// configured per VXC interface.

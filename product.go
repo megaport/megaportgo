@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"reflect"
 	"strings"
 )
 
@@ -32,6 +33,10 @@ type ProductService interface {
 	UpdateProductResourceTags(ctx context.Context, productUID string, tagsReq *UpdateProductResourceTagsRequest) error
 	// GetProductType returns the type of the product based on the Product UID. If no product is found, it returns an error.
 	GetProductType(ctx context.Context, productUID string) (string, error)
+	// GetProductPricing fetches pricing for a product configuration.
+	GetProductPricing(ctx context.Context, req PriceBookRequest) (*PriceBookDTO, error)
+	// GetProductPricingForCompany fetches pricing scoped to a specific company.
+	GetProductPricingForCompany(ctx context.Context, req *GetProductPricingRequest) (*PriceBookDTO, error)
 }
 
 // ProductServiceOp handles communication with Product methods of the Megaport API.
@@ -91,8 +96,9 @@ type ManageProductLockRequest struct {
 // ManageProductLockResponse represents a response from the Megaport Products API after locking or unlocking a product.
 type ManageProductLockResponse struct{}
 
-// ParsedProductsResponse represents a response from the Megaport Products API prior to parsing the response.
-type ParsedProductsResponse struct {
+// parsedProductsResponse represents a response from the Megaport Products API prior to parsing the response.
+// Used internally for JSON unmarshalling.
+type parsedProductsResponse struct {
 	Message string            `json:"message"`
 	Terms   string            `json:"terms"`
 	Data    []json.RawMessage `json:"data"`
@@ -107,25 +113,28 @@ type Product interface {
 	GetAssociatedIXs() []*IX
 }
 
-type GetProductResponse struct {
+// getProductResponse represents the response from the Megaport Products API for a single product.
+// Used internally for JSON unmarshalling.
+type getProductResponse struct {
 	Message string        `json:"message"`
 	Terms   string        `json:"terms"`
-	Data    ParsedProduct `json:"data"`
+	Data    parsedProduct `json:"data"`
 }
 
-type ParsedProduct struct {
+type parsedProduct struct {
 	Type           string `json:"productType"`
 	AssociatedVXCs []*VXC `json:"associatedVxcs"`
 }
 
-// ResourceTagsResponse represents a response from the Megaport Products API after retrieving the resource tags for a product.
-type ResourceTagsResponse struct {
+// resourceTagsResponse represents a response from the Megaport Products API after retrieving the resource tags for a product.
+// Used internally for JSON unmarshalling.
+type resourceTagsResponse struct {
 	Message string                    `json:"message"`
 	Terms   string                    `json:"terms"`
-	Data    *ResourceTagsResponseData `json:"data"`
+	Data    *resourceTagsResponseData `json:"data"`
 }
 
-type ResourceTagsResponseData struct {
+type resourceTagsResponseData struct {
 	ResourceTags []ResourceTag `json:"resourceTags"`
 }
 
@@ -197,7 +206,7 @@ func (svc *ProductServiceOp) ListProducts(ctx context.Context) ([]Product, error
 	defer response.Body.Close()
 
 	// Parse response into a structure with raw JSON messages
-	var parsed ParsedProductsResponse
+	var parsed parsedProductsResponse
 
 	if err := json.NewDecoder(response.Body).Decode(&parsed); err != nil {
 		return nil, err
@@ -207,15 +216,15 @@ func (svc *ProductServiceOp) ListProducts(ctx context.Context) ([]Product, error
 
 	for i, rawProduct := range parsed.Data {
 		// First extract just the type field
-		var parsedProduct ParsedProduct
+		var productMeta parsedProduct
 
-		if err := json.Unmarshal(rawProduct, &parsedProduct); err != nil {
+		if err := json.Unmarshal(rawProduct, &productMeta); err != nil {
 			svc.Client.Logger.WarnContext(ctx, fmt.Sprintf("Item %d: Could not extract product type: %v", i, err))
 			continue
 		}
 
 		// Then unmarshal into the appropriate struct based on type
-		switch strings.ToLower(parsedProduct.Type) {
+		switch strings.ToLower(productMeta.Type) {
 		case PRODUCT_MEGAPORT:
 			var port Port
 			if err := json.Unmarshal(rawProduct, &port); err != nil {
@@ -371,7 +380,7 @@ func (svc *ProductServiceOp) ListProductResourceTags(ctx context.Context, produc
 	}
 
 	defer response.Body.Close()
-	tagsResponse := &ResourceTagsResponse{}
+	tagsResponse := &resourceTagsResponse{}
 	body, fileErr := io.ReadAll(response.Body)
 	if fileErr != nil {
 		return nil, fileErr
@@ -418,6 +427,180 @@ func fromProductResourceTags(in []ResourceTag) map[string]string {
 	return tags
 }
 
+// buildPriceBookRequestBody marshals req, injects the productType field, and
+// returns the combined map ready to be used as an HTTP request body.
+func buildPriceBookRequestBody(req PriceBookRequest) (map[string]json.RawMessage, error) {
+	rawJSON, err := json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	var body map[string]json.RawMessage
+	if err := json.Unmarshal(rawJSON, &body); err != nil {
+		return nil, err
+	}
+	ptJSON, err := json.Marshal(req.pricingProductType())
+	if err != nil {
+		return nil, err
+	}
+	body["productType"] = ptJSON
+	return body, nil
+}
+
+// GetProductPricing fetches pricing for a product configuration via POST /v4/pricebook/product.
+func (svc *ProductServiceOp) GetProductPricing(ctx context.Context, req PriceBookRequest) (*PriceBookDTO, error) {
+	if err := validatePriceBookRequest(req); err != nil {
+		return nil, err
+	}
+	body, err := buildPriceBookRequestBody(req)
+	if err != nil {
+		return nil, err
+	}
+
+	path := "/v4/pricebook/product"
+	reqURL := svc.Client.BaseURL.JoinPath(path).String()
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodPost, reqURL, body)
+	if err != nil {
+		return nil, err
+	}
+	var envelope productPricingResponse
+	resp, err := svc.Client.Do(ctx, clientReq, &envelope)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if envelope.Data == nil {
+		return nil, ErrProductPricingResponseEmpty
+	}
+	return envelope.Data, nil
+}
+
+// GetProductPricingForCompany fetches pricing scoped to a specific company.
+// Use when pricing as a partner or reseller for another company.
+func (svc *ProductServiceOp) GetProductPricingForCompany(ctx context.Context, pricingReq *GetProductPricingRequest) (*PriceBookDTO, error) {
+	if pricingReq == nil {
+		return nil, ErrPricingRequestNil
+	}
+	// CompanyID and CompanyUID are mutually exclusive — reject early if both are set.
+	if pricingReq.CompanyID != 0 && pricingReq.CompanyUID != "" {
+		return nil, ErrPricingCompanyIDAndUIDSet
+	}
+	// validatePriceBookRequest also guards against nil / typed-nil Req values.
+	if err := validatePriceBookRequest(pricingReq.Req); err != nil {
+		return nil, err
+	}
+	body, err := buildPriceBookRequestBody(pricingReq.Req)
+	if err != nil {
+		return nil, err
+	}
+
+	baseURL := svc.Client.BaseURL.JoinPath("/v4/pricebook/product")
+	q := baseURL.Query()
+	if pricingReq.CompanyID != 0 {
+		q.Set("companyId", fmt.Sprintf("%d", pricingReq.CompanyID))
+	}
+	if pricingReq.CompanyUID != "" {
+		q.Set("companyUid", pricingReq.CompanyUID)
+	}
+	baseURL.RawQuery = q.Encode()
+
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodPost, baseURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+	var envelope productPricingResponse
+	resp, err := svc.Client.Do(ctx, clientReq, &envelope)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if envelope.Data == nil {
+		return nil, ErrProductPricingResponseEmpty
+	}
+	return envelope.Data, nil
+}
+
+// isNilPriceBookRequest reports whether req is nil or a typed nil pointer/interface.
+// reflect.Value.IsNil panics for non-nilable kinds (struct, int, …), so the kind
+// is checked first before calling IsNil.
+func isNilPriceBookRequest(req PriceBookRequest) bool {
+	if req == nil {
+		return true
+	}
+	v := reflect.ValueOf(req)
+	switch v.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Map, reflect.Ptr, reflect.Interface, reflect.Slice:
+		return v.IsNil()
+	default:
+		return false
+	}
+}
+
+// validatePriceBookRequest validates required fields for a pricing request.
+// It also guards against nil and typed-nil interface values so callers don't
+// have to repeat the reflect-based check at every call site.
+func validatePriceBookRequest(req PriceBookRequest) error {
+	if isNilPriceBookRequest(req) {
+		return ErrPricingRequestNil
+	}
+	switch r := req.(type) {
+	case *VXCPriceBookRequest:
+		if r.ALocationID == 0 || r.BLocationID == 0 {
+			return ErrPricingVXCLocationRequired
+		}
+		if r.Speed == 0 {
+			return ErrPricingVXCSpeedRequired
+		}
+	case *MCRPriceBookRequest:
+		if r.LocationID == 0 {
+			return ErrPricingLocationRequired
+		}
+		if r.Speed == 0 {
+			return ErrPricingSpeedRequired
+		}
+	case *MegaportPriceBookRequest:
+		if r.LocationID == 0 {
+			return ErrPricingLocationRequired
+		}
+		if r.Speed == 0 {
+			return ErrPricingSpeedRequired
+		}
+	case *IXPriceBookRequest:
+		if r.PortLocationID == 0 {
+			return ErrPricingIXLocationRequired
+		}
+		if r.IXType == "" {
+			return ErrPricingIXTypeRequired
+		}
+		if r.Speed == 0 {
+			return ErrPricingSpeedRequired
+		}
+	case *NATGatewayPriceBookRequest:
+		if r.LocationID == 0 {
+			return ErrPricingLocationRequired
+		}
+		if r.Speed == 0 {
+			return ErrPricingSpeedRequired
+		}
+		if r.SessionCount == 0 {
+			return ErrPricingNATSessionRequired
+		}
+	case *IPAddressPriceBookRequest:
+		if r.LocationID == 0 {
+			return ErrPricingIPLocationRequired
+		}
+		if r.IPBlock == "" {
+			return ErrPricingIPBlockRequired
+		}
+	case *MVEPriceBookRequest:
+		if r.LocationID == 0 {
+			return ErrPricingMVELocationRequired
+		}
+	default:
+		return fmt.Errorf("unsupported pricing request type: %T", req)
+	}
+	return nil
+}
+
 // GetProductType returns the type of the product based on the Product UID. If no product is found, it returns an error.
 func (svc *ProductServiceOp) GetProductType(ctx context.Context, productUID string) (string, error) {
 	path := fmt.Sprintf("/v2/product/%s", productUID)
@@ -442,16 +625,16 @@ func (svc *ProductServiceOp) GetProductType(ctx context.Context, productUID stri
 	// and then return that type.
 	// The response body is expected to be in JSON format.
 
-	var getProductResponse GetProductResponse
-	err = json.NewDecoder(response.Body).Decode(&getProductResponse)
+	var productResp getProductResponse
+	err = json.NewDecoder(response.Body).Decode(&productResp)
 	if err != nil {
 		return "", fmt.Errorf("failed to decode response: %w", err)
 	}
-	parsedProduct := getProductResponse.Data
+	productData := productResp.Data
 
-	if parsedProduct.Type == "" {
+	if productData.Type == "" {
 		return "", fmt.Errorf("product %s type not found in response", productUID)
 	}
 
-	return parsedProduct.Type, nil
+	return productData.Type, nil
 }

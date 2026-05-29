@@ -2,11 +2,14 @@
 .claude/
 
 .claude/
+.megaport-tools/
 .idea/
 .scannerwork
 
 .mpt_test_credentials
 .envrc
+
+testdata/csp_credentials.json
 
 *.exe
 *.exe~
@@ -14,3 +17,5 @@
 *.so
 *.test
 *.out
+
+.megaport-tools/
