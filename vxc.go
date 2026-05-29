@@ -528,7 +528,7 @@ func (svc *VXCServiceOp) LookupPartnerPorts(ctx context.Context, req *LookupPart
 	return nil, ErrNoAvailableVxcPorts
 }
 
-// LookupPartnerPorts looks up available partner ports in the Megaport VXC API.
+// ListPartnerPorts lists available partner ports in the Megaport VXC API.
 func (svc *VXCServiceOp) ListPartnerPorts(ctx context.Context, req *ListPartnerPortsRequest) (*ListPartnerPortsResponse, error) {
 	if req == nil {
 		return nil, ErrListPartnerPortsRequestNil

@@ -16,7 +16,7 @@ type ServiceKeyClientTestSuite struct {
 	ClientTestSuite
 }
 
-func TestServiceClientTestSuite(t *testing.T) {
+func TestServiceKeyClientTestSuite(t *testing.T) {
 	t.Parallel()
 	suite.Run(t, new(ServiceKeyClientTestSuite))
 }
