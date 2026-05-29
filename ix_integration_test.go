@@ -7,8 +7,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/suite"
 )
 
 const (
@@ -19,10 +17,7 @@ const (
 type IXIntegrationTestSuite IntegrationTestSuite
 
 func TestIXIntegrationTestSuite(t *testing.T) {
-	t.Parallel()
-	if *runIntegrationTests {
-		suite.Run(t, new(IXIntegrationTestSuite))
-	}
+	runIntegrationMethods[IXIntegrationTestSuite](t)
 }
 
 func (suite *IXIntegrationTestSuite) SetupSuite() {
@@ -51,13 +46,12 @@ func (suite *IXIntegrationTestSuite) TestIXLifecycle() {
 	logger := suite.client.Logger
 	ixSvc := suite.client.IXService
 	portSvc := suite.client.PortService
-	locSvc := suite.client.LocationService
 
-	// First, we need a port to attach the IX to
+	// Port must sit in Sydney so the "Sydney IX" network service is reachable.
 	logger.InfoContext(ctx, "Finding a suitable location for the port")
-	testLocation, locErr := GetRandomLocation(ctx, locSvc, TEST_IX_LOCATION_MARKET)
+	testLocation, locErr := findActivePortLocation(ctx, suite.T(), suite.client, TEST_IX_LOCATION_MARKET, 1000, portLocationOpts{Metro: "Sydney"})
 	if locErr != nil {
-		suite.FailNowf("could not get random location", "could not get random location %v", locErr)
+		suite.FailNowf("could not get port location", "could not get port location %v", locErr)
 	}
 	if !suite.NotNil(testLocation) {
 		suite.FailNow("invalid test location")
@@ -75,7 +69,7 @@ func (suite *IXIntegrationTestSuite) TestIXLifecycle() {
 		Market:                TEST_IX_LOCATION_MARKET,
 		MarketPlaceVisibility: true,
 		WaitForProvision:      true,
-		WaitForTime:           5 * time.Minute,
+		WaitForTime:           10 * time.Minute,
 	})
 	if portErr != nil {
 		suite.FailNowf("error buying port", "error buying port %v", portErr)
