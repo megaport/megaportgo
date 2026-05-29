@@ -1,6 +1,7 @@
 package megaport
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -30,6 +31,9 @@ type IXService interface {
 
 	// ListIXs lists all Internet Exchanges with optional filters
 	ListIXs(ctx context.Context, req *ListIXsRequest) ([]*IX, error)
+
+	// ListIXPs returns all globally available Internet Exchange Points with optional filters.
+	ListIXPs(ctx context.Context, req *ListIXPsRequest) ([]*IXP, error)
 }
 
 // IXServiceOp handles communication with the IX related methods of the Megaport API
@@ -365,6 +369,43 @@ func (svc *IXServiceOp) ListIXs(ctx context.Context, req *ListIXsRequest) ([]*IX
 	}
 
 	return ixs, nil
+}
+
+// ListIXPs returns globally available Internet Exchange Points. A nil req (or
+// empty Metro) returns all IXPs; otherwise results are filtered to those whose
+// metro contains req.Metro (case-insensitive).
+func (svc *IXServiceOp) ListIXPs(ctx context.Context, req *ListIXPsRequest) ([]*IXP, error) {
+	reqURL := svc.Client.BaseURL.JoinPath("/v2/ixp").String()
+
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, reqURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	response, err := svc.Client.Do(ctx, clientReq, &buf)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	var ixpResponse listIXPsResponse
+	if err = json.Unmarshal(buf.Bytes(), &ixpResponse); err != nil {
+		return nil, err
+	}
+
+	if req == nil || req.Metro == "" {
+		return ixpResponse.Data, nil
+	}
+
+	metro := strings.ToLower(req.Metro)
+	var filtered []*IXP
+	for _, ixp := range ixpResponse.Data {
+		if strings.Contains(strings.ToLower(ixp.Metro), metro) {
+			filtered = append(filtered, ixp)
+		}
+	}
+	return filtered, nil
 }
 
 // Helper function to determine if an IX matches the filter criteria
