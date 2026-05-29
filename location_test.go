@@ -1443,21 +1443,24 @@ func (suite *LocationV3ClientTestSuite) TestListLocationsV3WithOptions_NilOption
 	suite.Equal("", gotRawQuery)
 }
 
-func (suite *LocationV3ClientTestSuite) TestListLocationsV3WithOptions_DefaultActiveOnly() {
+// TestListLocationsV3WithOptions_EmptyNoFilter guards the fix for the
+// nil-vs-zero-value footgun: an empty options struct must behave like nil
+// (no filter, all statuses), not default to Active-only.
+func (suite *LocationV3ClientTestSuite) TestListLocationsV3WithOptions_EmptyNoFilter() {
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
-	var gotStatuses []string
+	var gotRawQuery string
 	suite.mux.HandleFunc("/v3/locations", func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
-		gotStatuses = r.URL.Query()["locationStatuses"]
+		gotRawQuery = r.URL.RawQuery
 		fmt.Fprint(w, emptyV3Body)
 	})
 	_, err := locSvc.ListLocationsV3WithOptions(ctx, &ListLocationsV3Options{})
 	suite.NoError(err)
-	suite.Equal([]string{LocationStatusActive}, gotStatuses)
+	suite.Equal("", gotRawQuery)
 }
 
-func (suite *LocationV3ClientTestSuite) TestListLocationsV3WithOptions_IncludeFlags() {
+func (suite *LocationV3ClientTestSuite) TestListLocationsV3WithOptions_Statuses() {
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
 	var gotStatuses []string
@@ -1467,14 +1470,15 @@ func (suite *LocationV3ClientTestSuite) TestListLocationsV3WithOptions_IncludeFl
 		fmt.Fprint(w, emptyV3Body)
 	})
 	_, err := locSvc.ListLocationsV3WithOptions(ctx, &ListLocationsV3Options{
-		IncludeRestricted: true,
-		IncludeDeployment: true,
+		Statuses: []string{LocationStatusActive, LocationStatusRestricted, LocationStatusDeployment},
 	})
 	suite.NoError(err)
 	suite.ElementsMatch([]string{LocationStatusActive, LocationStatusRestricted, LocationStatusDeployment}, gotStatuses)
 }
 
-func (suite *LocationV3ClientTestSuite) TestListLocationsV3WithOptions_StatusesOverride() {
+// TestListLocationsV3WithOptions_ActiveOnly documents how callers request only
+// Active locations now that there is no implicit default.
+func (suite *LocationV3ClientTestSuite) TestListLocationsV3WithOptions_ActiveOnly() {
 	ctx := context.Background()
 	locSvc := suite.client.LocationService
 	var gotStatuses []string
@@ -1484,11 +1488,10 @@ func (suite *LocationV3ClientTestSuite) TestListLocationsV3WithOptions_StatusesO
 		fmt.Fprint(w, emptyV3Body)
 	})
 	_, err := locSvc.ListLocationsV3WithOptions(ctx, &ListLocationsV3Options{
-		IncludeRestricted: true, // ignored — Statuses takes precedence
-		Statuses:          []string{LocationStatusExtended, LocationStatusNew},
+		Statuses: []string{LocationStatusActive},
 	})
 	suite.NoError(err)
-	suite.ElementsMatch([]string{LocationStatusExtended, LocationStatusNew}, gotStatuses)
+	suite.Equal([]string{LocationStatusActive}, gotStatuses)
 }
 
 // TestListLocationsV3_NoQueryParams asserts that the original ListLocationsV3

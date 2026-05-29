@@ -240,32 +240,13 @@ type RoundTripTimeResponse struct {
 
 // ListLocationsV3Options configures ListLocationsV3WithOptions.
 //
-// Statuses, when non-empty, takes precedence and is used as the values
-// for repeated locationStatuses query parameters. Otherwise the boolean
-// shortcuts are composed against the default allow-list of [Active]:
-//   - IncludeRestricted adds "Restricted"
-//   - IncludeDeployment adds "Deployment"
-//
-// A nil *ListLocationsV3Options is equivalent to calling ListLocationsV3
-// (no filter sent; all statuses returned).
+// Statuses filters the returned locations to the given status values, sent as
+// repeated locationStatuses query parameters. An empty Statuses — or a nil
+// *ListLocationsV3Options — sends no filter and returns all statuses, matching
+// ListLocationsV3. To request only orderable sites, pass
+// Statuses: []string{LocationStatusActive}.
 type ListLocationsV3Options struct {
-	IncludeRestricted bool
-	IncludeDeployment bool
-	Statuses          []string
-}
-
-func (o *ListLocationsV3Options) resolvedStatuses() []string {
-	if len(o.Statuses) > 0 {
-		return o.Statuses
-	}
-	statuses := []string{LocationStatusActive}
-	if o.IncludeRestricted {
-		statuses = append(statuses, LocationStatusRestricted)
-	}
-	if o.IncludeDeployment {
-		statuses = append(statuses, LocationStatusDeployment)
-	}
-	return statuses
+	Statuses []string
 }
 
 // ListLocationsV3 returns a list of all locations using the v3 API.
@@ -280,15 +261,12 @@ func (svc *LocationServiceOp) ListLocationsV3WithOptions(ctx context.Context, op
 	path := "/v3/locations"
 	u := svc.Client.BaseURL.JoinPath(path)
 
-	if opts != nil {
-		statuses := opts.resolvedStatuses()
-		if len(statuses) > 0 {
-			params := url.Values{}
-			for _, s := range statuses {
-				params.Add("locationStatuses", s)
-			}
-			u.RawQuery = params.Encode()
+	if opts != nil && len(opts.Statuses) > 0 {
+		params := url.Values{}
+		for _, s := range opts.Statuses {
+			params.Add("locationStatuses", s)
 		}
+		u.RawQuery = params.Encode()
 	}
 
 	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, u.String(), nil)
