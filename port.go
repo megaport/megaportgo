@@ -151,6 +151,9 @@ type UnlockPortResponse struct {
 
 // BuyPort buys a port from the Megaport Port API.
 func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*BuyPortResponse, error) {
+	if req == nil {
+		return nil, ErrBuyPortRequestNil
+	}
 	if !slices.Contains(VALID_CONTRACT_TERMS, req.Term) {
 		return nil, ErrInvalidTerm
 	}
@@ -242,6 +245,9 @@ func createPortOrder(req *BuyPortRequest) []PortOrder {
 }
 
 func (svc *PortServiceOp) ValidatePortOrder(ctx context.Context, req *BuyPortRequest) error {
+	if req == nil {
+		return ErrBuyPortRequestNil
+	}
 	if !slices.Contains(VALID_CONTRACT_TERMS, req.Term) {
 		// Validate that term is one of the allowed values
 		return ErrInvalidTerm
@@ -327,6 +333,9 @@ func (svc *PortServiceOp) GetPort(ctx context.Context, portId string) (*Port, er
 
 // ModifyPort modifies a port in the Megaport Port API.
 func (svc *PortServiceOp) ModifyPort(ctx context.Context, req *ModifyPortRequest) (*ModifyPortResponse, error) {
+	if req == nil {
+		return nil, ErrModifyPortRequestNil
+	}
 	if len(req.CostCentre) > 255 {
 		return nil, ErrCostCentreTooLong
 	}

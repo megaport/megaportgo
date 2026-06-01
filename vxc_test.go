@@ -2099,3 +2099,31 @@ func (suite *VXCClientTestSuite) TestGetVXCTelemetryValidation() {
 	_, err = vxcSvc.GetVXCTelemetry(ctx, nil)
 	suite.ErrorIs(err, ErrVXCTelemetryRequestRequired)
 }
+
+// TestVXCNilRequestGuards verifies that the required-request VXC methods reject
+// a nil request with a sentinel error instead of panicking.
+func (suite *VXCClientTestSuite) TestVXCNilRequestGuards() {
+	ctx := context.Background()
+	tests := []struct {
+		name string
+		call func() error
+		want error
+	}{
+		{"BuyVXC", func() error { _, err := suite.client.VXCService.BuyVXC(ctx, nil); return err }, ErrBuyVXCRequestNil},
+		{"ValidateVXCOrder", func() error { return suite.client.VXCService.ValidateVXCOrder(ctx, nil) }, ErrBuyVXCRequestNil},
+		{"UpdateVXC", func() error { _, err := suite.client.VXCService.UpdateVXC(ctx, "id", nil); return err }, ErrUpdateVXCRequestNil},
+		{"LookupPartnerPorts", func() error {
+			_, err := suite.client.VXCService.LookupPartnerPorts(ctx, nil)
+			return err
+		}, ErrLookupPartnerPortsRequestNil},
+		{"ListPartnerPorts", func() error {
+			_, err := suite.client.VXCService.ListPartnerPorts(ctx, nil)
+			return err
+		}, ErrListPartnerPortsRequestNil},
+	}
+	for _, tt := range tests {
+		suite.Run(tt.name, func() {
+			suite.ErrorIs(tt.call(), tt.want)
+		})
+	}
+}

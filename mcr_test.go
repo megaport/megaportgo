@@ -1060,3 +1060,39 @@ func (suite *MCRClientTestSuite) TestGetMCRTelemetryValidation() {
 	_, err = mcrSvc.GetMCRTelemetry(ctx, nil)
 	suite.ErrorIs(err, ErrMCRTelemetryRequestRequired)
 }
+
+// TestMCRNilRequestGuards verifies that the required-request MCR methods reject
+// a nil request with a sentinel error instead of panicking.
+func (suite *MCRClientTestSuite) TestMCRNilRequestGuards() {
+	ctx := context.Background()
+	tests := []struct {
+		name string
+		call func() error
+		want error
+	}{
+		{"BuyMCR", func() error { _, err := suite.client.MCRService.BuyMCR(ctx, nil); return err }, ErrBuyMCRRequestNil},
+		{"ValidateMCROrder", func() error { return suite.client.MCRService.ValidateMCROrder(ctx, nil) }, ErrBuyMCRRequestNil},
+		{"CreatePrefixFilterList", func() error {
+			_, err := suite.client.MCRService.CreatePrefixFilterList(ctx, nil)
+			return err
+		}, ErrCreateMCRPrefixFilterListRequestNil},
+		{"ModifyMCR", func() error { _, err := suite.client.MCRService.ModifyMCR(ctx, nil); return err }, ErrModifyMCRRequestNil},
+	}
+	for _, tt := range tests {
+		suite.Run(tt.name, func() {
+			suite.ErrorIs(tt.call(), tt.want)
+		})
+	}
+}
+
+// TestListMCRsNilRequest verifies that ListMCRs treats a nil request as "no filter".
+func (suite *MCRClientTestSuite) TestListMCRsNilRequest() {
+	ctx := context.Background()
+	suite.mux.HandleFunc("/v2/products", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, `{"message":"OK","data":[]}`)
+	})
+	mcrs, err := suite.client.MCRService.ListMCRs(ctx, nil)
+	suite.NoError(err)
+	suite.NotNil(mcrs)
+}

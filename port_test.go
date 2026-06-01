@@ -754,3 +754,23 @@ func (suite *PortClientTestSuite) TestGetPortTelemetryValidation() {
 	_, err = portSvc.GetPortTelemetry(ctx, nil)
 	suite.ErrorIs(err, ErrPortTelemetryRequestRequired)
 }
+
+// TestPortNilRequestGuards verifies that the required-request Port methods reject
+// a nil request with a sentinel error instead of panicking.
+func (suite *PortClientTestSuite) TestPortNilRequestGuards() {
+	ctx := context.Background()
+	tests := []struct {
+		name string
+		call func() error
+		want error
+	}{
+		{"BuyPort", func() error { _, err := suite.client.PortService.BuyPort(ctx, nil); return err }, ErrBuyPortRequestNil},
+		{"ValidatePortOrder", func() error { return suite.client.PortService.ValidatePortOrder(ctx, nil) }, ErrBuyPortRequestNil},
+		{"ModifyPort", func() error { _, err := suite.client.PortService.ModifyPort(ctx, nil); return err }, ErrModifyPortRequestNil},
+	}
+	for _, tt := range tests {
+		suite.Run(tt.name, func() {
+			suite.ErrorIs(tt.call(), tt.want)
+		})
+	}
+}
