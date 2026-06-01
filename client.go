@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"reflect"
 	"sync"
 	"time"
 )
@@ -110,6 +111,9 @@ type Client struct {
 	headers map[string]string
 
 	authMux sync.Mutex
+
+	refCaches   []Invalidatable
+	refCachesMu sync.Mutex
 }
 
 // accessTokenResponse is the response structure for the Login method containing the access token and expiration time.
@@ -398,12 +402,19 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*htt
 	if err != nil {
 		return nil, err
 	}
+	// Close resp.Body on every error-return path so we don't leak the
+	// underlying connection. The successful return below clears success
+	// and the caller becomes responsible for closing.
+	success := false
+	defer func() {
+		if !success {
+			_ = resp.Body.Close()
+		}
+	}()
 	if c.onRequestCompleted != nil {
 		c.onRequestCompleted(req, resp)
 	}
 	reqTime := time.Since(reqStart)
-
-	respBody := resp.Body
 
 	attrs := []slog.Attr{slog.Duration("duration", reqTime),
 		slog.Int("status_code", resp.StatusCode),
@@ -417,26 +428,27 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*htt
 		if err != nil {
 			return nil, err
 		}
-
-		// Base64 encode the response body
-		encodedBody := base64.StdEncoding.EncodeToString(b)
-
-		// Create new reader for the later code
-		respBody = io.NopCloser(bytes.NewReader(b))
-
-		attrs = append(attrs, slog.String("response_body_base_64", encodedBody))
+		// The original body is fully drained; close it now so the
+		// connection can be reused, then swap in a replayable reader
+		// so CheckResponse and any downstream decode see the body.
+		_ = resp.Body.Close()
+		resp.Body = io.NopCloser(bytes.NewReader(b))
+		attrs = append(attrs, slog.String("response_body_base_64", base64.StdEncoding.EncodeToString(b)))
 	}
 
 	c.Logger.DebugContext(ctx, "completed api request", slog.Any("api_request", attrs))
 
 	err = CheckResponse(resp)
 	if err != nil {
+		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+			c.invalidateRefCaches()
+		}
 		return nil, err
 	}
 
 	if resp.StatusCode != http.StatusNoContent && v != nil {
 		if w, ok := v.(io.Writer); ok {
-			_, err = io.Copy(w, respBody)
+			_, err = io.Copy(w, resp.Body)
 			if err != nil {
 				return nil, err
 			}
@@ -448,6 +460,7 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*htt
 		}
 	}
 
+	success = true
 	return resp, nil
 }
 
@@ -478,6 +491,71 @@ func (c *Client) SetTokenProvider(tp TokenProvider) {
 	c.authMux.Lock()
 	defer c.authMux.Unlock()
 	c.tokenProvider = tp
+}
+
+// RegisterRefCache adds cache to the Client's reference-data cache list.
+// All registered caches are invalidated together when the Client receives
+// a 401/403 response, so a stale auth context cannot poison cached
+// reference data after re-authentication.
+//
+// Nil and typed-nil values (e.g. an Invalidatable interface wrapping a
+// (*RefCache[T])(nil)) are rejected; otherwise a later invalidation would
+// call Invalidate on a nil receiver and panic.
+//
+// Registration is idempotent for cache values whose concrete type is
+// comparable (pointer types — including the standard *RefCache[T] — are
+// always comparable). Re-registering the same instance is a no-op so the
+// registry cannot grow unbounded if a long-lived Client re-runs service
+// construction. If the supplied Invalidatable has a non-comparable
+// concrete type (e.g. a struct containing a map or slice), dedup is
+// skipped to avoid a runtime panic on interface comparison; repeated
+// registrations of that value will accumulate, but Invalidate is
+// expected to be safe to call more than once.
+func (c *Client) RegisterRefCache(cache Invalidatable) {
+	if cache == nil || isTypedNil(cache) {
+		return
+	}
+	c.refCachesMu.Lock()
+	defer c.refCachesMu.Unlock()
+	if reflect.TypeOf(cache).Comparable() {
+		for _, existing := range c.refCaches {
+			if existing == nil || isTypedNil(existing) {
+				continue
+			}
+			if !reflect.TypeOf(existing).Comparable() {
+				continue
+			}
+			if existing == cache {
+				return
+			}
+		}
+	}
+	c.refCaches = append(c.refCaches, cache)
+}
+
+// isTypedNil reports whether v is a non-nil interface wrapping a nil
+// pointer/map/slice/etc. Such values pass `v == nil` checks but their
+// methods will panic on a nil receiver.
+func isTypedNil(v any) bool {
+	rv := reflect.ValueOf(v)
+	switch rv.Kind() {
+	case reflect.Ptr, reflect.Map, reflect.Slice, reflect.Chan, reflect.Func, reflect.Interface:
+		return rv.IsNil()
+	}
+	return false
+}
+
+func (c *Client) invalidateRefCaches() {
+	c.refCachesMu.Lock()
+	snapshot := make([]Invalidatable, len(c.refCaches))
+	copy(snapshot, c.refCaches)
+	c.refCachesMu.Unlock()
+	for _, ic := range snapshot {
+		if ic == nil || isTypedNil(ic) {
+			continue
+		}
+		ic.Invalidate()
+	}
 }
 
 // Authorize performs an OAuth-style login using the client's AccessKey and SecretKey and updates the client's access token on a successful response.

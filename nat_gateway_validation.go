@@ -1,6 +1,7 @@
 package megaport
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"slices"
@@ -36,29 +37,50 @@ var ErrNATGatewayLocationIDRequired = errors.New("location ID must be greater th
 // ErrNATGatewaySpeedRequired is returned when a Speed is not provided or is invalid.
 var ErrNATGatewaySpeedRequired = errors.New("speed must be greater than 0")
 
+// ErrNATGatewaySessionCountRequired is returned when a session count is not
+// provided or is invalid.
+var ErrNATGatewaySessionCountRequired = errors.New("session count must be greater than 0")
+
 // ErrNATGatewayInvalidTerm is returned when a Term is not a valid contract term.
 // The message is derived from VALID_CONTRACT_TERMS so it stays in sync if the
 // allowed set ever changes.
 var ErrNATGatewayInvalidTerm = fmt.Errorf("term must be one of: %s", intSliceToString(VALID_CONTRACT_TERMS))
+
+// ErrNATGatewaySpeedNotSupported is returned by ValidateNATGatewaySpeedSession
+// when the requested speed is not present in the live availability matrix.
+var ErrNATGatewaySpeedNotSupported = errors.New("nat gateway speed is not supported")
+
+// ErrNATGatewaySessionCountNotSupported is returned by
+// ValidateNATGatewaySpeedSession when the requested session count is not
+// permitted for the requested speed.
+var ErrNATGatewaySessionCountNotSupported = errors.New("nat gateway session count is not supported for the requested speed")
+
+// validateNATGatewayCommonFields performs the structural checks shared by
+// CreateNATGatewayRequest and UpdateNATGatewayRequest. It does not consult
+// the live availability matrix; use ValidateNATGatewaySpeedSession for
+// matrix-aware checks.
+func validateNATGatewayCommonFields(productName string, locationID, speed, term int) error {
+	if productName == "" {
+		return ErrNATGatewayProductNameRequired
+	}
+	if locationID < 1 {
+		return ErrNATGatewayLocationIDRequired
+	}
+	if speed < 1 {
+		return ErrNATGatewaySpeedRequired
+	}
+	if !slices.Contains(VALID_CONTRACT_TERMS, term) {
+		return ErrNATGatewayInvalidTerm
+	}
+	return nil
+}
 
 // validateCreateNATGatewayRequest validates the request parameters for creating a NAT Gateway.
 func validateCreateNATGatewayRequest(req *CreateNATGatewayRequest) error {
 	if req == nil {
 		return ErrNATGatewayRequestNil
 	}
-	if req.ProductName == "" {
-		return ErrNATGatewayProductNameRequired
-	}
-	if req.LocationID < 1 {
-		return ErrNATGatewayLocationIDRequired
-	}
-	if req.Speed < 1 {
-		return ErrNATGatewaySpeedRequired
-	}
-	if !slices.Contains(VALID_CONTRACT_TERMS, req.Term) {
-		return ErrNATGatewayInvalidTerm
-	}
-	return nil
+	return validateNATGatewayCommonFields(req.ProductName, req.LocationID, req.Speed, req.Term)
 }
 
 // validateUpdateNATGatewayRequest validates the request parameters for updating a NAT Gateway.
@@ -69,19 +91,7 @@ func validateUpdateNATGatewayRequest(req *UpdateNATGatewayRequest) error {
 	if req.ProductUID == "" {
 		return ErrNATGatewayProductUIDRequired
 	}
-	if req.ProductName == "" {
-		return ErrNATGatewayProductNameRequired
-	}
-	if req.LocationID < 1 {
-		return ErrNATGatewayLocationIDRequired
-	}
-	if req.Speed < 1 {
-		return ErrNATGatewaySpeedRequired
-	}
-	if !slices.Contains(VALID_CONTRACT_TERMS, req.Term) {
-		return ErrNATGatewayInvalidTerm
-	}
-	return nil
+	return validateNATGatewayCommonFields(req.ProductName, req.LocationID, req.Speed, req.Term)
 }
 
 // validateGetNATGatewayTelemetryRequest validates the request parameters.
@@ -105,4 +115,38 @@ func validateGetNATGatewayTelemetryRequest(req *GetNATGatewayTelemetryRequest) e
 		return ErrNATGatewayTelemetryFromToIncomplete
 	}
 	return nil
+}
+
+// ValidateNATGatewaySpeedSession checks the requested speed and session
+// count against the live availability matrix. The matrix is fetched lazily
+// on first call and cached on the service. Structural pre-checks
+// (speed > 0, sessionCount > 0) run before consulting the matrix so callers
+// see the same sentinels as the structural validators rather than a
+// matrix-shaped "not supported" message.
+func (svc *NATGatewayServiceOp) ValidateNATGatewaySpeedSession(ctx context.Context, speed, sessionCount int) error {
+	if speed < 1 {
+		return ErrNATGatewaySpeedRequired
+	}
+	if sessionCount < 1 {
+		return ErrNATGatewaySessionCountRequired
+	}
+	matrix, err := svc.ensureSessionMatrixCache().GetOrFetch(ctx)
+	if err != nil {
+		return err
+	}
+	supportedSpeeds := make([]int, 0, len(matrix))
+	for _, entry := range matrix {
+		if entry == nil {
+			continue
+		}
+		supportedSpeeds = append(supportedSpeeds, entry.SpeedMbps)
+		if entry.SpeedMbps != speed {
+			continue
+		}
+		if slices.Contains(entry.SessionCount, sessionCount) {
+			return nil
+		}
+		return fmt.Errorf("%w: got %d for %d Mbps; supported session counts: %v", ErrNATGatewaySessionCountNotSupported, sessionCount, speed, entry.SessionCount)
+	}
+	return fmt.Errorf("%w: got %d Mbps; supported speeds: %v", ErrNATGatewaySpeedNotSupported, speed, supportedSpeeds)
 }
