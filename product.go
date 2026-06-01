@@ -285,6 +285,9 @@ func (svc *ProductServiceOp) ModifyProduct(ctx context.Context, req *ModifyProdu
 
 // DeleteProduct is responsible for either scheduling a product for deletion "CANCEL" or deleting a product immediately "CANCEL_NOW" in the Megaport Products API.
 func (svc *ProductServiceOp) DeleteProduct(ctx context.Context, req *DeleteProductRequest) (*DeleteProductResponse, error) {
+	if req == nil {
+		return nil, ErrDeleteProductRequestNil
+	}
 	var action string
 
 	if req.DeleteNow {
@@ -335,6 +338,9 @@ func (svc *ProductServiceOp) RestoreProduct(ctx context.Context, productId strin
 
 // ManageProductLock is responsible for locking or unlocking a product in the Megaport Products API.
 func (svc *ProductServiceOp) ManageProductLock(ctx context.Context, req *ManageProductLockRequest) (*ManageProductLockResponse, error) {
+	if req == nil {
+		return nil, ErrManageProductLockRequestNil
+	}
 	verb := "POST"
 
 	if !req.ShouldLock {

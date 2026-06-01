@@ -938,3 +938,36 @@ func (suite *MVEClientTestSuite) TestPaloAltoConfigAdminPasswordMarshalling() {
 	suite.NoError(err)
 	suite.NotContains(string(emptyRaw), "adminPassword")
 }
+
+// TestMVENilRequestGuards verifies that the required-request MVE methods reject
+// a nil request with a sentinel error instead of panicking.
+func (suite *MVEClientTestSuite) TestMVENilRequestGuards() {
+	ctx := context.Background()
+	tests := []struct {
+		name string
+		call func() error
+		want error
+	}{
+		{"BuyMVE", func() error { _, err := suite.client.MVEService.BuyMVE(ctx, nil); return err }, ErrBuyMVERequestNil},
+		{"ValidateMVEOrder", func() error { return suite.client.MVEService.ValidateMVEOrder(ctx, nil) }, ErrBuyMVERequestNil},
+		{"ModifyMVE", func() error { _, err := suite.client.MVEService.ModifyMVE(ctx, nil); return err }, ErrModifyMVERequestNil},
+		{"DeleteMVE", func() error { _, err := suite.client.MVEService.DeleteMVE(ctx, nil); return err }, ErrDeleteMVERequestNil},
+	}
+	for _, tt := range tests {
+		suite.Run(tt.name, func() {
+			suite.ErrorIs(tt.call(), tt.want)
+		})
+	}
+}
+
+// TestListMVEsNilRequest verifies that ListMVEs treats a nil request as "no filter".
+func (suite *MVEClientTestSuite) TestListMVEsNilRequest() {
+	ctx := context.Background()
+	suite.mux.HandleFunc("/v2/products", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, `{"message":"OK","data":[]}`)
+	})
+	mves, err := suite.client.MVEService.ListMVEs(ctx, nil)
+	suite.NoError(err)
+	suite.NotNil(mves)
+}

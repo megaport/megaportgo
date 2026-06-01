@@ -137,11 +137,71 @@ var ErrDeleteMCRRequestNil = errors.New("delete MCR request cannot be nil")
 // ErrDeletePortRequestNil is returned when DeletePort is called with a nil request.
 var ErrDeletePortRequestNil = errors.New("delete port request cannot be nil")
 
-// ErrModifyProductRequestNil is returned when ModifyProduct is called with a nil request.
-var ErrModifyProductRequestNil = errors.New("modify product request cannot be nil")
+// ErrBuyIXRequestNil is returned when BuyIX or ValidateIXOrder is called with a nil request.
+var ErrBuyIXRequestNil = errors.New("buy IX request cannot be nil")
+
+// ErrUpdateIXRequestNil is returned when UpdateIX is called with a nil request.
+var ErrUpdateIXRequestNil = errors.New("update IX request cannot be nil")
+
+// ErrDeleteIXRequestNil is returned when DeleteIX is called with a nil request.
+var ErrDeleteIXRequestNil = errors.New("delete IX request cannot be nil")
+
+// ErrBuyMCRRequestNil is returned when BuyMCR or ValidateMCROrder is called with a nil request.
+var ErrBuyMCRRequestNil = errors.New("buy MCR request cannot be nil")
+
+// ErrCreateMCRPrefixFilterListRequestNil is returned when CreatePrefixFilterList is called with a nil request.
+var ErrCreateMCRPrefixFilterListRequestNil = errors.New("create MCR prefix filter list request cannot be nil")
+
+// ErrModifyMCRRequestNil is returned when ModifyMCR is called with a nil request.
+var ErrModifyMCRRequestNil = errors.New("modify MCR request cannot be nil")
+
+// ErrBuyMVERequestNil is returned when BuyMVE or ValidateMVEOrder is called with a nil request.
+var ErrBuyMVERequestNil = errors.New("buy MVE request cannot be nil")
 
 // ErrModifyMVERequestNil is returned when ModifyMVE is called with a nil request.
 var ErrModifyMVERequestNil = errors.New("modify MVE request cannot be nil")
+
+// ErrDeleteMVERequestNil is returned when DeleteMVE is called with a nil request.
+var ErrDeleteMVERequestNil = errors.New("delete MVE request cannot be nil")
+
+// ErrBuyVXCRequestNil is returned when BuyVXC or ValidateVXCOrder is called with a nil request.
+var ErrBuyVXCRequestNil = errors.New("buy VXC request cannot be nil")
+
+// ErrUpdateVXCRequestNil is returned when UpdateVXC is called with a nil request.
+var ErrUpdateVXCRequestNil = errors.New("update VXC request cannot be nil")
+
+// ErrLookupPartnerPortsRequestNil is returned when LookupPartnerPorts is called with a nil request.
+var ErrLookupPartnerPortsRequestNil = errors.New("lookup partner ports request cannot be nil")
+
+// ErrListPartnerPortsRequestNil is returned when ListPartnerPorts is called with a nil request.
+var ErrListPartnerPortsRequestNil = errors.New("list partner ports request cannot be nil")
+
+// ErrBuyPortRequestNil is returned when BuyPort or ValidatePortOrder is called with a nil request.
+var ErrBuyPortRequestNil = errors.New("buy port request cannot be nil")
+
+// ErrModifyPortRequestNil is returned when ModifyPort is called with a nil request.
+var ErrModifyPortRequestNil = errors.New("modify port request cannot be nil")
+
+// ErrModifyProductRequestNil is returned when ModifyProduct is called with a nil request.
+var ErrModifyProductRequestNil = errors.New("modify product request cannot be nil")
+
+// ErrDeleteProductRequestNil is returned when DeleteProduct is called with a nil request.
+var ErrDeleteProductRequestNil = errors.New("delete product request cannot be nil")
+
+// ErrManageProductLockRequestNil is returned when ManageProductLock is called with a nil request.
+var ErrManageProductLockRequestNil = errors.New("manage product lock request cannot be nil")
+
+// ErrCreateServiceKeyRequestNil is returned when CreateServiceKey is called with a nil request.
+var ErrCreateServiceKeyRequestNil = errors.New("create service key request cannot be nil")
+
+// ErrUpdateServiceKeyRequestNil is returned when UpdateServiceKey is called with a nil request.
+var ErrUpdateServiceKeyRequestNil = errors.New("update service key request cannot be nil")
+
+// ErrCreateUserRequestNil is returned when CreateUser is called with a nil request.
+var ErrCreateUserRequestNil = errors.New("create user request cannot be nil")
+
+// ErrUpdateUserRequestNil is returned when UpdateUser is called with a nil request.
+var ErrUpdateUserRequestNil = errors.New("update user request cannot be nil")
 
 // maintenanceStatesToString converts a slice of MaintenanceState to a slice of strings
 func maintenanceStatesToString(states []MaintenanceState) []string {

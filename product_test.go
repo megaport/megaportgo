@@ -723,3 +723,26 @@ func (suite *ProductClientTestSuite) TestListProductResourceTags() {
 	suite.NoError(err)
 	suite.EqualValues(testProductResourceTags, res)
 }
+
+// TestProductNilRequestGuards verifies that the required-request Product methods
+// reject a nil request with a sentinel error instead of panicking.
+func (suite *ProductClientTestSuite) TestProductNilRequestGuards() {
+	ctx := context.Background()
+	tests := []struct {
+		name string
+		call func() error
+		want error
+	}{
+		{"ModifyProduct", func() error { _, err := suite.client.ProductService.ModifyProduct(ctx, nil); return err }, ErrModifyProductRequestNil},
+		{"DeleteProduct", func() error { _, err := suite.client.ProductService.DeleteProduct(ctx, nil); return err }, ErrDeleteProductRequestNil},
+		{"ManageProductLock", func() error {
+			_, err := suite.client.ProductService.ManageProductLock(ctx, nil)
+			return err
+		}, ErrManageProductLockRequestNil},
+	}
+	for _, tt := range tests {
+		suite.Run(tt.name, func() {
+			suite.ErrorIs(tt.call(), tt.want)
+		})
+	}
+}
