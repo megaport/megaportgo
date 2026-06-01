@@ -214,6 +214,9 @@ type GetUserActivityRequest struct {
 
 // CreateUser creates a new user in the Megaport system.
 func (svc *UserManagementServiceOp) CreateUser(ctx context.Context, req *CreateUserRequest) (*CreateUserResponse, error) {
+	if req == nil {
+		return nil, ErrCreateUserRequestNil
+	}
 	// Validate the request according to API requirements
 	if err := req.Validate(); err != nil {
 		return nil, fmt.Errorf("validation failed: %w", err)
@@ -344,6 +347,9 @@ func (svc *UserManagementServiceOp) ListCompanyUsers(ctx context.Context) ([]*Us
 }
 
 func (svc *UserManagementServiceOp) UpdateUser(ctx context.Context, employeeID int, req *UpdateUserRequest) error {
+	if req == nil {
+		return ErrUpdateUserRequestNil
+	}
 	// Validate the request according to API requirements
 	if err := req.Validate(); err != nil {
 		return fmt.Errorf("validation failed: %w", err)
@@ -448,6 +454,9 @@ func (svc *UserManagementServiceOp) DeleteUser(ctx context.Context, employeeID i
 // GetUserActivity retrieves a log of user activity in the Megaport Portal.
 // It can be filtered by person ID/UID and/or company ID/UID using the request parameters.
 func (svc *UserManagementServiceOp) GetUserActivity(ctx context.Context, req *GetUserActivityRequest) ([]*UserActivity, error) {
+	if req == nil {
+		req = &GetUserActivityRequest{}
+	}
 	path := "/v3/activity"
 
 	// Append query parameters if provided using proper URL encoding

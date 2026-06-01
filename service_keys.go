@@ -144,6 +144,9 @@ type UpdateServiceKeyResponse struct {
 
 // CreateServiceKey creates a service key in the Megaport Service Key API.
 func (svc *ServiceKeyServiceOp) CreateServiceKey(ctx context.Context, req *CreateServiceKeyRequest) (*CreateServiceKeyResponse, error) {
+	if req == nil {
+		return nil, ErrCreateServiceKeyRequestNil
+	}
 	if req.ProductID != 0 && req.ProductUID != "" {
 		return nil, errors.New("ProductID and ProductUID cannot both be set")
 	}
@@ -184,6 +187,9 @@ func (svc *ServiceKeyServiceOp) CreateServiceKey(ctx context.Context, req *Creat
 }
 
 func (svc *ServiceKeyServiceOp) ListServiceKeys(ctx context.Context, req *ListServiceKeysRequest) (*ListServiceKeysResponse, error) {
+	if req == nil {
+		req = &ListServiceKeysRequest{}
+	}
 	path := "/v2/service/key"
 	params := url.Values{}
 	if req.ProductUID != nil {
@@ -262,6 +268,9 @@ func (svc *ServiceKeyServiceOp) GetServiceKey(ctx context.Context, keyId string)
 }
 
 func (svc *ServiceKeyServiceOp) UpdateServiceKey(ctx context.Context, req *UpdateServiceKeyRequest) (*UpdateServiceKeyResponse, error) {
+	if req == nil {
+		return nil, ErrUpdateServiceKeyRequestNil
+	}
 	if req.ProductID != 0 && req.ProductUID != "" {
 		return nil, errors.New("ProductID and ProductUID cannot both be set")
 	}
