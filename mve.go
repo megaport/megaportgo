@@ -85,7 +85,9 @@ type ModifyMVERequest struct {
 	ContractTermMonths    *int // Contract term in months
 	// Vnics updates the description for each vNIC on the MVE. Order matters —
 	// entries map positionally to the existing vNICs. Leave nil or empty to
-	// leave descriptions unchanged.
+	// leave descriptions unchanged. Every entry must have a non-empty
+	// description — the API rejects empty ones, so descriptions can't be
+	// cleared once set.
 	Vnics []MVEVnicUpdate
 
 	WaitForUpdate bool          // Wait until the MVE updates before returning

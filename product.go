@@ -63,8 +63,8 @@ type ModifyProductRequest struct {
 	// PUT /v2/product/mcr2/{productUid} endpoint when non-nil.
 	ASN *int `json:"asn,omitempty"`
 	// Vnics updates vNIC descriptions on PUT /v2/product/mve/{productUid}.
-	// Only set this for MVE products — the API validates vnic entries before
-	// checking product type and will reject non-empty vnics on Port/MCR.
+	// Only set this for MVE products — the API silently ignores vnics on
+	// Port/MCR, so the SDK rejects them up front to avoid a silent no-op.
 	Vnics []MVEVnicUpdate `json:"vnics,omitempty"`
 }
 
