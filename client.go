@@ -421,8 +421,9 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*htt
 		// Base64 encode the response body
 		encodedBody := base64.StdEncoding.EncodeToString(b)
 
-		// Create new reader for the later code
+		// Reset the body so later decode paths and callers can re-read it
 		respBody = io.NopCloser(bytes.NewReader(b))
+		resp.Body = respBody
 
 		attrs = append(attrs, slog.String("response_body_base_64", encodedBody))
 	}

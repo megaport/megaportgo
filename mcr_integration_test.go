@@ -595,6 +595,16 @@ func (suite *MCRIntegrationTestSuite) TestMCRWithIPsecAddOn() {
 	}
 	suite.EqualValues("MCR with IPsec", mcr.Name)
 
+	// Read back IPsec state — no VXCs yet, so no configured tunnels
+	logger.InfoContext(ctx, "Getting MCR IPsec configuration", slog.String("mcr_id", mcrId))
+	ipsec, ipsecErr := mcrSvc.GetMCRIPsec(ctx, mcrId)
+	if ipsecErr != nil {
+		suite.FailNowf("could not get mcr ipsec", "could not get mcr ipsec %v", ipsecErr)
+	}
+	suite.NotNil(ipsec)
+	suite.Empty(ipsec.IPsecConfiguredVXCs)
+	suite.EqualValues(0, ipsec.TotalTunnelCount)
+
 	// Delete MCR
 	logger.InfoContext(ctx, "Deleting MCR now", slog.String("mcr_id", mcrId))
 	hardDeleteRes, deleteErr := mcrSvc.DeleteMCR(ctx, &DeleteMCRRequest{

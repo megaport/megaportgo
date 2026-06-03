@@ -46,6 +46,9 @@ type MCRService interface {
 	UpdateMCRWithAddOn(ctx context.Context, mcrID string, req MCRAddOnRequest) error
 	// UpdateMCRIPsecAddOn updates an existing IPsec add-on on an MCR. Setting tunnelCount to 0 will disable IPsec.
 	UpdateMCRIPsecAddOn(ctx context.Context, mcrID string, addOnUID string, tunnelCount int) error
+	// GetMCRIPsec returns the IPsec tunnel configuration for an MCR. The response
+	// never includes the pre-shared key or phase lifetimes.
+	GetMCRIPsec(ctx context.Context, mcrID string) (*MCRIPsecConfiguration, error)
 	// WaitForMCRReady polls until the MCR reaches a ready provisioning state.
 	// A zero timeout defaults to 5 minutes. Returns ErrMCRNotFound or ErrMCRDecommissioned
 	// if the MCR is deleted or decommissioned while polling.
@@ -706,6 +709,38 @@ func (svc *MCRServiceOp) UpdateMCRIPsecAddOn(ctx context.Context, mcrID string, 
 	}
 	_, err = svc.Client.Do(ctx, clientReq, nil)
 	return err
+}
+
+// GetMCRIPsec returns the IPsec tunnel configuration for an MCR.
+// GET /v3/products/mcrs/{productUid}/ipsec
+// The response never includes the pre-shared key or phase lifetimes — those
+// cannot be read back after ordering.
+func (svc *MCRServiceOp) GetMCRIPsec(ctx context.Context, mcrID string) (*MCRIPsecConfiguration, error) {
+	url := "/v3/products/mcrs/" + mcrID + "/ipsec"
+
+	clientReq, err := svc.Client.NewRequest(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := svc.Client.Do(ctx, clientReq, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	body, fileErr := io.ReadAll(response.Body)
+	if fileErr != nil {
+		return nil, fileErr
+	}
+
+	ipsecRes := &mcrIPsecResponse{}
+	unmarshalErr := json.Unmarshal(body, ipsecRes)
+	if unmarshalErr != nil {
+		return nil, unmarshalErr
+	}
+
+	return ipsecRes.Data, nil
 }
 
 // WaitForMCRReady polls until the MCR identified by mcrID reaches a ready
