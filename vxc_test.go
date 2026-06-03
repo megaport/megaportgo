@@ -1423,23 +1423,25 @@ func (suite *VXCClientTestSuite) TestDecomissionedVXCMarshal() {
 }
 
 // TestMCRVXCWithIPsecTunnel verifies that an IPsec tunnel attached to an
-// MCR VXC A-End interface serialises to the wire format documented at
-// https://docs.megaport.com/mcr/ipsec-mcr/.
+// MCR VXC A-End interface serialises to the shape the API parses: a single
+// ipSecTunnelOptions object per interface with interfaceType "ipSecTunnel".
 func (suite *VXCClientTestSuite) TestMCRVXCWithIPsecTunnel() {
 	phase1 := 28800
 	phase2 := 3600
+	passive := false
 	iface := PartnerConfigInterface{
-		IpAddresses: []string{"192.0.2.1/30"},
-		IpsecTunnels: []IPsecTunnelConfig{
-			{
-				Description:          "tunnel-a",
-				SourceIpAddress:      "192.0.2.1",
-				DestinationIpAddress: "198.51.100.1",
-				PreSharedKey:         "notARealKey12345",
-				StartAction:          IPsecStartActionPassive,
-				Phase1Lifetime:       &phase1,
-				Phase2Lifetime:       &phase2,
-			},
+		Description:   "tunnel-a",
+		InterfaceType: InterfaceTypeIPSecTunnel,
+		IpAddresses:   []string{"192.0.2.1/30"},
+		IpSecTunnelOptions: &IPsecTunnelConfig{
+			SourceIpAddress:      "192.0.2.1",
+			DestinationIpAddress: "198.51.100.1",
+			PreSharedKey:         "notARealKey12345",
+			Passive:              &passive,
+			LocalId:              "local.example.com",
+			RemoteId:             "remote.example.com",
+			Phase1Lifetime:       &phase1,
+			Phase2Lifetime:       &phase2,
 		},
 	}
 	cfg := VXCOrderVrouterPartnerConfig{Interfaces: []PartnerConfigInterface{iface}}
@@ -1448,41 +1450,49 @@ func (suite *VXCClientTestSuite) TestMCRVXCWithIPsecTunnel() {
 	suite.NoError(err)
 
 	var got struct {
-		Interfaces []struct {
-			IpsecTunnels []map[string]any `json:"ipsecTunnels"`
-		} `json:"interfaces"`
+		Interfaces []map[string]any `json:"interfaces"`
 	}
 	suite.NoError(json.Unmarshal(raw, &got))
 	suite.Require().Len(got.Interfaces, 1)
-	suite.Require().Len(got.Interfaces[0].IpsecTunnels, 1)
 
-	tunnel := got.Interfaces[0].IpsecTunnels[0]
-	suite.Equal("tunnel-a", tunnel["description"])
+	gotIface := got.Interfaces[0]
+	suite.Equal("ipSecTunnel", gotIface["interfaceType"])
+	suite.Equal("tunnel-a", gotIface["description"])
+	_, hasLegacyKey := gotIface["ipsecTunnels"]
+	suite.False(hasLegacyKey, "legacy ipsecTunnels array must not be serialised")
+
+	tunnel, ok := gotIface["ipSecTunnelOptions"].(map[string]any)
+	suite.Require().True(ok, "expected ipSecTunnelOptions object")
 	suite.Equal("192.0.2.1", tunnel["sourceIpAddress"])
 	suite.Equal("198.51.100.1", tunnel["destinationIpAddress"])
 	suite.Equal("notARealKey12345", tunnel["preSharedKey"])
-	suite.Equal("passive", tunnel["startAction"])
+	suite.Equal(false, tunnel["passive"])
+	suite.Equal("local.example.com", tunnel["localId"])
+	suite.Equal("remote.example.com", tunnel["remoteId"])
 	suite.EqualValues(28800, tunnel["phase1Lifetime"])
 	suite.EqualValues(3600, tunnel["phase2Lifetime"])
+	_, hasStartAction := tunnel["startAction"]
+	suite.False(hasStartAction, "startAction is not an API field")
 
-	// Unset optional fields must be omitted from the wire payload.
+	// Unset optional fields must be omitted so the API defaults apply
+	// (notably passive, which the API defaults to true).
 	minimal := PartnerConfigInterface{
-		IpsecTunnels: []IPsecTunnelConfig{{
+		InterfaceType: InterfaceTypeIPSecTunnel,
+		IpSecTunnelOptions: &IPsecTunnelConfig{
 			SourceIpAddress:      "192.0.2.2",
 			DestinationIpAddress: "198.51.100.2",
 			PreSharedKey:         "anotherKey12345",
-		}},
+		},
 	}
 	raw, err = json.Marshal(minimal)
 	suite.NoError(err)
 	var minimalGot struct {
-		IpsecTunnels []map[string]any `json:"ipsecTunnels"`
+		IpSecTunnelOptions map[string]any `json:"ipSecTunnelOptions"`
 	}
 	suite.NoError(json.Unmarshal(raw, &minimalGot))
-	suite.Require().Len(minimalGot.IpsecTunnels, 1)
-	minimalTunnel := minimalGot.IpsecTunnels[0]
-	for _, key := range []string{"startAction", "phase1Lifetime", "phase2Lifetime", "description"} {
-		_, ok := minimalTunnel[key]
+	suite.Require().NotNil(minimalGot.IpSecTunnelOptions)
+	for _, key := range []string{"passive", "localId", "remoteId", "phase1Lifetime", "phase2Lifetime"} {
+		_, ok := minimalGot.IpSecTunnelOptions[key]
 		suite.False(ok, "expected key %q to be absent", key)
 	}
 }

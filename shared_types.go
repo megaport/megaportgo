@@ -32,13 +32,11 @@ const (
 	CONNECT_TYPE_AWS_VIF               = "AWS"
 	CONNECT_TYPE_AWS_HOSTED_CONNECTION = "AWSHC"
 
-	// InterfaceTypeSubInterface and InterfaceTypeIPSecTunnel are the interface
-	// type string values accepted by the Megaport API. These are new exports
-	// introduced in this release — no previously released version of this SDK
-	// exported these constants, so there are no existing consumers to maintain
-	// backwards compatibility with.
-	InterfaceTypeSubInterface = "SUBINTERFACE"
-	InterfaceTypeIPSecTunnel  = "IPSEC_TUNNEL"
+	// InterfaceTypeSubInterface and InterfaceTypeIPSecTunnel are the
+	// interface type values accepted by the Megaport API (camelCase —
+	// the API matches these exactly).
+	InterfaceTypeSubInterface = "subInterface"
+	InterfaceTypeIPSecTunnel  = "ipSecTunnel"
 
 	// maxCostCentreLength is the maximum number of characters the API accepts for a cost centre.
 	maxCostCentreLength = 255
