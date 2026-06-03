@@ -265,7 +265,7 @@ func (svc *MVEServiceOp) ModifyMVE(ctx context.Context, req *ModifyMVERequest) (
 	if req == nil {
 		return nil, ErrModifyMVERequestNil
 	}
-	if len(req.CostCentre) > 255 {
+	if len(req.CostCentre) > maxCostCentreLength {
 		return nil, ErrCostCentreTooLong
 	}
 
@@ -283,9 +283,7 @@ func (svc *MVEServiceOp) ModifyMVE(ctx context.Context, req *ModifyMVERequest) (
 	if req.ContractTermMonths != nil {
 		modifyProductReq.ContractTermMonths = *req.ContractTermMonths
 	}
-	if len(req.Vnics) > 0 {
-		modifyProductReq.Vnics = req.Vnics
-	}
+	modifyProductReq.Vnics = req.Vnics
 
 	_, err := svc.Client.ProductService.ModifyProduct(ctx, modifyProductReq)
 	if err != nil {

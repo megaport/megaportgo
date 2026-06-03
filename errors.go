@@ -37,7 +37,7 @@ func (r *ErrorResponse) Error() string {
 var ErrWrongProductModify = errors.New("you can only update Ports, MCR, and MVE using this method")
 
 // ErrVnicsOnNonMVE is returned when vNIC updates are supplied for a non-MVE product
-var ErrVnicsOnNonMVE = errors.New("vnics can only be modified on MVE products")
+var ErrVnicsOnNonMVE = errors.New("vNICs can only be modified on MVE products")
 
 // ErrInvalidTerm creates an error indicating an invalid contract term, dynamically listing the valid terms.
 var ErrInvalidTerm = fmt.Errorf("invalid term, valid terms are %s months", intSliceToString(VALID_CONTRACT_TERMS))
