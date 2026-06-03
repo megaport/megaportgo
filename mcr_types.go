@@ -179,7 +179,7 @@ type mcrResponse struct {
 type MCRIPsecConfiguration struct {
 	IPsecConfiguredVXCs []IPsecConfiguredVXC `json:"ipSecConfiguredVxcs"`
 	TotalTunnelCount    int                  `json:"totalTunnelCount"`
-	MaxTunnelCountLimit int                  `json:"maxTunnelCountLimit"`
+	MaxTunnelCountLimit int                  `json:"maxTunnelCountLimit"` // 0 if the API omits it; the platform default limit is currently 10
 }
 
 // IPsecConfiguredVXC is a VXC on an MCR with configured IPsec tunnels.
@@ -197,7 +197,7 @@ type IPsecTunnel struct {
 	DestinationIpAddress string `json:"destinationIpAddress"`
 	LocalID              string `json:"localId,omitempty"`
 	RemoteID             string `json:"remoteId,omitempty"`
-	VLAN                 int    `json:"vlan,omitempty"`
+	VLAN                 int    `json:"vlan"`
 }
 
 // mcrIPsecResponse represents a response from the Megaport MCR API after querying an MCR's IPsec configuration.

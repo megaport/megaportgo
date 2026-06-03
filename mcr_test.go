@@ -280,6 +280,20 @@ func (suite *MCRClientTestSuite) TestGetMCRIPsecNoVXCs() {
 	suite.Equal(10, got.MaxTunnelCountLimit)
 }
 
+// TestGetMCRIPsecNotFound tests error handling when the MCR does not exist.
+func (suite *MCRClientTestSuite) TestGetMCRIPsecNotFound() {
+	ctx := context.Background()
+	mcrSvc := suite.client.MCRService
+	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	suite.mux.HandleFunc(fmt.Sprintf("/v3/products/mcrs/%s/ipsec", mcrId), func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprint(w, `{"message": "MCR not found", "data": ""}`)
+	})
+	got, err := mcrSvc.GetMCRIPsec(ctx, mcrId)
+	suite.Error(err)
+	suite.Nil(got)
+}
+
 // TestCreatePrefixFilterList tests the CreatePrefixFilterList method.
 func (suite *MCRClientTestSuite) TestCreatePrefixFilterList() {
 	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
