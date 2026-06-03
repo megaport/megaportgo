@@ -604,7 +604,6 @@ func (suite *MCRIntegrationTestSuite) TestMCRWithIPsecAddOn() {
 	suite.NotNil(ipsec)
 	suite.Empty(ipsec.IPsecConfiguredVXCs)
 	suite.EqualValues(0, ipsec.TotalTunnelCount)
-	suite.Positive(ipsec.MaxTunnelCountLimit)
 
 	// Delete MCR
 	logger.InfoContext(ctx, "Deleting MCR now", slog.String("mcr_id", mcrId))

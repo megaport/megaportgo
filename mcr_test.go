@@ -280,12 +280,39 @@ func (suite *MCRClientTestSuite) TestGetMCRIPsecNoVXCs() {
 	suite.Equal(10, got.MaxTunnelCountLimit)
 }
 
+// TestGetMCRIPsecWithLogResponseBody ensures the response body survives the
+// LogResponseBody debug path in Client.Do and can still be read by the caller.
+func (suite *MCRClientTestSuite) TestGetMCRIPsecWithLogResponseBody() {
+	ctx := context.Background()
+	suite.client.LogResponseBody = true
+	mcrSvc := suite.client.MCRService
+	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	jblob := `{
+		"message": "test-message",
+		"terms": "test-terms",
+		"data": {
+			"ipSecConfiguredVxcs": [],
+			"totalTunnelCount": 0,
+			"maxTunnelCountLimit": 10
+		}
+	}`
+	suite.mux.HandleFunc(fmt.Sprintf("/v3/products/mcrs/%s/ipsec", mcrId), func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, jblob)
+	})
+	got, err := mcrSvc.GetMCRIPsec(ctx, mcrId)
+	suite.NoError(err)
+	suite.NotNil(got)
+	suite.Equal(10, got.MaxTunnelCountLimit)
+}
+
 // TestGetMCRIPsecNotFound tests error handling when the MCR does not exist.
 func (suite *MCRClientTestSuite) TestGetMCRIPsecNotFound() {
 	ctx := context.Background()
 	mcrSvc := suite.client.MCRService
 	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
 	suite.mux.HandleFunc(fmt.Sprintf("/v3/products/mcrs/%s/ipsec", mcrId), func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprint(w, `{"message": "MCR not found", "data": ""}`)
 	})
