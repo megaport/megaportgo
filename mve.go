@@ -76,13 +76,21 @@ type ListMVEsRequest struct {
 
 // ModifyMVERequest represents a request to modify an MVE
 type ModifyMVERequest struct {
-	MVEID                 string
-	Name                  string
+	MVEID string
+	Name  string
+	// MarketplaceVisibility is forwarded to the API when non-nil. Leave nil
+	// to leave the current visibility unchanged.
 	MarketplaceVisibility *bool
 	CostCentre            string
 	ContractTermMonths    *int // Contract term in months
+	// Vnics updates the description for each vNIC on the MVE. Order matters —
+	// entries map positionally to the existing vNICs. Leave nil or empty to
+	// leave descriptions unchanged. Every entry must have a non-empty
+	// description — the API rejects empty ones, so descriptions can't be
+	// cleared once set.
+	Vnics []MVEVnicUpdate
 
-	WaitForUpdate bool          // Wait until the MCVEupdates before returning
+	WaitForUpdate bool          // Wait until the MVE updates before returning
 	WaitForTime   time.Duration // How long to wait for the MVE to update if WaitForUpdate is true (default is 5 minutes)
 }
 
@@ -257,10 +265,14 @@ func (svc *MVEServiceOp) ModifyMVE(ctx context.Context, req *ModifyMVERequest) (
 	if req == nil {
 		return nil, ErrModifyMVERequestNil
 	}
+	if len(req.CostCentre) > maxCostCentreLength {
+		return nil, ErrCostCentreTooLong
+	}
+
 	modifyProductReq := &ModifyProductRequest{
 		ProductID:             req.MVEID,
 		ProductType:           PRODUCT_MVE,
-		MarketplaceVisibility: PtrTo(false),
+		MarketplaceVisibility: req.MarketplaceVisibility,
 	}
 	if req.Name != "" {
 		modifyProductReq.Name = req.Name
@@ -271,6 +283,7 @@ func (svc *MVEServiceOp) ModifyMVE(ctx context.Context, req *ModifyMVERequest) (
 	if req.ContractTermMonths != nil {
 		modifyProductReq.ContractTermMonths = *req.ContractTermMonths
 	}
+	modifyProductReq.Vnics = req.Vnics
 
 	_, err := svc.Client.ProductService.ModifyProduct(ctx, modifyProductReq)
 	if err != nil {

@@ -39,6 +39,9 @@ const (
 	// backwards compatibility with.
 	InterfaceTypeSubInterface = "SUBINTERFACE"
 	InterfaceTypeIPSecTunnel  = "IPSEC_TUNNEL"
+
+	// maxCostCentreLength is the maximum number of characters the API accepts for a cost centre.
+	maxCostCentreLength = 255
 )
 
 var (
