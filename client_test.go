@@ -485,6 +485,28 @@ func (suite *ClientTestSuite) TestAuthorize_tokenProviderError() {
 	suite.Contains(err.Error(), "failed to get token from provider")
 }
 
+// TestAuthorize_withTokenURL tests that WithTokenURL bypasses the host switch and reaches the custom endpoint.
+func (suite *ClientTestSuite) TestAuthorize_withTokenURL() {
+	var tokenEndpointHit bool
+	suite.mux.HandleFunc("/oauth2/token", func(w http.ResponseWriter, r *http.Request) {
+		tokenEndpointHit = true
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"access_token":"custom-token","token_type":"Bearer","expires_in":3600}`)
+	})
+
+	c, err := New(nil,
+		WithBaseURL(suite.server.URL),
+		WithCredentials("test-key", "test-secret"),
+		WithTokenURL(suite.server.URL+"/oauth2/token"),
+	)
+	suite.Require().NoError(err)
+
+	authInfo, err := c.Authorize(ctx)
+	suite.Require().NoError(err)
+	suite.True(tokenEndpointHit, "custom token endpoint should have been called")
+	suite.Equal("custom-token", authInfo.AccessToken)
+}
+
 // TestDo_withTokenProvider tests a full request cycle using TokenProvider.
 func (suite *ClientTestSuite) TestDo_withTokenProvider() {
 	type response struct {

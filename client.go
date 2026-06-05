@@ -100,6 +100,7 @@ type Client struct {
 
 	accessToken string    // Access Token for client
 	tokenExpiry time.Time // Token Expiration
+	tokenURL    string    // Optional override for the OAuth token endpoint
 
 	LogResponseBody bool // Log Response Body of HTTP Requests
 
@@ -320,6 +321,15 @@ func WithTokenProvider(tp TokenProvider) ClientOpt {
 	}
 }
 
+// WithTokenURL overrides the OAuth token endpoint used by Authorize. When set, the host-based
+// environment switch is bypassed entirely, allowing non-standard base URLs (e.g. localhost) to authenticate.
+func WithTokenURL(tokenURL string) ClientOpt {
+	return func(c *Client) error {
+		c.tokenURL = tokenURL
+		return nil
+	}
+}
+
 // NewRequest creates an API request. A relative URL can be provided in urlStr, which will be resolved to the
 // BaseURL of the Client. Relative URLS should always be specified without a preceding slash. If specified, the
 // value pointed to by body is JSON encoded and included in as the request body.
@@ -515,17 +525,18 @@ func (c *Client) Authorize(ctx context.Context) (*AuthInfo, error) {
 	authHeader := base64.StdEncoding.EncodeToString([]byte(c.AccessKey + ":" + c.SecretKey))
 
 	// Set the URL for the token endpoint
-	var tokenURL string
-
-	switch c.BaseURL.Host {
-	case "api.megaport.com":
-		tokenURL = "https://auth-m2m.megaport.com/oauth2/token"
-	case "api-staging.megaport.com":
-		tokenURL = "https://auth-m2m-staging.megaport.com/oauth2/token"
-	case "":
-		tokenURL = "https://auth-m2m-mpone-dev.megaport.com/oauth2/token"
-	default:
-		return nil, errors.New("unknown API environment")
+	tokenURL := c.tokenURL
+	if tokenURL == "" {
+		switch c.BaseURL.Host {
+		case "api.megaport.com":
+			tokenURL = "https://auth-m2m.megaport.com/oauth2/token"
+		case "api-staging.megaport.com":
+			tokenURL = "https://auth-m2m-staging.megaport.com/oauth2/token"
+		case "api-mpone-dev.megaport.com":
+			tokenURL = "https://auth-m2m-mpone-dev.megaport.com/oauth2/token"
+		default:
+			return nil, errors.New("unknown API environment")
+		}
 	}
 
 	// Create form data for the request body
