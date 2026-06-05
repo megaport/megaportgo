@@ -532,7 +532,7 @@ func (c *Client) Authorize(ctx context.Context) (*AuthInfo, error) {
 			tokenURL = "https://auth-m2m.megaport.com/oauth2/token"
 		case "api-staging.megaport.com":
 			tokenURL = "https://auth-m2m-staging.megaport.com/oauth2/token"
-		case "":
+		case "api-mpone-dev.megaport.com":
 			tokenURL = "https://auth-m2m-mpone-dev.megaport.com/oauth2/token"
 		default:
 			return nil, errors.New("unknown API environment")
