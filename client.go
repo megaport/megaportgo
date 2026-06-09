@@ -18,6 +18,12 @@ import (
 
 type Environment string
 
+type disableResponseBodyLoggingKey string
+
+const (
+	disableResponseBodyLogging disableResponseBodyLoggingKey = "disable_response_body_logging"
+)
+
 const (
 	EnvironmentStaging     Environment = "https://api-staging.megaport.com/"
 	EnvironmentProduction  Environment = "https://api.megaport.com/"
@@ -333,7 +339,7 @@ func WithTokenURL(tokenURL string) ClientOpt {
 // NewRequest creates an API request. A relative URL can be provided in urlStr, which will be resolved to the
 // BaseURL of the Client. Relative URLS should always be specified without a preceding slash. If specified, the
 // value pointed to by body is JSON encoded and included in as the request body.
-func (c *Client) NewRequest(ctx context.Context, method, urlStr string, body interface{}) (*http.Request, error) {
+func (c *Client) NewRequest(ctx context.Context, method, urlStr string, body any) (*http.Request, error) {
 	u, err := c.BaseURL.Parse(urlStr)
 	if err != nil {
 		return nil, err
@@ -402,7 +408,7 @@ func (c *Client) SetOnRequestCompleted(rc RequestCompletionCallback) {
 // Do sends an API request and returns the API response. The API response is JSON decoded and stored in the value
 // pointed to by v, or returned as an error if an API error has occurred. If v implements the io.Writer interface,
 // the raw response will be written to v, without attempting to decode it.
-func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*http.Response, error) {
+func (c *Client) Do(ctx context.Context, req *http.Request, v any) (*http.Response, error) {
 	reqStart := time.Now()
 	resp, err := DoRequestWithClient(ctx, c.HTTPClient, req)
 	if err != nil {
@@ -422,18 +428,20 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*htt
 		slog.String("method", req.Method),
 		slog.String("trace_id", resp.Header.Get(headerTraceId))}
 
-	if c.LogResponseBody {
+	tmpDisable := ctx.Value(disableResponseBodyLogging) != nil
+	if c.LogResponseBody && !tmpDisable {
 		b, err := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
 		if err != nil {
 			return nil, err
 		}
 
-		// Base64 encode the response body
-		encodedBody := base64.StdEncoding.EncodeToString(b)
-
 		// Create new reader for the later code
 		respBody = io.NopCloser(bytes.NewReader(b))
+		resp.Body = respBody
 
+		// Base64 encode the response body
+		encodedBody := base64.StdEncoding.EncodeToString(b)
 		attrs = append(attrs, slog.String("response_body_base_64", encodedBody))
 	}
 
@@ -506,8 +514,6 @@ func (c *Client) Authorize(ctx context.Context) (*AuthInfo, error) {
 		return &AuthInfo{AccessToken: token}, nil
 	}
 
-	c.Logger.DebugContext(ctx, "authorizing client using access key and secret key", slog.String("access_key", c.AccessKey))
-
 	// Shortcut if we've already authenticated.
 	if time.Now().Before(c.tokenExpiry) {
 		return &AuthInfo{Expiration: c.tokenExpiry, AccessToken: c.accessToken}, nil
@@ -556,8 +562,10 @@ func (c *Client) Authorize(ctx context.Context) (*AuthInfo, error) {
 	clientReq.Header.Set("Authorization", "Basic "+authHeader)
 
 	// Create an HTTP client and send the request
-	c.Logger.DebugContext(ctx, "login request", slog.String("token_url", tokenURL), slog.String("authorization_header", clientReq.Header.Get("Authorization")), slog.String("content_type", clientReq.Header.Get("Content_Type")))
-	resp, err := c.Do(ctx, clientReq, nil)
+	c.Logger.DebugContext(ctx, "login request", slog.String("token_url", tokenURL), slog.String("content_type", clientReq.Header.Get("Content-Type")))
+	// Temporarily disable response body logging to prevent sensitive information being leaked.
+	tmpContext := context.WithValue(ctx, disableResponseBodyLogging, true)
+	resp, err := c.Do(tmpContext, clientReq, nil)
 	if err != nil {
 		return nil, err
 	}
