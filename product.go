@@ -544,7 +544,7 @@ func isNilPriceBookRequest(req PriceBookRequest) bool {
 	}
 	v := reflect.ValueOf(req)
 	switch v.Kind() {
-	case reflect.Chan, reflect.Func, reflect.Map, reflect.Ptr, reflect.Interface, reflect.Slice:
+	case reflect.Chan, reflect.Func, reflect.Map, reflect.Pointer, reflect.Interface, reflect.Slice:
 		return v.IsNil()
 	default:
 		return false
