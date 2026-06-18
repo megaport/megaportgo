@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff  # v5.6.0
         with:
-          go-version: '1.22'
+          go-version-file: 'go.mod'
           cache: false
       - name: Run linters
         # Pinned to a SHA whitelisted for the org — any new SHA must be
