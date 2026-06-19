@@ -806,13 +806,13 @@ func (suite *VXCIntegrationTestSuite) TestMCRVXCWithIPsec() {
 						Description:   "integration-test-tunnel",
 						InterfaceType: InterfaceTypeIPSecTunnel,
 						IpAddresses:   []string{"192.0.2.1/30"},
-						IpSecTunnelOptions: &IPsecTunnelConfig{
+						IpSecTunnelOptions: []IPsecTunnelConfig{{
 							SourceIpAddress:      "192.0.2.1",
 							DestinationIpAddress: "198.51.100.1",
 							PreSharedKey:         "integrationTestKey123",
 							Phase1Lifetime:       &phase1,
 							Phase2Lifetime:       &phase2,
-						},
+						}},
 					},
 				},
 			},
