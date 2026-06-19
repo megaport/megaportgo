@@ -321,6 +321,21 @@ func (suite *MCRClientTestSuite) TestGetMCRIPsecNotFound() {
 	suite.Nil(got)
 }
 
+// TestGetMCRIPsecNoData ensures a 2xx response without a data payload returns
+// ErrMCRIPsecNoData rather than a nil configuration that callers would panic on.
+func (suite *MCRClientTestSuite) TestGetMCRIPsecNoData() {
+	ctx := context.Background()
+	mcrSvc := suite.client.MCRService
+	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	suite.mux.HandleFunc(fmt.Sprintf("/v3/products/mcrs/%s/ipsec", mcrId), func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, `{"message": "test-message", "terms": "test-terms"}`)
+	})
+	got, err := mcrSvc.GetMCRIPsec(ctx, mcrId)
+	suite.ErrorIs(err, ErrMCRIPsecNoData)
+	suite.Nil(got)
+}
+
 // TestCreatePrefixFilterList tests the CreatePrefixFilterList method.
 func (suite *MCRClientTestSuite) TestCreatePrefixFilterList() {
 	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"

@@ -740,6 +740,10 @@ func (svc *MCRServiceOp) GetMCRIPsec(ctx context.Context, mcrID string) (*MCRIPs
 		return nil, unmarshalErr
 	}
 
+	if ipsecRes.Data == nil {
+		return nil, fmt.Errorf("%w (trace_id %q)", ErrMCRIPsecNoData, response.Header.Get(headerTraceId))
+	}
+
 	return ipsecRes.Data, nil
 }
 
