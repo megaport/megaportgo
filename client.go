@@ -413,9 +413,12 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*htt
 		slog.String("trace_id", resp.Header.Get(headerTraceId))}
 
 	if c.LogResponseBody {
-		b, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, err
+		b, readErr := io.ReadAll(resp.Body)
+		// Close the original network body once it has been drained; the
+		// caller only sees the in-memory replacement below.
+		_ = resp.Body.Close()
+		if readErr != nil {
+			return nil, readErr
 		}
 
 		// Base64 encode the response body
