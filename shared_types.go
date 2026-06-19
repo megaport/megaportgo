@@ -33,8 +33,8 @@ const (
 	CONNECT_TYPE_AWS_HOSTED_CONNECTION = "AWSHC"
 
 	// InterfaceTypeSubInterface and InterfaceTypeIPSecTunnel are the
-	// interface type values accepted by the Megaport API (camelCase —
-	// the API matches these exactly).
+	// interface type values accepted by the Megaport API. They are
+	// camelCase and the API matches them exactly.
 	InterfaceTypeSubInterface = "subInterface"
 	InterfaceTypeIPSecTunnel  = "ipSecTunnel"
 
