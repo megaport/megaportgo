@@ -713,7 +713,7 @@ func (svc *MCRServiceOp) UpdateMCRIPsecAddOn(ctx context.Context, mcrID string, 
 
 // GetMCRIPsec returns the IPsec tunnel configuration for an MCR.
 // GET /v3/products/mcrs/{productUid}/ipsec
-// The response never includes the pre-shared key or phase lifetimes — those
+// The response never includes the pre-shared key or phase lifetimes: those
 // cannot be read back after ordering.
 func (svc *MCRServiceOp) GetMCRIPsec(ctx context.Context, mcrID string) (*MCRIPsecConfiguration, error) {
 	url := "/v3/products/mcrs/" + mcrID + "/ipsec"

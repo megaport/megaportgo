@@ -595,7 +595,7 @@ func (suite *MCRIntegrationTestSuite) TestMCRWithIPsecAddOn() {
 	}
 	suite.EqualValues("MCR with IPsec", mcr.Name)
 
-	// Read back IPsec state — no VXCs yet, so no configured tunnels
+	// Read back IPsec state: no VXCs yet, so no configured tunnels
 	logger.InfoContext(ctx, "Getting MCR IPsec configuration", slog.String("mcr_id", mcrId))
 	ipsec, ipsecErr := mcrSvc.GetMCRIPsec(ctx, mcrId)
 	if ipsecErr != nil {
