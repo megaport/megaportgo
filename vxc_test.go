@@ -1498,6 +1498,25 @@ func (suite *VXCClientTestSuite) TestMCRVXCWithIPsecTunnel() {
 		_, ok := minimalGot.IpSecTunnelOptions[0][key]
 		suite.False(ok, "expected key %q to be absent", key)
 	}
+
+	// The API accepts multiple tunnels per interface, so the field must
+	// serialise every element of the slice (not collapse to one object).
+	multi := PartnerConfigInterface{
+		InterfaceType: InterfaceTypeIPSecTunnel,
+		IpSecTunnelOptions: []IPsecTunnelConfig{
+			{SourceIpAddress: "192.0.2.3", DestinationIpAddress: "198.51.100.3", PreSharedKey: "firstKey12345678"},
+			{SourceIpAddress: "192.0.2.4", DestinationIpAddress: "198.51.100.4", PreSharedKey: "secondKey1234567"},
+		},
+	}
+	raw, err = json.Marshal(multi)
+	suite.NoError(err)
+	var multiGot struct {
+		IpSecTunnelOptions []map[string]any `json:"ipSecTunnelOptions"`
+	}
+	suite.NoError(json.Unmarshal(raw, &multiGot))
+	suite.Require().Len(multiGot.IpSecTunnelOptions, 2)
+	suite.Equal("192.0.2.3", multiGot.IpSecTunnelOptions[0]["sourceIpAddress"])
+	suite.Equal("192.0.2.4", multiGot.IpSecTunnelOptions[1]["sourceIpAddress"])
 }
 
 // TestListVXCs tests the ListVXCs method with various filters
