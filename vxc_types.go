@@ -341,14 +341,15 @@ type PartnerConfigInterface struct {
 	IpMtu              int                   `json:"ipMtu,omitempty"`
 	PacketFilterIn     *int64                `json:"packetFilterIn,omitempty"`     // NAT Gateway packet filter ID to apply to inbound packets.
 	PacketFilterOut    *int64                `json:"packetFilterOut,omitempty"`    // NAT Gateway packet filter ID to apply to outbound packets.
-	IpSecTunnelOptions []IPsecTunnelConfig   `json:"ipSecTunnelOptions,omitempty"` // Requires InterfaceType to be InterfaceTypeIPSecTunnel.
+	IpSecTunnelOptions *IPsecTunnelConfig    `json:"ipSecTunnelOptions,omitempty"` // Requires InterfaceType to be InterfaceTypeIPSecTunnel.
 }
 
-// IPsecTunnelConfig represents a single IPsec tunnel on a VXC A-End
-// interface on an MCR. An interface carries a list of these
-// (PartnerConfigInterface.IpSecTunnelOptions). See
+// IPsecTunnelConfig is the IPsec tunnel on a VXC A-End ipSecTunnel
+// interface on an MCR (PartnerConfigInterface.IpSecTunnelOptions, one per
+// interface). Attach multiple ipSecTunnel interfaces for multiple tunnels,
+// up to the MCR's IPsec add-on tunnel count. See
 // https://docs.megaport.com/mcr/ipsec-mcr/. The MCR must have an IPsec
-// add-on provisioned (see MCRAddOnIPsecConfig). Tunnels take their
+// add-on provisioned (see MCRAddOnIPsecConfig). The tunnel takes its
 // description from the enclosing PartnerConfigInterface.Description.
 type IPsecTunnelConfig struct {
 	SourceIpAddress      string `json:"sourceIpAddress"`
