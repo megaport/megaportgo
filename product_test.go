@@ -193,6 +193,49 @@ func (suite *ProductClientTestSuite) TestModifyProduct() {
 	suite.Equal(wantRes, gotRes)
 }
 
+// TestModifyProductVnicsOnNonMVE verifies ModifyProduct rejects vNIC updates
+// when the product is not an MVE, without dispatching the HTTP request.
+func (suite *ProductClientTestSuite) TestModifyProductVnicsOnNonMVE() {
+	ctx := context.Background()
+	productSvc := suite.client.ProductService
+
+	for _, productType := range []string{PRODUCT_MEGAPORT, PRODUCT_MCR} {
+		req := &ModifyProductRequest{
+			ProductID:   "36b3f68e-2f54-4331-bf94-f8984449365f",
+			ProductType: productType,
+			Vnics:       []MVEVnicUpdate{{Description: "should-be-rejected"}},
+		}
+		gotRes, err := productSvc.ModifyProduct(ctx, req)
+		suite.ErrorIs(err, ErrVnicsOnNonMVE)
+		suite.Nil(gotRes)
+	}
+}
+
+// TestModifyProductNilRequest verifies ModifyProduct rejects a nil request
+// up front instead of panicking on field access.
+func (suite *ProductClientTestSuite) TestModifyProductNilRequest() {
+	ctx := context.Background()
+	gotRes, err := suite.client.ProductService.ModifyProduct(ctx, nil)
+	suite.ErrorIs(err, ErrModifyProductRequestNil)
+	suite.Nil(gotRes)
+}
+
+// TestModifyProductUnknownTypeTakesPrecedence verifies that an unknown
+// ProductType yields ErrWrongProductModify even when Vnics are supplied —
+// the product-type check runs before the vNIC guard.
+func (suite *ProductClientTestSuite) TestModifyProductUnknownTypeTakesPrecedence() {
+	ctx := context.Background()
+	productSvc := suite.client.ProductService
+	req := &ModifyProductRequest{
+		ProductID:   "36b3f68e-2f54-4331-bf94-f8984449365f",
+		ProductType: "MEGAPORT", // uppercase — not one of the known constants
+		Vnics:       []MVEVnicUpdate{{Description: "should-be-irrelevant"}},
+	}
+	gotRes, err := productSvc.ModifyProduct(ctx, req)
+	suite.ErrorIs(err, ErrWrongProductModify)
+	suite.Nil(gotRes)
+}
+
 // TestDeleteProduct tests the DeleteProduct method
 func (suite *ProductClientTestSuite) TestDeleteProduct() {
 	ctx := context.Background()
@@ -679,4 +722,27 @@ func (suite *ProductClientTestSuite) TestListProductResourceTags() {
 	res, err := productSvc.ListProductResourceTags(ctx, productUid)
 	suite.NoError(err)
 	suite.EqualValues(testProductResourceTags, res)
+}
+
+// TestProductNilRequestGuards verifies that the required-request Product methods
+// reject a nil request with a sentinel error instead of panicking.
+func (suite *ProductClientTestSuite) TestProductNilRequestGuards() {
+	ctx := context.Background()
+	tests := []struct {
+		name string
+		call func() error
+		want error
+	}{
+		{"ModifyProduct", func() error { _, err := suite.client.ProductService.ModifyProduct(ctx, nil); return err }, ErrModifyProductRequestNil},
+		{"DeleteProduct", func() error { _, err := suite.client.ProductService.DeleteProduct(ctx, nil); return err }, ErrDeleteProductRequestNil},
+		{"ManageProductLock", func() error {
+			_, err := suite.client.ProductService.ManageProductLock(ctx, nil)
+			return err
+		}, ErrManageProductLockRequestNil},
+	}
+	for _, tt := range tests {
+		suite.Run(tt.name, func() {
+			suite.ErrorIs(tt.call(), tt.want)
+		})
+	}
 }

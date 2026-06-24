@@ -17,7 +17,7 @@ type ProductService interface {
 	ExecuteOrder(ctx context.Context, requestBody interface{}) (*[]byte, error)
 	// ListProducts retrieves a list of products from the Megaport Products API. It returns a slice of Product interfaces, which can be of different types (Port, MCR, MVE). The function handles the parsing of the response and unmarshals it into the appropriate product type based on the product type field.
 	ListProducts(ctx context.Context) ([]Product, error)
-	// ModifyProduct modifies a product in the Megaport Products API. The available fields to modify are Name, Cost Centre, and Marketplace Visibility.
+	// ModifyProduct modifies a product in the Megaport Products API. The available fields to modify are Name, Cost Centre, Marketplace Visibility, Contract Term, ASN (MCR only), and Vnics (MVE only).
 	ModifyProduct(ctx context.Context, req *ModifyProductRequest) (*ModifyProductResponse, error)
 	// DeleteProduct is responsible for either scheduling a product for deletion "CANCEL" or deleting a product immediately "CANCEL_NOW" in the Megaport Products API.
 	DeleteProduct(ctx context.Context, req *DeleteProductRequest) (*DeleteProductResponse, error)
@@ -62,6 +62,10 @@ type ModifyProductRequest struct {
 	// ASN is currently only meaningful for MCR products. Sent as-is to the
 	// PUT /v2/product/mcr2/{productUid} endpoint when non-nil.
 	ASN *int `json:"asn,omitempty"`
+	// Vnics updates vNIC descriptions on PUT /v2/product/mve/{productUid}.
+	// Only set this for MVE products — the API silently ignores vnics on
+	// Port/MCR, so the SDK rejects them up front to avoid a silent no-op.
+	Vnics []MVEVnicUpdate `json:"vnics,omitempty"`
 }
 
 // ModifyProductResponse represents a response from the Megaport Products API after modifying a product.
@@ -251,30 +255,39 @@ func (svc *ProductServiceOp) ListProducts(ctx context.Context) ([]Product, error
 	return products, nil
 }
 
-// ModifyProduct modifies a product in the Megaport Products API. The available fields to modify are Name, Cost Centre, and Marketplace Visibility.
+// ModifyProduct modifies a product in the Megaport Products API. The available
+// fields to modify are Name, Cost Centre, Marketplace Visibility, Contract Term,
+// ASN (MCR only), and Vnics (MVE only).
 func (svc *ProductServiceOp) ModifyProduct(ctx context.Context, req *ModifyProductRequest) (*ModifyProductResponse, error) {
-	if req.ProductType == PRODUCT_MEGAPORT || req.ProductType == PRODUCT_MCR || req.ProductType == PRODUCT_MVE {
-		path := fmt.Sprintf("/v2/product/%s/%s", req.ProductType, req.ProductID)
-		url := svc.Client.BaseURL.JoinPath(path).String()
-
-		req, err := svc.Client.NewRequest(ctx, http.MethodPut, url, req)
-
-		if err != nil {
-			return nil, err
-		}
-
-		_, err = svc.Client.Do(ctx, req, nil)
-		if err != nil {
-			return nil, err
-		}
-		return &ModifyProductResponse{IsUpdated: true}, nil
-	} else {
+	if req == nil {
+		return nil, ErrModifyProductRequestNil
+	}
+	if req.ProductType != PRODUCT_MEGAPORT && req.ProductType != PRODUCT_MCR && req.ProductType != PRODUCT_MVE {
 		return nil, ErrWrongProductModify
 	}
+	if len(req.Vnics) > 0 && req.ProductType != PRODUCT_MVE {
+		return nil, ErrVnicsOnNonMVE
+	}
+
+	path := fmt.Sprintf("/v2/product/%s/%s", req.ProductType, req.ProductID)
+	url := svc.Client.BaseURL.JoinPath(path).String()
+
+	httpReq, err := svc.Client.NewRequest(ctx, http.MethodPut, url, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := svc.Client.Do(ctx, httpReq, nil); err != nil {
+		return nil, err
+	}
+	return &ModifyProductResponse{IsUpdated: true}, nil
 }
 
 // DeleteProduct is responsible for either scheduling a product for deletion "CANCEL" or deleting a product immediately "CANCEL_NOW" in the Megaport Products API.
 func (svc *ProductServiceOp) DeleteProduct(ctx context.Context, req *DeleteProductRequest) (*DeleteProductResponse, error) {
+	if req == nil {
+		return nil, ErrDeleteProductRequestNil
+	}
 	var action string
 
 	if req.DeleteNow {
@@ -325,6 +338,9 @@ func (svc *ProductServiceOp) RestoreProduct(ctx context.Context, productId strin
 
 // ManageProductLock is responsible for locking or unlocking a product in the Megaport Products API.
 func (svc *ProductServiceOp) ManageProductLock(ctx context.Context, req *ManageProductLockRequest) (*ManageProductLockResponse, error) {
+	if req == nil {
+		return nil, ErrManageProductLockRequestNil
+	}
 	verb := "POST"
 
 	if !req.ShouldLock {
@@ -528,7 +544,7 @@ func isNilPriceBookRequest(req PriceBookRequest) bool {
 	}
 	v := reflect.ValueOf(req)
 	switch v.Kind() {
-	case reflect.Chan, reflect.Func, reflect.Map, reflect.Ptr, reflect.Interface, reflect.Slice:
+	case reflect.Chan, reflect.Func, reflect.Map, reflect.Pointer, reflect.Interface, reflect.Slice:
 		return v.IsNil()
 	default:
 		return false

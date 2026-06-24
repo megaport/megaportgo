@@ -16,9 +16,9 @@ type ServiceKeyClientTestSuite struct {
 	ClientTestSuite
 }
 
-func TestServiceClientTestSuite(t *testing.T) {
+func TestServiceKeyClientTestSuite(t *testing.T) {
 	t.Parallel()
-	suite.Run(t, new(PortClientTestSuite))
+	suite.Run(t, new(ServiceKeyClientTestSuite))
 }
 
 func (suite *ServiceKeyClientTestSuite) SetupTest() {
@@ -164,33 +164,28 @@ func (suite *ServiceKeyClientTestSuite) TestListServiceKeys() {
       }`
 	want := &ListServiceKeysResponse{ServiceKeys: []*ServiceKey{
 		{
-			Key: "d1269fa6-dde7-49d2-b643-0a9d3cc7bedd",
-			// CreateDate:  &Time{Time: GetTime(1527815582306)},
-			// CompanyID:   1153,
-			// CompanyUID:  "160208ae-01e4-4cb9-8d57-03a197be47a8",
-			// CompanyName: "Megaport Lab",
-			// Description: "pmgsk",
-			// ProductID:   19347,
-			// ProductUID:  "69ddf381-06ae-4150-9690-a46c8323d2d5",
-			// ProductName: "PMG1",
-			// VLAN:        300,
-			// MaxSpeed:    10,
-			// PreApproved: false,
-			// SingleUse:   true,
-			// LastUsed:    nil,
-			// Active:      true,
-			// ValidFor: &ValidFor{
-			// 	StartTime: &Time{
-			// 		Time: GetTime(1527815662405),
-			// 	},
-			// 	EndTime: &Time{
-			// 		Time: GetTime(1528725600000),
-			// 	},
-			// },
+			Key:         "d1269fa6-dde7-49d2-b643-0a9d3cc7bedd",
+			CreateDate:  &Time{Time: GetTime(1527815582306)},
+			CompanyID:   1153,
+			CompanyUID:  "160208ae-01e4-4cb9-8d57-03a197be47a8",
+			CompanyName: "Megaport Lab",
+			Description: "pmgsk",
+			ProductID:   19347,
+			ProductUID:  "69ddf381-06ae-4150-9690-a46c8323d2d5",
+			ProductName: "PMG1",
+			VLAN:        300,
+			MaxSpeed:    10,
+			SingleUse:   true,
+			Active:      true,
+			ValidFor: &ValidFor{
+				StartTime: &Time{Time: GetTime(1527815662405)},
+				EndTime:   &Time{Time: GetTime(1528725600000)},
+			},
 		},
 	}}
-	suite.mux.HandleFunc(fmt.Sprintf("/v2/service/key?productidOrUid=%s", productUid), func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc("/v2/service/key", func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
+		suite.Equal(productUid, r.URL.Query().Get("productIdOrUid"))
 		fmt.Fprint(w, jblob)
 	})
 	listRes, err := suite.client.ServiceKeyService.ListServiceKeys(ctx, listReq)
@@ -282,4 +277,39 @@ func (suite *ServiceKeyClientTestSuite) TestUpdateServiceKey() {
 	})
 	_, err := suite.client.ServiceKeyService.UpdateServiceKey(ctx, updateReq)
 	suite.NoError(err)
+}
+
+// TestServiceKeyNilRequestGuards verifies that the required-request service-key
+// methods reject a nil request with a sentinel error instead of panicking.
+func (suite *ServiceKeyClientTestSuite) TestServiceKeyNilRequestGuards() {
+	tests := []struct {
+		name string
+		call func() error
+		want error
+	}{
+		{"CreateServiceKey", func() error {
+			_, err := suite.client.ServiceKeyService.CreateServiceKey(ctx, nil)
+			return err
+		}, ErrCreateServiceKeyRequestNil},
+		{"UpdateServiceKey", func() error {
+			_, err := suite.client.ServiceKeyService.UpdateServiceKey(ctx, nil)
+			return err
+		}, ErrUpdateServiceKeyRequestNil},
+	}
+	for _, tt := range tests {
+		suite.Run(tt.name, func() {
+			suite.ErrorIs(tt.call(), tt.want)
+		})
+	}
+}
+
+// TestListServiceKeysNilRequest verifies that ListServiceKeys treats a nil request as "no filter".
+func (suite *ServiceKeyClientTestSuite) TestListServiceKeysNilRequest() {
+	suite.mux.HandleFunc("/v2/service/key", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, `{"message":"OK","data":[]}`)
+	})
+	res, err := suite.client.ServiceKeyService.ListServiceKeys(ctx, nil)
+	suite.NoError(err)
+	suite.NotNil(res)
 }
