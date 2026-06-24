@@ -2,6 +2,8 @@ module github.com/megaport/megaportgo
 
 go 1.21
 
+toolchain go1.26.4
+
 require (
 	github.com/lithammer/fuzzysearch v1.1.8
 	github.com/stretchr/testify v1.11.1

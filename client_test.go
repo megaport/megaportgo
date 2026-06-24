@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -224,6 +225,71 @@ func (suite *ClientTestSuite) TestDo() {
 	expected := &foo{"a"}
 	if !reflect.DeepEqual(body, expected) {
 		suite.FailNowf("", "Response body = %v, expected %v", *body, expected)
+	}
+}
+
+type myLogHandler struct {
+	m                     *sync.Mutex
+	messagesAndAttributes []string
+}
+
+func (mlh *myLogHandler) Enabled(context.Context, slog.Level) bool { return true }
+
+func (mlh *myLogHandler) Handle(ctx context.Context, r slog.Record) error {
+	mlh.m.Lock()
+	defer mlh.m.Unlock()
+
+	mlh.messagesAndAttributes = append(mlh.messagesAndAttributes, r.Message)
+	r.Attrs(
+		func(a slog.Attr) bool {
+			mlh.messagesAndAttributes = append(mlh.messagesAndAttributes, a.String())
+			return true
+		},
+	)
+
+	return nil
+}
+
+func (mlh *myLogHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return mlh
+}
+
+func (mlh *myLogHandler) WithGroup(name string) slog.Handler { return mlh }
+
+func (suite *ClientTestSuite) TestLogging() {
+	// Authorize() calls Do() which in turn logs response body if this functionality is enabled.
+	// Here we create custom slog handler to capture what's being logged
+	// and verify that response body isn't logged for auth request specifically.
+
+	customToken := "deadc0de"
+	responseBody := fmt.Sprintf(`{"access_token":"%s","token_type":"Bearer","expires_in":3600}`, customToken)
+
+	lh := &myLogHandler{
+		m:                     &sync.Mutex{},
+		messagesAndAttributes: make([]string, 0),
+	}
+
+	c, err := New(nil,
+		WithBaseURL(suite.server.URL),
+		WithCredentials("test-key", "test-secret"),
+		WithTokenURL(suite.server.URL+"/oauth2/token"),
+		WithLogResponseBody(),
+		WithLogHandler(lh),
+	)
+	suite.Require().NoError(err)
+
+	suite.mux.HandleFunc("/oauth2/token", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, responseBody)
+	})
+
+	authInfo, err := c.Authorize(context.Background())
+	suite.Require().NoError(err)
+	suite.Equal(customToken, authInfo.AccessToken)
+
+	for _, msg := range lh.messagesAndAttributes {
+		haveResponseBody := strings.Contains(msg, "response_body_base_64")
+		suite.Require().False(haveResponseBody)
 	}
 }
 
@@ -483,6 +549,28 @@ func (suite *ClientTestSuite) TestAuthorize_tokenProviderError() {
 	_, err = c.Authorize(ctx)
 	suite.Error(err)
 	suite.Contains(err.Error(), "failed to get token from provider")
+}
+
+// TestAuthorize_withTokenURL tests that WithTokenURL bypasses the host switch and reaches the custom endpoint.
+func (suite *ClientTestSuite) TestAuthorize_withTokenURL() {
+	var tokenEndpointHit bool
+	suite.mux.HandleFunc("/oauth2/token", func(w http.ResponseWriter, r *http.Request) {
+		tokenEndpointHit = true
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"access_token":"custom-token","token_type":"Bearer","expires_in":3600}`)
+	})
+
+	c, err := New(nil,
+		WithBaseURL(suite.server.URL),
+		WithCredentials("test-key", "test-secret"),
+		WithTokenURL(suite.server.URL+"/oauth2/token"),
+	)
+	suite.Require().NoError(err)
+
+	authInfo, err := c.Authorize(ctx)
+	suite.Require().NoError(err)
+	suite.True(tokenEndpointHit, "custom token endpoint should have been called")
+	suite.Equal("custom-token", authInfo.AccessToken)
 }
 
 // TestDo_withTokenProvider tests a full request cycle using TokenProvider.

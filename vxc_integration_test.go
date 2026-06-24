@@ -2,7 +2,9 @@ package megaport
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"testing"
 	"time"
@@ -718,7 +720,9 @@ func (suite *VXCIntegrationTestSuite) TestAWSHostedConnectionBuy() {
 
 // TestMCRVXCWithIPsec provisions an MCR with the IPsec add-on, orders a VXC
 // off it whose A-End interface carries an IPsec tunnel config, verifies the
-// VXC goes live, and tears everything down.
+// tunnel is actually configured on the MCR (not just that the VXC goes
+// live, since the API silently drops unknown partner config fields), and
+// tears everything down.
 func (suite *VXCIntegrationTestSuite) TestMCRVXCWithIPsec() {
 	vxcSvc := suite.client.VXCService
 	mcrSvc := suite.client.MCRService
@@ -799,18 +803,18 @@ func (suite *VXCIntegrationTestSuite) TestMCRVXCWithIPsec() {
 			PartnerConfig: VXCOrderVrouterPartnerConfig{
 				Interfaces: []PartnerConfigInterface{
 					{
-						IpAddresses: []string{"192.0.2.1/30"},
-						IpsecTunnels: []IPsecTunnelConfig{
-							{
-								Description:          "integration-test-tunnel",
-								SourceIpAddress:      "192.0.2.1",
-								DestinationIpAddress: "198.51.100.1",
-								PreSharedKey:         "integrationTestKey123",
-								StartAction:          IPsecStartActionPassive,
-								Phase1Lifetime:       &phase1,
-								Phase2Lifetime:       &phase2,
-							},
-						},
+						Description:   "integration-test-tunnel",
+						InterfaceType: InterfaceTypeIPSecTunnel,
+						IpAddresses:   []string{"192.0.2.1/30"},
+						IpSecTunnelOptions: []IPsecTunnelConfig{{
+							SourceIpAddress:      "192.0.2.1",
+							DestinationIpAddress: "198.51.100.1",
+							PreSharedKey:         "integrationTestKey123",
+							LocalId:              "local.example.com",
+							RemoteId:             "remote.example.com",
+							Phase1Lifetime:       &phase1,
+							Phase2Lifetime:       &phase2,
+						}},
 					},
 				},
 			},
@@ -842,6 +846,45 @@ func (suite *VXCIntegrationTestSuite) TestMCRVXCWithIPsec() {
 		slog.String("vxc_uid", vxcUid),
 		slog.String("provisioning_status", vxc.ProvisioningStatus))
 	suite.Contains(SERVICE_STATE_READY, vxc.ProvisioningStatus, "vxc with ipsec tunnel did not reach a ready provisioning status")
+
+	// A READY VXC alone is a false positive: the API silently drops
+	// unrecognized partner config fields, so read the tunnel state back
+	// from the MCR's IPsec endpoint. Raw request until ESD-1311 adds a
+	// GetMCRIPsec wrapper.
+	req, reqErr := suite.client.NewRequest(ctx, http.MethodGet, fmt.Sprintf("/v3/products/mcrs/%s/ipsec", mcrUid), nil)
+	if reqErr != nil {
+		suite.FailNowf("cannot build ipsec read request", "cannot build ipsec read request %v", reqErr)
+	}
+	var ipsecRes struct {
+		Data struct {
+			TotalTunnelCount    int `json:"totalTunnelCount"`
+			IpSecConfiguredVxcs []struct {
+				ProductUid string `json:"productUid"`
+				Tunnels    []struct {
+					Description          string `json:"description"`
+					SourceIpAddress      string `json:"sourceIpAddress"`
+					DestinationIpAddress string `json:"destinationIpAddress"`
+					LocalId              string `json:"localId"`
+					RemoteId             string `json:"remoteId"`
+				} `json:"tunnels"`
+			} `json:"ipSecConfiguredVxcs"`
+		} `json:"data"`
+	}
+	if _, doErr := suite.client.Do(ctx, req, &ipsecRes); doErr != nil {
+		suite.FailNowf("cannot read mcr ipsec config", "cannot read mcr ipsec config %v", doErr)
+	}
+
+	suite.Equal(1, ipsecRes.Data.TotalTunnelCount, "expected exactly one configured tunnel on the mcr")
+	suite.Require().Len(ipsecRes.Data.IpSecConfiguredVxcs, 1, "expected the vxc to appear in the mcr ipsec config")
+	configuredVxc := ipsecRes.Data.IpSecConfiguredVxcs[0]
+	suite.Equal(vxcUid, configuredVxc.ProductUid)
+	suite.Require().Len(configuredVxc.Tunnels, 1)
+	tunnel := configuredVxc.Tunnels[0]
+	suite.Equal("integration-test-tunnel", tunnel.Description)
+	suite.Equal("192.0.2.1", tunnel.SourceIpAddress)
+	suite.Equal("198.51.100.1", tunnel.DestinationIpAddress)
+	suite.Equal("local.example.com", tunnel.LocalId)
+	suite.Equal("remote.example.com", tunnel.RemoteId)
 }
 
 // TestAWSConnectionBuyDefaults tests the AWS connection buy process with default values.

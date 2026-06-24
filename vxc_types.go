@@ -330,37 +330,35 @@ type VXCOrderConfirmation struct {
 
 // PartnerConfigInterface represents the configuration of a partner interface.
 type PartnerConfigInterface struct {
-	Description     string                `json:"description,omitempty"`
-	InterfaceType   string                `json:"interfaceType,omitempty"` // InterfaceTypeSubInterface (default) or InterfaceTypeIPSecTunnel.
-	IpAddresses     []string              `json:"ipAddresses,omitempty"`
-	IpRoutes        []IpRoute             `json:"ipRoutes,omitempty"`
-	NatIpAddresses  []string              `json:"natIpAddresses,omitempty"`
-	Bfd             BfdConfig             `json:"bfd,omitempty"`
-	BgpConnections  []BgpConnectionConfig `json:"bgpConnections,omitempty"`
-	VLAN            int                   `json:"vlan,omitempty"`
-	IpMtu           int                   `json:"ipMtu,omitempty"`
-	PacketFilterIn  *int64                `json:"packetFilterIn,omitempty"`  // NAT Gateway packet filter ID to apply to inbound packets.
-	PacketFilterOut *int64                `json:"packetFilterOut,omitempty"` // NAT Gateway packet filter ID to apply to outbound packets.
-	IpsecTunnels    []IPsecTunnelConfig   `json:"ipsecTunnels,omitempty"`
+	Description        string                `json:"description,omitempty"`
+	InterfaceType      string                `json:"interfaceType,omitempty"` // InterfaceTypeSubInterface (default) or InterfaceTypeIPSecTunnel.
+	IpAddresses        []string              `json:"ipAddresses,omitempty"`
+	IpRoutes           []IpRoute             `json:"ipRoutes,omitempty"`
+	NatIpAddresses     []string              `json:"natIpAddresses,omitempty"`
+	Bfd                BfdConfig             `json:"bfd,omitempty"`
+	BgpConnections     []BgpConnectionConfig `json:"bgpConnections,omitempty"`
+	VLAN               int                   `json:"vlan,omitempty"`
+	IpMtu              int                   `json:"ipMtu,omitempty"`
+	PacketFilterIn     *int64                `json:"packetFilterIn,omitempty"`     // NAT Gateway packet filter ID to apply to inbound packets.
+	PacketFilterOut    *int64                `json:"packetFilterOut,omitempty"`    // NAT Gateway packet filter ID to apply to outbound packets.
+	IpSecTunnelOptions []IPsecTunnelConfig   `json:"ipSecTunnelOptions,omitempty"` // Requires InterfaceType to be InterfaceTypeIPSecTunnel.
 }
 
-// IPsec start action values used by IPsecTunnelConfig.StartAction.
-const (
-	IPsecStartActionActive  = "active"
-	IPsecStartActionPassive = "passive"
-)
-
-// IPsecTunnelConfig represents an IPsec tunnel interface attached to a VXC
-// A-End interface on an MCR. See https://docs.megaport.com/mcr/ipsec-mcr/.
-// The MCR must have an IPsec add-on provisioned (see MCRAddOnIPsecConfig).
+// IPsecTunnelConfig represents a single IPsec tunnel on a VXC A-End
+// interface on an MCR. An interface carries a list of these
+// (PartnerConfigInterface.IpSecTunnelOptions). See
+// https://docs.megaport.com/mcr/ipsec-mcr/. The MCR must have an IPsec
+// add-on provisioned (see MCRAddOnIPsecConfig). Tunnels take their
+// description from the enclosing PartnerConfigInterface.Description.
 type IPsecTunnelConfig struct {
-	Description          string `json:"description,omitempty"`
 	SourceIpAddress      string `json:"sourceIpAddress"`
 	DestinationIpAddress string `json:"destinationIpAddress"`
 	PreSharedKey         string `json:"preSharedKey"`
-	StartAction          string `json:"startAction,omitempty"`    // IPsecStartActionActive or IPsecStartActionPassive
-	Phase1Lifetime       *int   `json:"phase1Lifetime,omitempty"` // seconds, 300-604800, API default 28800
-	Phase2Lifetime       *int   `json:"phase2Lifetime,omitempty"` // seconds, 300-604800, must be < Phase1Lifetime, API default 3600
+	Passive              *bool  `json:"passive,omitempty"`        // nil applies the API default (true)
+	LocalId              string `json:"localId,omitempty"`        // IKE local identifier override, for peers behind NAT
+	RemoteId             string `json:"remoteId,omitempty"`       // IKE remote identifier override, for peers behind NAT
+	Phase1Lifetime       *int   `json:"phase1Lifetime,omitempty"` // seconds, 3600-604800, API default 28800
+	Phase2Lifetime       *int   `json:"phase2Lifetime,omitempty"` // seconds, 600-86400, must be < Phase1Lifetime, API default 3600
 }
 
 // IpRoute represents an IP route.
