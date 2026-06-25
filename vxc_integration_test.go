@@ -803,18 +803,26 @@ func (suite *VXCIntegrationTestSuite) TestMCRVXCWithIPsec() {
 			PartnerConfig: VXCOrderVrouterPartnerConfig{
 				Interfaces: []PartnerConfigInterface{
 					{
+						// The tunnel's sourceIpAddress must live on a
+						// separate interface, not on the ipSecTunnel
+						// interface itself, or the order fails CSP
+						// validation.
+						Description:   "integration-test-subif",
+						InterfaceType: InterfaceTypeSubInterface,
+						IpAddresses:   []string{"192.0.2.1/30"},
+					},
+					{
 						Description:   "integration-test-tunnel",
 						InterfaceType: InterfaceTypeIPSecTunnel,
-						IpAddresses:   []string{"192.0.2.1/30"},
-						IpSecTunnelOptions: []IPsecTunnelConfig{{
+						IpSecTunnelOptions: &IPsecTunnelConfig{
 							SourceIpAddress:      "192.0.2.1",
 							DestinationIpAddress: "198.51.100.1",
-							PreSharedKey:         "integrationTestKey123",
+							PreSharedKey:         "notARealKey-integration",
 							LocalId:              "local.example.com",
 							RemoteId:             "remote.example.com",
 							Phase1Lifetime:       &phase1,
 							Phase2Lifetime:       &phase2,
-						}},
+						},
 					},
 				},
 			},
