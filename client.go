@@ -414,6 +414,14 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v any) (*http.Respon
 	if err != nil {
 		return nil, err
 	}
+	// Close the body on every error return below so we don't leak the
+	// connection. On success the caller owns the body.
+	success := false
+	defer func() {
+		if !success {
+			_ = resp.Body.Close()
+		}
+	}()
 	if c.onRequestCompleted != nil {
 		c.onRequestCompleted(req, resp)
 	}
@@ -466,6 +474,7 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v any) (*http.Respon
 		}
 	}
 
+	success = true
 	return resp, nil
 }
 
