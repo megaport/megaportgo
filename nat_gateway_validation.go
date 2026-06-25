@@ -100,3 +100,38 @@ func validateGetNATGatewayTelemetryRequest(req *GetNATGatewayTelemetryRequest) e
 	}
 	return nil
 }
+
+// NATGatewaySpeedSessionResult describes whether a speed/session pair is
+// orderable according to a NAT Gateway availability matrix.
+type NATGatewaySpeedSessionResult struct {
+	// Supported is true only if the speed exists AND the session count is
+	// valid at that speed.
+	Supported bool
+	// SpeedSupported is true if the speed appears in the matrix at all.
+	SpeedSupported bool
+	// SupportedSpeeds lists every speed in the matrix. Always complete.
+	SupportedSpeeds []int
+	// SessionsAtSpeed lists the session counts valid at the requested speed
+	// (nil if the speed is unsupported).
+	SessionsAtSpeed []int
+}
+
+// NATGatewaySpeedSessionSupported reports whether a speed/sessionCount pair is
+// present in a NAT Gateway availability matrix obtained from
+// ListNATGatewaySessions. It performs no network I/O; the caller supplies the
+// matrix and validation happens locally.
+func NATGatewaySpeedSessionSupported(matrix []*NATGatewaySession, speed, sessionCount int) NATGatewaySpeedSessionResult {
+	res := NATGatewaySpeedSessionResult{SupportedSpeeds: make([]int, 0, len(matrix))}
+	for _, entry := range matrix {
+		if entry == nil {
+			continue
+		}
+		res.SupportedSpeeds = append(res.SupportedSpeeds, entry.SpeedMbps)
+		if entry.SpeedMbps == speed {
+			res.SpeedSupported = true
+			res.SessionsAtSpeed = entry.SessionCount
+		}
+	}
+	res.Supported = res.SpeedSupported && slices.Contains(res.SessionsAtSpeed, sessionCount)
+	return res
+}

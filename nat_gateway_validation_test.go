@@ -39,3 +39,35 @@ func TestValidateNATGatewayCommonFields(t *testing.T) {
 		})
 	}
 }
+
+func TestNATGatewaySpeedSessionSupported(t *testing.T) {
+	t.Parallel()
+	// Synthetic matrix; values are illustrative, not real availability data.
+	matrix := []*NATGatewaySession{
+		{SpeedMbps: 1000, SessionCount: []int{16000, 32000}},
+		nil,
+		{SpeedMbps: 5000, SessionCount: []int{128000}},
+	}
+	cases := []struct {
+		name           string
+		speed, session int
+		wantSupported  bool
+		wantSpeedKnown bool
+	}{
+		{"valid pair", 1000, 32000, true, true},
+		{"unsupported speed", 500, 16000, false, false},
+		{"bad session at good speed", 1000, 99999, false, true},
+		{"skips nil entries", 5000, 128000, true, true},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			r := NATGatewaySpeedSessionSupported(matrix, tc.speed, tc.session)
+			if r.Supported != tc.wantSupported || r.SpeedSupported != tc.wantSpeedKnown {
+				t.Fatalf("got supported=%v speedSupported=%v, want %v/%v",
+					r.Supported, r.SpeedSupported, tc.wantSupported, tc.wantSpeedKnown)
+			}
+		})
+	}
+}
