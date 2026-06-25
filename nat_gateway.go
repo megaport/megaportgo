@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"sync"
 	"time"
 )
 
@@ -103,64 +102,16 @@ type NATGatewayService interface {
 	ListNATGatewayBGPNeighborRoutes(ctx context.Context, req *NATGatewayBGPNeighborRoutesRequest) ([]*NATGatewayBGPRoute, error)
 }
 
-// NATGatewayMatrixValidator is implemented by NATGatewayServiceOp to support
-// matrix-aware speed/session-count validation against the live NAT Gateway
-// sessions endpoint. It is kept separate from NATGatewayService so existing
-// implementations of the main interface (test mocks, alternate clients) are
-// not forced to add a new method. Callers retrieve it via a type assertion
-// on Client.NATGatewayService:
-//
-//	if v, ok := client.NATGatewayService.(megaport.NATGatewayMatrixValidator); ok {
-//	    err := v.ValidateNATGatewaySpeedSession(ctx, speed, sessionCount)
-//	}
-type NATGatewayMatrixValidator interface {
-	// ValidateNATGatewaySpeedSession checks the requested speed (Mbps) and
-	// session count against the live availability matrix returned by the
-	// NAT Gateway sessions endpoint. The matrix is fetched lazily on first
-	// call and cached on the service (TTL: RefCacheDefaultTTL); the cache
-	// is invalidated automatically on auth failure. Returns
-	// ErrNATGatewaySpeedNotSupported if speed is not in the matrix, or
-	// ErrNATGatewaySessionCountNotSupported if the session count is not
-	// permitted for the requested speed.
-	ValidateNATGatewaySpeedSession(ctx context.Context, speed, sessionCount int) error
-}
-
 // NewNATGatewayService creates a new instance of the NAT Gateway Service.
 func NewNATGatewayService(c *Client) *NATGatewayServiceOp {
-	svc := &NATGatewayServiceOp{Client: c}
-	svc.sessionMatrixCache = NewRefCache(RefCacheDefaultTTL, svc.ListNATGatewaySessions)
-	if c != nil {
-		c.RegisterRefCache(svc.sessionMatrixCache)
+	return &NATGatewayServiceOp{
+		Client: c,
 	}
-	return svc
 }
 
 // NATGatewayServiceOp handles communication with NAT Gateway methods of the Megaport API.
 type NATGatewayServiceOp struct {
 	Client *Client
-
-	// sessionMatrixCache caches the response from ListNATGatewaySessions for
-	// use by ValidateNATGatewaySpeedSession. ListNATGatewaySessions itself
-	// bypasses the cache so callers that need a fresh fetch can request one.
-	// Populated by NewNATGatewayService, but the validator lazily initializes
-	// it on demand so direct struct instantiation (without the constructor)
-	// does not panic.
-	sessionMatrixCache   *RefCache[[]*NATGatewaySession]
-	sessionMatrixCacheMu sync.Mutex
-}
-
-// ensureSessionMatrixCache returns svc.sessionMatrixCache, initializing it on
-// demand for service values constructed without NewNATGatewayService.
-func (svc *NATGatewayServiceOp) ensureSessionMatrixCache() *RefCache[[]*NATGatewaySession] {
-	svc.sessionMatrixCacheMu.Lock()
-	defer svc.sessionMatrixCacheMu.Unlock()
-	if svc.sessionMatrixCache == nil {
-		svc.sessionMatrixCache = NewRefCache(RefCacheDefaultTTL, svc.ListNATGatewaySessions)
-		if svc.Client != nil {
-			svc.Client.RegisterRefCache(svc.sessionMatrixCache)
-		}
-	}
-	return svc.sessionMatrixCache
 }
 
 // GetNATGatewayTelemetryRequest represents a request to get telemetry data for a NAT Gateway.
