@@ -2,6 +2,7 @@ package megaport
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -1391,4 +1392,68 @@ func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRTracerouteContextCanc
 
 	_, err := lgSvc.WaitForMCRTraceroute(ctx, mcrUID, "op-id")
 	suite.Error(err)
+}
+
+// TestWaitForMCRPingTimeoutDuringRequest verifies that when the SDK-managed
+// timeout fires while a poll request is in flight, the wrapped context error
+// from the HTTP client is mapped to ErrMCRDiagnosticsTimeout.
+func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRPingTimeoutDuringRequest() {
+	lgSvc := suite.client.MCRLookingGlassService
+	mcrUID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	operationID := "op-id-ping-timeout"
+
+	op, ok := lgSvc.(*MCRLookingGlassServiceOp)
+	suite.Require().True(ok)
+	op.pollTimeout = 20 * time.Millisecond
+
+	path := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes/operation", mcrUID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		<-r.Context().Done() // block until the SDK timeout cancels the request
+	})
+
+	// No caller deadline, so the SDK-managed timeout applies.
+	_, err := lgSvc.WaitForMCRPing(context.Background(), mcrUID, operationID)
+	suite.ErrorIs(err, ErrMCRDiagnosticsTimeout)
+}
+
+// TestWaitForMCRTracerouteTimeoutDuringRequest verifies the same in-flight
+// timeout mapping for WaitForMCRTraceroute.
+func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRTracerouteTimeoutDuringRequest() {
+	lgSvc := suite.client.MCRLookingGlassService
+	mcrUID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	operationID := "op-id-traceroute-timeout"
+
+	op, ok := lgSvc.(*MCRLookingGlassServiceOp)
+	suite.Require().True(ok)
+	op.pollTimeout = 20 * time.Millisecond
+
+	path := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes/operation", mcrUID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		<-r.Context().Done() // block until the SDK timeout cancels the request
+	})
+
+	// No caller deadline, so the SDK-managed timeout applies.
+	_, err := lgSvc.WaitForMCRTraceroute(context.Background(), mcrUID, operationID)
+	suite.ErrorIs(err, ErrMCRDiagnosticsTimeout)
+}
+
+// TestWaitForMCRPingCallerDeadlineDuringRequest verifies that a caller-provided
+// deadline firing mid-request surfaces as the caller's context error, not the
+// SDK timeout sentinel.
+func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRPingCallerDeadlineDuringRequest() {
+	lgSvc := suite.client.MCRLookingGlassService
+	mcrUID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	operationID := "op-id-ping-caller-deadline"
+
+	path := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes/operation", mcrUID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		<-r.Context().Done() // block until the caller deadline cancels the request
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	defer cancel()
+
+	_, err := lgSvc.WaitForMCRPing(ctx, mcrUID, operationID)
+	suite.ErrorIs(err, context.DeadlineExceeded)
+	suite.False(errors.Is(err, ErrMCRDiagnosticsTimeout))
 }

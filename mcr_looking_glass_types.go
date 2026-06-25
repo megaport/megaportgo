@@ -237,7 +237,6 @@ type LookingGlassPingStatistics struct {
 
 // LookingGlassPingResult is the result of a ping operation.
 type LookingGlassPingResult struct {
-	Error      string                      `json:"error,omitempty"`
 	RawOutput  string                      `json:"rawOutput,omitempty"`
 	Statistics *LookingGlassPingStatistics `json:"statistics,omitempty"`
 }

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"time"
@@ -81,6 +82,9 @@ type MCRLookingGlassServiceOp struct {
 	// pollInterval overrides mcrDiagnosticsPollInterval when non-zero.
 	// Intended for tests that want to avoid real-time waits.
 	pollInterval time.Duration
+	// pollTimeout overrides mcrDiagnosticsPollTimeout when non-zero.
+	// Intended for tests that want to avoid real-time waits.
+	pollTimeout time.Duration
 }
 
 // NewMCRLookingGlassService creates a new instance of the MCR Looking Glass Service.
@@ -98,6 +102,14 @@ func (svc *MCRLookingGlassServiceOp) diagnosticsPollInterval() time.Duration {
 	return mcrDiagnosticsPollInterval
 }
 
+// diagnosticsPollTimeout returns the effective SDK-managed poll timeout for MCR diagnostics.
+func (svc *MCRLookingGlassServiceOp) diagnosticsPollTimeout() time.Duration {
+	if svc.pollTimeout != 0 {
+		return svc.pollTimeout
+	}
+	return mcrDiagnosticsPollTimeout
+}
+
 // pollMCRDiagnostics is a generic helper that polls fetch until it returns a
 // non-nil result, pollCtx is done, or pollDoneErr fires. It performs an
 // immediate poll before starting the ticker so callers receive results without
@@ -108,9 +120,20 @@ func pollMCRDiagnostics[T any](
 	fetch func(context.Context) (*T, error),
 	interval time.Duration,
 ) (*T, error) {
+	// When the poll context expires mid-request, Client.Do returns a wrapped
+	// context error. Attribute it to the deadline/cancellation via pollDoneErr
+	// so callers get a consistent error instead of a raw context error, while
+	// leaving genuine API/network failures untouched.
+	mapErr := func(err error) error {
+		if pollCtx.Err() != nil && (errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled)) {
+			return pollDoneErr()
+		}
+		return err
+	}
+
 	result, err := fetch(pollCtx)
 	if err != nil {
-		return nil, err
+		return nil, mapErr(err)
 	}
 	if result != nil {
 		return result, nil
@@ -126,7 +149,7 @@ func pollMCRDiagnostics[T any](
 		case <-ticker.C:
 			result, err = fetch(pollCtx)
 			if err != nil {
-				return nil, err
+				return nil, mapErr(err)
 			}
 			if result != nil {
 				return result, nil
@@ -695,7 +718,7 @@ func (svc *MCRLookingGlassServiceOp) WaitForMCRPing(ctx context.Context, mcrUID,
 	pollCtx := ctx
 	if _, ok := ctx.Deadline(); !ok {
 		var cancel context.CancelFunc
-		pollCtx, cancel = context.WithTimeout(ctx, mcrDiagnosticsPollTimeout)
+		pollCtx, cancel = context.WithTimeout(ctx, svc.diagnosticsPollTimeout())
 		defer cancel()
 	}
 
@@ -731,7 +754,7 @@ func (svc *MCRLookingGlassServiceOp) WaitForMCRTraceroute(ctx context.Context, m
 	pollCtx := ctx
 	if _, ok := ctx.Deadline(); !ok {
 		var cancel context.CancelFunc
-		pollCtx, cancel = context.WithTimeout(ctx, mcrDiagnosticsPollTimeout)
+		pollCtx, cancel = context.WithTimeout(ctx, svc.diagnosticsPollTimeout())
 		defer cancel()
 	}
 
