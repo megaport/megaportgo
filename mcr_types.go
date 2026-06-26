@@ -174,6 +174,40 @@ type mcrResponse struct {
 	Data    *MCR   `json:"data"`
 }
 
+// MCRIPsecConfiguration is the IPsec tunnel state for an MCR. The API never
+// returns the pre-shared key or phase lifetimes, so they are absent here.
+type MCRIPsecConfiguration struct {
+	IPsecConfiguredVXCs []IPsecConfiguredVXC `json:"ipSecConfiguredVxcs"`
+	TotalTunnelCount    int                  `json:"totalTunnelCount"`
+	MaxTunnelCountLimit int                  `json:"maxTunnelCountLimit"` // 0 if the API omits it
+}
+
+// IPsecConfiguredVXC is a VXC on an MCR with configured IPsec tunnels.
+type IPsecConfiguredVXC struct {
+	Name       string        `json:"name"`
+	ProductUID string        `json:"productUid"`
+	Tunnels    []IPsecTunnel `json:"tunnels"`
+}
+
+// IPsecTunnel is a configured IPsec tunnel as read back from the API.
+// Unlike IPsecTunnelConfig, it carries no pre-shared key or phase lifetimes.
+type IPsecTunnel struct {
+	Description          string `json:"description,omitempty"`
+	SourceIpAddress      string `json:"sourceIpAddress"`
+	DestinationIpAddress string `json:"destinationIpAddress"`
+	LocalID              string `json:"localId,omitempty"`
+	RemoteID             string `json:"remoteId,omitempty"`
+	VLAN                 int    `json:"vlan"`
+}
+
+// mcrIPsecResponse represents a response from the Megaport MCR API after querying an MCR's IPsec configuration.
+// Used internally for JSON unmarshalling.
+type mcrIPsecResponse struct {
+	Message string                 `json:"message"`
+	Terms   string                 `json:"terms"`
+	Data    *MCRIPsecConfiguration `json:"data"`
+}
+
 // PrefixFilterList represents a prefix filter list associated with an MCR.
 type PrefixFilterList struct {
 	Id            int    `json:"id"`

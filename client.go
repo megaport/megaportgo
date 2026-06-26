@@ -430,13 +430,15 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v any) (*http.Respon
 
 	tmpDisable := ctx.Value(disableResponseBodyLogging) != nil
 	if c.LogResponseBody && !tmpDisable {
-		b, err := io.ReadAll(resp.Body)
+		b, readErr := io.ReadAll(resp.Body)
+		// Close the original network body once it has been drained; the
+		// caller only sees the in-memory replacement below.
 		_ = resp.Body.Close()
-		if err != nil {
-			return nil, err
+		if readErr != nil {
+			return nil, readErr
 		}
 
-		// Create new reader for the later code
+		// Reset the body so later decode paths and callers can re-read it
 		respBody = io.NopCloser(bytes.NewReader(b))
 		resp.Body = respBody
 
