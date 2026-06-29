@@ -79,8 +79,11 @@ type BuyMCRRequest struct {
 	MCRAsn        int
 	CostCentre    string
 	PromoCode     string
-	ResourceTags  map[string]string `json:"resourceTags,omitempty"`
-	AddOns        []MCRAddOn        `json:"addOns,omitempty"`
+	// MarketplaceVisibility is sent only when non-nil. Leaving it nil omits the
+	// field so the API applies its own default, rather than forcing false.
+	MarketplaceVisibility *bool
+	ResourceTags          map[string]string `json:"resourceTags,omitempty"`
+	AddOns                []MCRAddOn        `json:"addOns,omitempty"`
 
 	WaitForProvision bool          // Wait until the MCR provisions before returning
 	WaitForTime      time.Duration // How long to wait for the MCR to provision if WaitForProvision is true (default is 5 minutes; must be at least 30 seconds for the poller to fire)
@@ -277,6 +280,8 @@ func createMCROrder(req *BuyMCRRequest) []MCROrder {
 		PromoCode:    req.PromoCode,
 		ResourceTags: toProductResourceTags(req.ResourceTags),
 		Config:       MCROrderConfig{},
+
+		MarketplaceVisibility: req.MarketplaceVisibility,
 	}
 
 	if req.CostCentre != "" {
