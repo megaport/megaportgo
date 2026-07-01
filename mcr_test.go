@@ -42,12 +42,13 @@ func (suite *MCRClientTestSuite) TestBuyMCR() {
 	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
 	want := &BuyMCRResponse{TechnicalServiceUID: productUid}
 	req := &BuyMCRRequest{
-		LocationID:    1,
-		Name:          "test-mcr",
-		Term:          1,
-		PortSpeed:     1000,
-		MCRAsn:        0,
-		DiversityZone: "red",
+		LocationID:            1,
+		Name:                  "test-mcr",
+		Term:                  1,
+		PortSpeed:             1000,
+		MCRAsn:                0,
+		DiversityZone:         "red",
+		MarketplaceVisibility: PtrTo(false),
 	}
 	jblob := `{
 			"message": "test-message",
@@ -68,6 +69,7 @@ func (suite *MCRClientTestSuite) TestBuyMCR() {
 				DiversityZone: "red",
 				ASN:           0,
 			},
+			MarketplaceVisibility: PtrTo(false),
 		},
 	}
 	suite.mux.HandleFunc("/v4/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
@@ -90,11 +92,34 @@ func (suite *MCRClientTestSuite) TestBuyMCR() {
 		suite.Equal(wantOrder.LocationID, gotOrder.LocationID)
 		suite.Equal(wantOrder.Type, gotOrder.Type)
 		suite.Equal(wantOrder.Config, gotOrder.Config)
+		suite.Equal(wantOrder.MarketplaceVisibility, gotOrder.MarketplaceVisibility)
 		suite.Equal([]string{}, wrapper.DiscountCodes)
 	})
 	got, err := mcrSvc.BuyMCR(ctx, req)
 	suite.NoError(err)
 	suite.Equal(want, got)
+}
+
+// TestCreateMCROrderMarketplaceVisibility asserts the marshaled MCROrder carries
+// marketplaceVisibility when set, and omits it (preserving the API default) when
+// the request leaves it nil.
+func (suite *MCRClientTestSuite) TestCreateMCROrderMarketplaceVisibility() {
+	visible := suite.marshalMCROrder(&BuyMCRRequest{MarketplaceVisibility: PtrTo(true)})
+	suite.Contains(visible, `"marketplaceVisibility":true`)
+
+	hidden := suite.marshalMCROrder(&BuyMCRRequest{MarketplaceVisibility: PtrTo(false)})
+	suite.Contains(hidden, `"marketplaceVisibility":false`)
+
+	unset := suite.marshalMCROrder(&BuyMCRRequest{})
+	suite.NotContains(unset, "marketplaceVisibility")
+}
+
+func (suite *MCRClientTestSuite) marshalMCROrder(req *BuyMCRRequest) string {
+	orders := createMCROrder(req)
+	suite.Require().Len(orders, 1)
+	b, err := json.Marshal(orders[0])
+	suite.Require().NoError(err)
+	return string(b)
 }
 
 // TestGetMCR tests the GetMCR method.
