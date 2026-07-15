@@ -1056,6 +1056,24 @@ func (suite *MCRClientTestSuite) TestGetMCRTelemetryValidation() {
 	})
 	suite.ErrorIs(err, ErrMCRTelemetryFromToIncomplete)
 
+	// From after To
+	_, err = mcrSvc.GetMCRTelemetry(ctx, &GetMCRTelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		From:       PtrTo(time.UnixMilli(1608603936000)),
+		To:         PtrTo(time.UnixMilli(1608516536000)),
+	})
+	suite.ErrorIs(err, ErrMCRTelemetryFromAfterTo)
+
+	// From/To range longer than 180 days
+	_, err = mcrSvc.GetMCRTelemetry(ctx, &GetMCRTelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		From:       PtrTo(time.UnixMilli(1608516536000)),
+		To:         PtrTo(time.UnixMilli(1608516536000).Add(181 * 24 * time.Hour)),
+	})
+	suite.ErrorIs(err, ErrMCRTelemetryRangeTooLong)
+
 	// Nil request
 	_, err = mcrSvc.GetMCRTelemetry(ctx, nil)
 	suite.ErrorIs(err, ErrMCRTelemetryRequestRequired)

@@ -2095,6 +2095,24 @@ func (suite *VXCClientTestSuite) TestGetVXCTelemetryValidation() {
 	})
 	suite.ErrorIs(err, ErrVXCTelemetryFromToIncomplete)
 
+	// From after To
+	_, err = vxcSvc.GetVXCTelemetry(ctx, &GetVXCTelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"A_BITS"},
+		From:       PtrTo(time.UnixMilli(1608603936000)),
+		To:         PtrTo(time.UnixMilli(1608516536000)),
+	})
+	suite.ErrorIs(err, ErrVXCTelemetryFromAfterTo)
+
+	// From/To range longer than 180 days
+	_, err = vxcSvc.GetVXCTelemetry(ctx, &GetVXCTelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"A_BITS"},
+		From:       PtrTo(time.UnixMilli(1608516536000)),
+		To:         PtrTo(time.UnixMilli(1608516536000).Add(181 * 24 * time.Hour)),
+	})
+	suite.ErrorIs(err, ErrVXCTelemetryRangeTooLong)
+
 	// Nil request
 	_, err = vxcSvc.GetVXCTelemetry(ctx, nil)
 	suite.ErrorIs(err, ErrVXCTelemetryRequestRequired)

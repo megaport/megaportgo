@@ -658,6 +658,24 @@ func (suite *NATGatewayClientTestSuite) TestGetNATGatewayTelemetryValidation() {
 		To:         PtrTo(time.UnixMilli(1608603936000)),
 	})
 	suite.ErrorIs(err, ErrNATGatewayTelemetryFromToIncomplete)
+
+	// From after To
+	_, err = natSvc.GetNATGatewayTelemetry(ctx, &GetNATGatewayTelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		From:       PtrTo(time.UnixMilli(1608603936000)),
+		To:         PtrTo(time.UnixMilli(1608516536000)),
+	})
+	suite.ErrorIs(err, ErrNATGatewayTelemetryFromAfterTo)
+
+	// From/To range longer than 180 days
+	_, err = natSvc.GetNATGatewayTelemetry(ctx, &GetNATGatewayTelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		From:       PtrTo(time.UnixMilli(1608516536000)),
+		To:         PtrTo(time.UnixMilli(1608516536000).Add(181 * 24 * time.Hour)),
+	})
+	suite.ErrorIs(err, ErrNATGatewayTelemetryRangeTooLong)
 }
 
 func (suite *NATGatewayClientTestSuite) TestValidateNATGatewayOrder() {

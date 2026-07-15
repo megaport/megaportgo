@@ -178,7 +178,7 @@ type IXUpdate struct {
 // GetIXTelemetryRequest represents a request to get telemetry data for an IX.
 type GetIXTelemetryRequest struct {
 	ProductUID string     // The product UID of the IX.
-	Types      []string   // Telemetry types to retrieve, e.g. "BITS", "PACKETS".
+	Types      []string   // Telemetry types to retrieve, e.g. "BITS", "PACKETS", "ROUTES_IMPORTED", "ROUTES_FILTERED", "BM_BYTES", "BM_PACKETS", "UU_BYTES", "UU_PACKETS".
 	From       *time.Time // Start time. Mutually exclusive with Days.
 	To         *time.Time // End time. Mutually exclusive with Days.
 	Days       *int32     // Number of days of telemetry (1-180). Mutually exclusive with From/To.
@@ -186,9 +186,21 @@ type GetIXTelemetryRequest struct {
 
 var (
 	ErrIXTelemetryRequestRequired    = errors.New("IX telemetry request is required")
-	ErrIXTelemetryProductUIDRequired = errors.New("product UID is required")
-	ErrIXTelemetryTypesRequired      = errors.New("at least one telemetry type is required")
-	ErrIXTelemetryTimeExclusive      = errors.New("days and from/to are mutually exclusive")
-	ErrIXTelemetryDaysOutOfRange     = errors.New("days must be between 1 and 180")
-	ErrIXTelemetryFromToIncomplete   = errors.New("both from and to must be provided together")
+	ErrIXTelemetryProductUIDRequired = errors.New("IX telemetry: product UID is required")
+	ErrIXTelemetryTypesRequired      = errors.New("IX telemetry: at least one telemetry type is required")
+	ErrIXTelemetryTimeExclusive      = errors.New("IX telemetry: days and from/to are mutually exclusive")
+	ErrIXTelemetryDaysOutOfRange     = errors.New("IX telemetry: days must be between 1 and 180")
+	ErrIXTelemetryFromToIncomplete   = errors.New("IX telemetry: both from and to must be provided together")
+	ErrIXTelemetryFromAfterTo        = errors.New("IX telemetry: from must not be after to")
+	ErrIXTelemetryRangeTooLong       = errors.New("IX telemetry: from/to time range must not exceed 180 days")
 )
+
+var ixTelemetryValidationErrors = telemetryValidationErrors{
+	productUIDRequired: ErrIXTelemetryProductUIDRequired,
+	typesRequired:      ErrIXTelemetryTypesRequired,
+	timeExclusive:      ErrIXTelemetryTimeExclusive,
+	daysOutOfRange:     ErrIXTelemetryDaysOutOfRange,
+	fromToIncomplete:   ErrIXTelemetryFromToIncomplete,
+	fromAfterTo:        ErrIXTelemetryFromAfterTo,
+	rangeTooLong:       ErrIXTelemetryRangeTooLong,
+}

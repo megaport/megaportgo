@@ -1,7 +1,6 @@
 package megaport
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -9,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -531,67 +529,14 @@ func (svc *PortServiceOp) UpdatePortResourceTags(ctx context.Context, portID str
 	})
 }
 
-// validateGetPortTelemetryRequest validates the request parameters for getting Port telemetry.
-func validateGetPortTelemetryRequest(req *GetPortTelemetryRequest) error {
-	if req == nil {
-		return ErrPortTelemetryRequestRequired
-	}
-	if req.ProductUID == "" {
-		return ErrPortTelemetryProductUIDRequired
-	}
-	if len(req.Types) == 0 {
-		return ErrPortTelemetryTypesRequired
-	}
-	if req.Days != nil && (req.From != nil || req.To != nil) {
-		return ErrPortTelemetryTimeExclusive
-	}
-	if req.Days != nil && (*req.Days < 1 || *req.Days > 180) {
-		return ErrPortTelemetryDaysOutOfRange
-	}
-	if (req.From != nil) != (req.To != nil) {
-		return ErrPortTelemetryFromToIncomplete
-	}
-	return nil
-}
-
 // GetPortTelemetry returns telemetry data for a Port product.
 func (svc *PortServiceOp) GetPortTelemetry(ctx context.Context, req *GetPortTelemetryRequest) (*ServiceTelemetryResponse, error) {
-	if err := validateGetPortTelemetryRequest(req); err != nil {
+	if req == nil {
+		return nil, ErrPortTelemetryRequestRequired
+	}
+	if err := validateTelemetryRequest(req.ProductUID, req.Types, req.From, req.To, req.Days, portTelemetryValidationErrors); err != nil {
 		return nil, err
 	}
-
 	path := fmt.Sprintf("/v2/product/%s/%s/telemetry", PRODUCT_MEGAPORT, url.PathEscape(req.ProductUID))
-
-	params := url.Values{}
-	for _, t := range req.Types {
-		params.Add("type", t)
-	}
-	if req.From != nil {
-		params.Set("from", strconv.FormatInt(req.From.UnixMilli(), 10))
-	}
-	if req.To != nil {
-		params.Set("to", strconv.FormatInt(req.To.UnixMilli(), 10))
-	}
-	if req.Days != nil {
-		params.Set("days", strconv.FormatInt(int64(*req.Days), 10))
-	}
-
-	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, path+"?"+params.Encode(), nil)
-	if err != nil {
-		return nil, err
-	}
-	var buf bytes.Buffer
-	resp, err := svc.Client.Do(ctx, clientReq, &buf)
-	if err != nil {
-		if resp != nil && resp.Body != nil {
-			resp.Body.Close()
-		}
-		return nil, err
-	}
-	defer resp.Body.Close()
-	telemetryResp := &ServiceTelemetryResponse{}
-	if err := json.Unmarshal(buf.Bytes(), telemetryResp); err != nil {
-		return nil, err
-	}
-	return telemetryResp, nil
+	return fetchTelemetry(ctx, svc.Client, path, req.Types, req.From, req.To, req.Days)
 }

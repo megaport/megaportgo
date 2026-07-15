@@ -1,12 +1,10 @@
 package megaport
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"net/url"
 	"slices"
 	"strconv"
@@ -760,67 +758,14 @@ func (svc *MCRServiceOp) WaitForMCRReady(ctx context.Context, mcrID string, time
 	}
 }
 
-// validateGetMCRTelemetryRequest validates the request parameters for getting MCR telemetry.
-func validateGetMCRTelemetryRequest(req *GetMCRTelemetryRequest) error {
-	if req == nil {
-		return ErrMCRTelemetryRequestRequired
-	}
-	if req.ProductUID == "" {
-		return ErrMCRTelemetryProductUIDRequired
-	}
-	if len(req.Types) == 0 {
-		return ErrMCRTelemetryTypesRequired
-	}
-	if req.Days != nil && (req.From != nil || req.To != nil) {
-		return ErrMCRTelemetryTimeExclusive
-	}
-	if req.Days != nil && (*req.Days < 1 || *req.Days > 180) {
-		return ErrMCRTelemetryDaysOutOfRange
-	}
-	if (req.From != nil) != (req.To != nil) {
-		return ErrMCRTelemetryFromToIncomplete
-	}
-	return nil
-}
-
 // GetMCRTelemetry returns telemetry data for an MCR product.
 func (svc *MCRServiceOp) GetMCRTelemetry(ctx context.Context, req *GetMCRTelemetryRequest) (*ServiceTelemetryResponse, error) {
-	if err := validateGetMCRTelemetryRequest(req); err != nil {
+	if req == nil {
+		return nil, ErrMCRTelemetryRequestRequired
+	}
+	if err := validateTelemetryRequest(req.ProductUID, req.Types, req.From, req.To, req.Days, mcrTelemetryValidationErrors); err != nil {
 		return nil, err
 	}
-
 	path := fmt.Sprintf("/v2/product/%s/%s/telemetry", PRODUCT_MCR, url.PathEscape(req.ProductUID))
-
-	params := url.Values{}
-	for _, t := range req.Types {
-		params.Add("type", t)
-	}
-	if req.From != nil {
-		params.Set("from", strconv.FormatInt(req.From.UnixMilli(), 10))
-	}
-	if req.To != nil {
-		params.Set("to", strconv.FormatInt(req.To.UnixMilli(), 10))
-	}
-	if req.Days != nil {
-		params.Set("days", strconv.FormatInt(int64(*req.Days), 10))
-	}
-
-	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, path+"?"+params.Encode(), nil)
-	if err != nil {
-		return nil, err
-	}
-	var buf bytes.Buffer
-	resp, err := svc.Client.Do(ctx, clientReq, &buf)
-	if err != nil {
-		if resp != nil && resp.Body != nil {
-			resp.Body.Close()
-		}
-		return nil, err
-	}
-	defer resp.Body.Close()
-	telemetryResp := &ServiceTelemetryResponse{}
-	if err := json.Unmarshal(buf.Bytes(), telemetryResp); err != nil {
-		return nil, err
-	}
-	return telemetryResp, nil
+	return fetchTelemetry(ctx, svc.Client, path, req.Types, req.From, req.To, req.Days)
 }

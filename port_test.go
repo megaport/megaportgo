@@ -750,6 +750,24 @@ func (suite *PortClientTestSuite) TestGetPortTelemetryValidation() {
 	})
 	suite.ErrorIs(err, ErrPortTelemetryFromToIncomplete)
 
+	// From after To
+	_, err = portSvc.GetPortTelemetry(ctx, &GetPortTelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		From:       PtrTo(time.UnixMilli(1608603936000)),
+		To:         PtrTo(time.UnixMilli(1608516536000)),
+	})
+	suite.ErrorIs(err, ErrPortTelemetryFromAfterTo)
+
+	// From/To range longer than 180 days
+	_, err = portSvc.GetPortTelemetry(ctx, &GetPortTelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		From:       PtrTo(time.UnixMilli(1608516536000)),
+		To:         PtrTo(time.UnixMilli(1608516536000).Add(181 * 24 * time.Hour)),
+	})
+	suite.ErrorIs(err, ErrPortTelemetryRangeTooLong)
+
 	// Nil request
 	_, err = portSvc.GetPortTelemetry(ctx, nil)
 	suite.ErrorIs(err, ErrPortTelemetryRequestRequired)

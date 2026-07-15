@@ -260,9 +260,21 @@ type GetMCRTelemetryRequest struct {
 
 var (
 	ErrMCRTelemetryRequestRequired    = errors.New("MCR telemetry request is required")
-	ErrMCRTelemetryProductUIDRequired = errors.New("product UID is required")
-	ErrMCRTelemetryTypesRequired      = errors.New("at least one telemetry type is required")
-	ErrMCRTelemetryTimeExclusive      = errors.New("days and from/to are mutually exclusive")
-	ErrMCRTelemetryDaysOutOfRange     = errors.New("days must be between 1 and 180")
-	ErrMCRTelemetryFromToIncomplete   = errors.New("both from and to must be provided together")
+	ErrMCRTelemetryProductUIDRequired = errors.New("MCR telemetry: product UID is required")
+	ErrMCRTelemetryTypesRequired      = errors.New("MCR telemetry: at least one telemetry type is required")
+	ErrMCRTelemetryTimeExclusive      = errors.New("MCR telemetry: days and from/to are mutually exclusive")
+	ErrMCRTelemetryDaysOutOfRange     = errors.New("MCR telemetry: days must be between 1 and 180")
+	ErrMCRTelemetryFromToIncomplete   = errors.New("MCR telemetry: both from and to must be provided together")
+	ErrMCRTelemetryFromAfterTo        = errors.New("MCR telemetry: from must not be after to")
+	ErrMCRTelemetryRangeTooLong       = errors.New("MCR telemetry: from/to time range must not exceed 180 days")
 )
+
+var mcrTelemetryValidationErrors = telemetryValidationErrors{
+	productUIDRequired: ErrMCRTelemetryProductUIDRequired,
+	typesRequired:      ErrMCRTelemetryTypesRequired,
+	timeExclusive:      ErrMCRTelemetryTimeExclusive,
+	daysOutOfRange:     ErrMCRTelemetryDaysOutOfRange,
+	fromToIncomplete:   ErrMCRTelemetryFromToIncomplete,
+	fromAfterTo:        ErrMCRTelemetryFromAfterTo,
+	rangeTooLong:       ErrMCRTelemetryRangeTooLong,
+}

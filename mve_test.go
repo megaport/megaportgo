@@ -912,6 +912,24 @@ func (suite *MVEClientTestSuite) TestGetMVETelemetryValidation() {
 	})
 	suite.ErrorIs(err, ErrMVETelemetryFromToIncomplete)
 
+	// From after To
+	_, err = mveSvc.GetMVETelemetry(ctx, &GetMVETelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		From:       PtrTo(time.UnixMilli(1608603936000)),
+		To:         PtrTo(time.UnixMilli(1608516536000)),
+	})
+	suite.ErrorIs(err, ErrMVETelemetryFromAfterTo)
+
+	// From/To range longer than 180 days
+	_, err = mveSvc.GetMVETelemetry(ctx, &GetMVETelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		From:       PtrTo(time.UnixMilli(1608516536000)),
+		To:         PtrTo(time.UnixMilli(1608516536000).Add(181 * 24 * time.Hour)),
+	})
+	suite.ErrorIs(err, ErrMVETelemetryRangeTooLong)
+
 	// Nil request
 	_, err = mveSvc.GetMVETelemetry(ctx, nil)
 	suite.ErrorIs(err, ErrMVETelemetryRequestRequired)

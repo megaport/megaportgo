@@ -60,7 +60,7 @@ type ServiceTelemetryResponse struct {
 	Type       string                 `json:"type"`
 	TimeFrame  TelemetryTimeFrame     `json:"timeFrame"`
 	Data       []*TelemetryMetricData `json:"data"`
-	PeerUID    string                 `json:"peerUid,omitempty"` // only present for IX flow metrics
+	PeerUID    string                 `json:"peerUid"` // only present for IX flow metrics
 }
 
 // TelemetryTimeFrame represents the time range of a telemetry response.

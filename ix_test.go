@@ -1041,6 +1041,24 @@ func (suite *IXClientTestSuite) TestGetIXTelemetryValidation() {
 	})
 	suite.ErrorIs(err, ErrIXTelemetryFromToIncomplete)
 
+	// From after To
+	_, err = ixSvc.GetIXTelemetry(ctx, &GetIXTelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		From:       PtrTo(time.UnixMilli(1608603936000)),
+		To:         PtrTo(time.UnixMilli(1608516536000)),
+	})
+	suite.ErrorIs(err, ErrIXTelemetryFromAfterTo)
+
+	// From/To range longer than 180 days
+	_, err = ixSvc.GetIXTelemetry(ctx, &GetIXTelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		From:       PtrTo(time.UnixMilli(1608516536000)),
+		To:         PtrTo(time.UnixMilli(1608516536000).Add(181 * 24 * time.Hour)),
+	})
+	suite.ErrorIs(err, ErrIXTelemetryRangeTooLong)
+
 	// Nil request
 	_, err = ixSvc.GetIXTelemetry(ctx, nil)
 	suite.ErrorIs(err, ErrIXTelemetryRequestRequired)
