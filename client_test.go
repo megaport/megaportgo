@@ -201,6 +201,42 @@ func (suite *ClientTestSuite) TestNewRequest_withCustomHeaders() {
 	}
 }
 
+// TestNewRequest_withCallContext tests that WithCallContext sets the
+// X-Call-Context header only when a non-empty company UID is provided.
+func (suite *ClientTestSuite) TestNewRequest_withCallContext() {
+	expectedUID := "fdf6a5fd-8fac-4957-bfcd-f1c77c2abf83"
+
+	// With the option and a UID: the header is present and equal to the UID.
+	withOpt, err := New(nil, WithCallContext(expectedUID))
+	if err != nil {
+		suite.FailNowf("unexpected error", "New() unexpected error: %v", err.Error())
+	}
+	req, _ := withOpt.NewRequest(ctx, http.MethodGet, "/foo", nil)
+	if got := req.Header.Get("X-Call-Context"); got != expectedUID {
+		suite.FailNowf("call context header mismatch", "X-Call-Context = %q; expected %q", got, expectedUID)
+	}
+
+	// Without the option: the header is absent.
+	without, err := New(nil)
+	if err != nil {
+		suite.FailNowf("unexpected error", "New() unexpected error: %v", err.Error())
+	}
+	req, _ = without.NewRequest(ctx, http.MethodGet, "/foo", nil)
+	if vals := req.Header.Values("X-Call-Context"); len(vals) != 0 {
+		suite.FailNowf("call context header should be absent", "X-Call-Context present: %v; expected absent", vals)
+	}
+
+	// With an empty UID: the header is absent.
+	empty, err := New(nil, WithCallContext(""))
+	if err != nil {
+		suite.FailNowf("unexpected error", "New() unexpected error: %v", err.Error())
+	}
+	req, _ = empty.NewRequest(ctx, http.MethodGet, "/foo", nil)
+	if vals := req.Header.Values("X-Call-Context"); len(vals) != 0 {
+		suite.FailNowf("call context header should be absent", "X-Call-Context present: %v; expected absent", vals)
+	}
+}
+
 // TestDo_get tests if the Do function returns a GET request with the default base URL and user agent.
 func (suite *ClientTestSuite) TestDo() {
 
