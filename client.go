@@ -439,10 +439,10 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v any) (*http.Respon
 	tmpDisable := ctx.Value(disableResponseBodyLogging) != nil
 	if c.LogResponseBody && !tmpDisable {
 		b, err := io.ReadAll(resp.Body)
-		_ = resp.Body.Close()
 		if err != nil {
 			return nil, err
 		}
+		_ = resp.Body.Close()
 
 		// Create new reader for the later code
 		respBody = io.NopCloser(bytes.NewReader(b))
@@ -476,6 +476,17 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v any) (*http.Respon
 
 	success = true
 	return resp, nil
+}
+
+// doDiscard runs Do for callers that ignore the response payload, draining
+// and closing the body so the connection is not leaked.
+func (c *Client) doDiscard(ctx context.Context, req *http.Request) error {
+	resp, err := c.Do(ctx, req, nil)
+	if err != nil {
+		return err
+	}
+	_, _ = io.Copy(io.Discard, resp.Body)
+	return resp.Body.Close()
 }
 
 type AuthInfo struct {

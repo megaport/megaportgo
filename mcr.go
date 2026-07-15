@@ -565,7 +565,7 @@ func (svc *MCRServiceOp) DeleteMCRPrefixFilterList(ctx context.Context, mcrID st
 	if err != nil {
 		return nil, err
 	}
-	_, err = svc.Client.Do(ctx, clientReq, nil)
+	err = svc.Client.doDiscard(ctx, clientReq)
 	if err != nil {
 		return nil, err
 	}
@@ -581,7 +581,7 @@ func (svc *MCRServiceOp) ModifyMCRPrefixFilterList(ctx context.Context, mcrID st
 	if err != nil {
 		return nil, err
 	}
-	_, err = svc.Client.Do(ctx, clientReq, nil)
+	err = svc.Client.doDiscard(ctx, clientReq)
 	if err != nil {
 		return nil, err
 	}
@@ -669,7 +669,7 @@ func (svc *MCRServiceOp) UpdateMCRWithAddOn(ctx context.Context, mcrID string, r
 		if err != nil {
 			return err
 		}
-		_, err = svc.Client.Do(ctx, clientReq, nil)
+		err = svc.Client.doDiscard(ctx, clientReq)
 		if err != nil {
 			return err
 		}
@@ -704,7 +704,7 @@ func (svc *MCRServiceOp) UpdateMCRIPsecAddOn(ctx context.Context, mcrID string, 
 	if err != nil {
 		return err
 	}
-	_, err = svc.Client.Do(ctx, clientReq, nil)
+	err = svc.Client.doDiscard(ctx, clientReq)
 	return err
 }
 
