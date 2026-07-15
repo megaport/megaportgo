@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/url"
 	"slices"
 	"strconv"
 	"strings"
@@ -716,9 +717,9 @@ func (svc *MCRServiceOp) UpdateMCRIPsecAddOn(ctx context.Context, mcrID string, 
 // The response never includes the pre-shared key or phase lifetimes: those
 // cannot be read back after ordering.
 func (svc *MCRServiceOp) GetMCRIPsec(ctx context.Context, mcrID string) (*MCRIPsecConfiguration, error) {
-	url := "/v3/products/mcrs/" + mcrID + "/ipsec"
+	path := "/v3/products/mcrs/" + url.PathEscape(mcrID) + "/ipsec"
 
-	clientReq, err := svc.Client.NewRequest(ctx, "GET", url, nil)
+	clientReq, err := svc.Client.NewRequest(ctx, "GET", path, nil)
 	if err != nil {
 		return nil, err
 	}

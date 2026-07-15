@@ -179,7 +179,7 @@ type mcrResponse struct {
 type MCRIPsecConfiguration struct {
 	IPsecConfiguredVXCs []IPsecConfiguredVXC `json:"ipSecConfiguredVxcs"`
 	TotalTunnelCount    int                  `json:"totalTunnelCount"`
-	MaxTunnelCountLimit int                  `json:"maxTunnelCountLimit"` // 0 if the API omits it
+	MaxTunnelCountLimit int                  `json:"maxTunnelCountLimit"` // 0 when the API omits it; the effective limit then defaults to 10
 }
 
 // IPsecConfiguredVXC is a VXC on an MCR with configured IPsec tunnels.
