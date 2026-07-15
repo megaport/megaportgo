@@ -41,24 +41,30 @@ var ErrNATGatewaySpeedRequired = errors.New("speed must be greater than 0")
 // allowed set ever changes.
 var ErrNATGatewayInvalidTerm = fmt.Errorf("term must be one of: %s", intSliceToString(VALID_CONTRACT_TERMS))
 
+// validateNATGatewayCommonFields performs the structural checks shared by
+// CreateNATGatewayRequest and UpdateNATGatewayRequest.
+func validateNATGatewayCommonFields(productName string, locationID, speed, term int) error {
+	if productName == "" {
+		return ErrNATGatewayProductNameRequired
+	}
+	if locationID < 1 {
+		return ErrNATGatewayLocationIDRequired
+	}
+	if speed < 1 {
+		return ErrNATGatewaySpeedRequired
+	}
+	if !slices.Contains(VALID_CONTRACT_TERMS, term) {
+		return ErrNATGatewayInvalidTerm
+	}
+	return nil
+}
+
 // validateCreateNATGatewayRequest validates the request parameters for creating a NAT Gateway.
 func validateCreateNATGatewayRequest(req *CreateNATGatewayRequest) error {
 	if req == nil {
 		return ErrNATGatewayRequestNil
 	}
-	if req.ProductName == "" {
-		return ErrNATGatewayProductNameRequired
-	}
-	if req.LocationID < 1 {
-		return ErrNATGatewayLocationIDRequired
-	}
-	if req.Speed < 1 {
-		return ErrNATGatewaySpeedRequired
-	}
-	if !slices.Contains(VALID_CONTRACT_TERMS, req.Term) {
-		return ErrNATGatewayInvalidTerm
-	}
-	return nil
+	return validateNATGatewayCommonFields(req.ProductName, req.LocationID, req.Speed, req.Term)
 }
 
 // validateUpdateNATGatewayRequest validates the request parameters for updating a NAT Gateway.
@@ -69,19 +75,7 @@ func validateUpdateNATGatewayRequest(req *UpdateNATGatewayRequest) error {
 	if req.ProductUID == "" {
 		return ErrNATGatewayProductUIDRequired
 	}
-	if req.ProductName == "" {
-		return ErrNATGatewayProductNameRequired
-	}
-	if req.LocationID < 1 {
-		return ErrNATGatewayLocationIDRequired
-	}
-	if req.Speed < 1 {
-		return ErrNATGatewaySpeedRequired
-	}
-	if !slices.Contains(VALID_CONTRACT_TERMS, req.Term) {
-		return ErrNATGatewayInvalidTerm
-	}
-	return nil
+	return validateNATGatewayCommonFields(req.ProductName, req.LocationID, req.Speed, req.Term)
 }
 
 // validateGetNATGatewayTelemetryRequest validates the request parameters.
@@ -105,4 +99,39 @@ func validateGetNATGatewayTelemetryRequest(req *GetNATGatewayTelemetryRequest) e
 		return ErrNATGatewayTelemetryFromToIncomplete
 	}
 	return nil
+}
+
+// NATGatewaySpeedSessionResult describes whether a speed/session pair is
+// orderable according to a NAT Gateway availability matrix.
+type NATGatewaySpeedSessionResult struct {
+	// Supported is true only if the speed exists AND the session count is
+	// valid at that speed.
+	Supported bool
+	// SpeedSupported is true if the speed appears in the matrix at all.
+	SpeedSupported bool
+	// SupportedSpeeds lists every speed in the matrix. Always complete.
+	SupportedSpeeds []int
+	// SessionsAtSpeed lists the session counts valid at the requested speed
+	// (nil if the speed is unsupported).
+	SessionsAtSpeed []int
+}
+
+// NATGatewaySpeedSessionSupported reports whether a speed/sessionCount pair is
+// present in a NAT Gateway availability matrix obtained from
+// ListNATGatewaySessions. It performs no network I/O; the caller supplies the
+// matrix and validation happens locally.
+func NATGatewaySpeedSessionSupported(matrix []*NATGatewaySession, speed, sessionCount int) NATGatewaySpeedSessionResult {
+	res := NATGatewaySpeedSessionResult{SupportedSpeeds: make([]int, 0, len(matrix))}
+	for _, entry := range matrix {
+		if entry == nil {
+			continue
+		}
+		res.SupportedSpeeds = append(res.SupportedSpeeds, entry.SpeedMbps)
+		if entry.SpeedMbps == speed {
+			res.SpeedSupported = true
+			res.SessionsAtSpeed = entry.SessionCount
+		}
+	}
+	res.Supported = res.SpeedSupported && slices.Contains(res.SessionsAtSpeed, sessionCount)
+	return res
 }
