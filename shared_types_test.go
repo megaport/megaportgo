@@ -22,6 +22,8 @@ func TestTimeUnmarshalJSON(t *testing.T) {
 		{name: "epoch milliseconds string", input: `"1700000000000"`, want: time.Unix(1700000000, 0)},
 		{name: "rfc3339 string", input: `"2026-06-29T01:02:03Z"`, want: time.Date(2026, 6, 29, 1, 2, 3, 0, time.UTC)},
 		{name: "rfc3339 with offset", input: `"2026-06-29T01:02:03+10:00"`, want: time.Date(2026, 6, 29, 1, 2, 3, 0, time.FixedZone("", 10*3600))},
+		{name: "colonless offset with millis", input: `"2026-06-29T01:02:03.000+0000"`, want: time.Date(2026, 6, 29, 1, 2, 3, 0, time.UTC)},
+		{name: "colonless offset without millis", input: `"2026-06-29T01:02:03+1000"`, want: time.Date(2026, 6, 29, 1, 2, 3, 0, time.FixedZone("", 10*3600))},
 		{name: "date only string", input: `"2026-06-29"`, want: time.Date(2026, 6, 29, 0, 0, 0, 0, time.UTC)},
 		{name: "null", input: `null`, zero: true},
 		{name: "empty string", input: `""`, zero: true},
