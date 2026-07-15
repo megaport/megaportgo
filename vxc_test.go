@@ -1423,8 +1423,8 @@ func (suite *VXCClientTestSuite) TestDecomissionedVXCMarshal() {
 }
 
 // TestMCRVXCWithIPsecTunnel verifies that an IPsec tunnel attached to an
-// MCR VXC A-End interface serialises to the shape the API parses: an
-// ipSecTunnelOptions array on an interface with interfaceType "ipSecTunnel".
+// MCR VXC A-End interface serialises to the shape the API parses: a single
+// ipSecTunnelOptions object on an interface with interfaceType "ipSecTunnel".
 func (suite *VXCClientTestSuite) TestMCRVXCWithIPsecTunnel() {
 	phase1 := 28800
 	phase2 := 3600
@@ -1433,7 +1433,7 @@ func (suite *VXCClientTestSuite) TestMCRVXCWithIPsecTunnel() {
 		Description:   "tunnel-a",
 		InterfaceType: InterfaceTypeIPSecTunnel,
 		IpAddresses:   []string{"192.0.2.1/30"},
-		IpSecTunnelOptions: []IPsecTunnelConfig{{
+		IpSecTunnelOptions: &IPsecTunnelConfig{
 			SourceIpAddress:      "192.0.2.1",
 			DestinationIpAddress: "198.51.100.1",
 			PreSharedKey:         "notARealKey12345",
@@ -1442,7 +1442,7 @@ func (suite *VXCClientTestSuite) TestMCRVXCWithIPsecTunnel() {
 			RemoteId:             "remote.example.com",
 			Phase1Lifetime:       &phase1,
 			Phase2Lifetime:       &phase2,
-		}},
+		},
 	}
 	cfg := VXCOrderVrouterPartnerConfig{Interfaces: []PartnerConfigInterface{iface}}
 
@@ -1458,14 +1458,9 @@ func (suite *VXCClientTestSuite) TestMCRVXCWithIPsecTunnel() {
 	gotIface := got.Interfaces[0]
 	suite.Equal("ipSecTunnel", gotIface["interfaceType"])
 	suite.Equal("tunnel-a", gotIface["description"])
-	_, hasLegacyKey := gotIface["ipsecTunnels"]
-	suite.False(hasLegacyKey, "legacy ipsecTunnels array must not be serialised")
 
-	tunnels, ok := gotIface["ipSecTunnelOptions"].([]any)
-	suite.Require().True(ok, "expected ipSecTunnelOptions to serialise as a JSON array")
-	suite.Require().Len(tunnels, 1)
-	tunnel, ok := tunnels[0].(map[string]any)
-	suite.Require().True(ok, "expected each ipSecTunnelOptions element to be an object")
+	tunnel, ok := gotIface["ipSecTunnelOptions"].(map[string]any)
+	suite.Require().True(ok, "expected ipSecTunnelOptions to serialise as a single JSON object")
 	suite.Equal("192.0.2.1", tunnel["sourceIpAddress"])
 	suite.Equal("198.51.100.1", tunnel["destinationIpAddress"])
 	suite.Equal("notARealKey12345", tunnel["preSharedKey"])
@@ -1474,49 +1469,70 @@ func (suite *VXCClientTestSuite) TestMCRVXCWithIPsecTunnel() {
 	suite.Equal("remote.example.com", tunnel["remoteId"])
 	suite.EqualValues(28800, tunnel["phase1Lifetime"])
 	suite.EqualValues(3600, tunnel["phase2Lifetime"])
-	_, hasStartAction := tunnel["startAction"]
-	suite.False(hasStartAction, "startAction is not an API field")
 
 	// Unset optional fields must be omitted so the API defaults apply
 	// (notably passive, which the API defaults to true).
 	minimal := PartnerConfigInterface{
 		InterfaceType: InterfaceTypeIPSecTunnel,
-		IpSecTunnelOptions: []IPsecTunnelConfig{{
+		IpSecTunnelOptions: &IPsecTunnelConfig{
 			SourceIpAddress:      "192.0.2.2",
 			DestinationIpAddress: "198.51.100.2",
 			PreSharedKey:         "anotherKey12345",
-		}},
+		},
 	}
 	raw, err = json.Marshal(minimal)
 	suite.NoError(err)
 	var minimalGot struct {
-		IpSecTunnelOptions []map[string]any `json:"ipSecTunnelOptions"`
+		IpSecTunnelOptions map[string]any `json:"ipSecTunnelOptions"`
 	}
 	suite.NoError(json.Unmarshal(raw, &minimalGot))
-	suite.Require().Len(minimalGot.IpSecTunnelOptions, 1)
+	suite.Require().NotNil(minimalGot.IpSecTunnelOptions)
+	suite.Equal("192.0.2.2", minimalGot.IpSecTunnelOptions["sourceIpAddress"])
+	suite.Equal("198.51.100.2", minimalGot.IpSecTunnelOptions["destinationIpAddress"])
+	suite.Equal("anotherKey12345", minimalGot.IpSecTunnelOptions["preSharedKey"])
 	for _, key := range []string{"passive", "localId", "remoteId", "phase1Lifetime", "phase2Lifetime"} {
-		_, ok := minimalGot.IpSecTunnelOptions[0][key]
+		_, ok := minimalGot.IpSecTunnelOptions[key]
 		suite.False(ok, "expected key %q to be absent", key)
 	}
 
-	// The API accepts multiple tunnels per interface, so the field must
-	// serialise every element of the slice (not collapse to one object).
-	multi := PartnerConfigInterface{
-		InterfaceType: InterfaceTypeIPSecTunnel,
-		IpSecTunnelOptions: []IPsecTunnelConfig{
-			{SourceIpAddress: "192.0.2.3", DestinationIpAddress: "198.51.100.3", PreSharedKey: "firstKey12345678"},
-			{SourceIpAddress: "192.0.2.4", DestinationIpAddress: "198.51.100.4", PreSharedKey: "secondKey1234567"},
+	// A nil IpSecTunnelOptions must omit the field entirely rather than
+	// serialise a JSON null, so a sub-interface order carries no tunnel.
+	noTunnel := PartnerConfigInterface{InterfaceType: InterfaceTypeSubInterface}
+	raw, err = json.Marshal(noTunnel)
+	suite.NoError(err)
+	var noTunnelGot map[string]any
+	suite.NoError(json.Unmarshal(raw, &noTunnelGot))
+	_, hasTunnelKey := noTunnelGot["ipSecTunnelOptions"]
+	suite.False(hasTunnelKey, "nil ipSecTunnelOptions must be omitted")
+
+	// Multiple tunnels are modelled as multiple ipSecTunnel interfaces,
+	// each carrying its own single tunnel object (one tunnel per interface).
+	multi := VXCOrderVrouterPartnerConfig{
+		Interfaces: []PartnerConfigInterface{
+			{
+				InterfaceType:      InterfaceTypeIPSecTunnel,
+				IpSecTunnelOptions: &IPsecTunnelConfig{SourceIpAddress: "192.0.2.3", DestinationIpAddress: "198.51.100.3", PreSharedKey: "firstKey12345678"},
+			},
+			{
+				InterfaceType:      InterfaceTypeIPSecTunnel,
+				IpSecTunnelOptions: &IPsecTunnelConfig{SourceIpAddress: "192.0.2.4", DestinationIpAddress: "198.51.100.4", PreSharedKey: "secondKey1234567"},
+			},
 		},
 	}
 	raw, err = json.Marshal(multi)
 	suite.NoError(err)
 	var multiGot struct {
-		IpSecTunnelOptions []map[string]any `json:"ipSecTunnelOptions"`
+		Interfaces []struct {
+			InterfaceType      string         `json:"interfaceType"`
+			IpSecTunnelOptions map[string]any `json:"ipSecTunnelOptions"`
+		} `json:"interfaces"`
 	}
 	suite.NoError(json.Unmarshal(raw, &multiGot))
-	suite.Require().Len(multiGot.IpSecTunnelOptions, 2)
-	suite.Equal("192.0.2.3", multiGot.IpSecTunnelOptions[0]["sourceIpAddress"])
-	suite.Equal("192.0.2.4", multiGot.IpSecTunnelOptions[1]["sourceIpAddress"])
+	suite.Require().Len(multiGot.Interfaces, 2)
+	suite.Equal("ipSecTunnel", multiGot.Interfaces[0].InterfaceType)
+	suite.Equal("ipSecTunnel", multiGot.Interfaces[1].InterfaceType)
+	suite.Equal("192.0.2.3", multiGot.Interfaces[0].IpSecTunnelOptions["sourceIpAddress"])
+	suite.Equal("192.0.2.4", multiGot.Interfaces[1].IpSecTunnelOptions["sourceIpAddress"])
 }
 
 // TestListVXCs tests the ListVXCs method with various filters

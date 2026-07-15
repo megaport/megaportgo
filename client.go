@@ -36,6 +36,10 @@ const (
 	userAgent      = "Go-Megaport-Library/" + libraryVersion
 	mediaType      = "application/json"
 	headerTraceId  = "Trace-Id"
+
+	// headerCallContext lets an authenticated user act on behalf of a company
+	// they can manage; the value is that company's UID.
+	headerCallContext = "X-Call-Context"
 )
 
 // TokenProvider is an interface for providing access tokens.
@@ -262,6 +266,18 @@ func WithCustomHeaders(headers map[string]string) ClientOpt {
 	return func(c *Client) error {
 		for k, v := range headers {
 			c.headers[k] = v
+		}
+		return nil
+	}
+}
+
+// WithCallContext sets the X-Call-Context header so requests act on behalf of
+// the given managed account; companyUID is that company's UID. An empty UID
+// sets no header.
+func WithCallContext(companyUID string) ClientOpt {
+	return func(c *Client) error {
+		if companyUID != "" {
+			c.headers[headerCallContext] = companyUID
 		}
 		return nil
 	}
