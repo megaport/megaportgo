@@ -1535,6 +1535,52 @@ func (suite *VXCClientTestSuite) TestMCRVXCWithIPsecTunnel() {
 	suite.Equal("192.0.2.4", multiGot.Interfaces[1].IpSecTunnelOptions["sourceIpAddress"])
 }
 
+// TestBgpConnectionAsOverride verifies that AsOverride on a BGP connection
+// serialises only when set, so an unset field leaves the API default in place.
+func (suite *VXCClientTestSuite) TestBgpConnectionAsOverride() {
+	marshalAsOverride := func(cfg VXCOrderVrouterPartnerConfig) (any, bool) {
+		raw, err := json.Marshal(cfg)
+		suite.NoError(err)
+		var got struct {
+			Interfaces []struct {
+				BgpConnections []map[string]any `json:"bgpConnections"`
+			} `json:"interfaces"`
+		}
+		suite.NoError(json.Unmarshal(raw, &got))
+		suite.Require().Len(got.Interfaces, 1)
+		suite.Require().Len(got.Interfaces[0].BgpConnections, 1)
+		v, ok := got.Interfaces[0].BgpConnections[0]["asOverride"]
+		return v, ok
+	}
+	newCfg := func(asOverride *bool) VXCOrderVrouterPartnerConfig {
+		return VXCOrderVrouterPartnerConfig{
+			Interfaces: []PartnerConfigInterface{{
+				BgpConnections: []BgpConnectionConfig{{
+					PeerAsn:        65000,
+					LocalIpAddress: "192.0.2.1",
+					PeerIpAddress:  "192.0.2.2",
+					AsOverride:     asOverride,
+				}},
+			}},
+		}
+	}
+
+	enabled := true
+	v, present := marshalAsOverride(newCfg(&enabled))
+	suite.True(present, "asOverride must be sent when set true")
+	suite.Equal(true, v)
+
+	// Explicit false is preserved (a plain bool with omitempty could not do this).
+	disabled := false
+	v, present = marshalAsOverride(newCfg(&disabled))
+	suite.True(present, "asOverride must be sent when set false")
+	suite.Equal(false, v)
+
+	// Unset (nil) omits the key so the API applies its own default.
+	_, present = marshalAsOverride(newCfg(nil))
+	suite.False(present, "unset asOverride must be omitted")
+}
+
 // TestListVXCs tests the ListVXCs method with various filters
 func (suite *VXCClientTestSuite) TestListVXCs() {
 	// Define mock responses for products list API
