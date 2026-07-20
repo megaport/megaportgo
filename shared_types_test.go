@@ -71,7 +71,7 @@ func TestTimeUnmarshalInStruct(t *testing.T) {
 		require.NoError(t, json.Unmarshal([]byte(`{"name":"port-1","createDate":"2026-06-29T00:00:00Z"}`), &p))
 		assert.Equal(t, "port-1", p.Name)
 		require.NotNil(t, p.CreateDate)
-		assert.Equal(t, 2026, p.CreateDate.Year())
+		assert.True(t, p.CreateDate.Equal(time.Date(2026, 6, 29, 0, 0, 0, 0, time.UTC)))
 	})
 
 	t.Run("pointer field null stays nil", func(t *testing.T) {
@@ -83,7 +83,7 @@ func TestTimeUnmarshalInStruct(t *testing.T) {
 	t.Run("value field with string date", func(t *testing.T) {
 		var v valueField
 		require.NoError(t, json.Unmarshal([]byte(`{"createDate":"2026-06-29T00:00:00Z"}`), &v))
-		assert.Equal(t, 2026, v.CreateDate.Year())
+		assert.True(t, v.CreateDate.Equal(time.Date(2026, 6, 29, 0, 0, 0, 0, time.UTC)))
 	})
 
 	// Deliberate change: null on a value Time field now yields the Go zero
