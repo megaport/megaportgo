@@ -47,8 +47,7 @@ type MCRService interface {
 	UpdateMCRWithAddOn(ctx context.Context, mcrID string, req MCRAddOnRequest) error
 	// UpdateMCRIPsecAddOn updates an existing IPsec add-on on an MCR. Setting tunnelCount to 0 will disable IPsec.
 	UpdateMCRIPsecAddOn(ctx context.Context, mcrID string, addOnUID string, tunnelCount int) error
-	// GetMCRIPsec returns the IPsec tunnel configuration for an MCR. The response
-	// never includes the pre-shared key or phase lifetimes.
+	// GetMCRIPsec returns the IPsec tunnel configuration for an MCR.
 	GetMCRIPsec(ctx context.Context, mcrID string) (*MCRIPsecConfiguration, error)
 	// WaitForMCRReady polls until the MCR reaches a ready provisioning state.
 	// A zero timeout defaults to 5 minutes. Returns ErrMCRNotFound or ErrMCRDecommissioned
@@ -719,8 +718,6 @@ func (svc *MCRServiceOp) UpdateMCRIPsecAddOn(ctx context.Context, mcrID string, 
 
 // GetMCRIPsec returns the IPsec tunnel configuration for an MCR.
 // GET /v3/products/mcrs/{productUid}/ipsec
-// The response never includes the pre-shared key or phase lifetimes: those
-// cannot be read back after ordering.
 func (svc *MCRServiceOp) GetMCRIPsec(ctx context.Context, mcrID string) (*MCRIPsecConfiguration, error) {
 	path := "/v3/products/mcrs/" + url.PathEscape(mcrID) + "/ipsec"
 

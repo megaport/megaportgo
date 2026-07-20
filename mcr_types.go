@@ -175,8 +175,7 @@ type mcrResponse struct {
 	Data    *MCR   `json:"data"`
 }
 
-// MCRIPsecConfiguration is the IPsec tunnel state for an MCR. The API never
-// returns the pre-shared key or phase lifetimes, so they are absent here.
+// MCRIPsecConfiguration is the IPsec tunnel state for an MCR.
 type MCRIPsecConfiguration struct {
 	IPsecConfiguredVXCs []IPsecConfiguredVXC `json:"ipSecConfiguredVxcs"`
 	TotalTunnelCount    int                  `json:"totalTunnelCount"`
