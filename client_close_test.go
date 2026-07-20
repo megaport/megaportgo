@@ -1,6 +1,7 @@
 package megaport
 
 import (
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -52,5 +53,76 @@ func TestDoClosesBodyOnError(t *testing.T) {
 	}
 	if got := atomic.LoadInt32(&closes); got < 1 {
 		t.Fatalf("response body not closed on error return (Close called %d times)", got)
+	}
+}
+
+type failingWriter struct{}
+
+func (failingWriter) Write(p []byte) (int, error) {
+	return 0, errors.New("write failed")
+}
+
+func TestDoClosesBodyOnCopyError(t *testing.T) {
+	var closes int32
+
+	c, err := New(nil)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	u, _ := url.Parse("https://example.test")
+	c.BaseURL = u
+	c.HTTPClient = &http.Client{Transport: rtFunc(func(r *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       closeCountingBody{Reader: strings.NewReader(`some body`), closes: &closes},
+			Header:     make(http.Header),
+			Request:    r,
+		}, nil
+	})}
+
+	req, err := c.NewRequest(ctx, http.MethodGet, "/x", nil)
+	if err != nil {
+		t.Fatalf("NewRequest: %v", err)
+	}
+
+	if _, err := c.Do(ctx, req, failingWriter{}); err == nil {
+		t.Fatal("expected Do to return an error when io.Copy fails")
+	}
+	if got := atomic.LoadInt32(&closes); got != 1 {
+		t.Fatalf("response body not closed exactly once on error return (Close called %d times)", got)
+	}
+}
+
+func TestDoClosesBodyOnDecodeError(t *testing.T) {
+	var closes int32
+
+	c, err := New(nil)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	u, _ := url.Parse("https://example.test")
+	c.BaseURL = u
+	c.HTTPClient = &http.Client{Transport: rtFunc(func(r *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       closeCountingBody{Reader: strings.NewReader(`not json`), closes: &closes},
+			Header:     make(http.Header),
+			Request:    r,
+		}, nil
+	})}
+
+	req, err := c.NewRequest(ctx, http.MethodGet, "/x", nil)
+	if err != nil {
+		t.Fatalf("NewRequest: %v", err)
+	}
+
+	var target struct {
+		Message string `json:"message"`
+	}
+	if _, err := c.Do(ctx, req, &target); err == nil {
+		t.Fatal("expected Do to return an error for malformed JSON")
+	}
+	if got := atomic.LoadInt32(&closes); got != 1 {
+		t.Fatalf("response body not closed exactly once on error return (Close called %d times)", got)
 	}
 }
