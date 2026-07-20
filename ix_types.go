@@ -178,7 +178,7 @@ type IXUpdate struct {
 // GetIXTelemetryRequest represents a request to get telemetry data for an IX.
 type GetIXTelemetryRequest struct {
 	ProductUID string     // The product UID of the IX.
-	Types      []string   // Telemetry types to retrieve, e.g. "BITS", "PACKETS", "ROUTES_IMPORTED", "ROUTES_FILTERED", "BM_BYTES", "BM_PACKETS", "UU_BYTES", "UU_PACKETS".
+	Types      []string   // Telemetry types to retrieve, e.g. "BITS", "PACKETS", "ROUTES_IMPORTED", "ROUTES_FILTERED", "BM_BYTES", "BM_PACKETS", "UU_BYTES", "UU_PACKETS". The SDK does not validate this list against the API.
 	From       *time.Time // Start time. Mutually exclusive with Days.
 	To         *time.Time // End time. Mutually exclusive with Days.
 	Days       *int32     // Number of days of telemetry (1-180). Mutually exclusive with From/To.

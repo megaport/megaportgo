@@ -835,7 +835,7 @@ func (c *CSPConnection) UnmarshalJSON(data []byte) error {
 // GetVXCTelemetryRequest represents a request to get telemetry data for a VXC.
 type GetVXCTelemetryRequest struct {
 	ProductUID string     // required
-	Types      []string   // required; valid values: A_BITS, B_BITS, A_PACKETS, B_PACKETS
+	Types      []string   // required; valid values: A_BITS, B_BITS, A_PACKETS, B_PACKETS. The SDK does not validate this list against the API.
 	From       *time.Time // mutually exclusive with Days
 	To         *time.Time // mutually exclusive with Days
 	Days       *int32     // 1-180; mutually exclusive with From/To

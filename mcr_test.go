@@ -1104,6 +1104,27 @@ func (suite *MCRClientTestSuite) TestGetMCRTelemetryValidation() {
 	suite.ErrorIs(err, ErrMCRTelemetryRequestRequired)
 }
 
+// TestGetMCRTelemetryAPIError tests that GetMCRTelemetry propagates API errors.
+func (suite *MCRClientTestSuite) TestGetMCRTelemetryAPIError() {
+	ctx := context.Background()
+	mcrSvc := suite.client.MCRService
+	productUID := "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+
+	path := fmt.Sprintf("/v2/product/%s/%s/telemetry", PRODUCT_MCR, productUID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, `{"message":"internal server error","data":null}`)
+	})
+
+	resp, err := mcrSvc.GetMCRTelemetry(ctx, &GetMCRTelemetryRequest{
+		ProductUID: productUID,
+		Types:      []string{"BITS"},
+		Days:       PtrTo[int32](7),
+	})
+	suite.Error(err)
+	suite.Nil(resp)
+}
+
 // TestMCRNilRequestGuards verifies that the required-request MCR methods reject
 // a nil request with a sentinel error instead of panicking.
 func (suite *MCRClientTestSuite) TestMCRNilRequestGuards() {

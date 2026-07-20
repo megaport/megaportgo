@@ -773,6 +773,49 @@ func (suite *PortClientTestSuite) TestGetPortTelemetryValidation() {
 	suite.ErrorIs(err, ErrPortTelemetryRequestRequired)
 }
 
+// TestGetPortTelemetryAPIError tests that GetPortTelemetry propagates API errors.
+func (suite *PortClientTestSuite) TestGetPortTelemetryAPIError() {
+	ctx := context.Background()
+	portSvc := suite.client.PortService
+	productUID := "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+
+	path := fmt.Sprintf("/v2/product/%s/%s/telemetry", PRODUCT_MEGAPORT, productUID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, `{"message":"internal server error","data":null}`)
+	})
+
+	resp, err := portSvc.GetPortTelemetry(ctx, &GetPortTelemetryRequest{
+		ProductUID: productUID,
+		Types:      []string{"BITS"},
+		Days:       PtrTo[int32](7),
+	})
+	suite.Error(err)
+	suite.Nil(resp)
+}
+
+// TestGetPortTelemetryMalformedJSON tests that fetchTelemetry (shared by all
+// telemetry services) returns an error when the response body isn't valid JSON.
+func (suite *PortClientTestSuite) TestGetPortTelemetryMalformedJSON() {
+	ctx := context.Background()
+	portSvc := suite.client.PortService
+	productUID := "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+
+	path := fmt.Sprintf("/v2/product/%s/%s/telemetry", PRODUCT_MEGAPORT, productUID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `not valid json`)
+	})
+
+	resp, err := portSvc.GetPortTelemetry(ctx, &GetPortTelemetryRequest{
+		ProductUID: productUID,
+		Types:      []string{"BITS"},
+		Days:       PtrTo[int32](7),
+	})
+	suite.Error(err)
+	suite.Nil(resp)
+}
+
 // TestPortNilRequestGuards verifies that the required-request Port methods reject
 // a nil request with a sentinel error instead of panicking.
 func (suite *PortClientTestSuite) TestPortNilRequestGuards() {

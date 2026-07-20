@@ -253,7 +253,7 @@ func (e *APIMCRPrefixFilterListEntry) ToMCRPrefixFilterListEntry() (*MCRPrefixLi
 // GetMCRTelemetryRequest represents a request to get telemetry data for an MCR.
 type GetMCRTelemetryRequest struct {
 	ProductUID string     // The product UID of the MCR.
-	Types      []string   // Telemetry types to retrieve, e.g. "BITS", "PACKETS", "ERRORS", "SPEED", "BYTES_RATE", "BYTES_VOLUME", "OPTICAL", "OPTICAL_100G".
+	Types      []string   // Telemetry types to retrieve, e.g. "BITS", "PACKETS", "ERRORS", "SPEED", "BYTES_RATE", "BYTES_VOLUME", "OPTICAL", "OPTICAL_100G". The SDK does not validate this list against the API.
 	From       *time.Time // Start time. Mutually exclusive with Days.
 	To         *time.Time // End time. Mutually exclusive with Days.
 	Days       *int32     // Number of days of telemetry (1-180). Mutually exclusive with From/To.

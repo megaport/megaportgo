@@ -182,7 +182,7 @@ type PortVLANAvailabilityAPIResponse struct {
 // GetPortTelemetryRequest represents a request to get telemetry data for a Port.
 type GetPortTelemetryRequest struct {
 	ProductUID string     // The product UID of the Port.
-	Types      []string   // Telemetry types to retrieve, e.g. "BITS", "PACKETS", "ERRORS", "OPTICAL", "OPTICAL_100G", "SUBSCRIBED_SPEED", "SERVICE_COUNT".
+	Types      []string   // Telemetry types to retrieve, e.g. "BITS", "PACKETS", "ERRORS", "OPTICAL", "OPTICAL_100G", "SUBSCRIBED_SPEED", "SERVICE_COUNT". The SDK does not validate this list against the API.
 	From       *time.Time // Start time. Mutually exclusive with Days.
 	To         *time.Time // End time. Mutually exclusive with Days.
 	Days       *int32     // Number of days of telemetry (1-180). Mutually exclusive with From/To.

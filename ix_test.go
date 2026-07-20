@@ -1064,6 +1064,27 @@ func (suite *IXClientTestSuite) TestGetIXTelemetryValidation() {
 	suite.ErrorIs(err, ErrIXTelemetryRequestRequired)
 }
 
+// TestGetIXTelemetryAPIError tests that GetIXTelemetry propagates API errors.
+func (suite *IXClientTestSuite) TestGetIXTelemetryAPIError() {
+	ctx := context.Background()
+	ixSvc := suite.client.IXService
+	productUID := "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+
+	path := fmt.Sprintf("/v2/product/ix/%s/telemetry", productUID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, `{"message":"internal server error","data":null}`)
+	})
+
+	resp, err := ixSvc.GetIXTelemetry(ctx, &GetIXTelemetryRequest{
+		ProductUID: productUID,
+		Types:      []string{"BITS"},
+		Days:       PtrTo[int32](7),
+	})
+	suite.Error(err)
+	suite.Nil(resp)
+}
+
 // TestGetIXTelemetryWithPeerUID tests that peerUid is decoded from the response.
 func (suite *IXClientTestSuite) TestGetIXTelemetryWithPeerUID() {
 	ctx := context.Background()

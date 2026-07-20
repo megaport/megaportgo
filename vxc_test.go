@@ -2166,6 +2166,27 @@ func (suite *VXCClientTestSuite) TestGetVXCTelemetryValidation() {
 	suite.ErrorIs(err, ErrVXCTelemetryRequestRequired)
 }
 
+// TestGetVXCTelemetryAPIError tests that GetVXCTelemetry propagates API errors.
+func (suite *VXCClientTestSuite) TestGetVXCTelemetryAPIError() {
+	ctx := context.Background()
+	vxcSvc := suite.client.VXCService
+	productUID := "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+
+	path := fmt.Sprintf("/v2/product/%s/%s/telemetry", PRODUCT_VXC, productUID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, `{"message":"internal server error","data":null}`)
+	})
+
+	resp, err := vxcSvc.GetVXCTelemetry(ctx, &GetVXCTelemetryRequest{
+		ProductUID: productUID,
+		Types:      []string{"A_BITS"},
+		Days:       PtrTo[int32](7),
+	})
+	suite.Error(err)
+	suite.Nil(resp)
+}
+
 // TestVXCNilRequestGuards verifies that the required-request VXC methods reject
 // a nil request with a sentinel error instead of panicking.
 func (suite *VXCClientTestSuite) TestVXCNilRequestGuards() {

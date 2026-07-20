@@ -1055,6 +1055,27 @@ func (suite *MVEClientTestSuite) TestGetMVETelemetryValidation() {
 	suite.ErrorIs(err, ErrMVETelemetryRequestRequired)
 }
 
+// TestGetMVETelemetryAPIError tests that GetMVETelemetry propagates API errors.
+func (suite *MVEClientTestSuite) TestGetMVETelemetryAPIError() {
+	ctx := context.Background()
+	mveSvc := suite.client.MVEService
+	productUID := "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+
+	path := fmt.Sprintf("/v2/product/%s/%s/telemetry", PRODUCT_MVE, productUID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, `{"message":"internal server error","data":null}`)
+	})
+
+	resp, err := mveSvc.GetMVETelemetry(ctx, &GetMVETelemetryRequest{
+		ProductUID: productUID,
+		Types:      []string{"BITS"},
+		Days:       PtrTo[int32](7),
+	})
+	suite.Error(err)
+	suite.Nil(resp)
+}
+
 // TestCiscoConfigAdminPasswordMarshalling verifies that CiscoConfig.AdminPassword
 // round-trips through JSON serialisation under the wire-format key "adminPassword".
 // The Megaport API requires this field for Cisco FTDv MVE buy orders.

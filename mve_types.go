@@ -364,7 +364,7 @@ type mveSizeAPIResponse struct {
 // GetMVETelemetryRequest represents a request to get telemetry data for an MVE.
 type GetMVETelemetryRequest struct {
 	ProductUID string     // The product UID of the MVE.
-	Types      []string   // Telemetry types to retrieve, e.g. "BITS", "PACKETS", "ERRORS".
+	Types      []string   // Telemetry types to retrieve, e.g. "BITS", "PACKETS", "ERRORS". The SDK does not validate this list against the API.
 	From       *time.Time // Start time. Mutually exclusive with Days.
 	To         *time.Time // End time. Mutually exclusive with Days.
 	Days       *int32     // Number of days of telemetry (1-180). Mutually exclusive with From/To.
