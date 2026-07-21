@@ -396,7 +396,8 @@ type BgpConnectionConfig struct {
 	ExportWhitelist    int      `json:"exportWhitelist,omitempty"`
 	ExportBlacklist    int      `json:"exportBlacklist,omitempty"`
 	AsPathPrependCount int      `json:"asPathPrependCount,omitempty"`
-	PeerType           string   `json:"peerType,omitempty"` // can be NON_CLOUD, PRIV_CLOUD, or PUB_CLOUD
+	PeerType           string   `json:"peerType,omitempty"`   // can be NON_CLOUD, PRIV_CLOUD, or PUB_CLOUD
+	AsOverride         *bool    `json:"asOverride,omitempty"` // nil applies the API default; only valid for eBGP
 }
 
 // AWS STUFF
