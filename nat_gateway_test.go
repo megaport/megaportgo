@@ -1333,17 +1333,46 @@ func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesPollTimeout() 
 	natSvc.pollTimeout = 20 * time.Millisecond
 	productUID := "uid-timeout"
 
+	var opCalls atomic.Int32
+
 	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/ip", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprint(w, `{"message":"ok","terms":"","data":"op-timeout"}`)
 	})
 	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/operation", func(w http.ResponseWriter, r *http.Request) {
+		opCalls.Add(1)
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, diagnosticsInProgressBody)
 	})
 
 	_, err := natSvc.ListNATGatewayIPRoutes(ctx, productUID, "")
 	suite.ErrorIs(err, ErrNATGatewayDiagnosticsTimeout)
+	suite.GreaterOrEqual(opCalls.Load(), int32(1)) // at least one in-progress poll was tolerated before the timeout
+}
+
+// TestListNATGatewayIPRoutesPollCallerCancelled verifies that when the caller's
+// own context is cancelled mid-poll, the poll returns that cancellation error
+// rather than the SDK-managed timeout sentinel.
+func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesPollCallerCancelled() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	natSvc := suite.fastPollNATService()
+	productUID := "uid-cancel"
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/ip", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":"op-cancel"}`)
+	})
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/operation", func(w http.ResponseWriter, r *http.Request) {
+		// Deliver one in-progress 400, then cancel the caller's context so the
+		// next poll iteration surfaces the caller's cancellation.
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, diagnosticsInProgressBody)
+		cancel()
+	})
+
+	_, err := natSvc.ListNATGatewayIPRoutes(ctx, productUID, "")
+	suite.ErrorIs(err, context.Canceled)
 }
 
 // --- Prefix list round-trip ----------------------------------------------
