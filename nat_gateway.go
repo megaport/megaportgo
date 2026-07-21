@@ -112,6 +112,13 @@ func NewNATGatewayService(c *Client) *NATGatewayServiceOp {
 // NATGatewayServiceOp handles communication with NAT Gateway methods of the Megaport API.
 type NATGatewayServiceOp struct {
 	Client *Client
+	// pollInitialDelay overrides diagnosticsPollInitialDelay when non-zero.
+	// pollInterval overrides diagnosticsPollInterval when non-zero.
+	// pollTimeout overrides diagnosticsPollTimeout when non-zero.
+	// Intended for tests that want to avoid real-time waits.
+	pollInitialDelay time.Duration
+	pollInterval     time.Duration
+	pollTimeout      time.Duration
 }
 
 // GetNATGatewayTelemetryRequest represents a request to get telemetry data for a NAT Gateway.

@@ -4,6 +4,7 @@
 - Add `WithCallContext` client option that sets the `X-Call-Context` header so API calls act on behalf of a managed account (identified by company UID).
 
 ## Changes
+- Fix NAT gateway diagnostics polling treating the API's in-progress signal (HTTP 400 `The polling result for async mode is not ready yet`) as a fatal error. The poll now keeps polling while the operation is processing, returns a completed 200 result including an empty route array, and leaves every other error fatal.
 - Bump Go toolchain to 1.26.5 to pick up a `crypto/tls` fix for an Encrypted Client Hello privacy leak ([GO-2026-5856](https://pkg.go.dev/vuln/GO-2026-5856)).
 
 # 1.0.0 Release
