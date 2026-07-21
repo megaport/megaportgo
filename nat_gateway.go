@@ -113,12 +113,14 @@ func NewNATGatewayService(c *Client) *NATGatewayServiceOp {
 type NATGatewayServiceOp struct {
 	Client *Client
 	// pollInitialDelay overrides diagnosticsPollInitialDelay when non-zero.
-	// pollInterval overrides diagnosticsPollInterval when non-zero.
-	// pollTimeout overrides diagnosticsPollTimeout when non-zero.
 	// Intended for tests that want to avoid real-time waits.
 	pollInitialDelay time.Duration
-	pollInterval     time.Duration
-	pollTimeout      time.Duration
+	// pollInterval overrides diagnosticsPollInterval when non-zero.
+	// Intended for tests that want to avoid real-time waits.
+	pollInterval time.Duration
+	// pollTimeout overrides diagnosticsPollTimeout when non-zero.
+	// Intended for tests that want to avoid real-time waits.
+	pollTimeout time.Duration
 }
 
 // GetNATGatewayTelemetryRequest represents a request to get telemetry data for a NAT Gateway.
