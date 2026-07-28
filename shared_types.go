@@ -64,7 +64,6 @@ type Time struct {
 // return across environments, tried in order.
 var timeStringLayouts = []string{
 	time.RFC3339Nano,
-	time.RFC3339,
 	// Colonless numeric offset (e.g. "+0000"), the form Jackson-based
 	// backends emit; RFC3339 layouts only match "+00:00".
 	"2006-01-02T15:04:05.999999999Z0700",
