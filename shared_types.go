@@ -98,9 +98,14 @@ func (s *TelemetrySample) UnmarshalJSON(data []byte) error {
 	if err != nil {
 		return fmt.Errorf("telemetry sample timestamp: %w", err)
 	}
-	val, err := tuple[1].Float64()
-	if err != nil {
-		return fmt.Errorf("telemetry sample value: %w", err)
+	// A null value means the metric had no reading at this timestamp. The API's
+	// own aggregation treats that as zero, so one gap must not fail the decode.
+	var val float64
+	if tuple[1] != "" {
+		val, err = tuple[1].Float64()
+		if err != nil {
+			return fmt.Errorf("telemetry sample value: %w", err)
+		}
 	}
 	s.Timestamp = ts
 	s.Value = val
