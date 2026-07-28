@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -222,14 +223,14 @@ func (suite *MCRClientTestSuite) TestCreatePrefixFilterList() {
 		{
 			Action: "permit",
 			Prefix: "10.0.1.0/24",
-			Ge:     24,
-			Le:     24,
+			Ge:     PtrTo(24),
+			Le:     PtrTo(24),
 		},
 		{
 			Action: "deny",
 			Prefix: "10.0.2.0/24",
-			Ge:     24,
-			Le:     24,
+			Ge:     PtrTo(24),
+			Le:     PtrTo(24),
 		},
 	}
 
@@ -267,6 +268,101 @@ func (suite *MCRClientTestSuite) TestCreatePrefixFilterList() {
 		PrefixFilterList: validatedPrefixFilterList,
 	})
 	suite.NoError(prefixErr)
+}
+
+// geLeEncodingList is the fixture for the ge/le wire-encoding tests: one entry
+// with both set, one with a deliberate 0, one with neither.
+func geLeEncodingList() MCRPrefixFilterList {
+	return MCRPrefixFilterList{
+		Description:   "ge-le-list",
+		AddressFamily: "IPv4",
+		Entries: []*MCRPrefixListEntry{
+			{Action: "permit", Prefix: "10.0.1.0/24", Ge: PtrTo(25), Le: PtrTo(32)},
+			{Action: "deny", Prefix: "10.0.2.0/24", Ge: PtrTo(0), Le: PtrTo(25)},
+			{Action: "permit", Prefix: "10.0.3.0/24"},
+		},
+	}
+}
+
+// wantGeLeBody is the payload the API expects: ge/le are strings per
+// PrefixEntryDto, a deliberate 0 is present as "0", and an unset ge/le is
+// absent rather than sent as 0.
+const wantGeLeBody = `{
+	"id": 0,
+	"description": "ge-le-list",
+	"addressFamily": "IPv4",
+	"entries": [
+		{"action": "permit", "prefix": "10.0.1.0/24", "ge": "25", "le": "32"},
+		{"action": "deny", "prefix": "10.0.2.0/24", "ge": "0", "le": "25"},
+		{"action": "permit", "prefix": "10.0.3.0/24"}
+	]
+}`
+
+// TestCreatePrefixFilterListGeLeEncoding asserts the marshaled POST body, not
+// just that a stubbed response decodes.
+func (suite *MCRClientTestSuite) TestCreatePrefixFilterListGeLeEncoding() {
+	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	mcrSvc := suite.client.MCRService
+
+	suite.mux.HandleFunc("/v2/product/mcr2/"+mcrId+"/prefixList", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPost)
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			suite.FailNowf("could not read body", "%v", err)
+		}
+		suite.JSONEq(wantGeLeBody, string(body))
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":{"id":2819,"description":"ge-le-list","addressFamily":"IPv4","entries":[]}}`)
+	})
+
+	_, err := mcrSvc.CreatePrefixFilterList(ctx, &CreateMCRPrefixFilterListRequest{
+		MCRID:            mcrId,
+		PrefixFilterList: geLeEncodingList(),
+	})
+	suite.NoError(err)
+}
+
+// TestModifyMCRPrefixFilterListGeLeEncoding is the PUT counterpart.
+func (suite *MCRClientTestSuite) TestModifyMCRPrefixFilterListGeLeEncoding() {
+	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	mcrSvc := suite.client.MCRService
+	list := geLeEncodingList()
+
+	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/mcr2/%s/prefixList/%d", mcrId, 2819), func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPut)
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			suite.FailNowf("could not read body", "%v", err)
+		}
+		suite.JSONEq(wantGeLeBody, string(body))
+		fmt.Fprint(w, `{"message":"ok","terms":""}`)
+	})
+
+	got, err := mcrSvc.ModifyMCRPrefixFilterList(ctx, mcrId, 2819, &list)
+	suite.NoError(err)
+	suite.True(got.IsUpdated)
+}
+
+// TestPrefixFilterListGeLeDecoding covers the read direction: an absent ge/le
+// decodes to nil, so callers can tell it apart from a deliberate 0.
+func (suite *MCRClientTestSuite) TestPrefixFilterListGeLeDecoding() {
+	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	mcrSvc := suite.client.MCRService
+
+	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/mcr2/%s/prefixList/%d", mcrId, 7), func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":{"id":7,"description":"d","addressFamily":"IPv4","entries":[
+			{"action":"permit","prefix":"10.0.1.0/24","ge":"0","le":"25"},
+			{"action":"deny","prefix":"10.0.2.0/24"}
+		]}}`)
+	})
+
+	got, err := mcrSvc.GetMCRPrefixFilterList(ctx, mcrId, 7)
+	suite.NoError(err)
+	suite.Require().Len(got.Entries, 2)
+	suite.Equal(PtrTo(0), got.Entries[0].Ge)
+	suite.Equal(PtrTo(25), got.Entries[0].Le)
+	suite.Nil(got.Entries[1].Ge)
+	suite.Nil(got.Entries[1].Le)
 }
 
 // TestListMCRs tests the ListMCRs method

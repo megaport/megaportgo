@@ -290,14 +290,15 @@ type NATGatewayPrefixList struct {
 	Entries       []NATGatewayPrefixListEntry `json:"entries"`
 }
 
-// NATGatewayPrefixListEntry is a single entry in a prefix list. Ge/Le are
-// exposed as ints for ergonomics; the SDK converts to/from the API's string
-// representation transparently.
+// NATGatewayPrefixListEntry is a single entry in a prefix list. The SDK
+// converts Ge/Le to and from the API's string representation transparently.
+// They are pointers because 0 is a valid prefix length the API treats
+// differently from an absent value.
 type NATGatewayPrefixListEntry struct {
 	Action string `json:"action"` // PrefixListActionPermit or PrefixListActionDeny.
 	Prefix string `json:"prefix"`
-	Ge     int    `json:"ge,omitempty"`
-	Le     int    `json:"le,omitempty"`
+	Ge     *int   `json:"ge,omitempty"`
+	Le     *int   `json:"le,omitempty"`
 }
 
 // NATGatewayPrefixListSummary is the compact entry returned by the
@@ -326,7 +327,8 @@ type apiNATGatewayPrefixListEntry struct {
 }
 
 // toAPI converts the user-facing NATGatewayPrefixList to its wire-level
-// representation (Ge/Le as strings, zero values omitted).
+// representation (Ge/Le as strings). A set Ge/Le of 0 goes out as "0"; nil is
+// omitted.
 func (p *NATGatewayPrefixList) toAPI() *apiNATGatewayPrefixList {
 	out := &apiNATGatewayPrefixList{
 		ID:            p.ID,
@@ -339,11 +341,11 @@ func (p *NATGatewayPrefixList) toAPI() *apiNATGatewayPrefixList {
 			Action: e.Action,
 			Prefix: e.Prefix,
 		}
-		if e.Ge > 0 {
-			apiEntry.Ge = strconv.Itoa(e.Ge)
+		if e.Ge != nil {
+			apiEntry.Ge = strconv.Itoa(*e.Ge)
 		}
-		if e.Le > 0 {
-			apiEntry.Le = strconv.Itoa(e.Le)
+		if e.Le != nil {
+			apiEntry.Le = strconv.Itoa(*e.Le)
 		}
 		out.Entries[i] = apiEntry
 	}
@@ -366,14 +368,14 @@ func (a *apiNATGatewayPrefixList) toPrefixList() (*NATGatewayPrefixList, error) 
 			if err != nil {
 				return nil, fmt.Errorf("prefix list entry %d: invalid ge %q: %w", i, e.Ge, err)
 			}
-			entry.Ge = ge
+			entry.Ge = &ge
 		}
 		if e.Le != "" {
 			le, err := strconv.Atoi(e.Le)
 			if err != nil {
 				return nil, fmt.Errorf("prefix list entry %d: invalid le %q: %w", i, e.Le, err)
 			}
-			entry.Le = le
+			entry.Le = &le
 		}
 		out.Entries[i] = entry
 	}

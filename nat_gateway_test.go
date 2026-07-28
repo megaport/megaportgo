@@ -981,13 +981,13 @@ func (suite *NATGatewayClientTestSuite) TestCreateNATGatewayPrefixList() {
 		Description:   "private",
 		AddressFamily: AddressFamilyIPv4,
 		Entries: []NATGatewayPrefixListEntry{
-			{Action: PrefixListActionPermit, Prefix: "10.0.0.0/8", Ge: 24, Le: 32},
+			{Action: PrefixListActionPermit, Prefix: "10.0.0.0/8", Ge: PtrTo(24), Le: PtrTo(32)},
 		},
 	})
 	suite.NoError(err)
 	suite.Equal(11, pl.ID)
-	suite.Equal(24, pl.Entries[0].Ge)
-	suite.Equal(32, pl.Entries[0].Le)
+	suite.Equal(PtrTo(24), pl.Entries[0].Ge)
+	suite.Equal(PtrTo(32), pl.Entries[0].Le)
 }
 
 func (suite *NATGatewayClientTestSuite) TestCreateNATGatewayPrefixListValidation() {
@@ -1025,8 +1025,8 @@ func (suite *NATGatewayClientTestSuite) TestGetNATGatewayPrefixList() {
 	pl, err := natSvc.GetNATGatewayPrefixList(ctx, productUID, 3)
 	suite.NoError(err)
 	suite.Equal(AddressFamilyIPv6, pl.AddressFamily)
-	suite.Equal(0, pl.Entries[0].Ge)
-	suite.Equal(0, pl.Entries[0].Le)
+	suite.Nil(pl.Entries[0].Ge)
+	suite.Nil(pl.Entries[0].Le)
 	suite.Equal(PrefixListActionDeny, pl.Entries[0].Action)
 }
 
@@ -1289,8 +1289,9 @@ func (suite *NATGatewayClientTestSuite) TestPrefixListGeLeRoundTrip() {
 		Description:   "rt",
 		AddressFamily: AddressFamilyIPv4,
 		Entries: []NATGatewayPrefixListEntry{
-			{Action: PrefixListActionPermit, Prefix: "10.0.0.0/8", Ge: 24, Le: 32},
+			{Action: PrefixListActionPermit, Prefix: "10.0.0.0/8", Ge: PtrTo(24), Le: PtrTo(32)},
 			{Action: PrefixListActionDeny, Prefix: "0.0.0.0/0"}, // ge/le omitted
+			{Action: PrefixListActionPermit, Prefix: "172.16.0.0/12", Ge: PtrTo(0), Le: PtrTo(24)},
 		},
 	}
 
@@ -1299,11 +1300,27 @@ func (suite *NATGatewayClientTestSuite) TestPrefixListGeLeRoundTrip() {
 	suite.Equal("32", api.Entries[0].Le)
 	suite.Equal("", api.Entries[1].Ge)
 	suite.Equal("", api.Entries[1].Le)
+	suite.Equal("0", api.Entries[2].Ge)
+
+	// A deliberate 0 has to survive the wire type's omitempty, and an unset
+	// ge/le has to stay absent.
+	body, err := json.Marshal(api)
+	suite.Require().NoError(err)
+	suite.JSONEq(`{
+		"description": "rt",
+		"addressFamily": "IPv4",
+		"entries": [
+			{"action": "permit", "prefix": "10.0.0.0/8", "ge": "24", "le": "32"},
+			{"action": "deny", "prefix": "0.0.0.0/0"},
+			{"action": "permit", "prefix": "172.16.0.0/12", "ge": "0", "le": "24"}
+		]
+	}`, string(body))
 
 	back, err := api.toPrefixList()
 	suite.Require().NoError(err)
-	suite.Equal(24, back.Entries[0].Ge)
-	suite.Equal(32, back.Entries[0].Le)
-	suite.Equal(0, back.Entries[1].Ge)
-	suite.Equal(0, back.Entries[1].Le)
+	suite.Equal(PtrTo(24), back.Entries[0].Ge)
+	suite.Equal(PtrTo(32), back.Entries[0].Le)
+	suite.Nil(back.Entries[1].Ge)
+	suite.Nil(back.Entries[1].Le)
+	suite.Equal(PtrTo(0), back.Entries[2].Ge)
 }

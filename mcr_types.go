@@ -152,11 +152,13 @@ type APIMCRPrefixFilterListEntry struct {
 }
 
 // MCRPrefixListEntry represents an entry in a prefix filter list.
+// Ge/Le are pointers because 0 is a valid prefix length the API treats
+// differently from an absent value.
 type MCRPrefixListEntry struct {
 	Action string `json:"action"`
 	Prefix string `json:"prefix"`
-	Ge     int    `json:"ge,omitempty"` // Great than or equal to - (Optional) The minimum starting prefix length to be matched. Valid values are from 0 to 32 (IPv4), or 0 to 128 (IPv6). The minimum (ge) must be no greater than or equal to the maximum value (le).
-	Le     int    `json:"le,omitempty"` // Less than or equal to - (Optional) The maximum ending prefix length to be matched. The prefix length is greater than or equal to the minimum value (ge). Valid values are from 0 to 32 (IPv4), or 0 to 128 (IPv6), but the maximum must be no less than the minimum value (ge).
+	Ge     *int   `json:"ge,omitempty"` // Great than or equal to - (Optional) The minimum starting prefix length to be matched. Valid values are from 0 to 32 (IPv4), or 0 to 128 (IPv6). The minimum (ge) must be no greater than or equal to the maximum value (le).
+	Le     *int   `json:"le,omitempty"` // Less than or equal to - (Optional) The maximum ending prefix length to be matched. The prefix length is greater than or equal to the minimum value (ge). Valid values are from 0 to 32 (IPv4), or 0 to 128 (IPv6), but the maximum must be no less than the minimum value (ge).
 }
 
 // mcrOrderResponse represents a response from the Megaport Products API after ordering an MCR.
@@ -223,20 +225,20 @@ func (e *APIMCRPrefixFilterList) ToMCRPrefixFilterList() (*MCRPrefixFilterList, 
 }
 
 func (e *APIMCRPrefixFilterListEntry) ToMCRPrefixFilterListEntry() (*MCRPrefixListEntry, error) {
-	var ge, le int
+	var ge, le *int
 	if e.Ge != "" {
 		geVal, err := strconv.Atoi(e.Ge)
 		if err != nil {
 			return nil, err
 		}
-		ge = geVal
+		ge = &geVal
 	}
 	if e.Le != "" {
 		leVal, err := strconv.Atoi(e.Le)
 		if err != nil {
 			return nil, err
 		}
-		le = leVal
+		le = &leVal
 	}
 	return &MCRPrefixListEntry{
 		Action: e.Action,
@@ -244,4 +246,38 @@ func (e *APIMCRPrefixFilterListEntry) ToMCRPrefixFilterListEntry() (*MCRPrefixLi
 		Ge:     ge,
 		Le:     le,
 	}, nil
+}
+
+// toAPI converts the user-facing MCRPrefixFilterList to its wire-level
+// representation, where the API expects Ge/Le as strings. A set Ge/Le of 0
+// goes out as "0"; nil is omitted.
+func (l *MCRPrefixFilterList) toAPI() *APIMCRPrefixFilterList {
+	if l == nil {
+		return nil
+	}
+	entries := make([]*APIMCRPrefixFilterListEntry, len(l.Entries))
+	for i, entry := range l.Entries {
+		// A nil entry stays nil so it marshals as null, as it did when this
+		// type went on the wire directly.
+		if entry == nil {
+			continue
+		}
+		apiEntry := &APIMCRPrefixFilterListEntry{
+			Action: entry.Action,
+			Prefix: entry.Prefix,
+		}
+		if entry.Ge != nil {
+			apiEntry.Ge = strconv.Itoa(*entry.Ge)
+		}
+		if entry.Le != nil {
+			apiEntry.Le = strconv.Itoa(*entry.Le)
+		}
+		entries[i] = apiEntry
+	}
+	return &APIMCRPrefixFilterList{
+		ID:            l.ID,
+		Description:   l.Description,
+		AddressFamily: l.AddressFamily,
+		Entries:       entries,
+	}
 }

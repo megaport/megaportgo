@@ -397,7 +397,7 @@ func (svc *MCRServiceOp) CreatePrefixFilterList(ctx context.Context, req *Create
 	}
 	url := "/v2/product/mcr2/" + req.MCRID + "/prefixList"
 
-	clientReq, err := svc.Client.NewRequest(ctx, "POST", url, req.PrefixFilterList)
+	clientReq, err := svc.Client.NewRequest(ctx, "POST", url, req.PrefixFilterList.toAPI())
 
 	if err != nil {
 		return nil, err
@@ -582,7 +582,7 @@ func (svc *MCRServiceOp) DeleteMCRPrefixFilterList(ctx context.Context, mcrID st
 // ModifyMCRPrefixFilterList modifies a prefix filter list on an MCR in the Megaport MCR API.
 func (svc *MCRServiceOp) ModifyMCRPrefixFilterList(ctx context.Context, mcrID string, prefixFilterListID int, prefixFilterList *MCRPrefixFilterList) (*ModifyMCRPrefixFilterListResponse, error) {
 	url := fmt.Sprintf("/v2/product/mcr2/%s/prefixList/%d", mcrID, prefixFilterListID)
-	clientReq, err := svc.Client.NewRequest(ctx, "PUT", url, prefixFilterList)
+	clientReq, err := svc.Client.NewRequest(ctx, "PUT", url, prefixFilterList.toAPI())
 	if err != nil {
 		return nil, err
 	}
