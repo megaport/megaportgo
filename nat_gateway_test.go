@@ -1321,7 +1321,7 @@ func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesPollFatalError
 
 	_, err := natSvc.ListNATGatewayIPRoutes(ctx, productUID, "")
 	suite.Require().Error(err)
-	suite.False(IsDiagnosticsInProgressError(err))
+	suite.False(isNATGatewayDiagnosticsInProgress(err))
 	suite.Equal(int32(1), opCalls.Load())
 }
 

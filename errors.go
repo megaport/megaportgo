@@ -125,10 +125,12 @@ func IsServiceNotFoundError(err error) bool {
 		strings.Contains(apiErr.Message, "Could not find a service with UID")
 }
 
-// IsDiagnosticsInProgressError reports whether err is the async diagnostics
-// "still processing" signal: the non-standard HTTP 400 the routes operation
-// endpoint returns while the result is not yet ready.
-func IsDiagnosticsInProgressError(err error) bool {
+// isNATGatewayDiagnosticsInProgress reports whether err is the async diagnostics
+// "still processing" signal: the non-standard HTTP 400 the NAT gateway routes
+// operation endpoint returns while the result is not yet ready. The signal is a
+// message string with no error code behind it, and other diagnostics APIs
+// report the same state differently, so this stays specific to NAT gateway.
+func isNATGatewayDiagnosticsInProgress(err error) bool {
 	apiErr, ok := err.(*ErrorResponse)
 	if !ok || apiErr.Response == nil {
 		return false
