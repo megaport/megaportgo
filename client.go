@@ -502,7 +502,10 @@ func (c *Client) doDiscard(ctx context.Context, req *http.Request) error {
 		return err
 	}
 	_, _ = io.Copy(io.Discard, resp.Body)
-	return resp.Body.Close()
+	// A close error here means the connection was already broken, not that the
+	// request failed, so it must not turn a completed mutation into an error.
+	_ = resp.Body.Close()
+	return nil
 }
 
 type AuthInfo struct {
