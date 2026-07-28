@@ -1,6 +1,6 @@
 package megaport
 
-import "strconv"
+import "fmt"
 
 // MCROrder represents a request to buy an MCR from the Megaport Products API.
 type MCROrder struct {
@@ -210,13 +210,14 @@ type APIMCRPrefixFilterList struct {
 func (e *APIMCRPrefixFilterList) ToMCRPrefixFilterList() (*MCRPrefixFilterList, error) {
 	entries := make([]*MCRPrefixListEntry, len(e.Entries))
 	for i, entry := range e.Entries {
-		// A null entry in the response stays nil rather than panicking.
+		// Rejecting a null entry beats returning a nil element for the caller to
+		// dereference. The API declares entries non-nullable, so this is malformed.
 		if entry == nil {
-			continue
+			return nil, fmt.Errorf("prefix list entry %d: null entry in response", i)
 		}
 		mcrEntry, err := entry.ToMCRPrefixFilterListEntry()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("prefix list entry %d: %w", i, err)
 		}
 		entries[i] = mcrEntry
 	}
@@ -229,20 +230,13 @@ func (e *APIMCRPrefixFilterList) ToMCRPrefixFilterList() (*MCRPrefixFilterList, 
 }
 
 func (e *APIMCRPrefixFilterListEntry) ToMCRPrefixFilterListEntry() (*MCRPrefixListEntry, error) {
-	var ge, le *int
-	if e.Ge != "" {
-		geVal, err := strconv.Atoi(e.Ge)
-		if err != nil {
-			return nil, err
-		}
-		ge = &geVal
+	ge, err := prefixLenFromAPI(e.Ge)
+	if err != nil {
+		return nil, fmt.Errorf("invalid ge %q: %w", e.Ge, err)
 	}
-	if e.Le != "" {
-		leVal, err := strconv.Atoi(e.Le)
-		if err != nil {
-			return nil, err
-		}
-		le = &leVal
+	le, err := prefixLenFromAPI(e.Le)
+	if err != nil {
+		return nil, fmt.Errorf("invalid le %q: %w", e.Le, err)
 	}
 	return &MCRPrefixListEntry{
 		Action: e.Action,
@@ -269,17 +263,12 @@ func (l *MCRPrefixFilterList) toAPI() *APIMCRPrefixFilterList {
 		if entry == nil {
 			continue
 		}
-		apiEntry := &APIMCRPrefixFilterListEntry{
+		entries[i] = &APIMCRPrefixFilterListEntry{
 			Action: entry.Action,
 			Prefix: entry.Prefix,
+			Ge:     prefixLenToAPI(entry.Ge),
+			Le:     prefixLenToAPI(entry.Le),
 		}
-		if entry.Ge != nil {
-			apiEntry.Ge = strconv.Itoa(*entry.Ge)
-		}
-		if entry.Le != nil {
-			apiEntry.Le = strconv.Itoa(*entry.Le)
-		}
-		entries[i] = apiEntry
 	}
 	return &APIMCRPrefixFilterList{
 		ID:            l.ID,

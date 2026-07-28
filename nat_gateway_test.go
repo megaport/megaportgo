@@ -1044,6 +1044,20 @@ func (suite *NATGatewayClientTestSuite) TestGetNATGatewayPrefixListInvalidGe() {
 	suite.Error(err)
 }
 
+func (suite *NATGatewayClientTestSuite) TestGetNATGatewayPrefixListInvalidLe() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "uid-pl-bad-le"
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/prefix_lists/4", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":{"id":4,"description":"x","addressFamily":"IPv4","entries":[{"action":"permit","prefix":"10.0.0.0/8","le":"not-a-number"}]}}`)
+	})
+
+	_, err := natSvc.GetNATGatewayPrefixList(ctx, productUID, 4)
+	suite.ErrorContains(err, `invalid le "not-a-number"`)
+}
+
 func (suite *NATGatewayClientTestSuite) TestGetNATGatewayPrefixListValidation() {
 	_, err := suite.client.NATGatewayService.GetNATGatewayPrefixList(context.Background(), "", 1)
 	suite.ErrorIs(err, ErrNATGatewayProductUIDRequired)

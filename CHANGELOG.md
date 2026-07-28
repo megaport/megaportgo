@@ -6,7 +6,7 @@
 
 ## Changes
 - Bump Go toolchain to 1.26.5 to pick up a `crypto/tls` fix for an Encrypted Client Hello privacy leak ([GO-2026-5856](https://pkg.go.dev/vuln/GO-2026-5856)).
-- Fix `ge`/`le` encoding on MCR and NAT gateway prefix lists: they now go out as the strings the API declares, and a prefix length of 0 is sent rather than dropped. **Breaking:** `Ge`/`Le` on `MCRPrefixListEntry` and `NATGatewayPrefixListEntry` are now `*int`. Set one with `PtrTo(24)`; an absent value reads back as `nil` instead of `0`. When migrating, map "unset" to `nil`, **not** `PtrTo(0)`: a 0 used to be silently dropped and is now honored, which changes which prefixes the filter matches. Negative values are likewise no longer dropped.
+- Fix `ge`/`le` on MCR and NAT gateway prefix lists: MCR sent them as JSON numbers where the API declares strings, and both dropped a deliberate 0. **Breaking:** `Ge`/`Le` on `MCRPrefixListEntry` and `NATGatewayPrefixListEntry` are now `*int` (`PtrTo(24)` to set, `nil` for unset). Map unset to `nil`, **not** `PtrTo(0)`: a 0 now reaches the API, where `le: 0` matches nothing, so a `deny` entry can quietly stop denying.
 
 # 1.0.0 Release
 

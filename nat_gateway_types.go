@@ -3,7 +3,6 @@ package megaport
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 )
 
 // NATGatewaySession represents a speed/session-count availability entry for NAT Gateways.
@@ -335,17 +334,12 @@ func (p *NATGatewayPrefixList) toAPI() *apiNATGatewayPrefixList {
 		Entries:       make([]apiNATGatewayPrefixListEntry, len(p.Entries)),
 	}
 	for i, e := range p.Entries {
-		apiEntry := apiNATGatewayPrefixListEntry{
+		out.Entries[i] = apiNATGatewayPrefixListEntry{
 			Action: e.Action,
 			Prefix: e.Prefix,
+			Ge:     prefixLenToAPI(e.Ge),
+			Le:     prefixLenToAPI(e.Le),
 		}
-		if e.Ge != nil {
-			apiEntry.Ge = strconv.Itoa(*e.Ge)
-		}
-		if e.Le != nil {
-			apiEntry.Le = strconv.Itoa(*e.Le)
-		}
-		out.Entries[i] = apiEntry
 	}
 	return out
 }
@@ -360,22 +354,20 @@ func (a *apiNATGatewayPrefixList) toPrefixList() (*NATGatewayPrefixList, error) 
 		Entries:       make([]NATGatewayPrefixListEntry, len(a.Entries)),
 	}
 	for i, e := range a.Entries {
-		entry := NATGatewayPrefixListEntry{Action: e.Action, Prefix: e.Prefix}
-		if e.Ge != "" {
-			ge, err := strconv.Atoi(e.Ge)
-			if err != nil {
-				return nil, fmt.Errorf("prefix list entry %d: invalid ge %q: %w", i, e.Ge, err)
-			}
-			entry.Ge = &ge
+		ge, err := prefixLenFromAPI(e.Ge)
+		if err != nil {
+			return nil, fmt.Errorf("prefix list entry %d: invalid ge %q: %w", i, e.Ge, err)
 		}
-		if e.Le != "" {
-			le, err := strconv.Atoi(e.Le)
-			if err != nil {
-				return nil, fmt.Errorf("prefix list entry %d: invalid le %q: %w", i, e.Le, err)
-			}
-			entry.Le = &le
+		le, err := prefixLenFromAPI(e.Le)
+		if err != nil {
+			return nil, fmt.Errorf("prefix list entry %d: invalid le %q: %w", i, e.Le, err)
 		}
-		out.Entries[i] = entry
+		out.Entries[i] = NATGatewayPrefixListEntry{
+			Action: e.Action,
+			Prefix: e.Prefix,
+			Ge:     ge,
+			Le:     le,
+		}
 	}
 	return out, nil
 }
