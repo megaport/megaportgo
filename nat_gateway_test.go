@@ -1059,6 +1059,18 @@ func (suite *NATGatewayClientTestSuite) TestUpdateNATGatewayPrefixList() {
 
 	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/prefix_lists/5", func(w http.ResponseWriter, r *http.Request) {
 		suite.Equal(http.MethodPut, r.Method)
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			suite.FailNowf("could not read body", "%v", err)
+		}
+		suite.JSONEq(`{
+			"description": "updated",
+			"addressFamily": "IPv4",
+			"entries": [
+				{"action": "permit", "prefix": "172.16.0.0/12", "ge": "0", "le": "24"},
+				{"action": "deny", "prefix": "10.0.0.0/8"}
+			]
+		}`, string(body))
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprint(w, `{"message":"ok","terms":"","data":{"id":5,"description":"updated","addressFamily":"IPv4","entries":[{"action":"permit","prefix":"172.16.0.0/12"}]}}`)
 	})
@@ -1066,7 +1078,10 @@ func (suite *NATGatewayClientTestSuite) TestUpdateNATGatewayPrefixList() {
 	pl, err := natSvc.UpdateNATGatewayPrefixList(ctx, productUID, 5, &NATGatewayPrefixList{
 		Description:   "updated",
 		AddressFamily: AddressFamilyIPv4,
-		Entries:       []NATGatewayPrefixListEntry{{Action: PrefixListActionPermit, Prefix: "172.16.0.0/12"}},
+		Entries: []NATGatewayPrefixListEntry{
+			{Action: PrefixListActionPermit, Prefix: "172.16.0.0/12", Ge: PtrTo(0), Le: PtrTo(24)},
+			{Action: PrefixListActionDeny, Prefix: "10.0.0.0/8"},
+		},
 	})
 	suite.NoError(err)
 	suite.Equal("updated", pl.Description)
@@ -1291,7 +1306,7 @@ func (suite *NATGatewayClientTestSuite) TestPrefixListGeLeRoundTrip() {
 		Entries: []NATGatewayPrefixListEntry{
 			{Action: PrefixListActionPermit, Prefix: "10.0.0.0/8", Ge: PtrTo(24), Le: PtrTo(32)},
 			{Action: PrefixListActionDeny, Prefix: "0.0.0.0/0"}, // ge/le omitted
-			{Action: PrefixListActionPermit, Prefix: "172.16.0.0/12", Ge: PtrTo(0), Le: PtrTo(24)},
+			{Action: PrefixListActionPermit, Prefix: "172.16.0.0/12", Ge: PtrTo(0), Le: PtrTo(0)},
 		},
 	}
 
@@ -1301,6 +1316,7 @@ func (suite *NATGatewayClientTestSuite) TestPrefixListGeLeRoundTrip() {
 	suite.Equal("", api.Entries[1].Ge)
 	suite.Equal("", api.Entries[1].Le)
 	suite.Equal("0", api.Entries[2].Ge)
+	suite.Equal("0", api.Entries[2].Le)
 
 	// A deliberate 0 has to survive the wire type's omitempty, and an unset
 	// ge/le has to stay absent.
@@ -1312,7 +1328,7 @@ func (suite *NATGatewayClientTestSuite) TestPrefixListGeLeRoundTrip() {
 		"entries": [
 			{"action": "permit", "prefix": "10.0.0.0/8", "ge": "24", "le": "32"},
 			{"action": "deny", "prefix": "0.0.0.0/0"},
-			{"action": "permit", "prefix": "172.16.0.0/12", "ge": "0", "le": "24"}
+			{"action": "permit", "prefix": "172.16.0.0/12", "ge": "0", "le": "0"}
 		]
 	}`, string(body))
 
@@ -1323,4 +1339,5 @@ func (suite *NATGatewayClientTestSuite) TestPrefixListGeLeRoundTrip() {
 	suite.Nil(back.Entries[1].Ge)
 	suite.Nil(back.Entries[1].Le)
 	suite.Equal(PtrTo(0), back.Entries[2].Ge)
+	suite.Equal(PtrTo(0), back.Entries[2].Le)
 }

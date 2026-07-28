@@ -210,6 +210,10 @@ type APIMCRPrefixFilterList struct {
 func (e *APIMCRPrefixFilterList) ToMCRPrefixFilterList() (*MCRPrefixFilterList, error) {
 	entries := make([]*MCRPrefixListEntry, len(e.Entries))
 	for i, entry := range e.Entries {
+		// A null entry in the response stays nil rather than panicking.
+		if entry == nil {
+			continue
+		}
 		mcrEntry, err := entry.ToMCRPrefixFilterListEntry()
 		if err != nil {
 			return nil, err
@@ -249,16 +253,19 @@ func (e *APIMCRPrefixFilterListEntry) ToMCRPrefixFilterListEntry() (*MCRPrefixLi
 }
 
 // toAPI converts the user-facing MCRPrefixFilterList to its wire-level
-// representation, where the API expects Ge/Le as strings. A set Ge/Le of 0
-// goes out as "0"; nil is omitted.
+// representation, where the API expects Ge/Le as strings.
 func (l *MCRPrefixFilterList) toAPI() *APIMCRPrefixFilterList {
 	if l == nil {
 		return nil
 	}
-	entries := make([]*APIMCRPrefixFilterListEntry, len(l.Entries))
+	// Allocate only for a non-nil slice, so a nil Entries still marshals as
+	// null rather than [].
+	var entries []*APIMCRPrefixFilterListEntry
+	if l.Entries != nil {
+		entries = make([]*APIMCRPrefixFilterListEntry, len(l.Entries))
+	}
 	for i, entry := range l.Entries {
-		// A nil entry stays nil so it marshals as null, as it did when this
-		// type went on the wire directly.
+		// A nil entry stays nil so it marshals as null.
 		if entry == nil {
 			continue
 		}

@@ -290,10 +290,9 @@ type NATGatewayPrefixList struct {
 	Entries       []NATGatewayPrefixListEntry `json:"entries"`
 }
 
-// NATGatewayPrefixListEntry is a single entry in a prefix list. The SDK
-// converts Ge/Le to and from the API's string representation transparently.
-// They are pointers because 0 is a valid prefix length the API treats
-// differently from an absent value.
+// NATGatewayPrefixListEntry is a single entry in a prefix list. Ge/Le are
+// pointers because 0 is a valid prefix length, distinct from absent; the SDK
+// converts them to and from the API's strings.
 type NATGatewayPrefixListEntry struct {
 	Action string `json:"action"` // PrefixListActionPermit or PrefixListActionDeny.
 	Prefix string `json:"prefix"`
@@ -327,8 +326,7 @@ type apiNATGatewayPrefixListEntry struct {
 }
 
 // toAPI converts the user-facing NATGatewayPrefixList to its wire-level
-// representation (Ge/Le as strings). A set Ge/Le of 0 goes out as "0"; nil is
-// omitted.
+// representation (Ge/Le as strings).
 func (p *NATGatewayPrefixList) toAPI() *apiNATGatewayPrefixList {
 	out := &apiNATGatewayPrefixList{
 		ID:            p.ID,
