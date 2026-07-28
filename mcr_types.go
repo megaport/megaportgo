@@ -208,10 +208,14 @@ type APIMCRPrefixFilterList struct {
 }
 
 func (e *APIMCRPrefixFilterList) ToMCRPrefixFilterList() (*MCRPrefixFilterList, error) {
-	entries := make([]*MCRPrefixListEntry, len(e.Entries))
+	// Allocate only for a non-nil slice, so a null entries array does not come
+	// back as [] and turn a read-modify-write into "delete every entry".
+	var entries []*MCRPrefixListEntry
+	if e.Entries != nil {
+		entries = make([]*MCRPrefixListEntry, len(e.Entries))
+	}
 	for i, entry := range e.Entries {
-		// Rejecting a null entry beats returning a nil element for the caller to
-		// dereference. The API declares entries non-nullable, so this is malformed.
+		// The API declares entries non-nullable, so a null is malformed.
 		if entry == nil {
 			return nil, fmt.Errorf("prefix list entry %d: null entry in response", i)
 		}
@@ -247,10 +251,11 @@ func (e *APIMCRPrefixFilterListEntry) ToMCRPrefixFilterListEntry() (*MCRPrefixLi
 }
 
 // toAPI converts the user-facing MCRPrefixFilterList to its wire-level
-// representation, where the API expects Ge/Le as strings.
-func (l *MCRPrefixFilterList) toAPI() *APIMCRPrefixFilterList {
+// representation, where the API expects Ge/Le as strings. A nil entry is an
+// error rather than a null on the wire.
+func (l *MCRPrefixFilterList) toAPI() (*APIMCRPrefixFilterList, error) {
 	if l == nil {
-		return nil
+		return nil, nil
 	}
 	// Allocate only for a non-nil slice, so a nil Entries still marshals as
 	// null rather than [].
@@ -259,9 +264,10 @@ func (l *MCRPrefixFilterList) toAPI() *APIMCRPrefixFilterList {
 		entries = make([]*APIMCRPrefixFilterListEntry, len(l.Entries))
 	}
 	for i, entry := range l.Entries {
-		// A nil entry stays nil so it marshals as null.
+		// Refuse to send what the read path refuses to accept. A null element
+		// passes the API's own validation and faults it further in.
 		if entry == nil {
-			continue
+			return nil, fmt.Errorf("prefix list entry %d: nil entry", i)
 		}
 		entries[i] = &APIMCRPrefixFilterListEntry{
 			Action: entry.Action,
@@ -275,5 +281,5 @@ func (l *MCRPrefixFilterList) toAPI() *APIMCRPrefixFilterList {
 		Description:   l.Description,
 		AddressFamily: l.AddressFamily,
 		Entries:       entries,
-	}
+	}, nil
 }

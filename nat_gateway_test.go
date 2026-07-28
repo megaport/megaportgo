@@ -1041,7 +1041,7 @@ func (suite *NATGatewayClientTestSuite) TestGetNATGatewayPrefixListInvalidGe() {
 	})
 
 	_, err := natSvc.GetNATGatewayPrefixList(ctx, productUID, 4)
-	suite.Error(err)
+	suite.ErrorContains(err, `prefix list entry 0: invalid ge "not-a-number"`)
 }
 
 func (suite *NATGatewayClientTestSuite) TestGetNATGatewayPrefixListInvalidLe() {
@@ -1051,11 +1051,27 @@ func (suite *NATGatewayClientTestSuite) TestGetNATGatewayPrefixListInvalidLe() {
 
 	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/prefix_lists/4", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"message":"ok","terms":"","data":{"id":4,"description":"x","addressFamily":"IPv4","entries":[{"action":"permit","prefix":"10.0.0.0/8","le":"not-a-number"}]}}`)
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":{"id":4,"description":"x","addressFamily":"IPv4","entries":[{"action":"permit","prefix":"10.0.0.0/8"},{"action":"permit","prefix":"10.0.1.0/24","le":"not-a-number"}]}}`)
 	})
 
 	_, err := natSvc.GetNATGatewayPrefixList(ctx, productUID, 4)
-	suite.ErrorContains(err, `invalid le "not-a-number"`)
+	suite.ErrorContains(err, `prefix list entry 1: invalid le "not-a-number"`)
+}
+
+// A null entry is rejected on the NAT read path too. Both products share one
+// schema, and a value-typed wire slice would smooth it into a blank entry.
+func (suite *NATGatewayClientTestSuite) TestGetNATGatewayPrefixListNullEntry() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "uid-pl-null-entry"
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/prefix_lists/4", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":{"id":4,"description":"x","addressFamily":"IPv4","entries":[{"action":"permit","prefix":"10.0.0.0/8"},null]}}`)
+	})
+
+	_, err := natSvc.GetNATGatewayPrefixList(ctx, productUID, 4)
+	suite.ErrorContains(err, "prefix list entry 1: null entry in response")
 }
 
 func (suite *NATGatewayClientTestSuite) TestGetNATGatewayPrefixListValidation() {

@@ -285,8 +285,9 @@ func mcrPrefixListGeLeFixture() MCRPrefixFilterList {
 	}
 }
 
-// wantMCRPrefixListGeLeBody is the payload the API expects: ge/le as strings per
-// PrefixEntryDto, a deliberate 0 present as "0", an unset one absent.
+// wantMCRPrefixListGeLeBody pins ge/le as strings per PrefixEntryDto, a
+// deliberate 0 present as "0", an unset one absent. The leading id is not part
+// of PrefixListRequest; it is pre-existing and out of scope here.
 const wantMCRPrefixListGeLeBody = `{
 	"id": 0,
 	"description": "ge-le-list",
@@ -342,10 +343,8 @@ func (suite *MCRClientTestSuite) TestModifyMCRPrefixFilterListGeLeEncoding() {
 	suite.True(got.IsUpdated)
 }
 
-// TestModifyMCRPrefixFilterListBodyEdgeCases pins the shapes the converter has
-// to leave alone: a nil list, a nil Entries, and a nil entry reach the wire
-// byte-identical to the old direct marshal. Whether the API accepts those
-// bodies is a separate question.
+// TestModifyMCRPrefixFilterListBodyEdgeCases pins a nil list and a nil Entries as
+// byte-identical to the old direct marshal, not as bodies the API accepts.
 func (suite *MCRClientTestSuite) TestModifyMCRPrefixFilterListBodyEdgeCases() {
 	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
 	mcrSvc := suite.client.MCRService
@@ -365,21 +364,8 @@ func (suite *MCRClientTestSuite) TestModifyMCRPrefixFilterListBodyEdgeCases() {
 		{
 			name: "nil entries",
 			id:   2,
-			list: &MCRPrefixFilterList{Description: "d", AddressFamily: "IPv4"},
-			want: `{"id":0,"description":"d","addressFamily":"IPv4","entries":null}`,
-		},
-		{
-			name: "nil entry keeps its position",
-			id:   3,
-			list: &MCRPrefixFilterList{
-				Description:   "d",
-				AddressFamily: "IPv4",
-				Entries: []*MCRPrefixListEntry{
-					nil,
-					{Action: "permit", Prefix: "10.0.1.0/24", Ge: PtrTo(0)},
-				},
-			},
-			want: `{"id":0,"description":"d","addressFamily":"IPv4","entries":[null,{"action":"permit","prefix":"10.0.1.0/24","ge":"0"}]}`,
+			list: &MCRPrefixFilterList{ID: 7, Description: "d", AddressFamily: "IPv4"},
+			want: `{"id":7,"description":"d","addressFamily":"IPv4","entries":null}`,
 		},
 	}
 
@@ -399,6 +385,23 @@ func (suite *MCRClientTestSuite) TestModifyMCRPrefixFilterListBodyEdgeCases() {
 			suite.NoError(err)
 		})
 	}
+}
+
+// A nil entry is refused before the request goes out. The API's own validation
+// accepts a null element and faults on it further in, and the read path rejects
+// it, so emitting one is never right.
+func (suite *MCRClientTestSuite) TestModifyMCRPrefixFilterListNilEntry() {
+	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	_, err := suite.client.MCRService.ModifyMCRPrefixFilterList(ctx, mcrId, 4, &MCRPrefixFilterList{
+		Description:   "d",
+		AddressFamily: "IPv4",
+		Entries: []*MCRPrefixListEntry{
+			nil,
+			{Action: "permit", Prefix: "10.0.1.0/24", Ge: PtrTo(0)},
+		},
+	})
+	suite.ErrorContains(err, "prefix list entry 0: nil entry")
 }
 
 // TestPrefixFilterListGeLeDecoding covers the read direction: an absent ge/le
@@ -427,9 +430,22 @@ func (suite *MCRClientTestSuite) TestPrefixFilterListGeLeDecoding() {
 	suite.Equal(PtrTo(0), got.Entries[2].Le)
 }
 
-// TestPrefixFilterListDecodeErrors covers the failure mode the string encoding
-// introduces: a ge/le the API sends that is not a number, and a null entry the
-// caller would otherwise have to nil-check.
+// A null entries array has to stay nil through the decode, or handing the result
+// straight back to Modify sends "entries":[], which deletes every entry.
+func (suite *MCRClientTestSuite) TestPrefixFilterListNullEntriesStaysNil() {
+	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/mcr2/%s/prefixList/%d", mcrId, 21), func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":{"id":21,"description":"d","addressFamily":"IPv4","entries":null}}`)
+	})
+
+	got, err := suite.client.MCRService.GetMCRPrefixFilterList(ctx, mcrId, 21)
+	suite.NoError(err)
+	suite.Nil(got.Entries)
+}
+
+// TestPrefixFilterListDecodeErrors asserts a non-numeric ge/le or a null entry
+// fails the whole read, naming the entry, rather than being smoothed over.
 func (suite *MCRClientTestSuite) TestPrefixFilterListDecodeErrors() {
 	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
 	mcrSvc := suite.client.MCRService
@@ -447,10 +463,10 @@ func (suite *MCRClientTestSuite) TestPrefixFilterListDecodeErrors() {
 			wantErr: `prefix list entry 0: invalid ge "x"`,
 		},
 		{
-			name:    "non-numeric le",
+			name:    "non-numeric le on a later entry",
 			id:      12,
-			entries: `{"action":"permit","prefix":"10.0.1.0/24","le":"y"}`,
-			wantErr: `prefix list entry 0: invalid le "y"`,
+			entries: `{"action":"permit","prefix":"10.0.1.0/24"},{"action":"permit","prefix":"10.0.2.0/24","le":"y"}`,
+			wantErr: `prefix list entry 1: invalid le "y"`,
 		},
 		{
 			name:    "null entry",

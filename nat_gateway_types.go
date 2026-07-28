@@ -308,13 +308,14 @@ type NATGatewayPrefixListSummary struct {
 }
 
 // apiNATGatewayPrefixList is the wire-level representation — the API sends
-// Ge/Le as strings. See (NATGatewayPrefixList).toAPI / fromAPI for
-// conversion.
+// Ge/Le as strings. See (NATGatewayPrefixList).toAPI / toPrefixList for
+// conversion. Entries are pointers so a null element is distinguishable from
+// an empty one on decode.
 type apiNATGatewayPrefixList struct {
-	ID            int                            `json:"id,omitempty"`
-	Description   string                         `json:"description"`
-	AddressFamily string                         `json:"addressFamily"`
-	Entries       []apiNATGatewayPrefixListEntry `json:"entries"`
+	ID            int                             `json:"id,omitempty"`
+	Description   string                          `json:"description"`
+	AddressFamily string                          `json:"addressFamily"`
+	Entries       []*apiNATGatewayPrefixListEntry `json:"entries"`
 }
 
 type apiNATGatewayPrefixListEntry struct {
@@ -331,10 +332,10 @@ func (p *NATGatewayPrefixList) toAPI() *apiNATGatewayPrefixList {
 		ID:            p.ID,
 		Description:   p.Description,
 		AddressFamily: p.AddressFamily,
-		Entries:       make([]apiNATGatewayPrefixListEntry, len(p.Entries)),
+		Entries:       make([]*apiNATGatewayPrefixListEntry, len(p.Entries)),
 	}
 	for i, e := range p.Entries {
-		out.Entries[i] = apiNATGatewayPrefixListEntry{
+		out.Entries[i] = &apiNATGatewayPrefixListEntry{
 			Action: e.Action,
 			Prefix: e.Prefix,
 			Ge:     prefixLenToAPI(e.Ge),
@@ -344,8 +345,9 @@ func (p *NATGatewayPrefixList) toAPI() *apiNATGatewayPrefixList {
 	return out
 }
 
-// fromAPI converts a wire-level apiNATGatewayPrefixList into the user-facing
-// NATGatewayPrefixList. Non-numeric Ge/Le strings produce an error.
+// toPrefixList converts a wire-level apiNATGatewayPrefixList into the
+// user-facing NATGatewayPrefixList. A null entry or a non-numeric Ge/Le
+// produces an error.
 func (a *apiNATGatewayPrefixList) toPrefixList() (*NATGatewayPrefixList, error) {
 	out := &NATGatewayPrefixList{
 		ID:            a.ID,
@@ -354,6 +356,10 @@ func (a *apiNATGatewayPrefixList) toPrefixList() (*NATGatewayPrefixList, error) 
 		Entries:       make([]NATGatewayPrefixListEntry, len(a.Entries)),
 	}
 	for i, e := range a.Entries {
+		// The API declares entries non-nullable, so a null is malformed.
+		if e == nil {
+			return nil, fmt.Errorf("prefix list entry %d: null entry in response", i)
+		}
 		ge, err := prefixLenFromAPI(e.Ge)
 		if err != nil {
 			return nil, fmt.Errorf("prefix list entry %d: invalid ge %q: %w", i, e.Ge, err)
