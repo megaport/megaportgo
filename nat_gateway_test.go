@@ -1037,11 +1037,11 @@ func (suite *NATGatewayClientTestSuite) TestGetNATGatewayPrefixListInvalidGe() {
 
 	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/prefix_lists/4", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"message":"ok","terms":"","data":{"id":4,"description":"x","addressFamily":"IPv4","entries":[{"action":"permit","prefix":"10.0.0.0/8","ge":"not-a-number"}]}}`)
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":{"id":4,"description":"x","addressFamily":"IPv4","entries":[{"action":"permit","prefix":"10.0.0.0/8"},{"action":"permit","prefix":"10.0.1.0/24","ge":"not-a-number"}]}}`)
 	})
 
 	_, err := natSvc.GetNATGatewayPrefixList(ctx, productUID, 4)
-	suite.ErrorContains(err, `prefix list entry 0: invalid ge "not-a-number"`)
+	suite.ErrorContains(err, `prefix list entry 1: invalid ge "not-a-number"`)
 }
 
 func (suite *NATGatewayClientTestSuite) TestGetNATGatewayPrefixListInvalidLe() {
@@ -1058,8 +1058,8 @@ func (suite *NATGatewayClientTestSuite) TestGetNATGatewayPrefixListInvalidLe() {
 	suite.ErrorContains(err, `prefix list entry 1: invalid le "not-a-number"`)
 }
 
-// A null entry is rejected on the NAT read path too. Both products share one
-// schema, and a value-typed wire slice would smooth it into a blank entry.
+// TestGetNATGatewayPrefixListNullEntry covers the NAT read path's null entry,
+// which a value-typed wire slice would smooth into a blank entry.
 func (suite *NATGatewayClientTestSuite) TestGetNATGatewayPrefixListNullEntry() {
 	ctx := context.Background()
 	natSvc := suite.client.NATGatewayService
@@ -1072,6 +1072,41 @@ func (suite *NATGatewayClientTestSuite) TestGetNATGatewayPrefixListNullEntry() {
 
 	_, err := natSvc.GetNATGatewayPrefixList(ctx, productUID, 4)
 	suite.ErrorContains(err, "prefix list entry 1: null entry in response")
+}
+
+// TestNATGatewayPrefixListNullEntryOnWrite covers the create and update
+// read-backs, which decode the same envelope through their own call sites.
+func (suite *NATGatewayClientTestSuite) TestNATGatewayPrefixListNullEntryOnWrite() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "uid-pl-null-write"
+	const nullEntryBody = `{"message":"ok","terms":"","data":{"id":4,"description":"x","addressFamily":"IPv4","entries":[{"action":"permit","prefix":"10.0.0.0/8"},null]}}`
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/prefix_lists", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, nullEntryBody)
+	})
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/prefix_lists/4", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, nullEntryBody)
+	})
+
+	req := &NATGatewayPrefixList{
+		Description:   "x",
+		AddressFamily: AddressFamilyIPv4,
+		Entries: []NATGatewayPrefixListEntry{
+			{Action: PrefixListActionPermit, Prefix: "10.0.0.0/8"},
+		},
+	}
+
+	suite.Run("create", func() {
+		_, err := natSvc.CreateNATGatewayPrefixList(ctx, productUID, req)
+		suite.ErrorContains(err, "prefix list entry 1: null entry in response")
+	})
+	suite.Run("update", func() {
+		_, err := natSvc.UpdateNATGatewayPrefixList(ctx, productUID, 4, req)
+		suite.ErrorContains(err, "prefix list entry 1: null entry in response")
+	})
 }
 
 func (suite *NATGatewayClientTestSuite) TestGetNATGatewayPrefixListValidation() {
@@ -1335,8 +1370,10 @@ func (suite *NATGatewayClientTestSuite) TestPrefixListGeLeRoundTrip() {
 		AddressFamily: AddressFamilyIPv4,
 		Entries: []NATGatewayPrefixListEntry{
 			{Action: PrefixListActionPermit, Prefix: "10.0.0.0/8", Ge: PtrTo(24), Le: PtrTo(32)},
-			{Action: PrefixListActionDeny, Prefix: "0.0.0.0/0"}, // ge/le omitted
-			{Action: PrefixListActionPermit, Prefix: "172.16.0.0/12", Ge: PtrTo(0), Le: PtrTo(0)},
+			{Action: PrefixListActionDeny, Prefix: "172.16.0.0/12"}, // ge/le omitted
+			// A 0 is only valid on a default route: the API requires ge to be
+			// at least the prefix length.
+			{Action: PrefixListActionPermit, Prefix: "0.0.0.0/0", Ge: PtrTo(0), Le: PtrTo(0)},
 		},
 	}
 
@@ -1357,17 +1394,24 @@ func (suite *NATGatewayClientTestSuite) TestPrefixListGeLeRoundTrip() {
 		"addressFamily": "IPv4",
 		"entries": [
 			{"action": "permit", "prefix": "10.0.0.0/8", "ge": "24", "le": "32"},
-			{"action": "deny", "prefix": "0.0.0.0/0"},
-			{"action": "permit", "prefix": "172.16.0.0/12", "ge": "0", "le": "0"}
+			{"action": "deny", "prefix": "172.16.0.0/12"},
+			{"action": "permit", "prefix": "0.0.0.0/0", "ge": "0", "le": "0"}
 		]
 	}`, string(body))
 
 	back, err := api.toPrefixList()
 	suite.Require().NoError(err)
+	suite.Equal("rt", back.Description)
+	suite.Equal(AddressFamilyIPv4, back.AddressFamily)
+	suite.Equal(PrefixListActionPermit, back.Entries[0].Action)
+	suite.Equal("10.0.0.0/8", back.Entries[0].Prefix)
 	suite.Equal(PtrTo(24), back.Entries[0].Ge)
 	suite.Equal(PtrTo(32), back.Entries[0].Le)
+	suite.Equal(PrefixListActionDeny, back.Entries[1].Action)
+	suite.Equal("172.16.0.0/12", back.Entries[1].Prefix)
 	suite.Nil(back.Entries[1].Ge)
 	suite.Nil(back.Entries[1].Le)
+	suite.Equal("0.0.0.0/0", back.Entries[2].Prefix)
 	suite.Equal(PtrTo(0), back.Entries[2].Ge)
 	suite.Equal(PtrTo(0), back.Entries[2].Le)
 }

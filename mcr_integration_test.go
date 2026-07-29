@@ -349,7 +349,7 @@ func (suite *MCRIntegrationTestSuite) TestMegaportPrefixFilterList() {
 			{
 				Action: "deny",
 				Prefix: "10.0.2.0/24",
-				Ge:     nil, // staging omitted ge when it matched the prefix length; undocumented
+				Ge:     nil, // undocumented: the API strips ge/le that equal the prefix length
 				Le:     PtrTo(25),
 			},
 		},
@@ -461,7 +461,7 @@ func (suite *MCRIntegrationTestSuite) TestMegaportPrefixFilterList() {
 			{
 				Action: "deny",
 				Prefix: "10.0.2.0/24",
-				Ge:     nil, // staging omitted ge when it matched the prefix length; undocumented
+				Ge:     nil, // undocumented: the API strips ge/le that equal the prefix length
 				Le:     PtrTo(26),
 			},
 		},
