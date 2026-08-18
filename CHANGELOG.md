@@ -5,6 +5,7 @@
 - Add `AsOverride` (`*bool`) to `BgpConnectionConfig` so consumers can enable AS Override for eBGP peering. Unset leaves the API default in place.
 
 ## Changes
+- `DeleteProduct` returns the new `ErrCancelPendingApproval` when the API answers 202 "pending for approval" instead of canceling. That happens in a company with cancellation order approval turned on, where a cancel used to look like a success on a product that was still live. `DeleteVXC`, `DeletePort`, `DeleteMCR`, `DeleteMVE`, `DeleteIX`, and `DeleteNATGateway` all forward the error.
 - Bump Go toolchain to 1.26.5 to pick up a `crypto/tls` fix for an Encrypted Client Hello privacy leak ([GO-2026-5856](https://pkg.go.dev/vuln/GO-2026-5856)).
 
 # 1.0.0 Release
