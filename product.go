@@ -20,7 +20,7 @@ type ProductService interface {
 	// ModifyProduct modifies a product in the Megaport Products API. The available fields to modify are Name, Cost Centre, Marketplace Visibility, Contract Term, ASN (MCR only), and Vnics (MVE only).
 	ModifyProduct(ctx context.Context, req *ModifyProductRequest) (*ModifyProductResponse, error)
 	// DeleteProduct is responsible for either scheduling a product for deletion "CANCEL" or deleting a product immediately "CANCEL_NOW" in the Megaport Products API.
-	// A "CANCEL_NOW" on a live product in a company with cancellation order approval returns ErrCancelPendingApproval and cancels nothing.
+	// Returns ErrCancelPendingApproval when the API files an order approval instead of canceling.
 	DeleteProduct(ctx context.Context, req *DeleteProductRequest) (*DeleteProductResponse, error)
 	// RestoreProduct is responsible for restoring a product in the Megaport Products API. The product must be in a "CANCELLED" state to be restored.
 	RestoreProduct(ctx context.Context, productId string) (*RestoreProductResponse, error)
@@ -285,7 +285,7 @@ func (svc *ProductServiceOp) ModifyProduct(ctx context.Context, req *ModifyProdu
 }
 
 // DeleteProduct is responsible for either scheduling a product for deletion "CANCEL" or deleting a product immediately "CANCEL_NOW" in the Megaport Products API.
-// A "CANCEL_NOW" on a live product in a company with cancellation order approval returns ErrCancelPendingApproval and cancels nothing.
+// Returns ErrCancelPendingApproval when the API files an order approval instead of canceling.
 func (svc *ProductServiceOp) DeleteProduct(ctx context.Context, req *DeleteProductRequest) (*DeleteProductResponse, error) {
 	if req == nil {
 		return nil, ErrDeleteProductRequestNil
@@ -321,7 +321,6 @@ func (svc *ProductServiceOp) DeleteProduct(ctx context.Context, req *DeleteProdu
 	}
 	defer resp.Body.Close()
 
-	// 202 means the API filed an order approval and canceled nothing.
 	if resp.StatusCode == http.StatusAccepted {
 		return nil, ErrCancelPendingApproval
 	}

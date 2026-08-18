@@ -106,7 +106,7 @@ var ErrMCRCancelLaterNotAllowed = errors.New("mcr products do not support schedu
 var ErrPortCancelLaterNotAllowed = errors.New("port products do not support scheduled deletion (cancel later), only immediate deletion (CANCEL_NOW) is allowed")
 
 // ErrCancelPendingApproval is returned when the API files an order approval instead of canceling.
-// The API answers 202 in that case and the product stays live until an approver acts on the request.
+// The product stays live until an approver acts on the request.
 var ErrCancelPendingApproval = errors.New("cancel request is pending approval, the product is still live")
 
 // ErrMCRNotFound is returned when an MCR cannot be found (deleted or never existed).
