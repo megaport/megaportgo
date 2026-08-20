@@ -27,6 +27,7 @@ type PortService interface {
 	// DeletePort deletes a port in the Megaport Port API.
 	// Note: Port products only support immediate deletion (CANCEL_NOW). Requests
 	// with DeleteNow=false are rejected with ErrPortCancelLaterNotAllowed.
+	// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 	DeletePort(ctx context.Context, req *DeletePortRequest) (*DeletePortResponse, error)
 	// RestorePort restores a port in the Megaport Port API.
 	RestorePort(ctx context.Context, portId string) (*RestorePortResponse, error)
@@ -393,6 +394,7 @@ func (svc *PortServiceOp) ModifyPort(ctx context.Context, req *ModifyPortRequest
 // Note: Port products only support immediate deletion (CANCEL_NOW). Requests with
 // DeleteNow=false are rejected with ErrPortCancelLaterNotAllowed, and accepted
 // requests always call the underlying API with DeleteNow=true.
+// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 func (svc *PortServiceOp) DeletePort(ctx context.Context, req *DeletePortRequest) (*DeletePortResponse, error) {
 	if req == nil {
 		return nil, ErrDeletePortRequestNil

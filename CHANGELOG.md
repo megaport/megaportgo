@@ -5,7 +5,7 @@
 - Add `AsOverride` (`*bool`) to `BgpConnectionConfig` so consumers can enable AS Override for eBGP peering. Unset leaves the API default in place.
 
 ## Changes
-- `DeleteProduct` returns the new `ErrCancelPendingApproval` when the API files an order approval instead of canceling, which used to read as a successful cancel on a service that was still live. Every product delete method forwards it.
+- `DeleteProduct` returns `ErrCancelPendingApproval` when the API creates an order approval request instead of canceling. That case used to read as a successful cancel on a service that was still live. Every product delete method forwards it.
 - Bump Go toolchain to 1.26.5 to pick up a `crypto/tls` fix for an Encrypted Client Hello privacy leak ([GO-2026-5856](https://pkg.go.dev/vuln/GO-2026-5856)).
 
 # 1.0.0 Release
