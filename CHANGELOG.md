@@ -6,6 +6,7 @@
 
 ## Changes
 - Bump Go toolchain to 1.26.5 to pick up a `crypto/tls` fix for an Encrypted Client Hello privacy leak ([GO-2026-5856](https://pkg.go.dev/vuln/GO-2026-5856)).
+- Breaking: the `MCRLookingGlassService` route methods now call the real MCR route diagnostics endpoints under `/v2/product/mcr2/{productUid}/diagnostics/routes/`. The old `lookingGlass` paths never existed, so every call returned 404. `ListIPRoutes`, `ListIPRoutesWithFilter`, `ListBGPRoutes`, `ListBGPRoutesWithFilter`, and `ListBGPNeighborRoutes` now submit an asynchronous run and poll for the result. Removed: `ListBGPSessions` (the API has no BGP sessions endpoint), the `List*Async`, `GetAsync*`, and `WaitForAsync*` route methods, and `ListIPRoutesRequest.Protocol` (the API has no protocol filter). `ListBGPNeighborRoutesRequest.SessionID` is replaced by `PeerIPAddress`. `Direction` is now required and validated.
 
 # 1.0.0 Release
 
