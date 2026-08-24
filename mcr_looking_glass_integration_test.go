@@ -48,9 +48,8 @@ func (suite *MCRLookingGlassIntegrationTestSuite) routeDiagnosticsCtx(ctx contex
 	return callCtx
 }
 
-// assertIPRoutesDecoded fails when the response decoded into zero-valued
-// structs, which is how a renamed wire field looks to a test that only checks
-// the error. The spec marks prefix and protocol required.
+// A renamed wire field decodes to a zero-valued struct and still passes NoError.
+// The spec marks prefix and protocol required, so check them.
 func (suite *MCRLookingGlassIntegrationTestSuite) assertIPRoutesDecoded(routes []*LookingGlassIPRoute) {
 	if len(routes) == 0 {
 		return
@@ -59,7 +58,7 @@ func (suite *MCRLookingGlassIntegrationTestSuite) assertIPRoutesDecoded(routes [
 	suite.NotEmpty(routes[0].Protocol, "IP route protocol should decode")
 }
 
-// assertBGPRoutesDecoded is assertIPRoutesDecoded for the BGP route shape.
+// assertBGPRoutesDecoded checks the BGP fields the spec marks required.
 func (suite *MCRLookingGlassIntegrationTestSuite) assertBGPRoutesDecoded(routes []*LookingGlassBGPRoute) {
 	if len(routes) == 0 {
 		return

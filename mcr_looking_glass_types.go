@@ -2,7 +2,7 @@ package megaport
 
 import "errors"
 
-// LookingGlassRouteVXCRef identifies the VXC a diagnostics next hop resolves through.
+// LookingGlassRouteVXCRef identifies the VXC that carries a next hop IP.
 type LookingGlassRouteVXCRef struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
@@ -19,19 +19,18 @@ type LookingGlassIPRoute struct {
 	Prefix   string                   `json:"prefix"`
 	Protocol string                   `json:"protocol"`
 	Distance int                      `json:"distance,omitempty"`
-	Metric   int                      `json:"metric,omitempty"`
+	Metric   int                      `json:"metric"`
 	NextHop  LookingGlassRouteNextHop `json:"nextHop"`
 }
 
-// LookingGlassBGPRoute is one BGP route. The BGP routes and the BGP neighbor
-// routes endpoints both return this shape.
+// LookingGlassBGPRoute is one BGP route. Both /bgp and /bgp/neighbor return this shape.
 type LookingGlassBGPRoute struct {
 	Prefix       string                   `json:"prefix"`
 	ASPath       string                   `json:"asPath,omitempty"`
 	Origin       string                   `json:"origin"`
 	Source       string                   `json:"source"`
 	LocalPref    int                      `json:"localPref"`
-	MED          int                      `json:"med,omitempty"`
+	MED          int                      `json:"med"`
 	Weight       int                      `json:"weight"`
 	Best         bool                     `json:"best"`
 	External     bool                     `json:"external"`

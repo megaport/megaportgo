@@ -12,7 +12,7 @@ import (
 )
 
 // MCRLookingGlassService reads MCR route and connectivity diagnostics.
-// The route methods start a route diagnostics run and poll for the result.
+// The route methods start a route diagnostics operation and poll for the result.
 type MCRLookingGlassService interface {
 	// ListIPRoutes retrieves the IP routing table from the MCR.
 	ListIPRoutes(ctx context.Context, mcrUID string) ([]*LookingGlassIPRoute, error)
@@ -129,14 +129,15 @@ func pollMCRDiagnostics[T any](
 
 var _ MCRLookingGlassService = (*MCRLookingGlassServiceOp)(nil)
 
-// submitRouteDiagnostics starts a route diagnostics run and returns the operation
-// ID to poll. Sync mode is deprecated in the spec and returns an empty array on an
-// MCR with a large routing table, so the run always asks for async mode.
+// submitRouteDiagnostics starts a route diagnostics operation and returns the
+// operation ID to poll. The spec says these endpoints must run in async mode and
+// that sync mode is deprecated, so the operation always asks for async.
 func (svc *MCRLookingGlassServiceOp) submitRouteDiagnostics(ctx context.Context, path string, params url.Values) (string, error) {
-	query := url.Values{"async": []string{"true"}}
+	query := url.Values{}
 	for key, values := range params {
 		query[key] = values
 	}
+	query.Set("async", "true")
 
 	clientReq, err := svc.Client.NewRequest(ctx, "GET", path+"?"+query.Encode(), nil)
 	if err != nil {
@@ -161,7 +162,6 @@ func (svc *MCRLookingGlassServiceOp) submitRouteDiagnostics(ctx context.Context,
 	return apiResponse.Data, nil
 }
 
-// routeDiagnosticsPath builds the URL for one MCR route diagnostics endpoint.
 func routeDiagnosticsPath(mcrUID, suffix string) string {
 	return fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes%s", url.PathEscape(mcrUID), suffix)
 }
@@ -198,8 +198,7 @@ func getRouteOperationResult[T any](ctx context.Context, svc *MCRLookingGlassSer
 	return &apiResponse.Data, nil
 }
 
-// listRouteDiagnostics starts a route diagnostics run and polls the operation
-// endpoint until the result is ready.
+// listRouteDiagnostics submits the operation, then polls until the result is ready.
 func listRouteDiagnostics[T any](ctx context.Context, svc *MCRLookingGlassServiceOp, mcrUID, suffix string, params url.Values) ([]*T, error) {
 	operationID, err := svc.submitRouteDiagnostics(ctx, routeDiagnosticsPath(mcrUID, suffix), params)
 	if err != nil {

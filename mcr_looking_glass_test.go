@@ -2,6 +2,7 @@ package megaport
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -31,6 +32,14 @@ func (suite *MCRLookingGlassClientTestSuite) SetupTest() {
 	suite.client = NewClient(nil, nil)
 	url, _ := url.Parse(suite.server.URL)
 	suite.client.BaseURL = url
+
+	// Keep the poll cadence short for every test, so a regression that stops the
+	// first poll from returning fails fast instead of running to the package
+	// timeout. Tests that assert on the timeout set their own values.
+	op, ok := suite.client.MCRLookingGlassService.(*MCRLookingGlassServiceOp)
+	suite.Require().True(ok)
+	op.pollInterval = 5 * time.Millisecond
+	op.pollTimeout = 2 * time.Second
 }
 
 func (suite *MCRLookingGlassClientTestSuite) TearDownTest() {
@@ -1179,4 +1188,50 @@ func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRPingCallerDeadlineDur
 	_, err := lgSvc.WaitForMCRPing(ctx, mcrUID, operationID)
 	suite.ErrorIs(err, context.DeadlineExceeded)
 	suite.False(errors.Is(err, ErrMCRDiagnosticsTimeout))
+}
+
+// TestRouteEncodingKeepsDocumentedZeros tests that a route re-encodes the zero
+// values the spec documents as real. distance is the deliberate exception: the
+// spec sets minimum 1, so its zero can only mean absent.
+func (suite *MCRLookingGlassClientTestSuite) TestRouteEncodingKeepsDocumentedZeros() {
+	ipJSON, err := json.Marshal(&LookingGlassIPRoute{Prefix: "10.0.1.0/24", Protocol: "connected"})
+	suite.Require().NoError(err)
+	suite.Contains(string(ipJSON), `"metric":0`)
+	suite.NotContains(string(ipJSON), "distance")
+
+	bgpJSON, err := json.Marshal(&LookingGlassBGPRoute{Prefix: "10.0.1.0/24", Origin: "IGP"})
+	suite.Require().NoError(err)
+	for _, want := range []string{`"med":0`, `"localPref":0`, `"weight":0`, `"best":false`, `"external":false`, `"valid":false`} {
+		suite.Contains(string(bgpJSON), want)
+	}
+}
+
+// TestRouteOperationUnexpected200Shapes pins how the poll reads two 200 bodies
+// the spec does not describe.
+func (suite *MCRLookingGlassClientTestSuite) TestRouteOperationUnexpected200Shapes() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+	operationID := "5c6d7e8f-9012-4345-8678-9012345678ab"
+
+	body := ""
+	base := "/v2/product/mcr2/" + testRouteMCRUID + "/diagnostics/routes"
+	suite.mux.HandleFunc(base+"/ip", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, `{"message":"ok","terms":"","data":%q}`, operationID)
+	})
+	suite.mux.HandleFunc(base+"/operation", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, body)
+	})
+
+	// A 200 with no data key. Only a 202 means the result is not ready, so this
+	// reads as an empty routing table rather than another poll.
+	body = `{"message":"Data result will be available soon","terms":""}`
+	routes, err := lgSvc.ListIPRoutes(ctx, testRouteMCRUID)
+	suite.NoError(err)
+	suite.Empty(routes)
+
+	// A 200 that is not JSON, which is what a proxy error page looks like.
+	body = "<html>gateway error</html>"
+	_, err = lgSvc.ListIPRoutes(ctx, testRouteMCRUID)
+	suite.Error(err)
+	suite.NotErrorIs(err, ErrMCRDiagnosticsTimeout)
 }
