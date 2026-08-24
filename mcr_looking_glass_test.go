@@ -521,6 +521,98 @@ func (suite *MCRLookingGlassClientTestSuite) TestListIPRoutesPollTimeout() {
 	suite.ErrorIs(err, ErrMCRDiagnosticsTimeout)
 }
 
+// TestListIPRoutesPollError tests that an API error partway through the poll
+// reaches the caller and stops the loop instead of polling to the timeout.
+func (suite *MCRLookingGlassClientTestSuite) TestListIPRoutesPollError() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+	mcrUID := testRouteMCRUID
+	operationID := "1f2e3d4c-5b6a-4798-8071-2e3d4c5b6a79"
+
+	op, ok := lgSvc.(*MCRLookingGlassServiceOp)
+	suite.Require().True(ok)
+	op.pollInterval = 5 * time.Millisecond
+	op.pollTimeout = 2 * time.Second
+
+	submitPath := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes/ip", mcrUID)
+	suite.mux.HandleFunc(submitPath, func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, `{"message":"ok","terms":"","data":%q}`, operationID)
+	})
+
+	var calls atomic.Int32
+	operationPath := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes/operation", mcrUID)
+	suite.mux.HandleFunc(operationPath, func(w http.ResponseWriter, r *http.Request) {
+		if calls.Add(1) == 1 {
+			w.WriteHeader(http.StatusAccepted)
+			fmt.Fprint(w, `{"message":"Data result will be available soon","terms":""}`)
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, `{"message":"diagnostics backend unavailable"}`)
+	})
+
+	_, err := lgSvc.ListIPRoutes(ctx, mcrUID)
+	suite.Error(err)
+	suite.NotErrorIs(err, ErrMCRDiagnosticsTimeout)
+	suite.Equal(int32(2), calls.Load())
+}
+
+// TestListIPRoutesCallerCancelled tests that cancelling the caller's context
+// mid-poll reports the caller's error, not the SDK timeout sentinel.
+func (suite *MCRLookingGlassClientTestSuite) TestListIPRoutesCallerCancelled() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	lgSvc := suite.client.MCRLookingGlassService
+	mcrUID := testRouteMCRUID
+	operationID := "2a3b4c5d-6e7f-4081-9203-4c5d6e7f8091"
+
+	op, ok := lgSvc.(*MCRLookingGlassServiceOp)
+	suite.Require().True(ok)
+	op.pollInterval = 5 * time.Millisecond
+	op.pollTimeout = 2 * time.Second
+
+	submitPath := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes/ip", mcrUID)
+	suite.mux.HandleFunc(submitPath, func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, `{"message":"ok","terms":"","data":%q}`, operationID)
+	})
+
+	operationPath := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes/operation", mcrUID)
+	suite.mux.HandleFunc(operationPath, func(w http.ResponseWriter, r *http.Request) {
+		cancel()
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, `{"message":"Data result will be available soon","terms":""}`)
+	})
+
+	_, err := lgSvc.ListIPRoutes(ctx, mcrUID)
+	suite.ErrorIs(err, context.Canceled)
+	suite.NotErrorIs(err, ErrMCRDiagnosticsTimeout)
+}
+
+// TestRouteDiagnosticsEscapesMCRUID tests that an MCR UID needing escaping is
+// escaped in the path rather than changing the URL the API sees.
+func (suite *MCRLookingGlassClientTestSuite) TestRouteDiagnosticsEscapesMCRUID() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+	mcrUID := "not a uid#frag"
+	operationID := "3b4c5d6e-7f80-4192-8314-5d6e7f809142"
+
+	var seen []string
+	suite.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		seen = append(seen, r.URL.String())
+		if r.URL.Query().Get("operationId") != "" {
+			fmt.Fprint(w, `{"message":"ok","terms":"","data":[]}`)
+			return
+		}
+		fmt.Fprintf(w, `{"message":"ok","terms":"","data":%q}`, operationID)
+	})
+
+	_, err := lgSvc.ListIPRoutes(ctx, mcrUID)
+	suite.NoError(err)
+
+	base := "/v2/product/mcr2/not%20a%20uid%23frag/diagnostics/routes"
+	suite.Equal([]string{base + "/ip?async=true", base + "/operation?operationId=" + operationID}, seen)
+}
+
 // TestPingMCR tests the PingMCR method happy path.
 func (suite *MCRLookingGlassClientTestSuite) TestPingMCR() {
 	ctx := context.Background()

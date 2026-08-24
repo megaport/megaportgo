@@ -11,12 +11,8 @@ import (
 	"time"
 )
 
-// MCRLookingGlassService is an interface for interfacing with the MCR diagnostics
-// endpoints of the Megaport API. The Looking Glass provides visibility into traffic
-// routing, helping you troubleshoot connections by showing the status of protocols
-// and routing tables in the MCR.
-//
-// The route methods start an async diagnostics run and poll for the result.
+// MCRLookingGlassService reads MCR route and connectivity diagnostics.
+// The route methods start a route diagnostics run and poll for the result.
 type MCRLookingGlassService interface {
 	// ListIPRoutes retrieves the IP routing table from the MCR.
 	ListIPRoutes(ctx context.Context, mcrUID string) ([]*LookingGlassIPRoute, error)
@@ -42,8 +38,8 @@ type MCRLookingGlassService interface {
 	WaitForMCRTraceroute(ctx context.Context, mcrUID, operationID string) (*LookingGlassTracerouteResult, error)
 }
 
-// mcrDiagnosticsPollTimeout is the SDK-managed timeout for WaitForMCRPing and
-// WaitForMCRTraceroute when the caller does not provide a context with a deadline.
+// mcrDiagnosticsPollTimeout is the SDK-managed timeout for the polling methods
+// when the caller does not provide a context with a deadline.
 const mcrDiagnosticsPollTimeout = 5 * time.Minute
 
 // mcrDiagnosticsPollInterval is the interval between poll attempts for MCR diagnostics.
@@ -133,13 +129,16 @@ func pollMCRDiagnostics[T any](
 
 var _ MCRLookingGlassService = (*MCRLookingGlassServiceOp)(nil)
 
-// submitRouteDiagnostics starts a route diagnostics run and returns the
-// operation ID to poll. It always asks for async mode. Sync mode is deprecated
-// in the spec and returns an empty array on an MCR with a large routing table.
+// submitRouteDiagnostics starts a route diagnostics run and returns the operation
+// ID to poll. Sync mode is deprecated in the spec and returns an empty array on an
+// MCR with a large routing table, so the run always asks for async mode.
 func (svc *MCRLookingGlassServiceOp) submitRouteDiagnostics(ctx context.Context, path string, params url.Values) (string, error) {
-	params.Set("async", "true")
+	query := url.Values{"async": []string{"true"}}
+	for key, values := range params {
+		query[key] = values
+	}
 
-	clientReq, err := svc.Client.NewRequest(ctx, "GET", path+"?"+params.Encode(), nil)
+	clientReq, err := svc.Client.NewRequest(ctx, "GET", path+"?"+query.Encode(), nil)
 	if err != nil {
 		return "", err
 	}
@@ -162,13 +161,16 @@ func (svc *MCRLookingGlassServiceOp) submitRouteDiagnostics(ctx context.Context,
 	return apiResponse.Data, nil
 }
 
-// getRouteOperationResult reads the result of a route diagnostics operation.
-// It returns nil while the result is not ready.
+// routeDiagnosticsPath builds the URL for one MCR route diagnostics endpoint.
+func routeDiagnosticsPath(mcrUID, suffix string) string {
+	return fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes%s", url.PathEscape(mcrUID), suffix)
+}
+
+// getRouteOperationResult returns nil while the result is not ready.
 func getRouteOperationResult[T any](ctx context.Context, svc *MCRLookingGlassServiceOp, mcrUID, operationID string) (*[]*T, error) {
-	path := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes/operation", url.PathEscape(mcrUID))
 	params := url.Values{}
 	params.Set("operationId", operationID)
-	path = path + "?" + params.Encode()
+	path := routeDiagnosticsPath(mcrUID, "/operation") + "?" + params.Encode()
 
 	clientReq, err := svc.Client.NewRequest(ctx, "GET", path, nil)
 	if err != nil {
@@ -182,9 +184,8 @@ func getRouteOperationResult[T any](ctx context.Context, svc *MCRLookingGlassSer
 	}
 	defer response.Body.Close()
 
-	// The API answers 202 while it still collects the result. Every 2xx arrives
-	// here as a success, and an empty route list is a real result, so the status
-	// code is the only signal that separates the two.
+	// The API answers 202 while it still collects the result. An empty route list
+	// is also a 200, so only the status code separates the two.
 	if response.StatusCode == http.StatusAccepted {
 		return nil, nil
 	}
@@ -194,18 +195,13 @@ func getRouteOperationResult[T any](ctx context.Context, svc *MCRLookingGlassSer
 		return nil, err
 	}
 
-	routes := apiResponse.Data
-	if routes == nil {
-		routes = []*T{}
-	}
-
-	return &routes, nil
+	return &apiResponse.Data, nil
 }
 
 // listRouteDiagnostics starts a route diagnostics run and polls the operation
 // endpoint until the result is ready.
-func listRouteDiagnostics[T any](ctx context.Context, svc *MCRLookingGlassServiceOp, mcrUID, path string, params url.Values) ([]*T, error) {
-	operationID, err := svc.submitRouteDiagnostics(ctx, path, params)
+func listRouteDiagnostics[T any](ctx context.Context, svc *MCRLookingGlassServiceOp, mcrUID, suffix string, params url.Values) ([]*T, error) {
+	operationID, err := svc.submitRouteDiagnostics(ctx, routeDiagnosticsPath(mcrUID, suffix), params)
 	if err != nil {
 		return nil, err
 	}
@@ -255,13 +251,12 @@ func (svc *MCRLookingGlassServiceOp) ListIPRoutesWithFilter(ctx context.Context,
 		return nil, ErrMCRDiagnosticsMCRUIDRequired
 	}
 
-	path := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes/ip", url.PathEscape(req.MCRID))
 	params := url.Values{}
 	if req.IPFilter != "" {
 		params.Set("ip_address", req.IPFilter)
 	}
 
-	return listRouteDiagnostics[LookingGlassIPRoute](ctx, svc, req.MCRID, path, params)
+	return listRouteDiagnostics[LookingGlassIPRoute](ctx, svc, req.MCRID, "/ip", params)
 }
 
 // ListBGPRoutes retrieves the BGP routes the MCR knows about.
@@ -278,13 +273,12 @@ func (svc *MCRLookingGlassServiceOp) ListBGPRoutesWithFilter(ctx context.Context
 		return nil, ErrMCRDiagnosticsMCRUIDRequired
 	}
 
-	path := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes/bgp", url.PathEscape(req.MCRID))
 	params := url.Values{}
 	if req.IPFilter != "" {
 		params.Set("ip_address", req.IPFilter)
 	}
 
-	return listRouteDiagnostics[LookingGlassBGPRoute](ctx, svc, req.MCRID, path, params)
+	return listRouteDiagnostics[LookingGlassBGPRoute](ctx, svc, req.MCRID, "/bgp", params)
 }
 
 // ListBGPNeighborRoutes retrieves the routes advertised to or received from one BGP peer.
@@ -302,12 +296,11 @@ func (svc *MCRLookingGlassServiceOp) ListBGPNeighborRoutes(ctx context.Context, 
 		return nil, ErrMCRDiagnosticsDirectionInvalid
 	}
 
-	path := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes/bgp/neighbor", url.PathEscape(req.MCRID))
 	params := url.Values{}
 	params.Set("direction", req.Direction)
 	params.Set("peer_ip_address", req.PeerIPAddress)
 
-	return listRouteDiagnostics[LookingGlassBGPRoute](ctx, svc, req.MCRID, path, params)
+	return listRouteDiagnostics[LookingGlassBGPRoute](ctx, svc, req.MCRID, "/bgp/neighbor", params)
 }
 
 // PingMCR initiates an ICMP ping from the MCR and returns the operation ID.

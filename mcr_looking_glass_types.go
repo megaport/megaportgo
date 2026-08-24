@@ -28,14 +28,14 @@ type LookingGlassIPRoute struct {
 type LookingGlassBGPRoute struct {
 	Prefix       string                   `json:"prefix"`
 	ASPath       string                   `json:"asPath,omitempty"`
-	Origin       string                   `json:"origin,omitempty"`
-	Source       string                   `json:"source,omitempty"`
-	LocalPref    int                      `json:"localPref,omitempty"`
+	Origin       string                   `json:"origin"`
+	Source       string                   `json:"source"`
+	LocalPref    int                      `json:"localPref"`
 	MED          int                      `json:"med,omitempty"`
-	Weight       int                      `json:"weight,omitempty"`
-	Best         bool                     `json:"best,omitempty"`
-	External     bool                     `json:"external,omitempty"`
-	Valid        bool                     `json:"valid,omitempty"`
+	Weight       int                      `json:"weight"`
+	Best         bool                     `json:"best"`
+	External     bool                     `json:"external"`
+	Valid        bool                     `json:"valid"`
 	Since        string                   `json:"since,omitempty"`
 	Communities  []string                 `json:"communities,omitempty"`
 	AdvertisedTo []string                 `json:"advertisedTo,omitempty"`
