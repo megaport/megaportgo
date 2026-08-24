@@ -6,6 +6,7 @@
 
 ## Changes
 - Bump Go toolchain to 1.26.5 to pick up a `crypto/tls` fix for an Encrypted Client Hello privacy leak ([GO-2026-5856](https://pkg.go.dev/vuln/GO-2026-5856)).
+- Bump Go toolchain to 1.26.7. This clears the four standard library advisories `govulncheck` reports against 1.26.5: [GO-2026-6218](https://pkg.go.dev/vuln/GO-2026-6218) (`net/url`), [GO-2026-6090](https://pkg.go.dev/vuln/GO-2026-6090) (`crypto/tls`), [GO-2026-5972](https://pkg.go.dev/vuln/GO-2026-5972) (`encoding/asn1`), and [GO-2026-5026](https://pkg.go.dev/vuln/GO-2026-5026) (`net/http`).
 
 # 1.0.0 Release
 
