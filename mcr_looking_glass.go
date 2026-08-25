@@ -195,7 +195,14 @@ func getRouteOperationResult[T any](ctx context.Context, svc *MCRLookingGlassSer
 		return nil, err
 	}
 
-	return &apiResponse.Data, nil
+	// Normalize a null or absent data key to an empty slice, so "no routes" has
+	// one shape rather than two.
+	routes := apiResponse.Data
+	if routes == nil {
+		routes = []*T{}
+	}
+
+	return &routes, nil
 }
 
 // listRouteDiagnostics submits the operation, then polls until the result is ready.

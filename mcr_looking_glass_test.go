@@ -35,7 +35,7 @@ func (suite *MCRLookingGlassClientTestSuite) SetupTest() {
 
 	// Keep the poll cadence short for every test, so a regression that stops the
 	// first poll from returning fails fast instead of running to the package
-	// timeout. Tests that assert on the timeout set their own values.
+	// timeout. Tests that need a different cadence set their own values.
 	op, ok := suite.client.MCRLookingGlassService.(*MCRLookingGlassServiceOp)
 	suite.Require().True(ok)
 	op.pollInterval = 5 * time.Millisecond
@@ -125,24 +125,6 @@ func (suite *MCRLookingGlassClientTestSuite) TestListIPRoutes() {
 	suite.Empty(submitted.Get("ip_address"))
 }
 
-// TestListIPRoutesWithIPFilter tests that the IP filter is sent as ip_address.
-func (suite *MCRLookingGlassClientTestSuite) TestListIPRoutesWithIPFilter() {
-	ctx := context.Background()
-	lgSvc := suite.client.MCRLookingGlassService
-	mcrUID := testRouteMCRUID
-	operationID := "3a2b1c0d-9e8f-4a7b-8c6d-5e4f3a2b1c0d"
-
-	submitted := suite.serveRouteDiagnostics("/ip", operationID, `[]`)
-
-	_, err := lgSvc.ListIPRoutesWithFilter(ctx, &ListIPRoutesRequest{
-		MCRID:    mcrUID,
-		IPFilter: "10.0.1.0/24",
-	})
-	suite.NoError(err)
-	suite.Equal("10.0.1.0/24", submitted.Get("ip_address"))
-	suite.Equal("true", submitted.Get("async"))
-}
-
 // TestListBGPRoutes tests the ListBGPRoutes method.
 func (suite *MCRLookingGlassClientTestSuite) TestListBGPRoutes() {
 	ctx := context.Background()
@@ -197,23 +179,6 @@ func (suite *MCRLookingGlassClientTestSuite) TestListBGPRoutes() {
 	suite.NoError(err)
 	suite.Equal(want, got)
 	suite.Equal("true", submitted.Get("async"))
-}
-
-// TestListBGPRoutesWithIPFilter tests that the IP filter is sent as ip_address.
-func (suite *MCRLookingGlassClientTestSuite) TestListBGPRoutesWithIPFilter() {
-	ctx := context.Background()
-	lgSvc := suite.client.MCRLookingGlassService
-	mcrUID := testRouteMCRUID
-	operationID := "6d5c4b3a-2918-4f7e-8d6c-4b3a29187f6e"
-
-	submitted := suite.serveRouteDiagnostics("/bgp", operationID, `[]`)
-
-	_, err := lgSvc.ListBGPRoutesWithFilter(ctx, &ListBGPRoutesRequest{
-		MCRID:    mcrUID,
-		IPFilter: "10.0.1.1",
-	})
-	suite.NoError(err)
-	suite.Equal("10.0.1.1", submitted.Get("ip_address"))
 }
 
 // TestListBGPNeighborRoutes tests that the neighbor request carries the
@@ -304,10 +269,10 @@ func (suite *MCRLookingGlassClientTestSuite) TestRouteDiagnosticsRequestURLs() {
 		{
 			name: "ip routes with filter",
 			call: func() error {
-				_, err := lgSvc.ListIPRoutesWithFilter(ctx, &ListIPRoutesRequest{MCRID: mcrUID, IPFilter: "10.0.1.1"})
+				_, err := lgSvc.ListIPRoutesWithFilter(ctx, &ListIPRoutesRequest{MCRID: mcrUID, IPFilter: "10.0.1.0/24"})
 				return err
 			},
-			wantURL: base + "/ip?async=true&ip_address=10.0.1.1",
+			wantURL: base + "/ip?async=true&ip_address=10.0.1.0%2F24",
 		},
 		{
 			name:    "bgp routes",
@@ -351,11 +316,6 @@ func (suite *MCRLookingGlassClientTestSuite) TestListIPRoutesPendingThenComplete
 	mcrUID := testRouteMCRUID
 	operationID := "9a8f7e6d-5c4b-42a3-9192-7e6d5c4b3a29"
 
-	// Use a fast poll interval so the test completes without real-time waits.
-	op, ok := lgSvc.(*MCRLookingGlassServiceOp)
-	suite.Require().True(ok)
-	op.pollInterval = 5 * time.Millisecond
-
 	submitPath := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes/ip", mcrUID)
 	suite.mux.HandleFunc(submitPath, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
@@ -395,10 +355,6 @@ func (suite *MCRLookingGlassClientTestSuite) TestListBGPRoutesEmptyResult() {
 	lgSvc := suite.client.MCRLookingGlassService
 	mcrUID := testRouteMCRUID
 	operationID := "a9b8c7d6-e5f4-4312-8291-8f7e6d5c4b3a"
-
-	op, ok := lgSvc.(*MCRLookingGlassServiceOp)
-	suite.Require().True(ok)
-	op.pollInterval = 5 * time.Millisecond
 
 	submitPath := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes/bgp", mcrUID)
 	suite.mux.HandleFunc(submitPath, func(w http.ResponseWriter, r *http.Request) {
@@ -512,7 +468,6 @@ func (suite *MCRLookingGlassClientTestSuite) TestListIPRoutesPollTimeout() {
 
 	op, ok := lgSvc.(*MCRLookingGlassServiceOp)
 	suite.Require().True(ok)
-	op.pollInterval = 5 * time.Millisecond
 	op.pollTimeout = 50 * time.Millisecond
 
 	submitPath := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes/ip", mcrUID)
@@ -537,11 +492,6 @@ func (suite *MCRLookingGlassClientTestSuite) TestListIPRoutesPollError() {
 	lgSvc := suite.client.MCRLookingGlassService
 	mcrUID := testRouteMCRUID
 	operationID := "1f2e3d4c-5b6a-4798-8071-2e3d4c5b6a79"
-
-	op, ok := lgSvc.(*MCRLookingGlassServiceOp)
-	suite.Require().True(ok)
-	op.pollInterval = 5 * time.Millisecond
-	op.pollTimeout = 2 * time.Second
 
 	submitPath := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes/ip", mcrUID)
 	suite.mux.HandleFunc(submitPath, func(w http.ResponseWriter, r *http.Request) {
@@ -574,11 +524,6 @@ func (suite *MCRLookingGlassClientTestSuite) TestListIPRoutesCallerCancelled() {
 	lgSvc := suite.client.MCRLookingGlassService
 	mcrUID := testRouteMCRUID
 	operationID := "2a3b4c5d-6e7f-4081-9203-4c5d6e7f8091"
-
-	op, ok := lgSvc.(*MCRLookingGlassServiceOp)
-	suite.Require().True(ok)
-	op.pollInterval = 5 * time.Millisecond
-	op.pollTimeout = 2 * time.Second
 
 	submitPath := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes/ip", mcrUID)
 	suite.mux.HandleFunc(submitPath, func(w http.ResponseWriter, r *http.Request) {
@@ -620,6 +565,74 @@ func (suite *MCRLookingGlassClientTestSuite) TestRouteDiagnosticsEscapesMCRUID()
 
 	base := "/v2/product/mcr2/not%20a%20uid%23frag/diagnostics/routes"
 	suite.Equal([]string{base + "/ip?async=true", base + "/operation?operationId=" + operationID}, seen)
+}
+
+// TestRouteDiagnosticsEscapesOperationID pins that the operation ID the API
+// hands back is escaped before it goes into the poll URL.
+func (suite *MCRLookingGlassClientTestSuite) TestRouteDiagnosticsEscapesOperationID() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+	operationID := "op id&async=false"
+
+	var pollURL string
+	base := "/v2/product/mcr2/" + testRouteMCRUID + "/diagnostics/routes"
+	suite.mux.HandleFunc(base+"/ip", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, `{"message":"ok","terms":"","data":%q}`, operationID)
+	})
+	suite.mux.HandleFunc(base+"/operation", func(w http.ResponseWriter, r *http.Request) {
+		pollURL = r.URL.String()
+		suite.Equal(operationID, r.URL.Query().Get("operationId"))
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":[]}`)
+	})
+
+	_, err := lgSvc.ListIPRoutes(ctx, testRouteMCRUID)
+	suite.NoError(err)
+	suite.Equal(base+"/operation?operationId=op+id%26async%3Dfalse", pollURL)
+}
+
+// TestDiagnosticsPollDefaults pins the cadence every caller gets when nothing
+// overrides it. Only the tests set these fields, so nothing else covers the
+// fallback, and a zero interval would panic time.NewTicker.
+func (suite *MCRLookingGlassClientTestSuite) TestDiagnosticsPollDefaults() {
+	svc := &MCRLookingGlassServiceOp{}
+
+	suite.Equal(mcrDiagnosticsPollInterval, svc.diagnosticsPollInterval())
+	suite.Equal(mcrDiagnosticsPollTimeout, svc.diagnosticsPollTimeout())
+	suite.Greater(svc.diagnosticsPollInterval(), time.Duration(0))
+	suite.Greater(svc.diagnosticsPollTimeout(), time.Duration(0))
+}
+
+// TestRouteDiagnosticsPollsImmediately pins the poll before the ticker starts.
+// The interval here is longer than the suite poll timeout, so an already-ready
+// result can only arrive if that first poll runs.
+func (suite *MCRLookingGlassClientTestSuite) TestRouteDiagnosticsPollsImmediately() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+
+	op, ok := lgSvc.(*MCRLookingGlassServiceOp)
+	suite.Require().True(ok)
+	op.pollInterval = time.Hour
+
+	suite.serveRouteDiagnostics("/ip", "4c5d6e7f-8091-42a3-b4c5-d6e7f8091a2b", `[]`)
+
+	_, err := lgSvc.ListIPRoutes(ctx, testRouteMCRUID)
+	suite.NoError(err)
+}
+
+// TestListIPRoutesSubmitNotJSON covers the submit leg of the proxy error page
+// that TestRouteOperationUnexpected200Shapes covers on the poll leg.
+func (suite *MCRLookingGlassClientTestSuite) TestListIPRoutesSubmitNotJSON() {
+	ctx := context.Background()
+	lgSvc := suite.client.MCRLookingGlassService
+
+	base := "/v2/product/mcr2/" + testRouteMCRUID + "/diagnostics/routes"
+	suite.mux.HandleFunc(base+"/ip", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, "<html>gateway error</html>")
+	})
+
+	_, err := lgSvc.ListIPRoutes(ctx, testRouteMCRUID)
+	suite.Error(err)
+	suite.NotErrorIs(err, ErrMCRDiagnosticsOperationEmpty)
 }
 
 // TestPingMCR tests the PingMCR method happy path.
@@ -1014,11 +1027,6 @@ func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRPingPending() {
 	mcrUID := "36b3f68e-2f54-4331-bf94-f8984449365f"
 	operationID := "op-id-ping-pending"
 
-	// Use a fast poll interval so the test completes instantly without real-time waits.
-	op, ok := lgSvc.(*MCRLookingGlassServiceOp)
-	suite.Require().True(ok)
-	op.pollInterval = 5 * time.Millisecond
-
 	pendingBlob := `{"message":"pending","terms":"","data":null}`
 	doneBlob := `{
 		"message": "Operation complete",
@@ -1063,11 +1071,6 @@ func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRTraceroutePending() {
 	lgSvc := suite.client.MCRLookingGlassService
 	mcrUID := "36b3f68e-2f54-4331-bf94-f8984449365f"
 	operationID := "op-id-traceroute-pending"
-
-	// Use a fast poll interval so the test completes instantly without real-time waits.
-	op, ok := lgSvc.(*MCRLookingGlassServiceOp)
-	suite.Require().True(ok)
-	op.pollInterval = 5 * time.Millisecond
 
 	pendingBlob := `{"message":"pending","terms":"","data":null}`
 	doneBlob := `{
@@ -1227,6 +1230,7 @@ func (suite *MCRLookingGlassClientTestSuite) TestRouteOperationUnexpected200Shap
 	body = `{"message":"Data result will be available soon","terms":""}`
 	routes, err := lgSvc.ListIPRoutes(ctx, testRouteMCRUID)
 	suite.NoError(err)
+	suite.NotNil(routes)
 	suite.Empty(routes)
 
 	// A 200 that is not JSON, which is what a proxy error page looks like.

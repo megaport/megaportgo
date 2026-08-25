@@ -11,6 +11,8 @@
 - Breaking: `ListBGPSessions` is removed. The API has no BGP sessions endpoint.
 - Breaking: `ListIPRoutesRequest.Protocol` is removed. The API has no protocol filter.
 - Breaking: `ListBGPNeighborRoutesRequest.SessionID` is replaced by `PeerIPAddress`, and `Direction` is now required and validated.
+- Breaking: `LookingGlassIPRoute` and `LookingGlassBGPRoute` now match the API schemas, so every field access needs review. `NextHop` is a struct carrying the next hop IP and its VXC, `Protocol` and `ASPath` are strings, the optional `*int` counters are plain `int`, and `Age`, `Interface`, `VXCID`, `VXCName`, `NeighborIP`, and `NeighborASN` are gone.
+- Breaking: `ListBGPNeighborRoutes` now returns `[]*LookingGlassBGPRoute`. `LookingGlassBGPNeighborRoute` is removed, because both BGP endpoints return the same shape.
 
 # 1.0.0 Release
 
