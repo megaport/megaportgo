@@ -658,6 +658,45 @@ func (suite *NATGatewayClientTestSuite) TestGetNATGatewayTelemetryValidation() {
 		To:         PtrTo(time.UnixMilli(1608603936000)),
 	})
 	suite.ErrorIs(err, ErrNATGatewayTelemetryFromToIncomplete)
+
+	// From after To
+	_, err = natSvc.GetNATGatewayTelemetry(ctx, &GetNATGatewayTelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		From:       PtrTo(time.UnixMilli(1608603936000)),
+		To:         PtrTo(time.UnixMilli(1608516536000)),
+	})
+	suite.ErrorIs(err, ErrNATGatewayTelemetryFromAfterTo)
+
+	// From/To range longer than 180 days
+	_, err = natSvc.GetNATGatewayTelemetry(ctx, &GetNATGatewayTelemetryRequest{
+		ProductUID: "some-uid",
+		Types:      []string{"BITS"},
+		From:       PtrTo(time.UnixMilli(1608516536000)),
+		To:         PtrTo(time.UnixMilli(1608516536000).Add(181 * 24 * time.Hour)),
+	})
+	suite.ErrorIs(err, ErrNATGatewayTelemetryRangeTooLong)
+}
+
+// TestGetNATGatewayTelemetryAPIError tests that GetNATGatewayTelemetry propagates API errors.
+func (suite *NATGatewayClientTestSuite) TestGetNATGatewayTelemetryAPIError() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+
+	path := fmt.Sprintf("/v3/products/nat_gateways/%s/telemetry", productUID)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, `{"message":"internal server error","data":null}`)
+	})
+
+	resp, err := natSvc.GetNATGatewayTelemetry(ctx, &GetNATGatewayTelemetryRequest{
+		ProductUID: productUID,
+		Types:      []string{"BITS"},
+		Days:       PtrTo[int32](7),
+	})
+	suite.Error(err)
+	suite.Nil(resp)
 }
 
 func (suite *NATGatewayClientTestSuite) TestValidateNATGatewayOrder() {

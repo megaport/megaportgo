@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"slices"
 	"strings"
 	"time"
@@ -31,6 +32,8 @@ type IXService interface {
 
 	// ListIXs lists all Internet Exchanges with optional filters
 	ListIXs(ctx context.Context, req *ListIXsRequest) ([]*IX, error)
+	// GetIXTelemetry returns telemetry metrics for an IX.
+	GetIXTelemetry(ctx context.Context, req *GetIXTelemetryRequest) (*ServiceTelemetryResponse, error)
 
 	// ListIXPs returns all globally available Internet Exchange Points with optional filters.
 	ListIXPs(ctx context.Context, req *ListIXPsRequest) ([]*IXP, error)
@@ -471,4 +474,16 @@ func shouldIncludeIX(ix *IX, req *ListIXsRequest) bool {
 	}
 
 	return true
+}
+
+// GetIXTelemetry returns telemetry data for an IX product.
+func (svc *IXServiceOp) GetIXTelemetry(ctx context.Context, req *GetIXTelemetryRequest) (*ServiceTelemetryResponse, error) {
+	if req == nil {
+		return nil, ErrIXTelemetryRequestRequired
+	}
+	if err := validateTelemetryRequest(req.ProductUID, req.Types, req.From, req.To, req.Days, ixTelemetryValidationErrors); err != nil {
+		return nil, err
+	}
+	path := fmt.Sprintf("/v2/product/%s/%s/telemetry", PRODUCT_IX, url.PathEscape(req.ProductUID))
+	return fetchTelemetry(ctx, svc.Client, path, req.Types, req.From, req.To, req.Days)
 }

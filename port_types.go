@@ -1,5 +1,10 @@
 package megaport
 
+import (
+	"errors"
+	"time"
+)
+
 // PortOrder represents a Megaport Port Order from the Megaport Products API.
 type PortOrder struct {
 	Name                  string          `json:"productName"`
@@ -172,4 +177,34 @@ type PortVLANAvailabilityAPIResponse struct {
 	Message string `json:"message"`
 	Terms   string `json:"terms"`
 	Data    []int  `json:"data"`
+}
+
+// GetPortTelemetryRequest represents a request to get telemetry data for a Port.
+type GetPortTelemetryRequest struct {
+	ProductUID string     // The product UID of the Port.
+	Types      []string   // Telemetry types to retrieve, e.g. "BITS", "PACKETS", "ERRORS", "OPTICAL", "OPTICAL_100G", "SUBSCRIBED_SPEED", "SERVICE_COUNT". The SDK does not validate this list against the API.
+	From       *time.Time // Start time. Mutually exclusive with Days.
+	To         *time.Time // End time. Mutually exclusive with Days.
+	Days       *int32     // Number of days of telemetry (1-180). Mutually exclusive with From/To.
+}
+
+var (
+	ErrPortTelemetryRequestRequired    = errors.New("port telemetry request is required")
+	ErrPortTelemetryProductUIDRequired = errors.New("port telemetry: product UID is required")
+	ErrPortTelemetryTypesRequired      = errors.New("port telemetry: at least one telemetry type is required")
+	ErrPortTelemetryTimeExclusive      = errors.New("port telemetry: days and from/to are mutually exclusive")
+	ErrPortTelemetryDaysOutOfRange     = errors.New("port telemetry: days must be between 1 and 180")
+	ErrPortTelemetryFromToIncomplete   = errors.New("port telemetry: both from and to must be provided together")
+	ErrPortTelemetryFromAfterTo        = errors.New("port telemetry: from must not be after to")
+	ErrPortTelemetryRangeTooLong       = errors.New("port telemetry: from/to time range must not exceed 180 days")
+)
+
+var portTelemetryValidationErrors = telemetryValidationErrors{
+	productUIDRequired: ErrPortTelemetryProductUIDRequired,
+	typesRequired:      ErrPortTelemetryTypesRequired,
+	timeExclusive:      ErrPortTelemetryTimeExclusive,
+	daysOutOfRange:     ErrPortTelemetryDaysOutOfRange,
+	fromToIncomplete:   ErrPortTelemetryFromToIncomplete,
+	fromAfterTo:        ErrPortTelemetryFromAfterTo,
+	rangeTooLong:       ErrPortTelemetryRangeTooLong,
 }

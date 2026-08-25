@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"slices"
 	"strings"
 	"time"
@@ -33,6 +34,8 @@ type MVEService interface {
 	ListMVEResourceTags(ctx context.Context, mveID string) (map[string]string, error)
 	// UpdateMVEResourceTags updates the resource tags for an MVE in the Megaport MVE API.
 	UpdateMVEResourceTags(ctx context.Context, mveID string, tags map[string]string) error
+	// GetMVETelemetry returns telemetry metrics for an MVE.
+	GetMVETelemetry(ctx context.Context, req *GetMVETelemetryRequest) (*ServiceTelemetryResponse, error)
 }
 
 // NewMVEService creates a new instance of the MVE Service.
@@ -432,4 +435,16 @@ func (svc *MVEServiceOp) UpdateMVEResourceTags(ctx context.Context, mveID string
 	return svc.Client.ProductService.UpdateProductResourceTags(ctx, mveID, &UpdateProductResourceTagsRequest{
 		ResourceTags: toProductResourceTags(tags),
 	})
+}
+
+// GetMVETelemetry returns telemetry data for an MVE product.
+func (svc *MVEServiceOp) GetMVETelemetry(ctx context.Context, req *GetMVETelemetryRequest) (*ServiceTelemetryResponse, error) {
+	if req == nil {
+		return nil, ErrMVETelemetryRequestRequired
+	}
+	if err := validateTelemetryRequest(req.ProductUID, req.Types, req.From, req.To, req.Days, mveTelemetryValidationErrors); err != nil {
+		return nil, err
+	}
+	path := fmt.Sprintf("/v2/product/%s/%s/telemetry", PRODUCT_MVE, url.PathEscape(req.ProductUID))
+	return fetchTelemetry(ctx, svc.Client, path, req.Types, req.From, req.To, req.Days)
 }

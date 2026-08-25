@@ -27,6 +27,22 @@ var ErrNATGatewayTelemetryDaysOutOfRange = errors.New("days must be between 1 an
 // ErrNATGatewayTelemetryFromToIncomplete is returned when only one of From/To is provided.
 var ErrNATGatewayTelemetryFromToIncomplete = errors.New("both from and to must be provided together")
 
+// ErrNATGatewayTelemetryFromAfterTo is returned when From is after To.
+var ErrNATGatewayTelemetryFromAfterTo = errors.New("NAT gateway telemetry: from must not be after to")
+
+// ErrNATGatewayTelemetryRangeTooLong is returned when the From/To range exceeds 180 days.
+var ErrNATGatewayTelemetryRangeTooLong = errors.New("NAT gateway telemetry: from/to time range must not exceed 180 days")
+
+var natGatewayTelemetryValidationErrors = telemetryValidationErrors{
+	productUIDRequired: ErrNATGatewayProductUIDRequired,
+	typesRequired:      ErrNATGatewayTelemetryTypesRequired,
+	timeExclusive:      ErrNATGatewayTelemetryTimeExclusive,
+	daysOutOfRange:     ErrNATGatewayTelemetryDaysOutOfRange,
+	fromToIncomplete:   ErrNATGatewayTelemetryFromToIncomplete,
+	fromAfterTo:        ErrNATGatewayTelemetryFromAfterTo,
+	rangeTooLong:       ErrNATGatewayTelemetryRangeTooLong,
+}
+
 // ErrNATGatewayProductNameRequired is returned when a ProductName is not provided.
 var ErrNATGatewayProductNameRequired = errors.New("product name is required")
 
@@ -83,22 +99,7 @@ func validateGetNATGatewayTelemetryRequest(req *GetNATGatewayTelemetryRequest) e
 	if req == nil {
 		return ErrNATGatewayRequestNil
 	}
-	if req.ProductUID == "" {
-		return ErrNATGatewayProductUIDRequired
-	}
-	if len(req.Types) == 0 {
-		return ErrNATGatewayTelemetryTypesRequired
-	}
-	if req.Days != nil && (req.From != nil || req.To != nil) {
-		return ErrNATGatewayTelemetryTimeExclusive
-	}
-	if req.Days != nil && (*req.Days < 1 || *req.Days > 180) {
-		return ErrNATGatewayTelemetryDaysOutOfRange
-	}
-	if (req.From != nil) != (req.To != nil) {
-		return ErrNATGatewayTelemetryFromToIncomplete
-	}
-	return nil
+	return validateTelemetryRequest(req.ProductUID, req.Types, req.From, req.To, req.Days, natGatewayTelemetryValidationErrors)
 }
 
 // NATGatewaySpeedSessionResult describes whether a speed/session pair is
