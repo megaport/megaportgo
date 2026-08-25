@@ -12,7 +12,7 @@
 - Breaking: `ListBGPSessions` is removed. The API has no BGP sessions endpoint.
 - Breaking: `ListIPRoutesRequest.Protocol` is removed. The API has no protocol filter.
 - Breaking: `ListBGPNeighborRoutesRequest.SessionID` is replaced by `PeerIPAddress`, and `IPFilter` is removed. `Direction` is now required and validated, and its type changes from `LookingGlassRouteDirection` to `string`. Use `BGPRouteDirectionReceived` (`"RECEIVED"`) or `BGPRouteDirectionAdvertised` (`"ADVERTISED"`); the old lowercase `"received"` and `"advertised"` literals still compile and now fail at runtime with `ErrMCRDiagnosticsDirectionInvalid`.
-- Breaking: `LookingGlassIPRoute` and `LookingGlassBGPRoute` now match the API schemas, so every field access needs review. `NextHop` is a struct carrying the next hop IP and its VXC, `Protocol` and `ASPath` are strings, the optional `*int` counters are plain `int`, and `Age`, `Interface`, `VXCID`, `VXCName`, `NeighborIP`, and `NeighborASN` are gone.
+- Breaking: `LookingGlassIPRoute` and `LookingGlassBGPRoute` now match the API schemas, so every field access needs review. `NextHop` is a struct carrying the next hop IP and its VXC, and the optional `*int` counters are plain `int`. `LookingGlassIPRoute` keeps only `Prefix`, `Protocol` (now a `string`), `Metric`, `NextHop`, and the new `Distance`; every other field is gone. On `LookingGlassBGPRoute`, `ASPath` is now a `string`, and `Age`, `VXCID`, `VXCName`, `NeighborIP`, and `NeighborASN` are gone.
 - Breaking: `ListBGPNeighborRoutes` now returns `[]*LookingGlassBGPRoute`. `LookingGlassBGPNeighborRoute` is removed, because both BGP endpoints return the same shape.
 
 # 1.0.0 Release

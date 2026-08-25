@@ -50,7 +50,6 @@ func (suite *MCRLookingGlassIntegrationTestSuite) routeDiagnosticsCtx(ctx contex
 
 // A renamed wire field decodes to a zero-valued struct and still passes NoError,
 // so check prefix and protocol, which the spec marks required.
-// An empty list asserts nothing, so say so rather than pass silently.
 func (suite *MCRLookingGlassIntegrationTestSuite) assertIPRoutesDecoded(routes []*LookingGlassIPRoute) {
 	if len(routes) == 0 {
 		suite.T().Log("no IP routes returned; decode assertions did not run")
@@ -61,8 +60,8 @@ func (suite *MCRLookingGlassIntegrationTestSuite) assertIPRoutesDecoded(routes [
 }
 
 // assertBGPRoutesDecoded checks prefix and origin, two of the fields the spec
-// marks required. An empty list asserts nothing, so say so rather than pass
-// silently. A fresh MCR has no BGP routes; TEST_MCR_UID is what exercises this.
+// marks required. A fresh MCR has no BGP routes; TEST_MCR_UID is what
+// exercises this.
 func (suite *MCRLookingGlassIntegrationTestSuite) assertBGPRoutesDecoded(routes []*LookingGlassBGPRoute) {
 	if len(routes) == 0 {
 		suite.T().Log("no BGP routes returned; decode assertions did not run")
@@ -112,8 +111,8 @@ func (suite *MCRLookingGlassIntegrationTestSuite) TestLookingGlassWithMCR() {
 
 	logger.InfoContext(ctx, "MCR Purchased for Looking Glass test", slog.String("mcr_id", mcrUID))
 
-	// Give the data plane a moment after provisioning before the looking-glass
-	// call, as the NAT gateway diagnostics suite does for the same reason.
+	// Give the data plane a moment after provisioning, so the route diagnostics
+	// call does not run against an unpopulated table.
 	time.Sleep(10 * time.Second)
 
 	// Cleanup function to delete the MCR after the test
@@ -155,7 +154,6 @@ func (suite *MCRLookingGlassIntegrationTestSuite) TestLookingGlassWithMCR() {
 		logger.InfoContext(ctx, "Filtered routes", slog.Int("route_count", len(filteredRoutes)))
 	})
 
-	// Likely empty for a new MCR without VXCs.
 	suite.Run("bgp-routes", func() {
 		bgpRoutes, err := lgSvc.ListBGPRoutes(suite.routeDiagnosticsCtx(ctx), mcrUID)
 		if isTransientDiagnosticsError(err) {

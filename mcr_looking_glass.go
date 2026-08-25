@@ -13,8 +13,8 @@ import (
 
 // MCRLookingGlassService reads MCR route and connectivity diagnostics.
 // The route methods start a route diagnostics operation and poll for the result.
-// They block until it completes. If the context has no deadline,
-// mcrDiagnosticsPollTimeout is applied.
+// They block until it completes. When the caller's context has no deadline, the
+// SDK stops polling after 5 minutes. The submit leg is not bounded by that.
 type MCRLookingGlassService interface {
 	// ListIPRoutes retrieves the IP routing table from the MCR.
 	ListIPRoutes(ctx context.Context, mcrUID string) ([]*LookingGlassIPRoute, error)
@@ -40,8 +40,8 @@ type MCRLookingGlassService interface {
 	WaitForMCRTraceroute(ctx context.Context, mcrUID, operationID string) (*LookingGlassTracerouteResult, error)
 }
 
-// mcrDiagnosticsPollTimeout is the SDK-managed timeout for the polling methods
-// when the caller does not provide a context with a deadline.
+// mcrDiagnosticsPollTimeout bounds the poll loop when the caller's context has
+// no deadline.
 const mcrDiagnosticsPollTimeout = 5 * time.Minute
 
 // mcrDiagnosticsPollInterval is the interval between poll attempts for MCR diagnostics.

@@ -348,6 +348,47 @@ func (suite *MCRLookingGlassClientTestSuite) TestListIPRoutesPendingThenComplete
 	suite.Equal(int32(3), calls.Load())
 }
 
+// TestListIPRoutesCallerDeadlineWins pins that a caller deadline is used as
+// given. The SDK timeout here is far shorter than the run, so wrapping the
+// caller's context in it as well would end the poll early.
+func (suite *MCRLookingGlassClientTestSuite) TestListIPRoutesCallerDeadlineWins() {
+	lgSvc := suite.client.MCRLookingGlassService
+	mcrUID := testRouteMCRUID
+	operationID := "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f"
+
+	op, ok := lgSvc.(*MCRLookingGlassServiceOp)
+	suite.Require().True(ok)
+	op.pollTimeout = 20 * time.Millisecond
+
+	submitPath := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes/ip", mcrUID)
+	suite.mux.HandleFunc(submitPath, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprintf(w, `{"message":"ok","terms":"","data":%q}`, operationID)
+	})
+
+	start := time.Now()
+	operationPath := fmt.Sprintf("/v2/product/mcr2/%s/diagnostics/routes/operation", mcrUID)
+	suite.mux.HandleFunc(operationPath, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		if time.Since(start) < 100*time.Millisecond {
+			w.WriteHeader(http.StatusAccepted)
+			fmt.Fprint(w, `{"message":"Data result will be available soon","terms":""}`)
+			return
+		}
+		fmt.Fprint(w, `{"message":"Diagnostic result retrieved successfully","terms":"","data":[
+			{"distance":20,"metric":0,"prefix":"10.0.1.0/24","protocol":"BGP",
+			 "nextHop":{"ip":"169.254.0.1","vxc":{"id":"25af1452-5bb4-487b-a510-ef8ef614cb6f","name":"Test VXC"}}}
+		]}`)
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	got, err := lgSvc.ListIPRoutes(ctx, mcrUID)
+	suite.NoError(err)
+	suite.Len(got, 1)
+}
+
 // TestListBGPRoutesEmptyResult covers the other half of the poll contract: a
 // 200 with an empty array is a real result, so the poll stops.
 func (suite *MCRLookingGlassClientTestSuite) TestListBGPRoutesEmptyResult() {
@@ -590,9 +631,10 @@ func (suite *MCRLookingGlassClientTestSuite) TestRouteDiagnosticsEscapesOperatio
 	suite.Equal(base+"/operation?operationId=op+id%26async%3Dfalse", pollURL)
 }
 
-// TestDiagnosticsPollDefaults pins the cadence every caller gets when nothing
+// TestDiagnosticsPollDefaults pins the fallback every caller gets when nothing
 // overrides it. Only the tests set these fields, so nothing else covers the
-// fallback, and a zero interval would panic time.NewTicker.
+// fallback. A zero interval would panic time.NewTicker, and an interval that
+// does not fit inside the timeout would allow only one poll.
 func (suite *MCRLookingGlassClientTestSuite) TestDiagnosticsPollDefaults() {
 	svc := &MCRLookingGlassServiceOp{}
 
@@ -600,6 +642,7 @@ func (suite *MCRLookingGlassClientTestSuite) TestDiagnosticsPollDefaults() {
 	suite.Equal(mcrDiagnosticsPollTimeout, svc.diagnosticsPollTimeout())
 	suite.Greater(svc.diagnosticsPollInterval(), time.Duration(0))
 	suite.Greater(svc.diagnosticsPollTimeout(), time.Duration(0))
+	suite.Less(svc.diagnosticsPollInterval(), svc.diagnosticsPollTimeout())
 }
 
 // TestRouteDiagnosticsPollsImmediately pins the poll before the ticker starts.
@@ -1195,6 +1238,8 @@ func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRPingCallerDeadlineDur
 
 // Go's JSON decoder matches keys case-insensitively, so a decode test stays
 // green when a tag's case drifts from the API schema. Marshaling catches it.
+// best, external, and valid carry distinct values here, so a tag swapped
+// between them fails rather than round-tripping.
 func (suite *MCRLookingGlassClientTestSuite) TestRouteJSONTagCase() {
 	ipJSON, err := json.Marshal(&LookingGlassIPRoute{
 		Prefix:   "10.0.1.0/24",
@@ -1220,12 +1265,16 @@ func (suite *MCRLookingGlassClientTestSuite) TestRouteJSONTagCase() {
 		Origin:       "IGP",
 		Source:       "external",
 		Since:        "2026-01-01T00:00:00Z",
+		Best:         true,
+		External:     false,
+		Valid:        true,
 		Communities:  []string{"65000:100"},
 		AdvertisedTo: []string{"10.0.0.2"},
 		NextHop:      LookingGlassRouteNextHop{IP: "10.0.0.1"},
 	})
 	suite.Require().NoError(err)
 	for _, want := range []string{
+		`"best":true`, `"external":false`, `"valid":true`,
 		`"prefix":`, `"asPath":`, `"origin":`, `"source":`, `"localPref":`,
 		`"med":`, `"weight":`, `"best":`, `"external":`, `"valid":`,
 		`"since":`, `"communities":`, `"advertisedTo":`, `"nextHop":`,
