@@ -48,19 +48,24 @@ func (suite *MCRLookingGlassIntegrationTestSuite) routeDiagnosticsCtx(ctx contex
 	return callCtx
 }
 
-// A renamed wire field decodes to a zero-valued struct and still passes NoError.
-// The spec marks prefix and protocol required, so check them.
+// A renamed wire field decodes to a zero-valued struct and still passes NoError,
+// so check prefix and protocol, which the spec marks required.
+// An empty list asserts nothing, so say so rather than pass silently.
 func (suite *MCRLookingGlassIntegrationTestSuite) assertIPRoutesDecoded(routes []*LookingGlassIPRoute) {
 	if len(routes) == 0 {
+		suite.T().Log("no IP routes returned; decode assertions did not run")
 		return
 	}
 	suite.NotEmpty(routes[0].Prefix, "IP route prefix should decode")
 	suite.NotEmpty(routes[0].Protocol, "IP route protocol should decode")
 }
 
-// assertBGPRoutesDecoded checks the BGP fields the spec marks required.
+// assertBGPRoutesDecoded checks prefix and origin, two of the fields the spec
+// marks required. An empty list asserts nothing, so say so rather than pass
+// silently. A fresh MCR has no BGP routes; TEST_MCR_UID is what exercises this.
 func (suite *MCRLookingGlassIntegrationTestSuite) assertBGPRoutesDecoded(routes []*LookingGlassBGPRoute) {
 	if len(routes) == 0 {
+		suite.T().Log("no BGP routes returned; decode assertions did not run")
 		return
 	}
 	suite.NotEmpty(routes[0].Prefix, "BGP route prefix should decode")
@@ -107,6 +112,10 @@ func (suite *MCRLookingGlassIntegrationTestSuite) TestLookingGlassWithMCR() {
 
 	logger.InfoContext(ctx, "MCR Purchased for Looking Glass test", slog.String("mcr_id", mcrUID))
 
+	// Give the data plane a moment after provisioning before the looking-glass
+	// call, as the NAT gateway diagnostics suite does for the same reason.
+	time.Sleep(10 * time.Second)
+
 	// Cleanup function to delete the MCR after the test
 	defer func() {
 		logger.InfoContext(ctx, "Cleaning up test MCR", slog.String("mcr_id", mcrUID))
@@ -119,29 +128,44 @@ func (suite *MCRLookingGlassIntegrationTestSuite) TestLookingGlassWithMCR() {
 		}
 	}()
 
-	// Test ListIPRoutes
-	logger.DebugContext(ctx, "Testing ListIPRoutes")
-	routes, err := lgSvc.ListIPRoutes(suite.routeDiagnosticsCtx(ctx), mcrUID)
-	suite.NoError(err, "ListIPRoutes should not return error")
-	suite.assertIPRoutesDecoded(routes)
-	logger.InfoContext(ctx, "ListIPRoutes result", slog.Int("route_count", len(routes)))
-
-	// Test ListIPRoutesWithFilter, restricted to one prefix
-	logger.DebugContext(ctx, "Testing ListIPRoutesWithFilter")
-	filteredRoutes, err := lgSvc.ListIPRoutesWithFilter(suite.routeDiagnosticsCtx(ctx), &ListIPRoutesRequest{
-		MCRID:    mcrUID,
-		IPFilter: "0.0.0.0/0",
+	// Each endpoint runs as its own sub-case, so a transient 429 or 5xx on one
+	// skips only that endpoint instead of hiding the other two.
+	suite.Run("ip-routes", func() {
+		routes, err := lgSvc.ListIPRoutes(suite.routeDiagnosticsCtx(ctx), mcrUID)
+		if isTransientDiagnosticsError(err) {
+			suite.T().Skip("transient backend error (429/5xx); skipping ip-routes sub-case")
+			return
+		}
+		suite.NoError(err, "ListIPRoutes should not return error")
+		suite.assertIPRoutesDecoded(routes)
+		logger.InfoContext(ctx, "ListIPRoutes result", slog.Int("route_count", len(routes)))
 	})
-	suite.NoError(err, "ListIPRoutesWithFilter should not return error")
-	suite.assertIPRoutesDecoded(filteredRoutes)
-	logger.InfoContext(ctx, "Filtered routes", slog.Int("route_count", len(filteredRoutes)))
 
-	// Test ListBGPRoutes - likely empty for a new MCR without VXCs
-	logger.DebugContext(ctx, "Testing ListBGPRoutes")
-	bgpRoutes, err := lgSvc.ListBGPRoutes(suite.routeDiagnosticsCtx(ctx), mcrUID)
-	suite.NoError(err, "ListBGPRoutes should not return error")
-	suite.assertBGPRoutesDecoded(bgpRoutes)
-	logger.InfoContext(ctx, "BGP routes", slog.Int("route_count", len(bgpRoutes)))
+	suite.Run("ip-routes-filtered", func() {
+		filteredRoutes, err := lgSvc.ListIPRoutesWithFilter(suite.routeDiagnosticsCtx(ctx), &ListIPRoutesRequest{
+			MCRID:    mcrUID,
+			IPFilter: "0.0.0.0/0",
+		})
+		if isTransientDiagnosticsError(err) {
+			suite.T().Skip("transient backend error (429/5xx); skipping ip-routes-filtered sub-case")
+			return
+		}
+		suite.NoError(err, "ListIPRoutesWithFilter should not return error")
+		suite.assertIPRoutesDecoded(filteredRoutes)
+		logger.InfoContext(ctx, "Filtered routes", slog.Int("route_count", len(filteredRoutes)))
+	})
+
+	// Likely empty for a new MCR without VXCs.
+	suite.Run("bgp-routes", func() {
+		bgpRoutes, err := lgSvc.ListBGPRoutes(suite.routeDiagnosticsCtx(ctx), mcrUID)
+		if isTransientDiagnosticsError(err) {
+			suite.T().Skip("transient backend error (429/5xx); skipping bgp-routes sub-case")
+			return
+		}
+		suite.NoError(err, "ListBGPRoutes should not return error")
+		suite.assertBGPRoutesDecoded(bgpRoutes)
+		logger.InfoContext(ctx, "BGP routes", slog.Int("route_count", len(bgpRoutes)))
+	})
 
 	logger.InfoContext(ctx, "Looking Glass integration test completed successfully")
 }

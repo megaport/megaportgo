@@ -13,6 +13,8 @@ import (
 
 // MCRLookingGlassService reads MCR route and connectivity diagnostics.
 // The route methods start a route diagnostics operation and poll for the result.
+// They block until it completes. If the context has no deadline,
+// mcrDiagnosticsPollTimeout is applied.
 type MCRLookingGlassService interface {
 	// ListIPRoutes retrieves the IP routing table from the MCR.
 	ListIPRoutes(ctx context.Context, mcrUID string) ([]*LookingGlassIPRoute, error)

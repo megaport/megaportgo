@@ -1193,6 +1193,47 @@ func (suite *MCRLookingGlassClientTestSuite) TestWaitForMCRPingCallerDeadlineDur
 	suite.False(errors.Is(err, ErrMCRDiagnosticsTimeout))
 }
 
+// Go's JSON decoder matches keys case-insensitively, so a decode test stays
+// green when a tag's case drifts from the API schema. Marshaling catches it.
+func (suite *MCRLookingGlassClientTestSuite) TestRouteJSONTagCase() {
+	ipJSON, err := json.Marshal(&LookingGlassIPRoute{
+		Prefix:   "10.0.1.0/24",
+		Protocol: "bgp",
+		Distance: 20,
+		Metric:   100,
+		NextHop: LookingGlassRouteNextHop{
+			IP:  "10.0.0.1",
+			VXC: LookingGlassRouteVXCRef{ID: "vxc-uid", Name: "vxc-name"},
+		},
+	})
+	suite.Require().NoError(err)
+	for _, want := range []string{
+		`"prefix":`, `"protocol":`, `"distance":`, `"metric":`, `"nextHop":`,
+		`"ip":`, `"vxc":`, `"id":`, `"name":`,
+	} {
+		suite.Contains(string(ipJSON), want)
+	}
+
+	bgpJSON, err := json.Marshal(&LookingGlassBGPRoute{
+		Prefix:       "10.0.1.0/24",
+		ASPath:       "65000 65001",
+		Origin:       "IGP",
+		Source:       "external",
+		Since:        "2026-01-01T00:00:00Z",
+		Communities:  []string{"65000:100"},
+		AdvertisedTo: []string{"10.0.0.2"},
+		NextHop:      LookingGlassRouteNextHop{IP: "10.0.0.1"},
+	})
+	suite.Require().NoError(err)
+	for _, want := range []string{
+		`"prefix":`, `"asPath":`, `"origin":`, `"source":`, `"localPref":`,
+		`"med":`, `"weight":`, `"best":`, `"external":`, `"valid":`,
+		`"since":`, `"communities":`, `"advertisedTo":`, `"nextHop":`,
+	} {
+		suite.Contains(string(bgpJSON), want)
+	}
+}
+
 // TestRouteEncodingKeepsDocumentedZeros tests that a route re-encodes the zero
 // values the spec documents as real. distance is the deliberate exception: the
 // spec sets minimum 1, so its zero can only mean absent.
