@@ -43,10 +43,11 @@ func (suite *MVEClientTestSuite) TestBuyMVE() {
 	mveSvc := suite.client.MVEService
 	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
 	req := &BuyMVERequest{
-		Name:          "test-mve",
-		Term:          12,
-		LocationID:    1,
-		DiversityZone: "blue",
+		Name:                  "test-mve",
+		Term:                  12,
+		LocationID:            1,
+		DiversityZone:         "blue",
+		MarketplaceVisibility: PtrTo(false),
 	}
 	jblob := `{
     "message": "MVE [36b3f68e-2f54-4331-bf94-f8984449365f] created.",
@@ -134,6 +135,7 @@ func (suite *MVEClientTestSuite) TestBuyMVE() {
 		Config: MVEConfig{
 			DiversityZone: req.DiversityZone,
 		},
+		MarketplaceVisibility: PtrTo(false),
 	}}
 	want := &BuyMVEResponse{TechnicalServiceUID: productUid}
 
@@ -158,11 +160,34 @@ func (suite *MVEClientTestSuite) TestBuyMVE() {
 		suite.Equal(wantOrder.LocationID, gotOrder.LocationID)
 		suite.Equal(wantOrder.NetworkInterfaces, gotOrder.NetworkInterfaces)
 		suite.Equal(wantOrder.Config, gotOrder.Config)
+		suite.Equal(wantOrder.MarketplaceVisibility, gotOrder.MarketplaceVisibility)
 		suite.Equal([]string{}, wrapper.DiscountCodes)
 	})
 	got, err := mveSvc.BuyMVE(ctx, req)
 	suite.NoError(err)
 	suite.Equal(want, got)
+}
+
+// TestCreateMVEOrderMarketplaceVisibility asserts the marshaled MVEOrderConfig
+// carries marketplaceVisibility when set, and omits it (preserving the API
+// default) when the request leaves it nil.
+func (suite *MVEClientTestSuite) TestCreateMVEOrderMarketplaceVisibility() {
+	visible := suite.marshalMVEOrder(&BuyMVERequest{MarketplaceVisibility: PtrTo(true)})
+	suite.Contains(visible, `"marketplaceVisibility":true`)
+
+	hidden := suite.marshalMVEOrder(&BuyMVERequest{MarketplaceVisibility: PtrTo(false)})
+	suite.Contains(hidden, `"marketplaceVisibility":false`)
+
+	unset := suite.marshalMVEOrder(&BuyMVERequest{})
+	suite.NotContains(unset, "marketplaceVisibility")
+}
+
+func (suite *MVEClientTestSuite) marshalMVEOrder(req *BuyMVERequest) string {
+	orders := createMVEOrder(req)
+	suite.Require().Len(orders, 1)
+	b, err := json.Marshal(orders[0])
+	suite.Require().NoError(err)
+	return string(b)
 }
 
 // TestListMVEs tests the ListMVEs method which lists provisioned MVE products
