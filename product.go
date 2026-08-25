@@ -277,7 +277,7 @@ func (svc *ProductServiceOp) ModifyProduct(ctx context.Context, req *ModifyProdu
 		return nil, err
 	}
 
-	if _, err := svc.Client.Do(ctx, httpReq, nil); err != nil {
+	if err := svc.Client.doDiscard(ctx, httpReq); err != nil {
 		return nil, err
 	}
 	return &ModifyProductResponse{IsUpdated: true}, nil
@@ -313,7 +313,7 @@ func (svc *ProductServiceOp) DeleteProduct(ctx context.Context, req *DeleteProdu
 		return nil, err
 	}
 
-	_, err = svc.Client.Do(ctx, clientReq, nil)
+	err = svc.Client.doDiscard(ctx, clientReq)
 	if err != nil {
 		return nil, err
 	}
@@ -328,7 +328,7 @@ func (svc *ProductServiceOp) RestoreProduct(ctx context.Context, productId strin
 	if err != nil {
 		return nil, err
 	}
-	_, err = svc.Client.Do(ctx, clientReq, nil)
+	err = svc.Client.doDiscard(ctx, clientReq)
 	if err != nil {
 		return nil, err
 	}
@@ -355,7 +355,7 @@ func (svc *ProductServiceOp) ManageProductLock(ctx context.Context, req *ManageP
 		return nil, err
 	}
 
-	_, err = svc.Client.Do(ctx, clientReq, nil)
+	err = svc.Client.doDiscard(ctx, clientReq)
 	if err != nil {
 		return nil, err
 	}
@@ -373,7 +373,7 @@ func (svc *ProductServiceOp) ValidateProductOrder(ctx context.Context, requestBo
 		return err
 	}
 
-	_, resErr := svc.Client.Do(ctx, req, nil)
+	resErr := svc.Client.doDiscard(ctx, req)
 	if resErr != nil {
 		return resErr
 	}
@@ -419,7 +419,7 @@ func (svc *ProductServiceOp) UpdateProductResourceTags(ctx context.Context, prod
 		return err
 	}
 
-	_, err = svc.Client.Do(ctx, clientReq, nil)
+	err = svc.Client.doDiscard(ctx, clientReq)
 	if err != nil {
 		return err
 	}
