@@ -253,7 +253,7 @@ func (svc *MCRLookingGlassServiceOp) ListIPRoutes(ctx context.Context, mcrUID st
 // ListIPRoutesWithFilter retrieves the IP routing table, optionally narrowed to one IP address or prefix.
 func (svc *MCRLookingGlassServiceOp) ListIPRoutesWithFilter(ctx context.Context, req *ListIPRoutesRequest) ([]*LookingGlassIPRoute, error) {
 	if req == nil {
-		return nil, fmt.Errorf("list IP routes request cannot be nil")
+		return nil, ErrListIPRoutesRequestNil
 	}
 	if req.MCRID == "" {
 		return nil, ErrMCRDiagnosticsMCRUIDRequired
@@ -275,7 +275,7 @@ func (svc *MCRLookingGlassServiceOp) ListBGPRoutes(ctx context.Context, mcrUID s
 // ListBGPRoutesWithFilter retrieves BGP routes, optionally narrowed to one IP address or prefix.
 func (svc *MCRLookingGlassServiceOp) ListBGPRoutesWithFilter(ctx context.Context, req *ListBGPRoutesRequest) ([]*LookingGlassBGPRoute, error) {
 	if req == nil {
-		return nil, fmt.Errorf("list BGP routes request cannot be nil")
+		return nil, ErrListBGPRoutesRequestNil
 	}
 	if req.MCRID == "" {
 		return nil, ErrMCRDiagnosticsMCRUIDRequired
@@ -292,7 +292,7 @@ func (svc *MCRLookingGlassServiceOp) ListBGPRoutesWithFilter(ctx context.Context
 // ListBGPNeighborRoutes retrieves the routes advertised to or received from one BGP peer.
 func (svc *MCRLookingGlassServiceOp) ListBGPNeighborRoutes(ctx context.Context, req *ListBGPNeighborRoutesRequest) ([]*LookingGlassBGPRoute, error) {
 	if req == nil {
-		return nil, fmt.Errorf("list BGP neighbor routes request cannot be nil")
+		return nil, ErrListBGPNeighborRoutesRequestNil
 	}
 	if req.MCRID == "" {
 		return nil, ErrMCRDiagnosticsMCRUIDRequired

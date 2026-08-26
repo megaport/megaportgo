@@ -432,17 +432,17 @@ func (suite *MCRLookingGlassClientTestSuite) TestRouteRequestValidation() {
 	})
 
 	_, err := lgSvc.ListIPRoutesWithFilter(ctx, nil)
-	suite.Error(err)
+	suite.ErrorIs(err, ErrListIPRoutesRequestNil)
 	_, err = lgSvc.ListIPRoutes(ctx, "")
 	suite.ErrorIs(err, ErrMCRDiagnosticsMCRUIDRequired)
 
 	_, err = lgSvc.ListBGPRoutesWithFilter(ctx, nil)
-	suite.Error(err)
+	suite.ErrorIs(err, ErrListBGPRoutesRequestNil)
 	_, err = lgSvc.ListBGPRoutes(ctx, "")
 	suite.ErrorIs(err, ErrMCRDiagnosticsMCRUIDRequired)
 
 	_, err = lgSvc.ListBGPNeighborRoutes(ctx, nil)
-	suite.Error(err)
+	suite.ErrorIs(err, ErrListBGPNeighborRoutesRequestNil)
 	_, err = lgSvc.ListBGPNeighborRoutes(ctx, &ListBGPNeighborRoutesRequest{
 		PeerIPAddress: "169.254.0.1",
 		Direction:     BGPRouteDirectionReceived,
