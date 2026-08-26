@@ -349,8 +349,10 @@ func (suite *MCRIntegrationTestSuite) TestMegaportPrefixFilterList() {
 			{
 				Action: "deny",
 				Prefix: "10.0.2.0/24",
-				Ge:     nil, // undocumented: the API strips ge/le that equal the prefix length
-				Le:     PtrTo(25),
+				// Undocumented: the API omits a bound that equals the prefix length.
+				// It also omits a bound nothing set, so absent has two causes.
+				Ge: nil,
+				Le: PtrTo(25),
 			},
 		},
 	}
@@ -461,8 +463,10 @@ func (suite *MCRIntegrationTestSuite) TestMegaportPrefixFilterList() {
 			{
 				Action: "deny",
 				Prefix: "10.0.2.0/24",
-				Ge:     nil, // undocumented: the API strips ge/le that equal the prefix length
-				Le:     PtrTo(26),
+				// Undocumented: the API omits a bound that equals the prefix length.
+				// It also omits a bound nothing set, so absent has two causes.
+				Ge: nil,
+				Le: PtrTo(26),
 			},
 		},
 	}
