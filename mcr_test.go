@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -222,14 +223,14 @@ func (suite *MCRClientTestSuite) TestCreatePrefixFilterList() {
 		{
 			Action: "permit",
 			Prefix: "10.0.1.0/24",
-			Ge:     24,
-			Le:     24,
+			Ge:     PtrTo(24),
+			Le:     PtrTo(24),
 		},
 		{
 			Action: "deny",
 			Prefix: "10.0.2.0/24",
-			Ge:     24,
-			Le:     24,
+			Ge:     PtrTo(24),
+			Le:     PtrTo(24),
 		},
 	}
 
@@ -267,6 +268,295 @@ func (suite *MCRClientTestSuite) TestCreatePrefixFilterList() {
 		PrefixFilterList: validatedPrefixFilterList,
 	})
 	suite.NoError(prefixErr)
+}
+
+// mcrPrefixListGeLeFixture covers every ge/le cell: both set, both a deliberate
+// 0, neither set, and one set without the other. The 0 sits on a default route
+// because the API requires ge to be at least the prefix length.
+func mcrPrefixListGeLeFixture() MCRPrefixFilterList {
+	return MCRPrefixFilterList{
+		Description:   "ge-le-list",
+		AddressFamily: "IPv4",
+		Entries: []*MCRPrefixListEntry{
+			{Action: "permit", Prefix: "10.0.1.0/24", Ge: PtrTo(25), Le: PtrTo(32)},
+			{Action: "deny", Prefix: "0.0.0.0/0", Ge: PtrTo(0), Le: PtrTo(0)},
+			{Action: "permit", Prefix: "10.0.3.0/24"},
+			{Action: "permit", Prefix: "10.0.4.0/24", Le: PtrTo(30)},
+		},
+	}
+}
+
+// wantMCRPrefixListGeLeBody pins ge/le as strings per PrefixEntryDto, a
+// deliberate 0 present as "0", an unset one absent. The leading id is not part
+// of PrefixListRequest; it is pre-existing and out of scope here.
+const wantMCRPrefixListGeLeBody = `{
+	"id": 0,
+	"description": "ge-le-list",
+	"addressFamily": "IPv4",
+	"entries": [
+		{"action": "permit", "prefix": "10.0.1.0/24", "ge": "25", "le": "32"},
+		{"action": "deny", "prefix": "0.0.0.0/0", "ge": "0", "le": "0"},
+		{"action": "permit", "prefix": "10.0.3.0/24"},
+		{"action": "permit", "prefix": "10.0.4.0/24", "le": "30"}
+	]
+}`
+
+// TestCreatePrefixFilterListGeLeEncoding asserts the marshaled POST body.
+func (suite *MCRClientTestSuite) TestCreatePrefixFilterListGeLeEncoding() {
+	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	mcrSvc := suite.client.MCRService
+
+	suite.mux.HandleFunc("/v2/product/mcr2/"+mcrId+"/prefixList", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPost)
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			suite.FailNowf("could not read body", "%v", err)
+		}
+		suite.JSONEq(wantMCRPrefixListGeLeBody, string(body))
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":{"id":2819,"description":"ge-le-list","addressFamily":"IPv4","entries":[]}}`)
+	})
+
+	_, err := mcrSvc.CreatePrefixFilterList(ctx, &CreateMCRPrefixFilterListRequest{
+		MCRID:            mcrId,
+		PrefixFilterList: mcrPrefixListGeLeFixture(),
+	})
+	suite.NoError(err)
+}
+
+// TestModifyMCRPrefixFilterListGeLeEncoding is the PUT counterpart.
+func (suite *MCRClientTestSuite) TestModifyMCRPrefixFilterListGeLeEncoding() {
+	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	mcrSvc := suite.client.MCRService
+	list := mcrPrefixListGeLeFixture()
+
+	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/mcr2/%s/prefixList/%d", mcrId, 2819), func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPut)
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			suite.FailNowf("could not read body", "%v", err)
+		}
+		suite.JSONEq(wantMCRPrefixListGeLeBody, string(body))
+		fmt.Fprint(w, `{"message":"ok","terms":""}`)
+	})
+
+	got, err := mcrSvc.ModifyMCRPrefixFilterList(ctx, mcrId, 2819, &list)
+	suite.NoError(err)
+	suite.True(got.IsUpdated)
+}
+
+// TestModifyMCRPrefixFilterListNullBodies covers the two bodies the API answers
+// with a 400: a bare null and a null entries array. Both are refused locally, so
+// no request goes out.
+func (suite *MCRClientTestSuite) TestModifyMCRPrefixFilterListNullBodies() {
+	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	mcrSvc := suite.client.MCRService
+
+	cases := []struct {
+		name string
+		id   int
+		list *MCRPrefixFilterList
+		want error
+	}{
+		{
+			name: "nil list",
+			id:   1,
+			list: nil,
+			want: ErrMCRPrefixFilterListNil,
+		},
+		{
+			name: "nil entries",
+			id:   2,
+			list: &MCRPrefixFilterList{ID: 7, Description: "d", AddressFamily: "IPv4"},
+			want: ErrMCRPrefixFilterListEntriesNil,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		suite.mux.HandleFunc(fmt.Sprintf("/v2/product/mcr2/%s/prefixList/%d", mcrId, tc.id), func(w http.ResponseWriter, r *http.Request) {
+			suite.Failf("request should not have been sent", "case %q reached the API", tc.name)
+		})
+
+		suite.Run(tc.name, func() {
+			_, err := mcrSvc.ModifyMCRPrefixFilterList(ctx, mcrId, tc.id, tc.list)
+			suite.ErrorIs(err, tc.want)
+		})
+	}
+}
+
+// TestModifyMCRPrefixFilterListEmptyEntries pins an empty Entries as still
+// reaching the wire, unlike a nil one.
+func (suite *MCRClientTestSuite) TestModifyMCRPrefixFilterListEmptyEntries() {
+	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/mcr2/%s/prefixList/%d", mcrId, 9), func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			suite.FailNowf("could not read body", "%v", err)
+		}
+		suite.JSONEq(`{"id":0,"description":"d","addressFamily":"IPv4","entries":[]}`, string(body))
+		fmt.Fprint(w, `{"message":"ok","terms":""}`)
+	})
+
+	_, err := suite.client.MCRService.ModifyMCRPrefixFilterList(ctx, mcrId, 9, &MCRPrefixFilterList{
+		Description:   "d",
+		AddressFamily: "IPv4",
+		Entries:       []*MCRPrefixListEntry{},
+	})
+	suite.NoError(err)
+}
+
+// TestModifyMCRPrefixFilterListNilEntry checks a nil entry is refused before the
+// request goes out, and that the error names which entry.
+func (suite *MCRClientTestSuite) TestModifyMCRPrefixFilterListNilEntry() {
+	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	_, err := suite.client.MCRService.ModifyMCRPrefixFilterList(ctx, mcrId, 4, &MCRPrefixFilterList{
+		Description:   "d",
+		AddressFamily: "IPv4",
+		Entries: []*MCRPrefixListEntry{
+			{Action: "permit", Prefix: "10.0.1.0/24", Le: PtrTo(25)},
+			nil,
+		},
+	})
+	suite.ErrorContains(err, "prefix list entry 1: nil entry")
+}
+
+// TestCreatePrefixFilterListConversionError pins the create path's own error
+// return, which is a separate call site from the modify path's.
+func (suite *MCRClientTestSuite) TestCreatePrefixFilterListConversionError() {
+	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	suite.mux.HandleFunc("/v2/product/mcr2/"+mcrId+"/prefixList", func(w http.ResponseWriter, r *http.Request) {
+		suite.Fail("request should not have been sent")
+	})
+
+	cases := []struct {
+		name string
+		list MCRPrefixFilterList
+		want string
+	}{
+		{
+			name: "nil entries",
+			list: MCRPrefixFilterList{Description: "d", AddressFamily: "IPv4"},
+			want: ErrMCRPrefixFilterListEntriesNil.Error(),
+		},
+		{
+			name: "nil entry",
+			list: MCRPrefixFilterList{
+				Description:   "d",
+				AddressFamily: "IPv4",
+				Entries: []*MCRPrefixListEntry{
+					{Action: "permit", Prefix: "10.0.1.0/24"},
+					nil,
+				},
+			},
+			want: "prefix list entry 1: nil entry",
+		},
+	}
+
+	for _, tc := range cases {
+		suite.Run(tc.name, func() {
+			_, err := suite.client.MCRService.CreatePrefixFilterList(ctx, &CreateMCRPrefixFilterListRequest{
+				MCRID:            mcrId,
+				PrefixFilterList: tc.list,
+			})
+			suite.ErrorContains(err, tc.want)
+		})
+	}
+}
+
+// TestPrefixFilterListGeLeDecoding covers the read direction: an absent ge/le
+// decodes to nil, so callers can tell it apart from a deliberate 0.
+func (suite *MCRClientTestSuite) TestPrefixFilterListGeLeDecoding() {
+	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	mcrSvc := suite.client.MCRService
+
+	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/mcr2/%s/prefixList/%d", mcrId, 7), func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":{"id":7,"description":"d","addressFamily":"IPv4","entries":[
+			{"action":"permit","prefix":"10.0.1.0/24","ge":"0","le":"25"},
+			{"action":"deny","prefix":"10.0.2.0/24"},
+			{"action":"permit","prefix":"10.0.3.0/24","le":"0"}
+		]}}`)
+	})
+
+	got, err := mcrSvc.GetMCRPrefixFilterList(ctx, mcrId, 7)
+	suite.NoError(err)
+	suite.Equal(7, got.ID)
+	suite.Equal("d", got.Description)
+	suite.Equal("IPv4", got.AddressFamily)
+	suite.Require().Len(got.Entries, 3)
+	suite.Equal("permit", got.Entries[0].Action)
+	suite.Equal("10.0.1.0/24", got.Entries[0].Prefix)
+	suite.Equal(PtrTo(0), got.Entries[0].Ge)
+	suite.Equal(PtrTo(25), got.Entries[0].Le)
+	suite.Equal("deny", got.Entries[1].Action)
+	suite.Equal("10.0.2.0/24", got.Entries[1].Prefix)
+	suite.Nil(got.Entries[1].Ge)
+	suite.Nil(got.Entries[1].Le)
+	suite.Nil(got.Entries[2].Ge)
+	suite.Equal(PtrTo(0), got.Entries[2].Le)
+}
+
+// TestPrefixFilterListNullEntriesStaysNil pins the read path's nil Entries, which
+// the list endpoint returns on every call.
+func (suite *MCRClientTestSuite) TestPrefixFilterListNullEntriesStaysNil() {
+	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/mcr2/%s/prefixList/%d", mcrId, 21), func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":{"id":21,"description":"d","addressFamily":"IPv4","entries":null}}`)
+	})
+
+	got, err := suite.client.MCRService.GetMCRPrefixFilterList(ctx, mcrId, 21)
+	suite.NoError(err)
+	suite.Nil(got.Entries)
+}
+
+// TestPrefixFilterListDecodeErrors asserts a non-numeric ge/le or a null entry
+// fails the whole read, naming the entry, rather than being smoothed over.
+func (suite *MCRClientTestSuite) TestPrefixFilterListDecodeErrors() {
+	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	mcrSvc := suite.client.MCRService
+
+	cases := []struct {
+		name    string
+		id      int
+		entries string
+		wantErr string
+	}{
+		{
+			name:    "non-numeric ge",
+			id:      11,
+			entries: `{"action":"permit","prefix":"10.0.1.0/24","ge":"x"}`,
+			wantErr: `prefix list entry 0: invalid ge "x"`,
+		},
+		{
+			name:    "non-numeric le on a later entry",
+			id:      12,
+			entries: `{"action":"permit","prefix":"10.0.1.0/24"},{"action":"permit","prefix":"10.0.2.0/24","le":"y"}`,
+			wantErr: `prefix list entry 1: invalid le "y"`,
+		},
+		{
+			name:    "null entry",
+			id:      13,
+			entries: `{"action":"permit","prefix":"10.0.1.0/24"},null`,
+			wantErr: `prefix list entry 1: null entry in response`,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		suite.mux.HandleFunc(fmt.Sprintf("/v2/product/mcr2/%s/prefixList/%d", mcrId, tc.id), func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprintf(w, `{"message":"ok","terms":"","data":{"id":%d,"description":"d","addressFamily":"IPv4","entries":[%s]}}`, tc.id, tc.entries)
+		})
+
+		suite.Run(tc.name, func() {
+			got, err := mcrSvc.GetMCRPrefixFilterList(ctx, mcrId, tc.id)
+			suite.Nil(got)
+			suite.ErrorContains(err, tc.wantErr)
+		})
+	}
 }
 
 // TestListMCRs tests the ListMCRs method

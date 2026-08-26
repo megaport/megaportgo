@@ -1,6 +1,6 @@
 package megaport
 
-import "strconv"
+import "fmt"
 
 // MCROrder represents a request to buy an MCR from the Megaport Products API.
 type MCROrder struct {
@@ -147,16 +147,18 @@ type MCRPrefixFilterList struct {
 type APIMCRPrefixFilterListEntry struct {
 	Action string `json:"action"`
 	Prefix string `json:"prefix"`
-	Ge     string `json:"ge,omitempty"` // Greater than or equal to - (Optional) The minimum starting prefix length to be matched. Valid values are from 0 to 32 (IPv4), or 0 to 128 (IPv6). The minimum (ge) must be no greater than or equal to the maximum value (le).
+	Ge     string `json:"ge,omitempty"` // Greater than or equal to - (Optional) The minimum starting prefix length to be matched. Valid values are from 0 to 32 (IPv4), or 0 to 128 (IPv6). The minimum (ge) must be no greater than the maximum value (le).
 	Le     string `json:"le,omitempty"` // Less than or equal to - (Optional) The maximum ending prefix length to be matched. The prefix length is greater than or equal to the minimum value (ge). Valid values are from 0 to 32 (IPv4), or 0 to 128 (IPv6), but the maximum must be no less than the minimum value (ge).
 }
 
 // MCRPrefixListEntry represents an entry in a prefix filter list.
+// Ge/Le are pointers because 0 is a valid prefix length the API treats
+// differently from an absent value.
 type MCRPrefixListEntry struct {
 	Action string `json:"action"`
 	Prefix string `json:"prefix"`
-	Ge     int    `json:"ge,omitempty"` // Great than or equal to - (Optional) The minimum starting prefix length to be matched. Valid values are from 0 to 32 (IPv4), or 0 to 128 (IPv6). The minimum (ge) must be no greater than or equal to the maximum value (le).
-	Le     int    `json:"le,omitempty"` // Less than or equal to - (Optional) The maximum ending prefix length to be matched. The prefix length is greater than or equal to the minimum value (ge). Valid values are from 0 to 32 (IPv4), or 0 to 128 (IPv6), but the maximum must be no less than the minimum value (ge).
+	Ge     *int   `json:"ge,omitempty"` // Greater than or equal to - (Optional) The minimum starting prefix length to be matched. Valid values are from 0 to 32 (IPv4), or 0 to 128 (IPv6). The minimum (ge) must be no greater than the maximum value (le).
+	Le     *int   `json:"le,omitempty"` // Less than or equal to - (Optional) The maximum ending prefix length to be matched. The prefix length is greater than or equal to the minimum value (ge). Valid values are from 0 to 32 (IPv4), or 0 to 128 (IPv6), but the maximum must be no less than the minimum value (ge).
 }
 
 // mcrOrderResponse represents a response from the Megaport Products API after ordering an MCR.
@@ -206,11 +208,20 @@ type APIMCRPrefixFilterList struct {
 }
 
 func (e *APIMCRPrefixFilterList) ToMCRPrefixFilterList() (*MCRPrefixFilterList, error) {
-	entries := make([]*MCRPrefixListEntry, len(e.Entries))
+	// Allocate only for a non-nil slice, so a null entries array does not come
+	// back as [] and turn a read-modify-write into "delete every entry".
+	var entries []*MCRPrefixListEntry
+	if e.Entries != nil {
+		entries = make([]*MCRPrefixListEntry, len(e.Entries))
+	}
 	for i, entry := range e.Entries {
+		// The API declares entries non-nullable, so a null is malformed.
+		if entry == nil {
+			return nil, fmt.Errorf("prefix list entry %d: null entry in response", i)
+		}
 		mcrEntry, err := entry.ToMCRPrefixFilterListEntry()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("prefix list entry %d: %w", i, err)
 		}
 		entries[i] = mcrEntry
 	}
@@ -223,25 +234,49 @@ func (e *APIMCRPrefixFilterList) ToMCRPrefixFilterList() (*MCRPrefixFilterList, 
 }
 
 func (e *APIMCRPrefixFilterListEntry) ToMCRPrefixFilterListEntry() (*MCRPrefixListEntry, error) {
-	var ge, le int
-	if e.Ge != "" {
-		geVal, err := strconv.Atoi(e.Ge)
-		if err != nil {
-			return nil, err
-		}
-		ge = geVal
+	ge, err := prefixLenFromAPI(e.Ge)
+	if err != nil {
+		return nil, fmt.Errorf("invalid ge %q: %w", e.Ge, err)
 	}
-	if e.Le != "" {
-		leVal, err := strconv.Atoi(e.Le)
-		if err != nil {
-			return nil, err
-		}
-		le = leVal
+	le, err := prefixLenFromAPI(e.Le)
+	if err != nil {
+		return nil, fmt.Errorf("invalid le %q: %w", e.Le, err)
 	}
 	return &MCRPrefixListEntry{
 		Action: e.Action,
 		Prefix: e.Prefix,
 		Ge:     ge,
 		Le:     le,
+	}, nil
+}
+
+// toAPI converts the user-facing MCRPrefixFilterList to its wire-level
+// representation, where the API expects Ge/Le as strings. A nil list, a nil
+// Entries, or a nil entry is refused here rather than sent: the API 400s on all
+// three. An empty Entries is valid and clears the list.
+func (l *MCRPrefixFilterList) toAPI() (*APIMCRPrefixFilterList, error) {
+	if l == nil {
+		return nil, ErrMCRPrefixFilterListNil
+	}
+	if l.Entries == nil {
+		return nil, ErrMCRPrefixFilterListEntriesNil
+	}
+	entries := make([]*APIMCRPrefixFilterListEntry, len(l.Entries))
+	for i, entry := range l.Entries {
+		if entry == nil {
+			return nil, fmt.Errorf("prefix list entry %d: nil entry", i)
+		}
+		entries[i] = &APIMCRPrefixFilterListEntry{
+			Action: entry.Action,
+			Prefix: entry.Prefix,
+			Ge:     prefixLenToAPI(entry.Ge),
+			Le:     prefixLenToAPI(entry.Le),
+		}
+	}
+	return &APIMCRPrefixFilterList{
+		ID:            l.ID,
+		Description:   l.Description,
+		AddressFamily: l.AddressFamily,
+		Entries:       entries,
 	}, nil
 }
