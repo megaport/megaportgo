@@ -24,6 +24,7 @@ type MVEService interface {
 	// ModifyMVE modifies an MVE in the Megaport MVE API.
 	ModifyMVE(ctx context.Context, req *ModifyMVERequest) (*ModifyMVEResponse, error)
 	// DeleteMVE deletes an MVE in the Megaport MVE API.
+	// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 	DeleteMVE(ctx context.Context, req *DeleteMVERequest) (*DeleteMVEResponse, error)
 	// ListMVEImages returns a list of currently supported MVE images and details for each image, including image ID, version, product, and vendor. The image id returned indicates the software version and key configuration parameters of the image. The releaseImage value returned indicates whether the MVE image is available for selection when ordering an MVE.
 	ListMVEImages(ctx context.Context) ([]*MVEImage, error)
@@ -328,6 +329,7 @@ func (svc *MVEServiceOp) ModifyMVE(ctx context.Context, req *ModifyMVERequest) (
 }
 
 // DeleteMVE deletes an MVE in the Megaport MVE API.
+// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 func (svc *MVEServiceOp) DeleteMVE(ctx context.Context, req *DeleteMVERequest) (*DeleteMVEResponse, error) {
 	if req == nil {
 		return nil, ErrDeleteMVERequestNil
