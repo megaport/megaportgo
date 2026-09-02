@@ -86,7 +86,7 @@ func (suite *MCRLookingGlassClientTestSuite) TestListIPRoutes() {
 			Metric:   0,
 			NextHop: LookingGlassRouteNextHop{
 				IP:  "169.254.0.1",
-				VXC: LookingGlassRouteVXCRef{ID: "25af1452-5bb4-487b-a510-ef8ef614cb6f", Name: "Test VXC"},
+				VXC: LookingGlassRouteVXCRef{ID: "11111111-2222-4333-8444-555555555555", Name: "Test VXC"},
 			},
 		},
 		{
@@ -95,7 +95,7 @@ func (suite *MCRLookingGlassClientTestSuite) TestListIPRoutes() {
 			Distance: 1,
 			NextHop: LookingGlassRouteNextHop{
 				IP:  "10.0.0.2",
-				VXC: LookingGlassRouteVXCRef{ID: "7c1f7167-746e-485b-bd5d-fa36398ad069", Name: "Static VXC"},
+				VXC: LookingGlassRouteVXCRef{ID: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee", Name: "Static VXC"},
 			},
 		},
 	}
@@ -104,13 +104,13 @@ func (suite *MCRLookingGlassClientTestSuite) TestListIPRoutes() {
 		{
 			"distance": 20,
 			"metric": 0,
-			"nextHop": {"ip": "169.254.0.1", "vxc": {"id": "25af1452-5bb4-487b-a510-ef8ef614cb6f", "name": "Test VXC"}},
+			"nextHop": {"ip": "169.254.0.1", "vxc": {"id": "11111111-2222-4333-8444-555555555555", "name": "Test VXC"}},
 			"prefix": "10.0.1.0/24",
 			"protocol": "BGP"
 		},
 		{
 			"distance": 1,
-			"nextHop": {"ip": "10.0.0.2", "vxc": {"id": "7c1f7167-746e-485b-bd5d-fa36398ad069", "name": "Static VXC"}},
+			"nextHop": {"ip": "10.0.0.2", "vxc": {"id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee", "name": "Static VXC"}},
 			"prefix": "192.168.0.0/16",
 			"protocol": "STATIC"
 		}
@@ -149,7 +149,7 @@ func (suite *MCRLookingGlassClientTestSuite) TestListBGPRoutes() {
 			AdvertisedTo: []string{"168.254.0.5", "168.254.0.9"},
 			NextHop: LookingGlassRouteNextHop{
 				IP:  "169.254.0.1",
-				VXC: LookingGlassRouteVXCRef{ID: "25af1452-5bb4-487b-a510-ef8ef614cb6f", Name: "Test VXC"},
+				VXC: LookingGlassRouteVXCRef{ID: "11111111-2222-4333-8444-555555555555", Name: "Test VXC"},
 			},
 		},
 	}
@@ -169,7 +169,7 @@ func (suite *MCRLookingGlassClientTestSuite) TestListBGPRoutes() {
 			"advertisedTo": ["168.254.0.5", "168.254.0.9"],
 			"asPath": "64512 64512",
 			"localPref": 100,
-			"nextHop": {"ip": "169.254.0.1", "vxc": {"id": "25af1452-5bb4-487b-a510-ef8ef614cb6f", "name": "Test VXC"}}
+			"nextHop": {"ip": "169.254.0.1", "vxc": {"id": "11111111-2222-4333-8444-555555555555", "name": "Test VXC"}}
 		}
 	]`
 
@@ -201,7 +201,7 @@ func (suite *MCRLookingGlassClientTestSuite) TestListBGPNeighborRoutes() {
 			Valid:     true,
 			NextHop: LookingGlassRouteNextHop{
 				IP:  "169.254.0.1",
-				VXC: LookingGlassRouteVXCRef{ID: "25af1452-5bb4-487b-a510-ef8ef614cb6f", Name: "Test VXC"},
+				VXC: LookingGlassRouteVXCRef{ID: "11111111-2222-4333-8444-555555555555", Name: "Test VXC"},
 			},
 		},
 	}
@@ -216,7 +216,7 @@ func (suite *MCRLookingGlassClientTestSuite) TestListBGPNeighborRoutes() {
 			"best": true,
 			"external": true,
 			"valid": true,
-			"nextHop": {"ip": "169.254.0.1", "vxc": {"id": "25af1452-5bb4-487b-a510-ef8ef614cb6f", "name": "Test VXC"}}
+			"nextHop": {"ip": "169.254.0.1", "vxc": {"id": "11111111-2222-4333-8444-555555555555", "name": "Test VXC"}}
 		}
 	]`
 
@@ -334,7 +334,7 @@ func (suite *MCRLookingGlassClientTestSuite) TestListIPRoutesPendingThenComplete
 		}
 		fmt.Fprint(w, `{"message":"Diagnostic result retrieved successfully","terms":"","data":[
 			{"distance":20,"metric":0,"prefix":"10.0.1.0/24","protocol":"BGP",
-			 "nextHop":{"ip":"169.254.0.1","vxc":{"id":"25af1452-5bb4-487b-a510-ef8ef614cb6f","name":"Test VXC"}}}
+			 "nextHop":{"ip":"169.254.0.1","vxc":{"id":"11111111-2222-4333-8444-555555555555","name":"Test VXC"}}}
 		]}`)
 	})
 
@@ -377,7 +377,7 @@ func (suite *MCRLookingGlassClientTestSuite) TestListIPRoutesCallerDeadlineWins(
 		}
 		fmt.Fprint(w, `{"message":"Diagnostic result retrieved successfully","terms":"","data":[
 			{"distance":20,"metric":0,"prefix":"10.0.1.0/24","protocol":"BGP",
-			 "nextHop":{"ip":"169.254.0.1","vxc":{"id":"25af1452-5bb4-487b-a510-ef8ef614cb6f","name":"Test VXC"}}}
+			 "nextHop":{"ip":"169.254.0.1","vxc":{"id":"11111111-2222-4333-8444-555555555555","name":"Test VXC"}}}
 		]}`)
 	})
 
