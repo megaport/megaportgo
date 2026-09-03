@@ -203,6 +203,15 @@ var ErrCreateUserRequestNil = errors.New("create user request cannot be nil")
 // ErrUpdateUserRequestNil is returned when UpdateUser is called with a nil request.
 var ErrUpdateUserRequestNil = errors.New("update user request cannot be nil")
 
+// ErrListIPRoutesRequestNil is returned when ListIPRoutesWithFilter is called with a nil request.
+var ErrListIPRoutesRequestNil = errors.New("list IP routes request cannot be nil")
+
+// ErrListBGPRoutesRequestNil is returned when ListBGPRoutesWithFilter is called with a nil request.
+var ErrListBGPRoutesRequestNil = errors.New("list BGP routes request cannot be nil")
+
+// ErrListBGPNeighborRoutesRequestNil is returned when ListBGPNeighborRoutes is called with a nil request.
+var ErrListBGPNeighborRoutesRequestNil = errors.New("list BGP neighbor routes request cannot be nil")
+
 // maintenanceStatesToString converts a slice of MaintenanceState to a slice of strings
 func maintenanceStatesToString(states []MaintenanceState) []string {
 	strs := make([]string, len(states))

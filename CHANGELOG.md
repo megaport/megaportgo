@@ -7,6 +7,15 @@
 ## Changes
 - Bump Go toolchain to 1.26.5 to pick up a `crypto/tls` fix for an Encrypted Client Hello privacy leak ([GO-2026-5856](https://pkg.go.dev/vuln/GO-2026-5856)).
 - Bump Go toolchain to 1.26.7. This clears the four standard library advisories `govulncheck` reports against 1.26.5: [GO-2026-6218](https://pkg.go.dev/vuln/GO-2026-6218) (`net/url`), [GO-2026-6090](https://pkg.go.dev/vuln/GO-2026-6090) (`crypto/tls`), [GO-2026-5972](https://pkg.go.dev/vuln/GO-2026-5972) (`encoding/asn1`), and [GO-2026-5026](https://pkg.go.dev/vuln/GO-2026-5026) (`net/http`).
+- Breaking: the `MCRLookingGlassService` route methods now call the real endpoints under `/v2/product/mcr2/{productUid}/diagnostics/routes/`. The old `lookingGlass` paths never existed, so every call returned 404.
+- Breaking: `ListIPRoutes`, `ListIPRoutesWithFilter`, `ListBGPRoutes`, `ListBGPRoutesWithFilter`, and `ListBGPNeighborRoutes` now submit an asynchronous operation and poll for the result. The `List*Async`, `GetAsync*`, and `WaitForAsync*` route methods are removed.
+- Breaking: `ListBGPSessions` is removed. The API has no BGP sessions endpoint.
+- Breaking: `ListIPRoutesRequest.Protocol` is removed. The API has no protocol filter.
+- Breaking: `ListBGPNeighborRoutesRequest.SessionID` is replaced by `PeerIPAddress`, and `IPFilter` is removed. `Direction` is now required and validated, and its type changes from `LookingGlassRouteDirection` to `string`. Use `BGPRouteDirectionReceived` (`"RECEIVED"`) or `BGPRouteDirectionAdvertised` (`"ADVERTISED"`); the old lowercase `"received"` and `"advertised"` literals still compile and now fail at runtime with `ErrMCRDiagnosticsDirectionInvalid`.
+- Breaking: `LookingGlassIPRoute` and `LookingGlassBGPRoute` now match the API schemas, so every field access needs review. `NextHop` is a struct carrying the next hop IP and its VXC, and the optional `*int` counters are plain `int`. `LookingGlassIPRoute` keeps only `Prefix`, `Protocol` (now a `string`), `Metric`, `NextHop`, and the new `Distance`; every other field is gone. On `LookingGlassBGPRoute`, `ASPath` is now a `string`, and `Age`, `VXCID`, `VXCName`, `NeighborIP`, and `NeighborASN` are gone.
+- Breaking: `ListBGPNeighborRoutes` now returns `[]*LookingGlassBGPRoute`. `LookingGlassBGPNeighborRoute` is removed, because both BGP endpoints return the same shape.
+- Breaking: the types behind the removed methods are gone too: `RouteProtocol` and its constants, `LookingGlassRouteDirection` and its constants, `BGPSessionStatus`, `LookingGlassBGPSession`, `ListBGPSessionsRequest`, `LookingGlassAsyncStatus`, `LookingGlassAsyncJob`, `AsyncIPRoutesData`, `AsyncBGPNeighborRoutesData`, and every exported `LookingGlass*Response` envelope.
+- The nil-request guards on `ListIPRoutesWithFilter`, `ListBGPRoutesWithFilter`, and `ListBGPNeighborRoutes` now return `ErrListIPRoutesRequestNil`, `ErrListBGPRoutesRequestNil`, and `ErrListBGPNeighborRoutesRequestNil`, so callers can use `errors.Is` instead of matching the message.
 
 # 1.0.0 Release
 
