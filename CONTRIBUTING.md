@@ -34,4 +34,4 @@ If you don't see an open issue for your need, open one and let others know what 
 
 Megaport is under no obligation to accept any pull requests or to accept them in full. You are free to fork and modify the code for your own use as long as it is published under the MPL-2.0 License.
 
-Commit subjects start with a Jira key (`ESD-1234: <summary>`) and branches are named `feature/ESD-1234-<slug>`. GitHub enforces both. If you're contributing from a fork you don't need a key: write a clear subject and a maintainer will squash-merge your pull request under one. Dependabot commits use the standing key `EIP-3148`.
+Commit subjects start with a Jira key (`ESD-1234: <summary>`) and branches are named `feature/ESD-1234-<slug>` (`fix/`, `hotfix/`, and `release/` prefixes also pass). GitHub enforces both. If you're contributing from a fork you don't need a key: write a clear subject and a maintainer will squash-merge your pull request under one. Dependabot commits use the standing key `EIP-3148`.
