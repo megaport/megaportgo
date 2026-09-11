@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -645,11 +646,11 @@ func (suite *PortClientTestSuite) TestCheckPortVLANAvailabilityBodyReadError() {
 		fmt.Fprint(w, portJblob)
 	})
 
-	var vlanCalled bool
+	var vlanCalled atomic.Bool
 	// Declaring more bytes than the handler writes makes the server close the
 	// connection short, so the client's io.ReadAll fails with an unexpected EOF.
 	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/port/%s/vlan", productUid), func(w http.ResponseWriter, r *http.Request) {
-		vlanCalled = true
+		vlanCalled.Store(true)
 		suite.testMethod(r, http.MethodGet)
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Content-Length", "4096")
@@ -659,7 +660,7 @@ func (suite *PortClientTestSuite) TestCheckPortVLANAvailabilityBodyReadError() {
 
 	available, err := suite.client.PortService.CheckPortVLANAvailability(ctx, productUid, vlan)
 
-	suite.True(vlanCalled, "the VLAN availability handler was never reached")
+	suite.True(vlanCalled.Load(), "the VLAN availability handler was never reached")
 	suite.ErrorIs(err, io.ErrUnexpectedEOF)
 	suite.False(available)
 }
