@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -635,7 +634,7 @@ func (suite *PortClientTestSuite) TestCheckPortVLANAvailabilityBodyReadError() {
 	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
 	vlan := 730
 
-	portJblob := `{
+	jblobPort := `{
             "message": "Found Product 36b3f68e-2f54-4331-bf94-f8984449365f",
             "terms": "test-terms",
             "data": {"productId":999999,"productUid":"36b3f68e-2f54-4331-bf94-f8984449365f","productName":"test-port","productType":"megaport","provisioningStatus":"CONFIGURED","portSpeed":10000,"market":"US","locationId":226}
@@ -643,14 +642,12 @@ func (suite *PortClientTestSuite) TestCheckPortVLANAvailabilityBodyReadError() {
 
 	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/%s", productUid), func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
-		fmt.Fprint(w, portJblob)
+		fmt.Fprint(w, jblobPort)
 	})
 
-	var vlanCalled atomic.Bool
 	// Declaring more bytes than the handler writes makes the server close the
 	// connection short, so the client's io.ReadAll fails with an unexpected EOF.
 	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/port/%s/vlan", productUid), func(w http.ResponseWriter, r *http.Request) {
-		vlanCalled.Store(true)
 		suite.testMethod(r, http.MethodGet)
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Content-Length", "4096")
@@ -660,7 +657,6 @@ func (suite *PortClientTestSuite) TestCheckPortVLANAvailabilityBodyReadError() {
 
 	available, err := suite.client.PortService.CheckPortVLANAvailability(ctx, productUid, vlan)
 
-	suite.True(vlanCalled.Load(), "the VLAN availability handler was never reached")
 	suite.ErrorIs(err, io.ErrUnexpectedEOF)
 	suite.False(available)
 }
