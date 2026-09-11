@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -623,4 +624,42 @@ func (suite *PortClientTestSuite) TestPortNilRequestGuards() {
 			suite.ErrorIs(tt.call(), tt.want)
 		})
 	}
+}
+
+// TestCheckPortVLANAvailabilityBodyReadError verifies that a response body which
+// fails mid-read surfaces as an error rather than as a "VLAN not available" answer.
+func (suite *PortClientTestSuite) TestCheckPortVLANAvailabilityBodyReadError() {
+	ctx := context.Background()
+
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	vlan := 730
+
+	portJblob := `{
+            "message": "Found Product 36b3f68e-2f54-4331-bf94-f8984449365f",
+            "terms": "test-terms",
+            "data": {"productId":999999,"productUid":"36b3f68e-2f54-4331-bf94-f8984449365f","productName":"test-port","productType":"megaport","provisioningStatus":"CONFIGURED","portSpeed":10000,"market":"US","locationId":226}
+            }`
+
+	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/%s", productUid), func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, portJblob)
+	})
+
+	var vlanCalled bool
+	// Declaring more bytes than the handler writes makes the server close the
+	// connection short, so the client's io.ReadAll fails with an unexpected EOF.
+	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/port/%s/vlan", productUid), func(w http.ResponseWriter, r *http.Request) {
+		vlanCalled = true
+		suite.testMethod(r, http.MethodGet)
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Length", "4096")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, `{"message":"test-message","data":[`)
+	})
+
+	available, err := suite.client.PortService.CheckPortVLANAvailability(ctx, productUid, vlan)
+
+	suite.True(vlanCalled, "the VLAN availability handler was never reached")
+	suite.ErrorIs(err, io.ErrUnexpectedEOF)
+	suite.False(available)
 }
