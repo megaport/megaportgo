@@ -164,6 +164,9 @@ var ErrModifyMVERequestNil = errors.New("modify MVE request cannot be nil")
 // ErrDeleteMVERequestNil is returned when DeleteMVE is called with a nil request.
 var ErrDeleteMVERequestNil = errors.New("delete MVE request cannot be nil")
 
+// ErrMVEImagesResponseNil is returned when the MVE images API returns a 2xx response with an empty or null or missing data payload.
+var ErrMVEImagesResponseNil = errors.New("MVE images response is nil")
+
 // ErrBuyVXCRequestNil is returned when BuyVXC or ValidateVXCOrder is called with a nil request.
 var ErrBuyVXCRequestNil = errors.New("buy VXC request cannot be nil")
 
@@ -211,6 +214,9 @@ var ErrListBGPRoutesRequestNil = errors.New("list BGP routes request cannot be n
 
 // ErrListBGPNeighborRoutesRequestNil is returned when ListBGPNeighborRoutes is called with a nil request.
 var ErrListBGPNeighborRoutesRequestNil = errors.New("list BGP neighbor routes request cannot be nil")
+
+// ErrProductResourceTagsResponseNil is returned when the product resource tags API returns a 2xx response with an empty data payload.
+var ErrProductResourceTagsResponseNil = errors.New("product resource tags response is empty")
 
 // maintenanceStatesToString converts a slice of MaintenanceState to a slice of strings
 func maintenanceStatesToString(states []MaintenanceState) []string {
