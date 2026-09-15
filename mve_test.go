@@ -813,6 +813,33 @@ func (suite *MVEClientTestSuite) TestListMVEImages() {
 	suite.Equal(want, got)
 }
 
+func (suite *MVEClientTestSuite) TestListMVEImagesNullData() {
+
+	// Given
+	mveSvc := suite.client.MVEService
+	ctx := context.Background()
+	jsonBlob := `{
+		"message": "Current supported MVE images",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": null
+	}`
+
+	// When
+	var handler = func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		_, err := fmt.Fprint(w, jsonBlob)
+		if err != nil {
+			return
+		}
+	}
+	suite.mux.HandleFunc("/v4/product/mve/images", handler)
+
+	// Then
+	got, err := mveSvc.ListMVEImages(ctx)
+	suite.ErrorIs(err, ErrMVEImagesResponseNil)
+	suite.Nil(got)
+}
+
 func (suite *MVEClientTestSuite) TestListAvailableMVESizes() {
 	mveSvc := suite.client.MVEService
 	ctx := context.Background()
