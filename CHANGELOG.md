@@ -18,7 +18,7 @@
 - Breaking: the types behind the removed methods are gone too: `RouteProtocol` and its constants, `LookingGlassRouteDirection` and its constants, `BGPSessionStatus`, `LookingGlassBGPSession`, `ListBGPSessionsRequest`, `LookingGlassAsyncStatus`, `LookingGlassAsyncJob`, `AsyncIPRoutesData`, `AsyncBGPNeighborRoutesData`, and every exported `LookingGlass*Response` envelope.
 - The nil-request guards on `ListIPRoutesWithFilter`, `ListBGPRoutesWithFilter`, and `ListBGPNeighborRoutes` now return `ErrListIPRoutesRequestNil`, `ErrListBGPRoutesRequestNil`, and `ErrListBGPNeighborRoutesRequestNil`, so callers can use `errors.Is` instead of matching the message.
 - `CheckPortVLANAvailability` now returns the response body read error instead of a stale nil error. A truncated or reset body previously came back as `(false, nil)`, which callers read as "VLAN not available".
-- `ListMVEImages` and `ListProductResourceTags` now return `ErrMVEImagesResponseEmpty` and `ErrProductResourceTagsResponseEmpty` instead of panicking with a nil pointer dereference when a 2xx response carries a null `data` envelope.
+- `ListMVEImages` and `ListProductResourceTags` now return `ErrMVEImagesResponseNil` and `ErrProductResourceTagsResponseNil` instead of panicking with a nil pointer dereference when a 2xx response carries a null `data` envelope. An envelope missing the inner list (for example `"data": {}`) returns the same errors instead of `(nil, nil)`; an explicit empty list remains a valid result.
 
 # 1.0.0 Release
 

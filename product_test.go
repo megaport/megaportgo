@@ -747,6 +747,42 @@ func (suite *ProductClientTestSuite) TestListProductResourceTagsNullData() {
 	suite.Nil(res)
 }
 
+// TestListProductResourceTagsEmptyDataEnvelope verifies a 2xx response with
+// "data": {} (no resourceTags key) returns a sentinel error instead of (nil, nil).
+func (suite *ProductClientTestSuite) TestListProductResourceTagsEmptyDataEnvelope() {
+	ctx := context.Background()
+	productSvc := suite.client.ProductService
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/%s/tags", productUid), func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		_, err := fmt.Fprint(w, `{"message":"ok","terms":"terms","data":{}}`)
+		if err != nil {
+			return
+		}
+	})
+	res, err := productSvc.ListProductResourceTags(ctx, productUid)
+	suite.ErrorIs(err, ErrProductResourceTagsResponseNil)
+	suite.Nil(res)
+}
+
+// TestListProductResourceTagsEmptyTagList verifies an explicit empty resourceTags
+// array is a valid result: no error and no tags.
+func (suite *ProductClientTestSuite) TestListProductResourceTagsEmptyTagList() {
+	ctx := context.Background()
+	productSvc := suite.client.ProductService
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/%s/tags", productUid), func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		_, err := fmt.Fprint(w, `{"message":"ok","terms":"terms","data":{"resourceTags":[]}}`)
+		if err != nil {
+			return
+		}
+	})
+	res, err := productSvc.ListProductResourceTags(ctx, productUid)
+	suite.NoError(err)
+	suite.Empty(res)
+}
+
 // TestProductNilRequestGuards verifies that the required-request Product methods
 // reject a nil request with a sentinel error instead of panicking.
 func (suite *ProductClientTestSuite) TestProductNilRequestGuards() {

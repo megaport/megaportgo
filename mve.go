@@ -364,7 +364,7 @@ func (svc *MVEServiceOp) ListMVEImages(ctx context.Context) ([]*MVEImage, error)
 	if err := json.Unmarshal(body, &imageResp); err != nil {
 		return nil, err
 	}
-	if imageResp.Data == nil {
+	if imageResp.Data == nil || imageResp.Data.Images == nil {
 		return nil, ErrMVEImagesResponseNil
 	}
 
