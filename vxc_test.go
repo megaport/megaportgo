@@ -2064,8 +2064,7 @@ func (suite *VXCClientTestSuite) TestVXCNilRequestGuards() {
 }
 
 // TestVXCDhcpPoolOnBuy verifies that a DHCP pool on an MCR interface reaches
-// the order body, that unset optional fields are omitted, and that an
-// interface without a pool sends no dhcpPools key.
+// the order body.
 func (suite *VXCClientTestSuite) TestVXCDhcpPoolOnBuy() {
 	ctx := context.Background()
 	vxcSvc := suite.client.VXCService

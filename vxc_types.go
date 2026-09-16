@@ -346,17 +346,17 @@ type PartnerConfigInterface struct {
 }
 
 // DhcpPoolConfig is a DHCP pool served on an MCR interface
-// (PartnerConfigInterface.DhcpPools). See
+// (PartnerConfigInterface.DhcpPools). Network, StartIpAddress and EndIpAddress
+// are required. The SDK does not decode pools on the VXC read, so this is
+// write-only today. See
 // https://docs.megaport.com/mcr/configuring-mcr#configuring-a-dhcp-pool.
-// Network, StartIpAddress and EndIpAddress are required; the API validates
-// the addresses and the range.
 type DhcpPoolConfig struct {
-	Network        string   `json:"network"`                  // IPv4 network in CIDR notation, e.g. 192.168.1.0/24. Host bits are normalized to zero.
-	StartIpAddress string   `json:"startIpAddress"`           // First IP address to assign to clients.
-	EndIpAddress   string   `json:"endIpAddress"`             // Last IP address to assign to clients.
-	DefaultGateway string   `json:"defaultGateway,omitempty"` // Default gateway offered to clients.
-	Description    string   `json:"description,omitempty"`
-	DnsServers     []string `json:"dnsServers,omitempty"` // Up to 5 DNS resolvers offered to clients.
+	Network        string   `json:"network"` // CIDR, e.g. 192.168.1.0/24. The API normalizes host bits to zero.
+	StartIpAddress string   `json:"startIpAddress"`
+	EndIpAddress   string   `json:"endIpAddress"`
+	DefaultGateway string   `json:"defaultGateway,omitempty"`
+	Description    string   `json:"description,omitempty"` // Max 100 characters.
+	DnsServers     []string `json:"dnsServers,omitempty"`  // Up to 5, must be unique.
 }
 
 // IPsecTunnelConfig is the IPsec tunnel on a VXC A-End ipSecTunnel
