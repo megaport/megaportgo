@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 // Partner Providers
@@ -456,23 +457,43 @@ type CSPConnectionConfig interface {
 // CSPConnectionAWS represents the configuration of a CSP connection for AWS Virtual Interface.
 type CSPConnectionAWS struct {
 	CSPConnectionConfig
-	ConnectType       string `json:"connectType"`
-	ResourceName      string `json:"resource_name"`
-	ResourceType      string `json:"resource_type"`
-	VLAN              int    `json:"vlan"`
-	Account           string `json:"account"`
-	AmazonAddress     string `json:"amazon_address"`
-	ASN               int    `json:"asn"`
-	AmazonASN         int    `json:"amazonAsn"`
-	AuthKey           string `json:"authKey"`
-	CustomerAddress   string `json:"customer_address"`
-	CustomerIPAddress string `json:"customerIpAddress"`
-	ID                int    `json:"id"`
-	Name              string `json:"name"`
-	OwnerAccount      string `json:"ownerAccount"`
-	PeerASN           int    `json:"peerAsn"`
-	Type              string `json:"type"`
-	VIFID             string `json:"vif_id"`
+	ConnectType       string      `json:"connectType"`
+	ResourceName      string      `json:"resource_name"`
+	ResourceType      string      `json:"resource_type"`
+	VLAN              int         `json:"vlan"`
+	Account           string      `json:"account"`
+	AmazonAddress     string      `json:"amazon_address"`
+	ASN               int         `json:"asn"`
+	AmazonASN         int         `json:"amazonAsn"`
+	AuthKey           string      `json:"authKey"`
+	CustomerAddress   string      `json:"customer_address"`
+	CustomerIPAddress string      `json:"customerIpAddress"`
+	ID                int         `json:"id"`
+	Name              string      `json:"name"`
+	OwnerAccount      string      `json:"ownerAccount"`
+	PeerASN           int         `json:"peerAsn"`
+	Prefixes          CSPPrefixes `json:"prefixes"`
+	Type              string      `json:"type"`
+	VIFID             string      `json:"vif_id"`
+}
+
+// CSPPrefixes holds the prefixes on a CSP connection read. NetAuto sends either
+// a JSON string or an array of strings, so an array is joined with commas.
+type CSPPrefixes string
+
+func (p *CSPPrefixes) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err == nil {
+		*p = CSPPrefixes(s)
+		return nil
+	}
+
+	var list []string
+	if err := json.Unmarshal(data, &list); err != nil {
+		return fmt.Errorf("prefixes: expected a string or an array of strings, got %s", string(data))
+	}
+	*p = CSPPrefixes(strings.Join(list, ","))
+	return nil
 }
 
 // CSPConnectionAWSHC represents the configuration of a CSP connection for AWS Hosted Connection.
