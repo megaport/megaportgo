@@ -407,8 +407,8 @@ func (svc *ProductServiceOp) ListProductResourceTags(ctx context.Context, produc
 		return nil, err
 	}
 
-	if tagsResponse.Data == nil || tagsResponse.Data.ResourceTags == nil {
-		return nil, ErrProductResourceTagsResponseNil
+	if tagsResponse.Data == nil {
+		return nil, ErrProductResourceTagsResponseEmpty
 	}
 
 	return tagsResponse.Data.ResourceTags, nil

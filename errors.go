@@ -164,8 +164,8 @@ var ErrModifyMVERequestNil = errors.New("modify MVE request cannot be nil")
 // ErrDeleteMVERequestNil is returned when DeleteMVE is called with a nil request.
 var ErrDeleteMVERequestNil = errors.New("delete MVE request cannot be nil")
 
-// ErrMVEImagesResponseNil is returned when the MVE images API returns a 2xx response with an empty or null or missing data payload.
-var ErrMVEImagesResponseNil = errors.New("MVE images response is nil")
+// ErrMVEImagesResponseEmpty is returned when the MVE images API returns a 2xx response with a null or missing data payload.
+var ErrMVEImagesResponseEmpty = errors.New("MVE images response is empty")
 
 // ErrBuyVXCRequestNil is returned when BuyVXC or ValidateVXCOrder is called with a nil request.
 var ErrBuyVXCRequestNil = errors.New("buy VXC request cannot be nil")
@@ -187,6 +187,9 @@ var ErrModifyPortRequestNil = errors.New("modify port request cannot be nil")
 
 // ErrModifyProductRequestNil is returned when ModifyProduct is called with a nil request.
 var ErrModifyProductRequestNil = errors.New("modify product request cannot be nil")
+
+// ErrProductResourceTagsResponseEmpty is returned when the product resource tags API returns a 2xx response with a null or missing data payload.
+var ErrProductResourceTagsResponseEmpty = errors.New("product resource tags response is empty")
 
 // ErrDeleteProductRequestNil is returned when DeleteProduct is called with a nil request.
 var ErrDeleteProductRequestNil = errors.New("delete product request cannot be nil")
@@ -214,9 +217,6 @@ var ErrListBGPRoutesRequestNil = errors.New("list BGP routes request cannot be n
 
 // ErrListBGPNeighborRoutesRequestNil is returned when ListBGPNeighborRoutes is called with a nil request.
 var ErrListBGPNeighborRoutesRequestNil = errors.New("list BGP neighbor routes request cannot be nil")
-
-// ErrProductResourceTagsResponseNil is returned when the product resource tags API returns a 2xx response with an empty data payload.
-var ErrProductResourceTagsResponseNil = errors.New("product resource tags response is empty")
 
 // maintenanceStatesToString converts a slice of MaintenanceState to a slice of strings
 func maintenanceStatesToString(states []MaintenanceState) []string {

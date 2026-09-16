@@ -743,12 +743,13 @@ func (suite *ProductClientTestSuite) TestListProductResourceTagsNullData() {
 		}
 	})
 	res, err := productSvc.ListProductResourceTags(ctx, productUid)
-	suite.ErrorIs(err, ErrProductResourceTagsResponseNil)
+	suite.ErrorIs(err, ErrProductResourceTagsResponseEmpty)
 	suite.Nil(res)
 }
 
 // TestListProductResourceTagsEmptyDataEnvelope verifies a 2xx response with
-// "data": {} (no resourceTags key) returns a sentinel error instead of (nil, nil).
+// "data": {} (no resourceTags key) is a valid empty result — the API spec does not
+// require the key, and erroring here would orphan resources on the Terraform create path.
 func (suite *ProductClientTestSuite) TestListProductResourceTagsEmptyDataEnvelope() {
 	ctx := context.Background()
 	productSvc := suite.client.ProductService
@@ -761,8 +762,8 @@ func (suite *ProductClientTestSuite) TestListProductResourceTagsEmptyDataEnvelop
 		}
 	})
 	res, err := productSvc.ListProductResourceTags(ctx, productUid)
-	suite.ErrorIs(err, ErrProductResourceTagsResponseNil)
-	suite.Nil(res)
+	suite.NoError(err)
+	suite.Empty(res)
 }
 
 // TestListProductResourceTagsEmptyTagList verifies an explicit empty resourceTags

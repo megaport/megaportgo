@@ -836,12 +836,12 @@ func (suite *MVEClientTestSuite) TestListMVEImagesNullData() {
 
 	// Then
 	got, err := mveSvc.ListMVEImages(ctx)
-	suite.ErrorIs(err, ErrMVEImagesResponseNil)
+	suite.ErrorIs(err, ErrMVEImagesResponseEmpty)
 	suite.Nil(got)
 }
 
 // TestListMVEImagesEmptyDataEnvelope verifies a 2xx response with "data": {}
-// (no mveImages key) returns a sentinel error instead of (nil, nil).
+// (no mveImages key) is a valid empty result — the API spec does not require the key.
 func (suite *MVEClientTestSuite) TestListMVEImagesEmptyDataEnvelope() {
 
 	// Given
@@ -865,8 +865,8 @@ func (suite *MVEClientTestSuite) TestListMVEImagesEmptyDataEnvelope() {
 
 	// Then
 	got, err := mveSvc.ListMVEImages(ctx)
-	suite.ErrorIs(err, ErrMVEImagesResponseNil)
-	suite.Nil(got)
+	suite.NoError(err)
+	suite.Empty(got)
 }
 
 // TestListMVEImagesEmptyImageList verifies an explicit empty mveImages array
