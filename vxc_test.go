@@ -2062,3 +2062,165 @@ func (suite *VXCClientTestSuite) TestVXCNilRequestGuards() {
 		})
 	}
 }
+
+// TestVXCDhcpPoolOnBuy verifies that a DHCP pool on an MCR interface reaches
+// the order body, that unset optional fields are omitted, and that an
+// interface without a pool sends no dhcpPools key.
+func (suite *VXCClientTestSuite) TestVXCDhcpPoolOnBuy() {
+	ctx := context.Background()
+	vxcSvc := suite.client.VXCService
+
+	req := &BuyVXCRequest{
+		PortUID:   "9b1c46c7-1e8d-4035-bf38-1bc60d346d57",
+		VXCName:   "test-vxc-dhcp",
+		RateLimit: 50,
+		Term:      1,
+		AEndConfiguration: VXCOrderEndpointConfiguration{
+			PartnerConfig: VXCOrderVrouterPartnerConfig{
+				Interfaces: []PartnerConfigInterface{{
+					IpAddresses: []string{"192.168.1.1/24"},
+					DhcpPools: []DhcpPoolConfig{{
+						Network:        "192.168.1.0/24",
+						StartIpAddress: "192.168.1.10",
+						EndIpAddress:   "192.168.1.100",
+						DefaultGateway: "192.168.1.1",
+						Description:    "Office LAN DHCP pool",
+						DnsServers:     []string{"1.1.1.1", "8.8.8.8"},
+					}},
+				}},
+			},
+		},
+		BEndConfiguration: VXCOrderEndpointConfiguration{
+			ProductUID: "36b3f68e-2f54-4331-bf94-f8984449365f",
+		},
+	}
+
+	jblob := `{
+		"message": "VXC created.",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": [{"technicalServiceUid": "36b3f68e-2f54-4331-bf94-f8984449365f"}]
+	}`
+
+	var gotPools []map[string]any
+	suite.mux.HandleFunc("/v4/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
+		var wrapper struct {
+			NetworkDesign []struct {
+				AssociatedVXCs []struct {
+					AEnd struct {
+						PartnerConfig struct {
+							Interfaces []struct {
+								DhcpPools []map[string]any `json:"dhcpPools"`
+							} `json:"interfaces"`
+						} `json:"partnerConfig"`
+					} `json:"aEnd"`
+				} `json:"associatedVxcs"`
+			} `json:"networkDesign"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&wrapper); err != nil {
+			suite.FailNowf("could not decode json", "could not decode json %v", err)
+		}
+		suite.testMethod(r, http.MethodPost)
+		suite.Require().Len(wrapper.NetworkDesign, 1)
+		suite.Require().Len(wrapper.NetworkDesign[0].AssociatedVXCs, 1)
+		gotPools = wrapper.NetworkDesign[0].AssociatedVXCs[0].AEnd.PartnerConfig.Interfaces[0].DhcpPools
+		fmt.Fprint(w, jblob)
+	})
+
+	_, err := vxcSvc.BuyVXC(ctx, req)
+	suite.NoError(err)
+	suite.Require().Len(gotPools, 1)
+	pool := gotPools[0]
+	suite.Equal("192.168.1.0/24", pool["network"])
+	suite.Equal("192.168.1.10", pool["startIpAddress"])
+	suite.Equal("192.168.1.100", pool["endIpAddress"])
+	suite.Equal("192.168.1.1", pool["defaultGateway"])
+	suite.Equal("Office LAN DHCP pool", pool["description"])
+	suite.Equal([]any{"1.1.1.1", "8.8.8.8"}, pool["dnsServers"])
+
+	// Only the three required fields set: the optional keys must be absent so
+	// the API applies its own defaults.
+	minimal := PartnerConfigInterface{
+		DhcpPools: []DhcpPoolConfig{{
+			Network:        "10.0.0.0/24",
+			StartIpAddress: "10.0.0.10",
+			EndIpAddress:   "10.0.0.20",
+		}},
+	}
+	raw, err := json.Marshal(minimal)
+	suite.NoError(err)
+	var minimalGot struct {
+		DhcpPools []map[string]any `json:"dhcpPools"`
+	}
+	suite.NoError(json.Unmarshal(raw, &minimalGot))
+	suite.Require().Len(minimalGot.DhcpPools, 1)
+	for _, key := range []string{"defaultGateway", "description", "dnsServers"} {
+		_, ok := minimalGot.DhcpPools[0][key]
+		suite.False(ok, "expected key %q to be absent", key)
+	}
+
+	// An interface with no pool must omit the key rather than send an empty array.
+	raw, err = json.Marshal(PartnerConfigInterface{IpAddresses: []string{"192.0.2.1/30"}})
+	suite.NoError(err)
+	var noPool map[string]any
+	suite.NoError(json.Unmarshal(raw, &noPool))
+	_, hasKey := noPool["dhcpPools"]
+	suite.False(hasKey, "nil DhcpPools must be omitted")
+}
+
+// TestVXCDhcpPoolOnUpdate verifies that a DHCP pool on a vrouter B-End config
+// reaches the update body under bEndConfig.
+func (suite *VXCClientTestSuite) TestVXCDhcpPoolOnUpdate() {
+	ctx := context.Background()
+	vxcSvc := suite.client.VXCService
+	vxcUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	req := &UpdateVXCRequest{
+		BEndPartnerConfig: VXCOrderVrouterPartnerConfig{
+			Interfaces: []PartnerConfigInterface{{
+				VLAN: 100,
+				DhcpPools: []DhcpPoolConfig{{
+					Network:        "172.16.0.0/24",
+					StartIpAddress: "172.16.0.50",
+					EndIpAddress:   "172.16.0.150",
+					DnsServers:     []string{"9.9.9.9"},
+				}},
+			}},
+		},
+	}
+
+	jblob := `{
+		"message": "Product has been updated",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": {"productUid": "36b3f68e-2f54-4331-bf94-f8984449365f", "productType": "VXC"}
+	}`
+
+	var gotPools []map[string]any
+	path := fmt.Sprintf("/v3/product/%s/%s", PRODUCT_VXC, vxcUid)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			BEndConfig struct {
+				Interfaces []struct {
+					DhcpPools []map[string]any `json:"dhcpPools"`
+				} `json:"interfaces"`
+			} `json:"bEndConfig"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			suite.FailNowf("could not decode json", "could not decode json %v", err)
+		}
+		suite.testMethod(r, http.MethodPut)
+		suite.Require().Len(body.BEndConfig.Interfaces, 1)
+		gotPools = body.BEndConfig.Interfaces[0].DhcpPools
+		fmt.Fprint(w, jblob)
+	})
+
+	_, err := vxcSvc.UpdateVXC(ctx, vxcUid, req)
+	suite.NoError(err)
+	suite.Require().Len(gotPools, 1)
+	pool := gotPools[0]
+	suite.Equal("172.16.0.0/24", pool["network"])
+	suite.Equal("172.16.0.50", pool["startIpAddress"])
+	suite.Equal("172.16.0.150", pool["endIpAddress"])
+	suite.Equal([]any{"9.9.9.9"}, pool["dnsServers"])
+	_, hasGateway := pool["defaultGateway"]
+	suite.False(hasGateway, "unset defaultGateway must be omitted")
+}

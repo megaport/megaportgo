@@ -342,6 +342,21 @@ type PartnerConfigInterface struct {
 	PacketFilterIn     *int64                `json:"packetFilterIn,omitempty"`     // NAT Gateway packet filter ID to apply to inbound packets.
 	PacketFilterOut    *int64                `json:"packetFilterOut,omitempty"`    // NAT Gateway packet filter ID to apply to outbound packets.
 	IpSecTunnelOptions *IPsecTunnelConfig    `json:"ipSecTunnelOptions,omitempty"` // Requires InterfaceType to be InterfaceTypeIPSecTunnel.
+	DhcpPools          []DhcpPoolConfig      `json:"dhcpPools,omitempty"`          // The API accepts at most one pool per interface.
+}
+
+// DhcpPoolConfig is a DHCP pool served on an MCR interface
+// (PartnerConfigInterface.DhcpPools). See
+// https://docs.megaport.com/mcr/configuring-mcr#configuring-a-dhcp-pool.
+// Network, StartIpAddress and EndIpAddress are required; the API validates
+// the addresses and the range.
+type DhcpPoolConfig struct {
+	Network        string   `json:"network"`                  // IPv4 network in CIDR notation, e.g. 192.168.1.0/24. Host bits are normalized to zero.
+	StartIpAddress string   `json:"startIpAddress"`           // First IP address to assign to clients.
+	EndIpAddress   string   `json:"endIpAddress"`             // Last IP address to assign to clients.
+	DefaultGateway string   `json:"defaultGateway,omitempty"` // Default gateway offered to clients.
+	Description    string   `json:"description,omitempty"`
+	DnsServers     []string `json:"dnsServers,omitempty"` // Up to 5 DNS resolvers offered to clients.
 }
 
 // IPsecTunnelConfig is the IPsec tunnel on a VXC A-End ipSecTunnel
