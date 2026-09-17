@@ -813,6 +813,91 @@ func (suite *MVEClientTestSuite) TestListMVEImages() {
 	suite.Equal(want, got)
 }
 
+func (suite *MVEClientTestSuite) TestListMVEImagesNullData() {
+
+	// Given
+	mveSvc := suite.client.MVEService
+	ctx := context.Background()
+	jsonBlob := `{
+		"message": "Current supported MVE images",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": null
+	}`
+
+	// When
+	var handler = func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		_, err := fmt.Fprint(w, jsonBlob)
+		if err != nil {
+			return
+		}
+	}
+	suite.mux.HandleFunc("/v4/product/mve/images", handler)
+
+	// Then
+	got, err := mveSvc.ListMVEImages(ctx)
+	suite.ErrorIs(err, ErrMVEImagesResponseEmpty)
+	suite.Nil(got)
+}
+
+// TestListMVEImagesEmptyDataEnvelope verifies a 2xx response with "data": {}
+// (no mveImages key) is a valid empty result — the API spec does not require the key.
+func (suite *MVEClientTestSuite) TestListMVEImagesEmptyDataEnvelope() {
+
+	// Given
+	mveSvc := suite.client.MVEService
+	ctx := context.Background()
+	jsonBlob := `{
+		"message": "Current supported MVE images",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": {}
+	}`
+
+	// When
+	var handler = func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		_, err := fmt.Fprint(w, jsonBlob)
+		if err != nil {
+			return
+		}
+	}
+	suite.mux.HandleFunc("/v4/product/mve/images", handler)
+
+	// Then
+	got, err := mveSvc.ListMVEImages(ctx)
+	suite.NoError(err)
+	suite.Empty(got)
+}
+
+// TestListMVEImagesEmptyImageList verifies an explicit empty mveImages array
+// is a valid result: no error and no images.
+func (suite *MVEClientTestSuite) TestListMVEImagesEmptyImageList() {
+
+	// Given
+	mveSvc := suite.client.MVEService
+	ctx := context.Background()
+	jsonBlob := `{
+		"message": "Current supported MVE images",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": {"mveImages": []}
+	}`
+
+	// When
+	var handler = func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		_, err := fmt.Fprint(w, jsonBlob)
+		if err != nil {
+			return
+		}
+	}
+	suite.mux.HandleFunc("/v4/product/mve/images", handler)
+
+	// Then
+	got, err := mveSvc.ListMVEImages(ctx)
+	suite.NoError(err)
+	suite.Empty(got)
+}
+
 func (suite *MVEClientTestSuite) TestListAvailableMVESizes() {
 	mveSvc := suite.client.MVEService
 	ctx := context.Background()
