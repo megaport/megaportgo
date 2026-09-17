@@ -3,7 +3,6 @@ package megaport
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 )
 
 // NATGatewaySession represents a speed/session-count availability entry for NAT Gateways.
@@ -291,13 +290,13 @@ type NATGatewayPrefixList struct {
 }
 
 // NATGatewayPrefixListEntry is a single entry in a prefix list. Ge/Le are
-// exposed as ints for ergonomics; the SDK converts to/from the API's string
-// representation transparently.
+// pointers because 0 is a valid prefix length, distinct from absent; the SDK
+// converts them to and from the API's strings.
 type NATGatewayPrefixListEntry struct {
 	Action string `json:"action"` // PrefixListActionPermit or PrefixListActionDeny.
 	Prefix string `json:"prefix"`
-	Ge     int    `json:"ge,omitempty"`
-	Le     int    `json:"le,omitempty"`
+	Ge     *int   `json:"ge,omitempty"`
+	Le     *int   `json:"le,omitempty"`
 }
 
 // NATGatewayPrefixListSummary is the compact entry returned by the
@@ -309,13 +308,14 @@ type NATGatewayPrefixListSummary struct {
 }
 
 // apiNATGatewayPrefixList is the wire-level representation — the API sends
-// Ge/Le as strings. See (NATGatewayPrefixList).toAPI / fromAPI for
-// conversion.
+// Ge/Le as strings. See (NATGatewayPrefixList).toAPI / toPrefixList for
+// conversion. Entries are pointers so a null element is distinguishable from
+// an empty one on decode.
 type apiNATGatewayPrefixList struct {
-	ID            int                            `json:"id,omitempty"`
-	Description   string                         `json:"description"`
-	AddressFamily string                         `json:"addressFamily"`
-	Entries       []apiNATGatewayPrefixListEntry `json:"entries"`
+	ID            int                             `json:"id,omitempty"`
+	Description   string                          `json:"description"`
+	AddressFamily string                          `json:"addressFamily"`
+	Entries       []*apiNATGatewayPrefixListEntry `json:"entries"`
 }
 
 type apiNATGatewayPrefixListEntry struct {
@@ -326,32 +326,28 @@ type apiNATGatewayPrefixListEntry struct {
 }
 
 // toAPI converts the user-facing NATGatewayPrefixList to its wire-level
-// representation (Ge/Le as strings, zero values omitted).
+// representation (Ge/Le as strings).
 func (p *NATGatewayPrefixList) toAPI() *apiNATGatewayPrefixList {
 	out := &apiNATGatewayPrefixList{
 		ID:            p.ID,
 		Description:   p.Description,
 		AddressFamily: p.AddressFamily,
-		Entries:       make([]apiNATGatewayPrefixListEntry, len(p.Entries)),
+		Entries:       make([]*apiNATGatewayPrefixListEntry, len(p.Entries)),
 	}
 	for i, e := range p.Entries {
-		apiEntry := apiNATGatewayPrefixListEntry{
+		out.Entries[i] = &apiNATGatewayPrefixListEntry{
 			Action: e.Action,
 			Prefix: e.Prefix,
+			Ge:     prefixLenToAPI(e.Ge),
+			Le:     prefixLenToAPI(e.Le),
 		}
-		if e.Ge > 0 {
-			apiEntry.Ge = strconv.Itoa(e.Ge)
-		}
-		if e.Le > 0 {
-			apiEntry.Le = strconv.Itoa(e.Le)
-		}
-		out.Entries[i] = apiEntry
 	}
 	return out
 }
 
-// fromAPI converts a wire-level apiNATGatewayPrefixList into the user-facing
-// NATGatewayPrefixList. Non-numeric Ge/Le strings produce an error.
+// toPrefixList converts a wire-level apiNATGatewayPrefixList into the
+// user-facing NATGatewayPrefixList. A null entry or a non-numeric Ge/Le
+// produces an error.
 func (a *apiNATGatewayPrefixList) toPrefixList() (*NATGatewayPrefixList, error) {
 	out := &NATGatewayPrefixList{
 		ID:            a.ID,
@@ -360,22 +356,24 @@ func (a *apiNATGatewayPrefixList) toPrefixList() (*NATGatewayPrefixList, error) 
 		Entries:       make([]NATGatewayPrefixListEntry, len(a.Entries)),
 	}
 	for i, e := range a.Entries {
-		entry := NATGatewayPrefixListEntry{Action: e.Action, Prefix: e.Prefix}
-		if e.Ge != "" {
-			ge, err := strconv.Atoi(e.Ge)
-			if err != nil {
-				return nil, fmt.Errorf("prefix list entry %d: invalid ge %q: %w", i, e.Ge, err)
-			}
-			entry.Ge = ge
+		// The API declares entries non-nullable, so a null is malformed.
+		if e == nil {
+			return nil, fmt.Errorf("prefix list entry %d: null entry in response", i)
 		}
-		if e.Le != "" {
-			le, err := strconv.Atoi(e.Le)
-			if err != nil {
-				return nil, fmt.Errorf("prefix list entry %d: invalid le %q: %w", i, e.Le, err)
-			}
-			entry.Le = le
+		ge, err := prefixLenFromAPI(e.Ge)
+		if err != nil {
+			return nil, fmt.Errorf("prefix list entry %d: invalid ge %q: %w", i, e.Ge, err)
 		}
-		out.Entries[i] = entry
+		le, err := prefixLenFromAPI(e.Le)
+		if err != nil {
+			return nil, fmt.Errorf("prefix list entry %d: invalid le %q: %w", i, e.Le, err)
+		}
+		out.Entries[i] = NATGatewayPrefixListEntry{
+			Action: e.Action,
+			Prefix: e.Prefix,
+			Ge:     ge,
+			Le:     le,
+		}
 	}
 	return out, nil
 }

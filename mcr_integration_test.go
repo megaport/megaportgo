@@ -199,14 +199,14 @@ func (suite *MCRIntegrationTestSuite) TestCreatePrefixFilterList() {
 		{
 			Action: "permit",
 			Prefix: "10.0.1.0/24",
-			Ge:     24,
-			Le:     24,
+			Ge:     PtrTo(24),
+			Le:     PtrTo(24),
 		},
 		{
 			Action: "deny",
 			Prefix: "10.0.2.0/24",
-			Ge:     24,
-			Le:     24,
+			Ge:     PtrTo(24),
+			Le:     PtrTo(24),
 		},
 	}
 
@@ -298,14 +298,14 @@ func (suite *MCRIntegrationTestSuite) TestMegaportPrefixFilterList() {
 		{
 			Action: "permit",
 			Prefix: "10.0.1.0/24",
-			Ge:     25,
-			Le:     32,
+			Ge:     PtrTo(25),
+			Le:     PtrTo(32),
 		},
 		{
 			Action: "deny",
 			Prefix: "10.0.2.0/24",
-			Ge:     24,
-			Le:     25,
+			Ge:     PtrTo(24),
+			Le:     PtrTo(25),
 		},
 	}
 
@@ -313,14 +313,14 @@ func (suite *MCRIntegrationTestSuite) TestMegaportPrefixFilterList() {
 		{
 			Action: "permit",
 			Prefix: "10.0.1.0/24",
-			Ge:     26,
-			Le:     32,
+			Ge:     PtrTo(26),
+			Le:     PtrTo(32),
 		},
 		{
 			Action: "deny",
 			Prefix: "10.0.2.0/24",
-			Ge:     25,
-			Le:     27,
+			Ge:     PtrTo(25),
+			Le:     PtrTo(27),
 		},
 	}
 
@@ -343,14 +343,16 @@ func (suite *MCRIntegrationTestSuite) TestMegaportPrefixFilterList() {
 			{
 				Action: "permit",
 				Prefix: "10.0.1.0/24",
-				Ge:     25,
-				Le:     32,
+				Ge:     PtrTo(25),
+				Le:     PtrTo(32),
 			},
 			{
 				Action: "deny",
 				Prefix: "10.0.2.0/24",
-				Ge:     0,
-				Le:     25,
+				// Undocumented: the API omits a bound that equals the prefix length.
+				// It also omits a bound the caller never set, so absent has two causes.
+				Ge: nil,
+				Le: PtrTo(25),
 			},
 		},
 	}
@@ -361,14 +363,14 @@ func (suite *MCRIntegrationTestSuite) TestMegaportPrefixFilterList() {
 			{
 				Action: "permit",
 				Prefix: "10.0.1.0/24",
-				Ge:     26,
-				Le:     32,
+				Ge:     PtrTo(26),
+				Le:     PtrTo(32),
 			},
 			{
 				Action: "deny",
 				Prefix: "10.0.2.0/24",
-				Ge:     25,
-				Le:     27,
+				Ge:     PtrTo(25),
+				Le:     PtrTo(27),
 			},
 		},
 	}
@@ -418,14 +420,14 @@ func (suite *MCRIntegrationTestSuite) TestMegaportPrefixFilterList() {
 			{
 				Action: "permit",
 				Prefix: "10.0.1.0/24",
-				Ge:     26,
-				Le:     32,
+				Ge:     PtrTo(26),
+				Le:     PtrTo(32),
 			},
 			{
 				Action: "deny",
 				Prefix: "10.0.2.0/24",
-				Ge:     24,
-				Le:     26,
+				Ge:     PtrTo(24),
+				Le:     PtrTo(26),
 			},
 		},
 	}
@@ -436,14 +438,14 @@ func (suite *MCRIntegrationTestSuite) TestMegaportPrefixFilterList() {
 			{
 				Action: "permit",
 				Prefix: "10.0.1.0/24",
-				Ge:     27,
-				Le:     32,
+				Ge:     PtrTo(27),
+				Le:     PtrTo(32),
 			},
 			{
 				Action: "deny",
 				Prefix: "10.0.2.0/24",
-				Ge:     25,
-				Le:     27,
+				Ge:     PtrTo(25),
+				Le:     PtrTo(27),
 			},
 		},
 	}
@@ -455,14 +457,16 @@ func (suite *MCRIntegrationTestSuite) TestMegaportPrefixFilterList() {
 			{
 				Action: "permit",
 				Prefix: "10.0.1.0/24",
-				Ge:     26,
-				Le:     32,
+				Ge:     PtrTo(26),
+				Le:     PtrTo(32),
 			},
 			{
 				Action: "deny",
 				Prefix: "10.0.2.0/24",
-				Ge:     0,
-				Le:     26,
+				// Undocumented: the API omits a bound that equals the prefix length.
+				// It also omits a bound the caller never set, so absent has two causes.
+				Ge: nil,
+				Le: PtrTo(26),
 			},
 		},
 	}
@@ -474,14 +478,14 @@ func (suite *MCRIntegrationTestSuite) TestMegaportPrefixFilterList() {
 			{
 				Action: "permit",
 				Prefix: "10.0.1.0/24",
-				Ge:     27,
-				Le:     32,
+				Ge:     PtrTo(27),
+				Le:     PtrTo(32),
 			},
 			{
 				Action: "deny",
 				Prefix: "10.0.2.0/24",
-				Ge:     25,
-				Le:     27,
+				Ge:     PtrTo(25),
+				Le:     PtrTo(27),
 			},
 		},
 	}
