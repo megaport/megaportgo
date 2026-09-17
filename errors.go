@@ -170,6 +170,9 @@ var ErrModifyMVERequestNil = errors.New("modify MVE request cannot be nil")
 // ErrDeleteMVERequestNil is returned when DeleteMVE is called with a nil request.
 var ErrDeleteMVERequestNil = errors.New("delete MVE request cannot be nil")
 
+// ErrMVEImagesResponseEmpty is returned when the MVE images API returns a 2xx response with a null or missing data payload.
+var ErrMVEImagesResponseEmpty = errors.New("MVE images response missing data")
+
 // ErrBuyVXCRequestNil is returned when BuyVXC or ValidateVXCOrder is called with a nil request.
 var ErrBuyVXCRequestNil = errors.New("buy VXC request cannot be nil")
 
@@ -191,6 +194,9 @@ var ErrModifyPortRequestNil = errors.New("modify port request cannot be nil")
 // ErrModifyProductRequestNil is returned when ModifyProduct is called with a nil request.
 var ErrModifyProductRequestNil = errors.New("modify product request cannot be nil")
 
+// ErrProductResourceTagsResponseEmpty is returned when the product resource tags API returns a 2xx response with a null or missing data payload.
+var ErrProductResourceTagsResponseEmpty = errors.New("product resource tags response missing data")
+
 // ErrDeleteProductRequestNil is returned when DeleteProduct is called with a nil request.
 var ErrDeleteProductRequestNil = errors.New("delete product request cannot be nil")
 
@@ -208,6 +214,15 @@ var ErrCreateUserRequestNil = errors.New("create user request cannot be nil")
 
 // ErrUpdateUserRequestNil is returned when UpdateUser is called with a nil request.
 var ErrUpdateUserRequestNil = errors.New("update user request cannot be nil")
+
+// ErrListIPRoutesRequestNil is returned when ListIPRoutesWithFilter is called with a nil request.
+var ErrListIPRoutesRequestNil = errors.New("list IP routes request cannot be nil")
+
+// ErrListBGPRoutesRequestNil is returned when ListBGPRoutesWithFilter is called with a nil request.
+var ErrListBGPRoutesRequestNil = errors.New("list BGP routes request cannot be nil")
+
+// ErrListBGPNeighborRoutesRequestNil is returned when ListBGPNeighborRoutes is called with a nil request.
+var ErrListBGPNeighborRoutesRequestNil = errors.New("list BGP neighbor routes request cannot be nil")
 
 // maintenanceStatesToString converts a slice of MaintenanceState to a slice of strings
 func maintenanceStatesToString(states []MaintenanceState) []string {
