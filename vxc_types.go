@@ -376,6 +376,20 @@ type IPsecTunnelConfig struct {
 	Phase2Lifetime       *int   `json:"phase2Lifetime,omitempty"` // seconds, 600-86400, must be < Phase1Lifetime, API default 3600
 }
 
+// IPsecTunnelState is the IPsec tunnel a VXC read returns on an MCR
+// interface. It mirrors IPsecTunnelConfig without PreSharedKey: the API
+// sends the key back in plaintext, and decoding it would carry a live
+// secret into Terraform state and CLI output.
+type IPsecTunnelState struct {
+	SourceIpAddress      string `json:"sourceIpAddress"`
+	DestinationIpAddress string `json:"destinationIpAddress"`
+	Passive              *bool  `json:"passive,omitempty"`
+	LocalId              string `json:"localId,omitempty"`
+	RemoteId             string `json:"remoteId,omitempty"`
+	Phase1Lifetime       *int   `json:"phase1Lifetime,omitempty"`
+	Phase2Lifetime       *int   `json:"phase2Lifetime,omitempty"`
+}
+
 // IpRoute represents an IP route.
 type IpRoute struct {
 	Prefix      string `json:"prefix"`
@@ -588,7 +602,7 @@ type CSPConnectionVirtualRouterInterface struct {
 	NatIPAddresses     []string              `json:"natIpAddresses"`
 	BFD                BfdConfig             `json:"bfd"`
 	InterfaceType      string                `json:"interfaceType,omitempty"` // InterfaceTypeSubInterface (default) or InterfaceTypeIPSecTunnel.
-	IpSecTunnelOptions *IPsecTunnelConfig    `json:"ipSecTunnelOptions,omitempty"`
+	IpSecTunnelOptions *IPsecTunnelState     `json:"ipSecTunnelOptions,omitempty"`
 	Description        string                `json:"description,omitempty"`
 	IpMtu              *int                  `json:"ipMtu,omitempty"`
 	VLAN               *int                  `json:"vlan,omitempty"` // Inner VLAN for Q-in-Q. Not applicable on an IPsec tunnel interface. -1 means no inner VLAN.
@@ -601,11 +615,15 @@ type CSPConnectionVirtualRouterInterface struct {
 // single-element ipRoutes, bgpConnections or dhcpPools list down to a bare
 // object; accept either shape for each.
 func (i *CSPConnectionVirtualRouterInterface) UnmarshalJSON(data []byte) error {
+	// Decode from zero so a setting the API omits reads back as nil rather
+	// than whatever a reused receiver already held.
+	*i = CSPConnectionVirtualRouterInterface{}
+
 	type alias CSPConnectionVirtualRouterInterface
 	aux := struct {
 		IPRoutes       json.RawMessage `json:"ipRoutes"`
 		BGPConnections json.RawMessage `json:"bgpConnections"`
-		DhcpPools      json.RawMessage `json:"dhcpPools,omitempty"`
+		DhcpPools      json.RawMessage `json:"dhcpPools"`
 		*alias
 	}{alias: (*alias)(i)}
 
@@ -628,19 +646,36 @@ func (i *CSPConnectionVirtualRouterInterface) UnmarshalJSON(data []byte) error {
 
 // decodeListOrObject decodes raw as a JSON array, or wraps a single JSON
 // object into a one-element slice, matching the API's habit of coercing a
-// singleton list field down to a bare object.
+// singleton list field down to a bare object. A null element and an empty
+// object both decode to no entry, because every item type here has required
+// fields and a blank entry would be indistinguishable from a real one.
 func decodeListOrObject[T any](raw json.RawMessage) ([]T, error) {
 	raw = bytes.TrimSpace(raw)
 	switch {
-	case len(raw) == 0 || bytes.Equal(raw, []byte("null")):
+	case len(raw) == 0 || bytes.Equal(raw, jsonNull):
 		return nil, nil
 	case bytes.HasPrefix(raw, []byte("[")):
-		var list []T
-		if err := json.Unmarshal(raw, &list); err != nil {
+		var elems []json.RawMessage
+		if err := json.Unmarshal(raw, &elems); err != nil {
 			return nil, err
+		}
+		list := make([]T, 0, len(elems))
+		for _, elem := range elems {
+			if bytes.Equal(bytes.TrimSpace(elem), jsonNull) {
+				continue
+			}
+			var item T
+			if err := json.Unmarshal(elem, &item); err != nil {
+				return nil, err
+			}
+			list = append(list, item)
 		}
 		return list, nil
 	default:
+		var fields map[string]json.RawMessage
+		if err := json.Unmarshal(raw, &fields); err == nil && len(fields) == 0 {
+			return nil, nil
+		}
 		var item T
 		if err := json.Unmarshal(raw, &item); err != nil {
 			return nil, err
