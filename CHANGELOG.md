@@ -19,6 +19,7 @@
 - Breaking: the types behind the removed methods are gone too: `RouteProtocol` and its constants, `LookingGlassRouteDirection` and its constants, `BGPSessionStatus`, `LookingGlassBGPSession`, `ListBGPSessionsRequest`, `LookingGlassAsyncStatus`, `LookingGlassAsyncJob`, `AsyncIPRoutesData`, `AsyncBGPNeighborRoutesData`, and every exported `LookingGlass*Response` envelope.
 - The nil-request guards on `ListIPRoutesWithFilter`, `ListBGPRoutesWithFilter`, and `ListBGPNeighborRoutes` now return `ErrListIPRoutesRequestNil`, `ErrListBGPRoutesRequestNil`, and `ErrListBGPNeighborRoutesRequestNil`, so callers can use `errors.Is` instead of matching the message.
 - `CheckPortVLANAvailability` now returns the response body read error instead of a stale nil error. A truncated or reset body previously came back as `(false, nil)`, which callers read as "VLAN not available".
+- `GetVXC` now decodes `ipRoutes`, `bgpConnections` and `dhcpPools` on a vrouter interface when the API sends a single entry as a bare object instead of an array. Previously this failed with a JSON unmarshal error.
 
 # 1.0.0 Release
 

@@ -597,12 +597,15 @@ type CSPConnectionVirtualRouterInterface struct {
 	DhcpPools          []DhcpPoolConfig      `json:"dhcpPools,omitempty"`
 }
 
-// UnmarshalJSON decodes a vrouter interface. The API sends dhcpPools as an
-// array, but coerces a single pool down to a bare object; accept either shape.
+// UnmarshalJSON decodes a vrouter interface. The API coerces a
+// single-element ipRoutes, bgpConnections or dhcpPools list down to a bare
+// object; accept either shape for each.
 func (i *CSPConnectionVirtualRouterInterface) UnmarshalJSON(data []byte) error {
 	type alias CSPConnectionVirtualRouterInterface
 	aux := struct {
-		DhcpPools json.RawMessage `json:"dhcpPools,omitempty"`
+		IPRoutes       json.RawMessage `json:"ipRoutes"`
+		BGPConnections json.RawMessage `json:"bgpConnections"`
+		DhcpPools      json.RawMessage `json:"dhcpPools,omitempty"`
 		*alias
 	}{alias: (*alias)(i)}
 
@@ -610,19 +613,39 @@ func (i *CSPConnectionVirtualRouterInterface) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	raw := bytes.TrimSpace(aux.DhcpPools)
+	var err error
+	if i.IPRoutes, err = decodeListOrObject[IpRoute](aux.IPRoutes); err != nil {
+		return err
+	}
+	if i.BGPConnections, err = decodeListOrObject[BgpConnectionConfig](aux.BGPConnections); err != nil {
+		return err
+	}
+	if i.DhcpPools, err = decodeListOrObject[DhcpPoolConfig](aux.DhcpPools); err != nil {
+		return err
+	}
+	return nil
+}
+
+// decodeListOrObject decodes raw as a JSON array, or wraps a single JSON
+// object into a one-element slice, matching the API's habit of coercing a
+// singleton list field down to a bare object.
+func decodeListOrObject[T any](raw json.RawMessage) ([]T, error) {
+	raw = bytes.TrimSpace(raw)
 	switch {
 	case len(raw) == 0 || bytes.Equal(raw, []byte("null")):
-		return nil
+		return nil, nil
 	case bytes.HasPrefix(raw, []byte("[")):
-		return json.Unmarshal(raw, &i.DhcpPools)
-	default:
-		var pool DhcpPoolConfig
-		if err := json.Unmarshal(raw, &pool); err != nil {
-			return err
+		var list []T
+		if err := json.Unmarshal(raw, &list); err != nil {
+			return nil, err
 		}
-		i.DhcpPools = []DhcpPoolConfig{pool}
-		return nil
+		return list, nil
+	default:
+		var item T
+		if err := json.Unmarshal(raw, &item); err != nil {
+			return nil, err
+		}
+		return []T{item}, nil
 	}
 }
 

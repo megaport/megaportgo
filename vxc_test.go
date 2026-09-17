@@ -633,9 +633,10 @@ func (suite *VXCClientTestSuite) TestGetVXCWithVRouterInterfaces() {
 	suite.Nil(tunnelInterface.DhcpPools)
 }
 
-// TestGetVXCWithVRouterInterfaceDhcpPoolAsObject tests that GetVXC decodes a
-// dhcpPools field the API sends as a bare object instead of an array.
-func (suite *VXCClientTestSuite) TestGetVXCWithVRouterInterfaceDhcpPoolAsObject() {
+// TestGetVXCWithVRouterInterfaceListFieldsAsObject tests that GetVXC decodes
+// ipRoutes, bgpConnections and dhcpPools fields the API sends as a bare
+// object instead of an array.
+func (suite *VXCClientTestSuite) TestGetVXCWithVRouterInterfaceListFieldsAsObject() {
 	ctx := context.Background()
 	vxcSvc := suite.client.VXCService
 
@@ -644,6 +645,12 @@ func (suite *VXCClientTestSuite) TestGetVXCWithVRouterInterfaceDhcpPoolAsObject(
 	wantInterfaces := []CSPConnectionVirtualRouterInterface{
 		{
 			IPAddresses: []string{"192.168.1.1/30"},
+			IPRoutes: []IpRoute{
+				{Prefix: "10.0.0.0/24", NextHop: "192.168.1.2"},
+			},
+			BGPConnections: []BgpConnectionConfig{
+				{PeerAsn: 65001, LocalIpAddress: "192.168.1.1", PeerIpAddress: "192.168.1.2"},
+			},
 			DhcpPools: []DhcpPoolConfig{
 				{
 					Network:        "10.0.0.0/24",
@@ -670,6 +677,8 @@ func (suite *VXCClientTestSuite) TestGetVXCWithVRouterInterfaceDhcpPoolAsObject(
 					"interfaces": [
 						{
 							"ipAddresses": ["192.168.1.1/30"],
+							"ipRoutes": {"prefix": "10.0.0.0/24", "nextHop": "192.168.1.2"},
+							"bgpConnections": {"peerAsn": 65001, "localIpAddress": "192.168.1.1", "peerIpAddress": "192.168.1.2"},
 							"dhcpPools": {
 								"network": "10.0.0.0/24",
 								"startIpAddress": "10.0.0.10",
