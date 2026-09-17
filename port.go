@@ -498,7 +498,7 @@ func (svc *PortServiceOp) CheckPortVLANAvailability(ctx context.Context, portId 
 
 	body, fileErr := io.ReadAll(response.Body)
 	if fileErr != nil {
-		return false, err
+		return false, fileErr
 	}
 
 	vlanResponse := PortVLANAvailabilityAPIResponse{}
