@@ -4,10 +4,13 @@ import (
 	"context"
 	"log/slog"
 	"os"
-	"strings"
 	"testing"
 	"time"
 )
+
+// routeDiagnosticsTimeout bounds one route diagnostics call so a stuck
+// operation fails the test instead of running to the suite timeout.
+const routeDiagnosticsTimeout = 2 * time.Minute
 
 // MCRLookingGlassIntegrationTestSuite is the integration test suite for the MCR Looking Glass service.
 type MCRLookingGlassIntegrationTestSuite IntegrationTestSuite
@@ -37,12 +40,40 @@ func (suite *MCRLookingGlassIntegrationTestSuite) SetupSuite() {
 	suite.client = megaportClient
 }
 
-// TestLookingGlassWithMCR tests the Looking Glass endpoints with a real MCR.
-// This test creates an MCR, queries the Looking Glass, and then cleans up.
-func (suite *MCRLookingGlassIntegrationTestSuite) TestLookingGlassWithMCR() {
-	if strings.Contains(MEGAPORTURL, "staging") {
-		suite.T().Skip("Looking Glass API endpoints are not available in the staging environment")
+// routeDiagnosticsCtx gives one route diagnostics call its own deadline, so a
+// slow call cannot spend the budget of the calls after it.
+func (suite *MCRLookingGlassIntegrationTestSuite) routeDiagnosticsCtx(ctx context.Context) context.Context {
+	callCtx, cancel := context.WithTimeout(ctx, routeDiagnosticsTimeout)
+	suite.T().Cleanup(cancel)
+	return callCtx
+}
+
+// A renamed wire field decodes to a zero-valued struct and still passes NoError,
+// so check prefix and protocol, which the spec marks required.
+func (suite *MCRLookingGlassIntegrationTestSuite) assertIPRoutesDecoded(routes []*LookingGlassIPRoute) {
+	if len(routes) == 0 {
+		suite.T().Log("no IP routes returned; decode assertions did not run")
+		return
 	}
+	suite.NotEmpty(routes[0].Prefix, "IP route prefix should decode")
+	suite.NotEmpty(routes[0].Protocol, "IP route protocol should decode")
+}
+
+// assertBGPRoutesDecoded checks prefix and origin, two of the fields the spec
+// marks required. A fresh MCR has no BGP routes; TEST_MCR_UID is what
+// exercises this.
+func (suite *MCRLookingGlassIntegrationTestSuite) assertBGPRoutesDecoded(routes []*LookingGlassBGPRoute) {
+	if len(routes) == 0 {
+		suite.T().Log("no BGP routes returned; decode assertions did not run")
+		return
+	}
+	suite.NotEmpty(routes[0].Prefix, "BGP route prefix should decode")
+	suite.NotEmpty(routes[0].Origin, "BGP route origin should decode")
+}
+
+// TestLookingGlassWithMCR tests the route diagnostics endpoints with a real MCR.
+// This test creates an MCR, queries the routing tables, and then cleans up.
+func (suite *MCRLookingGlassIntegrationTestSuite) TestLookingGlassWithMCR() {
 	ctx := context.Background()
 	logger := suite.client.Logger
 	mcrSvc := suite.client.MCRService
@@ -80,6 +111,10 @@ func (suite *MCRLookingGlassIntegrationTestSuite) TestLookingGlassWithMCR() {
 
 	logger.InfoContext(ctx, "MCR Purchased for Looking Glass test", slog.String("mcr_id", mcrUID))
 
+	// Give the data plane a moment after provisioning, so the route diagnostics
+	// call does not run against an unpopulated table.
+	time.Sleep(10 * time.Second)
+
 	// Cleanup function to delete the MCR after the test
 	defer func() {
 		logger.InfoContext(ctx, "Cleaning up test MCR", slog.String("mcr_id", mcrUID))
@@ -92,62 +127,50 @@ func (suite *MCRLookingGlassIntegrationTestSuite) TestLookingGlassWithMCR() {
 		}
 	}()
 
-	// Test ListIPRoutes
-	logger.DebugContext(ctx, "Testing ListIPRoutes")
-	routes, err := lgSvc.ListIPRoutes(ctx, mcrUID)
-	suite.NoError(err, "ListIPRoutes should not return error")
-	// A newly provisioned MCR should have at least connected routes
-	logger.InfoContext(ctx, "ListIPRoutes result", slog.Int("route_count", len(routes)))
-
-	// Test ListIPRoutesWithFilter - filter by protocol
-	logger.DebugContext(ctx, "Testing ListIPRoutesWithFilter with CONNECTED protocol")
-	connectedRoutes, err := lgSvc.ListIPRoutesWithFilter(ctx, &ListIPRoutesRequest{
-		MCRID:    mcrUID,
-		Protocol: RouteProtocolConnected,
-	})
-	suite.NoError(err, "ListIPRoutesWithFilter should not return error")
-	logger.InfoContext(ctx, "Connected routes", slog.Int("route_count", len(connectedRoutes)))
-
-	// Test ListBGPRoutes - likely empty for a new MCR without VXCs
-	logger.DebugContext(ctx, "Testing ListBGPRoutes")
-	bgpRoutes, err := lgSvc.ListBGPRoutes(ctx, mcrUID)
-	suite.NoError(err, "ListBGPRoutes should not return error")
-	logger.InfoContext(ctx, "BGP routes", slog.Int("route_count", len(bgpRoutes)))
-
-	// Test ListBGPSessions - likely empty for a new MCR without VXCs
-	logger.DebugContext(ctx, "Testing ListBGPSessions")
-	bgpSessions, err := lgSvc.ListBGPSessions(ctx, mcrUID)
-	suite.NoError(err, "ListBGPSessions should not return error")
-	logger.InfoContext(ctx, "BGP sessions", slog.Int("session_count", len(bgpSessions)))
-
-	// Test async IP routes retrieval
-	logger.DebugContext(ctx, "Testing ListIPRoutesAsync")
-	asyncJob, err := lgSvc.ListIPRoutesAsync(ctx, mcrUID)
-	if err != nil {
-		// Async might not be supported or enabled - log and continue
-		logger.WarnContext(ctx, "ListIPRoutesAsync returned error (may not be supported)", slog.String("error", err.Error()))
-	} else {
-		suite.NotNil(asyncJob, "Async job should not be nil")
-		suite.NotEmpty(asyncJob.JobID, "Async job ID should not be empty")
-		logger.InfoContext(ctx, "Async job created", slog.String("job_id", asyncJob.JobID), slog.String("status", string(asyncJob.Status)))
-
-		// Wait for async results. The 2-minute bound is on the context so that
-		// the wait helper cannot outlive it.
-		waitCtx, cancelWait := context.WithTimeout(ctx, 2*time.Minute)
-		asyncRoutes, err := lgSvc.WaitForAsyncIPRoutes(waitCtx, mcrUID, asyncJob.JobID)
-		cancelWait()
-		if err != nil {
-			logger.WarnContext(ctx, "WaitForAsyncIPRoutes returned error", slog.String("error", err.Error()))
-		} else {
-			logger.InfoContext(ctx, "Async routes received", slog.Int("route_count", len(asyncRoutes)))
+	// Each endpoint runs as its own sub-case, so a transient 429 or 5xx on one
+	// skips only that endpoint instead of hiding the other two.
+	suite.Run("ip-routes", func() {
+		routes, err := lgSvc.ListIPRoutes(suite.routeDiagnosticsCtx(ctx), mcrUID)
+		if isTransientDiagnosticsError(err) {
+			suite.T().Skip("transient backend error (429/5xx); skipping ip-routes sub-case")
+			return
 		}
-	}
+		suite.NoError(err, "ListIPRoutes should not return error")
+		suite.assertIPRoutesDecoded(routes)
+		logger.InfoContext(ctx, "ListIPRoutes result", slog.Int("route_count", len(routes)))
+	})
+
+	suite.Run("ip-routes-filtered", func() {
+		filteredRoutes, err := lgSvc.ListIPRoutesWithFilter(suite.routeDiagnosticsCtx(ctx), &ListIPRoutesRequest{
+			MCRID:    mcrUID,
+			IPFilter: "0.0.0.0/0",
+		})
+		if isTransientDiagnosticsError(err) {
+			suite.T().Skip("transient backend error (429/5xx); skipping ip-routes-filtered sub-case")
+			return
+		}
+		suite.NoError(err, "ListIPRoutesWithFilter should not return error")
+		suite.assertIPRoutesDecoded(filteredRoutes)
+		logger.InfoContext(ctx, "Filtered routes", slog.Int("route_count", len(filteredRoutes)))
+	})
+
+	suite.Run("bgp-routes", func() {
+		bgpRoutes, err := lgSvc.ListBGPRoutes(suite.routeDiagnosticsCtx(ctx), mcrUID)
+		if isTransientDiagnosticsError(err) {
+			suite.T().Skip("transient backend error (429/5xx); skipping bgp-routes sub-case")
+			return
+		}
+		suite.NoError(err, "ListBGPRoutes should not return error")
+		suite.assertBGPRoutesDecoded(bgpRoutes)
+		logger.InfoContext(ctx, "BGP routes", slog.Int("route_count", len(bgpRoutes)))
+	})
 
 	logger.InfoContext(ctx, "Looking Glass integration test completed successfully")
 }
 
-// TestLookingGlassWithExistingMCR tests Looking Glass with an existing MCR if MCR_UID env var is set.
-// This allows testing against a real MCR with active BGP sessions.
+// TestLookingGlassWithExistingMCR tests route diagnostics against an existing
+// MCR when TEST_MCR_UID is set. Set TEST_MCR_BGP_PEER_IP as well to also
+// exercise the BGP neighbor routes endpoint, which needs a live peer.
 func (suite *MCRLookingGlassIntegrationTestSuite) TestLookingGlassWithExistingMCR() {
 	mcrUID := os.Getenv("TEST_MCR_UID")
 	if mcrUID == "" {
@@ -162,8 +185,9 @@ func (suite *MCRLookingGlassIntegrationTestSuite) TestLookingGlassWithExistingMC
 	logger.InfoContext(ctx, "Testing Looking Glass with existing MCR", slog.String("mcr_id", mcrUID))
 
 	// Test ListIPRoutes
-	routes, err := lgSvc.ListIPRoutes(ctx, mcrUID)
+	routes, err := lgSvc.ListIPRoutes(suite.routeDiagnosticsCtx(ctx), mcrUID)
 	suite.NoError(err, "ListIPRoutes should not return error")
+	suite.assertIPRoutesDecoded(routes)
 	logger.InfoContext(ctx, "ListIPRoutes result", slog.Int("route_count", len(routes)))
 
 	// Log some route details for debugging
@@ -174,48 +198,42 @@ func (suite *MCRLookingGlassIntegrationTestSuite) TestLookingGlassWithExistingMC
 		}
 		logger.DebugContext(ctx, "Route",
 			slog.String("prefix", route.Prefix),
-			slog.String("next_hop", route.NextHop),
-			slog.String("protocol", string(route.Protocol)),
+			slog.String("next_hop", route.NextHop.IP),
+			slog.String("protocol", route.Protocol),
 		)
 	}
 
 	// Test ListBGPRoutes
-	bgpRoutes, err := lgSvc.ListBGPRoutes(ctx, mcrUID)
+	bgpRoutes, err := lgSvc.ListBGPRoutes(suite.routeDiagnosticsCtx(ctx), mcrUID)
 	suite.NoError(err, "ListBGPRoutes should not return error")
+	suite.assertBGPRoutesDecoded(bgpRoutes)
 	logger.InfoContext(ctx, "BGP routes", slog.Int("route_count", len(bgpRoutes)))
 
-	// Test ListBGPSessions
-	bgpSessions, err := lgSvc.ListBGPSessions(ctx, mcrUID)
-	suite.NoError(err, "ListBGPSessions should not return error")
-	logger.InfoContext(ctx, "BGP sessions", slog.Int("session_count", len(bgpSessions)))
-
-	// If we have BGP sessions, test neighbor routes
-	if len(bgpSessions) > 0 {
-		session := bgpSessions[0]
-		logger.InfoContext(ctx, "Testing BGP neighbor routes for session",
-			slog.String("session_id", session.SessionID),
-			slog.String("neighbor", session.NeighborAddress),
-			slog.Int("neighbor_asn", session.NeighborASN),
-		)
-
-		// Test received routes
-		receivedRoutes, err := lgSvc.ListBGPNeighborRoutes(ctx, &ListBGPNeighborRoutesRequest{
-			MCRID:     mcrUID,
-			SessionID: session.SessionID,
-			Direction: LookingGlassRouteDirectionReceived,
-		})
-		suite.NoError(err, "ListBGPNeighborRoutes (received) should not return error")
-		logger.InfoContext(ctx, "Received routes from neighbor", slog.Int("route_count", len(receivedRoutes)))
-
-		// Test advertised routes
-		advertisedRoutes, err := lgSvc.ListBGPNeighborRoutes(ctx, &ListBGPNeighborRoutesRequest{
-			MCRID:     mcrUID,
-			SessionID: session.SessionID,
-			Direction: LookingGlassRouteDirectionAdvertised,
-		})
-		suite.NoError(err, "ListBGPNeighborRoutes (advertised) should not return error")
-		logger.InfoContext(ctx, "Advertised routes to neighbor", slog.Int("route_count", len(advertisedRoutes)))
+	// The neighbor endpoint rejects a peer IP the MCR does not peer with, so it
+	// needs an MCR with a live BGP session named by the caller.
+	peerIP := os.Getenv("TEST_MCR_BGP_PEER_IP")
+	if peerIP == "" {
+		logger.InfoContext(ctx, "TEST_MCR_BGP_PEER_IP not set, skipping BGP neighbor routes")
+		return
 	}
+
+	receivedRoutes, err := lgSvc.ListBGPNeighborRoutes(suite.routeDiagnosticsCtx(ctx), &ListBGPNeighborRoutesRequest{
+		MCRID:         mcrUID,
+		PeerIPAddress: peerIP,
+		Direction:     BGPRouteDirectionReceived,
+	})
+	suite.NoError(err, "ListBGPNeighborRoutes (received) should not return error")
+	suite.assertBGPRoutesDecoded(receivedRoutes)
+	logger.InfoContext(ctx, "Received routes from neighbor", slog.Int("route_count", len(receivedRoutes)))
+
+	advertisedRoutes, err := lgSvc.ListBGPNeighborRoutes(suite.routeDiagnosticsCtx(ctx), &ListBGPNeighborRoutesRequest{
+		MCRID:         mcrUID,
+		PeerIPAddress: peerIP,
+		Direction:     BGPRouteDirectionAdvertised,
+	})
+	suite.NoError(err, "ListBGPNeighborRoutes (advertised) should not return error")
+	suite.assertBGPRoutesDecoded(advertisedRoutes)
+	logger.InfoContext(ctx, "Advertised routes to neighbor", slog.Int("route_count", len(advertisedRoutes)))
 
 	logger.InfoContext(ctx, "Looking Glass test with existing MCR completed")
 }

@@ -368,6 +368,9 @@ func (svc *MVEServiceOp) ListMVEImages(ctx context.Context) ([]*MVEImage, error)
 	if err := json.Unmarshal(body, &imageResp); err != nil {
 		return nil, err
 	}
+	if imageResp.Data == nil {
+		return nil, ErrMVEImagesResponseEmpty
+	}
 
 	// Flatten the nested v4 response structure to maintain backward compatibility
 	// Product and Vendor are denormalized from the parent level to each image
