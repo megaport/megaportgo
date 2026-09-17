@@ -111,6 +111,9 @@ var ErrMCRNotFound = errors.New("mcr not found or deleted")
 // ErrMCRDecommissioned is returned when an MCR has been decommissioned.
 var ErrMCRDecommissioned = errors.New("mcr has been decommissioned")
 
+// ErrMCRIPsecNoData is returned when GetMCRIPsec gets a successful response with no data payload.
+var ErrMCRIPsecNoData = errors.New("mcr ipsec response contained no data")
+
 // IsServiceNotFoundError reports whether err is a Megaport API not-found response —
 // either HTTP 404 or the non-standard HTTP 400 "Could not find a service with UID" form.
 func IsServiceNotFoundError(err error) bool {
