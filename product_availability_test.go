@@ -29,8 +29,6 @@ func (suite *ProductAvailabilityClientTestSuite) SetupTest() {
 	suite.client = NewClient(nil, nil)
 	url, _ := url.Parse(suite.server.URL)
 	suite.client.BaseURL = url
-
-	suite.client.ProductAvailabilityService = NewProductAvailabilityService(suite.client)
 }
 
 func (suite *ProductAvailabilityClientTestSuite) TearDownTest() {
@@ -151,14 +149,12 @@ func (suite *ProductAvailabilityClientTestSuite) TestListCompanyProductAvailabil
 	suite.Equal(http.StatusForbidden, errResp.Response.StatusCode)
 }
 
-// A body that declares more bytes than it writes fails the decode mid-read.
-func (suite *ProductAvailabilityClientTestSuite) TestListCompanyProductAvailabilityBodyReadError() {
+func (suite *ProductAvailabilityClientTestSuite) TestListCompanyProductAvailabilityDecodeError() {
 	ctx := context.Background()
 	path := "/v1/availability/companies/" + testAvailabilityCompanyUID + "/products"
 
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Content-Length", "4096")
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, `{"message":"test-message","data":[`)
 	})
@@ -166,4 +162,37 @@ func (suite *ProductAvailabilityClientTestSuite) TestListCompanyProductAvailabil
 	got, err := suite.client.ProductAvailabilityService.ListCompanyProductAvailability(ctx, testAvailabilityCompanyUID)
 	suite.Nil(got)
 	suite.Error(err)
+}
+
+// The client constructor must wire the service, not only the test setup.
+func (suite *ProductAvailabilityClientTestSuite) TestProductAvailabilityServiceIsWired() {
+	c, err := New(nil)
+	suite.NoError(err)
+	suite.NotNil(c.ProductAvailabilityService)
+}
+
+func (suite *ProductAvailabilityClientTestSuite) TestListCompanyProductAvailabilityEmptyCompanyUID() {
+	got, err := suite.client.ProductAvailabilityService.ListCompanyProductAvailability(context.Background(), "")
+	suite.Nil(got)
+	suite.ErrorIs(err, ErrCompanyUIDRequired)
+}
+
+// A hostile company UID must stay inside its own path segment. The server is a bare
+// handler, not a ServeMux: a ServeMux cleans the path and redirects before the handler runs.
+func (suite *ProductAvailabilityClientTestSuite) TestListCompanyProductAvailabilityEscapesCompanyUID() {
+	var gotURI string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotURI = r.RequestURI
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	serverURL, err := url.Parse(server.URL)
+	suite.NoError(err)
+	suite.client.BaseURL = serverURL
+
+	got, err := suite.client.ProductAvailabilityService.ListCompanyProductAvailability(context.Background(), "../../v2/product/deadbeef")
+	suite.Nil(got)
+	suite.Error(err)
+	suite.Equal("/v1/availability/companies/..%2F..%2Fv2%2Fproduct%2Fdeadbeef/products", gotURI)
 }
