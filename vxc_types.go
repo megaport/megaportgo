@@ -347,8 +347,7 @@ type PartnerConfigInterface struct {
 
 // DhcpPoolConfig is a DHCP pool served on an MCR interface
 // (PartnerConfigInterface.DhcpPools). Network, StartIpAddress and EndIpAddress
-// are required. The SDK does not decode pools on the VXC read, so this is
-// write-only today. See
+// are required. See
 // https://docs.megaport.com/mcr/configuring-mcr#configuring-a-dhcp-pool.
 type DhcpPoolConfig struct {
 	Network        string   `json:"network"` // CIDR, e.g. 192.168.1.0/24. The API normalizes host bits to zero.
@@ -583,11 +582,19 @@ type CSPConnectionVirtualRouter struct {
 
 // CSPConnectionVirtualRouterInterface represents the configuration of a CSP connection for Virtual Router interface.
 type CSPConnectionVirtualRouterInterface struct {
-	IPAddresses    []string              `json:"ipAddresses"`
-	IPRoutes       []IpRoute             `json:"ipRoutes"`
-	BGPConnections []BgpConnectionConfig `json:"bgpConnections"`
-	NatIPAddresses []string              `json:"natIpAddresses"`
-	BFD            BfdConfig             `json:"bfd"`
+	IPAddresses        []string              `json:"ipAddresses"`
+	IPRoutes           []IpRoute             `json:"ipRoutes"`
+	BGPConnections     []BgpConnectionConfig `json:"bgpConnections"`
+	NatIPAddresses     []string              `json:"natIpAddresses"`
+	BFD                BfdConfig             `json:"bfd"`
+	InterfaceType      string                `json:"interfaceType,omitempty"` // InterfaceTypeSubInterface (default) or InterfaceTypeIPSecTunnel.
+	IpSecTunnelOptions *IPsecTunnelConfig    `json:"ipSecTunnelOptions,omitempty"`
+	Description        string                `json:"description,omitempty"`
+	IpMtu              *int                  `json:"ipMtu,omitempty"`
+	VLAN               *int                  `json:"vlan,omitempty"` // Inner VLAN for Q-in-Q; not applicable on an IPsec tunnel interface.
+	PacketFilterIn     *int64                `json:"packetFilterIn,omitempty"`
+	PacketFilterOut    *int64                `json:"packetFilterOut,omitempty"`
+	DhcpPools          []DhcpPoolConfig      `json:"dhcpPools,omitempty"`
 }
 
 type CSPConnectionOracle struct {
