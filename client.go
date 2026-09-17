@@ -430,6 +430,14 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v any) (*http.Respon
 	if err != nil {
 		return nil, err
 	}
+	// Close the body on every error return below so we don't leak the
+	// connection. On success the caller owns the body.
+	success := false
+	defer func() {
+		if !success {
+			_ = resp.Body.Close()
+		}
+	}()
 	if c.onRequestCompleted != nil {
 		c.onRequestCompleted(req, resp)
 	}
@@ -447,10 +455,10 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v any) (*http.Respon
 	tmpDisable := ctx.Value(disableResponseBodyLogging) != nil
 	if c.LogResponseBody && !tmpDisable {
 		b, err := io.ReadAll(resp.Body)
-		_ = resp.Body.Close()
 		if err != nil {
 			return nil, err
 		}
+		_ = resp.Body.Close()
 
 		// Create new reader for the later code
 		respBody = io.NopCloser(bytes.NewReader(b))
@@ -482,7 +490,22 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v any) (*http.Respon
 		}
 	}
 
+	success = true
 	return resp, nil
+}
+
+// doDiscard runs Do for callers that ignore the response payload, draining
+// and closing the body so the connection is not leaked.
+func (c *Client) doDiscard(ctx context.Context, req *http.Request) error {
+	resp, err := c.Do(ctx, req, nil)
+	if err != nil {
+		return err
+	}
+	_, _ = io.Copy(io.Discard, resp.Body)
+	// A close error here means the connection was already broken, not that the
+	// request failed, so it must not turn a completed mutation into an error.
+	_ = resp.Body.Close()
+	return nil
 }
 
 type AuthInfo struct {
