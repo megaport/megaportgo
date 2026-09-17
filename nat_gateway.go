@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strconv"
 	"time"
 )
 
@@ -364,38 +363,8 @@ func (svc *NATGatewayServiceOp) GetNATGatewayTelemetry(ctx context.Context, req 
 	if err := validateGetNATGatewayTelemetryRequest(req); err != nil {
 		return nil, err
 	}
-
 	path := fmt.Sprintf("/v3/products/nat_gateways/%s/telemetry", url.PathEscape(req.ProductUID))
-
-	params := url.Values{}
-	for _, t := range req.Types {
-		params.Add("type", t)
-	}
-	if req.From != nil {
-		params.Set("from", strconv.FormatInt(req.From.UnixMilli(), 10))
-	}
-	if req.To != nil {
-		params.Set("to", strconv.FormatInt(req.To.UnixMilli(), 10))
-	}
-	if req.Days != nil {
-		params.Set("days", strconv.FormatInt(int64(*req.Days), 10))
-	}
-
-	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, path+"?"+params.Encode(), nil)
-	if err != nil {
-		return nil, err
-	}
-	var buf bytes.Buffer
-	resp, err := svc.Client.Do(ctx, clientReq, &buf)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	telemetryResp := &ServiceTelemetryResponse{}
-	if err := json.Unmarshal(buf.Bytes(), telemetryResp); err != nil {
-		return nil, err
-	}
-	return telemetryResp, nil
+	return fetchTelemetry(ctx, svc.Client, path, req.Types, req.From, req.To, req.Days)
 }
 
 // doJSON sends a JSON request and decodes the response into out (or discards

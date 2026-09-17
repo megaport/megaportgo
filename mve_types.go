@@ -1,5 +1,10 @@
 package megaport
 
+import (
+	"errors"
+	"time"
+)
+
 // MVEOrderConfig represents a request to buy an MVE from the Megaport Products API.
 type MVEOrderConfig struct {
 	LocationID        int                   `json:"locationId"`
@@ -354,4 +359,34 @@ type mveSizeAPIResponse struct {
 	Message string     `json:"message"`
 	Terms   string     `json:"terms"`
 	Data    []*MVESize `json:"data"`
+}
+
+// GetMVETelemetryRequest represents a request to get telemetry data for an MVE.
+type GetMVETelemetryRequest struct {
+	ProductUID string     // The product UID of the MVE.
+	Types      []string   // Telemetry types to retrieve, e.g. "BITS", "PACKETS", "ERRORS". The SDK does not validate this list against the API.
+	From       *time.Time // Start time. Mutually exclusive with Days.
+	To         *time.Time // End time. Mutually exclusive with Days.
+	Days       *int32     // Number of days of telemetry (1-180). Mutually exclusive with From/To.
+}
+
+var (
+	ErrMVETelemetryRequestRequired    = errors.New("MVE telemetry request is required")
+	ErrMVETelemetryProductUIDRequired = errors.New("MVE telemetry: product UID is required")
+	ErrMVETelemetryTypesRequired      = errors.New("MVE telemetry: at least one telemetry type is required")
+	ErrMVETelemetryTimeExclusive      = errors.New("MVE telemetry: days and from/to are mutually exclusive")
+	ErrMVETelemetryDaysOutOfRange     = errors.New("MVE telemetry: days must be between 1 and 180")
+	ErrMVETelemetryFromToIncomplete   = errors.New("MVE telemetry: both from and to must be provided together")
+	ErrMVETelemetryFromAfterTo        = errors.New("MVE telemetry: from must not be after to")
+	ErrMVETelemetryRangeTooLong       = errors.New("MVE telemetry: from/to time range must not exceed 180 days")
+)
+
+var mveTelemetryValidationErrors = telemetryValidationErrors{
+	productUIDRequired: ErrMVETelemetryProductUIDRequired,
+	typesRequired:      ErrMVETelemetryTypesRequired,
+	timeExclusive:      ErrMVETelemetryTimeExclusive,
+	daysOutOfRange:     ErrMVETelemetryDaysOutOfRange,
+	fromToIncomplete:   ErrMVETelemetryFromToIncomplete,
+	fromAfterTo:        ErrMVETelemetryFromAfterTo,
+	rangeTooLong:       ErrMVETelemetryRangeTooLong,
 }

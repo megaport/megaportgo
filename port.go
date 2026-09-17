@@ -40,6 +40,8 @@ type PortService interface {
 	ListPortResourceTags(ctx context.Context, portID string) (map[string]string, error)
 	// UpdatePortResourceTags updates the resource tags for a port in the Megaport Port API.
 	UpdatePortResourceTags(ctx context.Context, portID string, tags map[string]string) error
+	// GetPortTelemetry returns telemetry metrics for a Port.
+	GetPortTelemetry(ctx context.Context, req *GetPortTelemetryRequest) (*ServiceTelemetryResponse, error)
 }
 
 // NewPortService creates a new instance of the Port Service.
@@ -525,4 +527,16 @@ func (svc *PortServiceOp) UpdatePortResourceTags(ctx context.Context, portID str
 	return svc.Client.ProductService.UpdateProductResourceTags(ctx, portID, &UpdateProductResourceTagsRequest{
 		ResourceTags: productTags,
 	})
+}
+
+// GetPortTelemetry returns telemetry data for a Port product.
+func (svc *PortServiceOp) GetPortTelemetry(ctx context.Context, req *GetPortTelemetryRequest) (*ServiceTelemetryResponse, error) {
+	if req == nil {
+		return nil, ErrPortTelemetryRequestRequired
+	}
+	if err := validateTelemetryRequest(req.ProductUID, req.Types, req.From, req.To, req.Days, portTelemetryValidationErrors); err != nil {
+		return nil, err
+	}
+	path := fmt.Sprintf("/v2/product/%s/%s/telemetry", PRODUCT_MEGAPORT, url.PathEscape(req.ProductUID))
+	return fetchTelemetry(ctx, svc.Client, path, req.Types, req.From, req.To, req.Days)
 }

@@ -1,6 +1,10 @@
 package megaport
 
-import "strconv"
+import (
+	"errors"
+	"strconv"
+	"time"
+)
 
 // MCROrder represents a request to buy an MCR from the Megaport Products API.
 type MCROrder struct {
@@ -244,4 +248,34 @@ func (e *APIMCRPrefixFilterListEntry) ToMCRPrefixFilterListEntry() (*MCRPrefixLi
 		Ge:     ge,
 		Le:     le,
 	}, nil
+}
+
+// GetMCRTelemetryRequest represents a request to get telemetry data for an MCR.
+type GetMCRTelemetryRequest struct {
+	ProductUID string     // The product UID of the MCR.
+	Types      []string   // Telemetry types to retrieve, e.g. "BITS", "PACKETS", "ERRORS", "SPEED", "BYTES_RATE", "BYTES_VOLUME", "OPTICAL", "OPTICAL_100G". The SDK does not validate this list against the API.
+	From       *time.Time // Start time. Mutually exclusive with Days.
+	To         *time.Time // End time. Mutually exclusive with Days.
+	Days       *int32     // Number of days of telemetry (1-180). Mutually exclusive with From/To.
+}
+
+var (
+	ErrMCRTelemetryRequestRequired    = errors.New("MCR telemetry request is required")
+	ErrMCRTelemetryProductUIDRequired = errors.New("MCR telemetry: product UID is required")
+	ErrMCRTelemetryTypesRequired      = errors.New("MCR telemetry: at least one telemetry type is required")
+	ErrMCRTelemetryTimeExclusive      = errors.New("MCR telemetry: days and from/to are mutually exclusive")
+	ErrMCRTelemetryDaysOutOfRange     = errors.New("MCR telemetry: days must be between 1 and 180")
+	ErrMCRTelemetryFromToIncomplete   = errors.New("MCR telemetry: both from and to must be provided together")
+	ErrMCRTelemetryFromAfterTo        = errors.New("MCR telemetry: from must not be after to")
+	ErrMCRTelemetryRangeTooLong       = errors.New("MCR telemetry: from/to time range must not exceed 180 days")
+)
+
+var mcrTelemetryValidationErrors = telemetryValidationErrors{
+	productUIDRequired: ErrMCRTelemetryProductUIDRequired,
+	typesRequired:      ErrMCRTelemetryTypesRequired,
+	timeExclusive:      ErrMCRTelemetryTimeExclusive,
+	daysOutOfRange:     ErrMCRTelemetryDaysOutOfRange,
+	fromToIncomplete:   ErrMCRTelemetryFromToIncomplete,
+	fromAfterTo:        ErrMCRTelemetryFromAfterTo,
+	rangeTooLong:       ErrMCRTelemetryRangeTooLong,
 }
