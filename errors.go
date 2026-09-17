@@ -105,6 +105,10 @@ var ErrMCRCancelLaterNotAllowed = errors.New("mcr products do not support schedu
 // ErrPortCancelLaterNotAllowed is returned when attempting to schedule Port deletion for later (only CANCEL_NOW is allowed)
 var ErrPortCancelLaterNotAllowed = errors.New("port products do not support scheduled deletion (cancel later), only immediate deletion (CANCEL_NOW) is allowed")
 
+// ErrCancelPendingApproval is returned when the API creates an order approval request instead of canceling.
+// The product stays live until an approver acts on the request.
+var ErrCancelPendingApproval = errors.New("cancel request is pending approval, the product is still live")
+
 // ErrMCRNotFound is returned when an MCR cannot be found (deleted or never existed).
 var ErrMCRNotFound = errors.New("mcr not found or deleted")
 

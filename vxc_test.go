@@ -1169,6 +1169,35 @@ func (suite *VXCClientTestSuite) TestDeleteVXC() {
 	suite.NoError(err)
 }
 
+// TestDeleteVXCPendingApproval tests that a 202 pending-approval cancel errors instead of reading as a completed delete.
+func (suite *VXCClientTestSuite) TestDeleteVXCPendingApproval() {
+	ctx := context.Background()
+
+	vxcSvc := suite.client.VXCService
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	req := &DeleteVXCRequest{
+		DeleteNow: true,
+	}
+
+	deleteBlob := `{
+		"message": "Request accepted and pending for approval",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"
+	}`
+
+	deletePath := "/v3/product/" + productUid + "/action/CANCEL_NOW"
+
+	suite.mux.HandleFunc(deletePath, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPost)
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, deleteBlob)
+	})
+
+	err := vxcSvc.DeleteVXC(ctx, productUid, req)
+
+	suite.ErrorIs(err, ErrCancelPendingApproval)
+}
+
 // TestDeleteVXCNilRequest verifies that DeleteVXC rejects a nil request.
 func (suite *VXCClientTestSuite) TestDeleteVXCNilRequest() {
 	ctx := context.Background()
