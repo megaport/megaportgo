@@ -191,6 +191,12 @@ var ErrModifyProductRequestNil = errors.New("modify product request cannot be ni
 // ErrProductResourceTagsResponseEmpty is returned when the product resource tags API returns a 2xx response with a null or missing data payload.
 var ErrProductResourceTagsResponseEmpty = errors.New("product resource tags response missing data")
 
+// ErrCompanyUIDRequired is returned when a company availability method is called with an empty company UID.
+var ErrCompanyUIDRequired = errors.New("company UID is required")
+
+// ErrCompanyProductAvailabilityResponseEmpty is returned when the company product availability API returns a 2xx response with a null or missing data payload.
+var ErrCompanyProductAvailabilityResponseEmpty = errors.New("company product availability response missing data")
+
 // ErrDeleteProductRequestNil is returned when DeleteProduct is called with a nil request.
 var ErrDeleteProductRequestNil = errors.New("delete product request cannot be nil")
 
