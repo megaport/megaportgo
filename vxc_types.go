@@ -344,6 +344,21 @@ type PartnerConfigInterface struct {
 	PacketFilterIn     *int64                `json:"packetFilterIn,omitempty"`     // NAT Gateway packet filter ID to apply to inbound packets.
 	PacketFilterOut    *int64                `json:"packetFilterOut,omitempty"`    // NAT Gateway packet filter ID to apply to outbound packets.
 	IpSecTunnelOptions *IPsecTunnelConfig    `json:"ipSecTunnelOptions,omitempty"` // Requires InterfaceType to be InterfaceTypeIPSecTunnel.
+	DhcpPools          []DhcpPoolConfig      `json:"dhcpPools,omitempty"`          // The API accepts at most one pool per interface.
+}
+
+// DhcpPoolConfig is a DHCP pool served on an MCR interface
+// (PartnerConfigInterface.DhcpPools). Network, StartIpAddress and EndIpAddress
+// are required. The SDK does not decode pools on the VXC read, so this is
+// write-only today. See
+// https://docs.megaport.com/mcr/configuring-mcr#configuring-a-dhcp-pool.
+type DhcpPoolConfig struct {
+	Network        string   `json:"network"` // CIDR, e.g. 192.168.1.0/24. The API normalizes host bits to zero.
+	StartIpAddress string   `json:"startIpAddress"`
+	EndIpAddress   string   `json:"endIpAddress"`
+	DefaultGateway string   `json:"defaultGateway,omitempty"`
+	Description    string   `json:"description,omitempty"` // Max 100 characters.
+	DnsServers     []string `json:"dnsServers,omitempty"`  // Up to 5, must be unique.
 }
 
 // IPsecTunnelConfig is the IPsec tunnel on a VXC A-End ipSecTunnel
@@ -398,7 +413,8 @@ type BgpConnectionConfig struct {
 	ExportWhitelist    int      `json:"exportWhitelist,omitempty"`
 	ExportBlacklist    int      `json:"exportBlacklist,omitempty"`
 	AsPathPrependCount int      `json:"asPathPrependCount,omitempty"`
-	PeerType           string   `json:"peerType,omitempty"` // can be NON_CLOUD, PRIV_CLOUD, or PUB_CLOUD
+	PeerType           string   `json:"peerType,omitempty"`   // can be NON_CLOUD, PRIV_CLOUD, or PUB_CLOUD
+	AsOverride         *bool    `json:"asOverride,omitempty"` // nil applies the API default; only valid for eBGP
 }
 
 // AWS STUFF
