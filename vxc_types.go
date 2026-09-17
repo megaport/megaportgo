@@ -591,10 +591,39 @@ type CSPConnectionVirtualRouterInterface struct {
 	IpSecTunnelOptions *IPsecTunnelConfig    `json:"ipSecTunnelOptions,omitempty"`
 	Description        string                `json:"description,omitempty"`
 	IpMtu              *int                  `json:"ipMtu,omitempty"`
-	VLAN               *int                  `json:"vlan,omitempty"` // Inner VLAN for Q-in-Q; not applicable on an IPsec tunnel interface.
+	VLAN               *int                  `json:"vlan,omitempty"` // Inner VLAN for Q-in-Q. Not applicable on an IPsec tunnel interface. -1 means no inner VLAN.
 	PacketFilterIn     *int64                `json:"packetFilterIn,omitempty"`
 	PacketFilterOut    *int64                `json:"packetFilterOut,omitempty"`
 	DhcpPools          []DhcpPoolConfig      `json:"dhcpPools,omitempty"`
+}
+
+// UnmarshalJSON decodes a vrouter interface. The API sends dhcpPools as an
+// array, but coerces a single pool down to a bare object; accept either shape.
+func (i *CSPConnectionVirtualRouterInterface) UnmarshalJSON(data []byte) error {
+	type alias CSPConnectionVirtualRouterInterface
+	aux := struct {
+		DhcpPools json.RawMessage `json:"dhcpPools,omitempty"`
+		*alias
+	}{alias: (*alias)(i)}
+
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	raw := bytes.TrimSpace(aux.DhcpPools)
+	switch {
+	case len(raw) == 0 || bytes.Equal(raw, []byte("null")):
+		return nil
+	case bytes.HasPrefix(raw, []byte("[")):
+		return json.Unmarshal(raw, &i.DhcpPools)
+	default:
+		var pool DhcpPoolConfig
+		if err := json.Unmarshal(raw, &pool); err != nil {
+			return err
+		}
+		i.DhcpPools = []DhcpPoolConfig{pool}
+		return nil
+	}
 }
 
 type CSPConnectionOracle struct {
