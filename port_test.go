@@ -103,6 +103,124 @@ func (suite *PortClientTestSuite) TestBuyPort() {
 	suite.Equal(want, got)
 }
 
+// TestBuyPortAddToLag tests that a buy request naming an existing LAG sends
+// aggregationId alongside lagPortCount.
+func (suite *PortClientTestSuite) TestBuyPortAddToLag() {
+	ctx := context.Background()
+
+	portSvc := suite.client.PortService
+
+	want := &BuyPortResponse{TechnicalServiceUIDs: []string{"36b3f68e-2f54-4331-bf94-f8984449365f"}}
+
+	req := &BuyPortRequest{
+		Name:                  "test-port-lag-addition",
+		Term:                  12,
+		PortSpeed:             10000,
+		LocationId:            226,
+		Market:                "US",
+		LagCount:              2,
+		AggregationID:         12345,
+		MarketPlaceVisibility: true,
+	}
+
+	jblob := `{
+			"message": "test-message",
+			"terms": "test-terms",
+			"data": [
+			{"technicalServiceUid": "36b3f68e-2f54-4331-bf94-f8984449365f"}
+			]
+			}`
+
+	suite.mux.HandleFunc("/v4/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
+		var wrapper struct {
+			NetworkDesign []map[string]any `json:"networkDesign"`
+		}
+		err := json.NewDecoder(r.Body).Decode(&wrapper)
+		if err != nil {
+			suite.FailNowf("could not decode json", "could not decode json %v", err)
+		}
+		suite.testMethod(r, http.MethodPost)
+		fmt.Fprint(w, jblob)
+		suite.Require().Len(wrapper.NetworkDesign, 1)
+		order := wrapper.NetworkDesign[0]
+		suite.Equal(float64(12345), order["aggregationId"])
+		suite.Equal(float64(2), order["lagPortCount"])
+	})
+	got, err := portSvc.BuyPort(ctx, req)
+	suite.NoError(err)
+	suite.Equal(want, got)
+}
+
+// TestBuyPortAggregationIDWithoutLagCount tests that naming a LAG without
+// asking for ports is rejected before the order is sent.
+func (suite *PortClientTestSuite) TestBuyPortAggregationIDWithoutLagCount() {
+	ctx := context.Background()
+
+	portSvc := suite.client.PortService
+
+	req := &BuyPortRequest{
+		Name:                  "test-port-lag-no-count",
+		Term:                  12,
+		PortSpeed:             10000,
+		LocationId:            226,
+		Market:                "US",
+		LagCount:              0,
+		AggregationID:         12345,
+		MarketPlaceVisibility: true,
+	}
+
+	_, err := portSvc.BuyPort(ctx, req)
+	suite.ErrorIs(err, ErrLagCountRequiredWithAggregationID)
+
+	err = portSvc.ValidatePortOrder(ctx, req)
+	suite.ErrorIs(err, ErrLagCountRequiredWithAggregationID)
+}
+
+// TestBuyPortOmitsAggregationID tests that a buy request naming no LAG leaves
+// aggregationId out of the order body. A zero would read as a LAG the API
+// cannot find.
+func (suite *PortClientTestSuite) TestBuyPortOmitsAggregationID() {
+	ctx := context.Background()
+
+	portSvc := suite.client.PortService
+
+	req := &BuyPortRequest{
+		Name:                  "test-port",
+		Term:                  12,
+		PortSpeed:             10000,
+		LocationId:            226,
+		Market:                "US",
+		LagCount:              0,
+		MarketPlaceVisibility: true,
+	}
+
+	jblob := `{
+			"message": "test-message",
+			"terms": "test-terms",
+			"data": [
+			{"technicalServiceUid": "36b3f68e-2f54-4331-bf94-f8984449365f"}
+			]
+			}`
+
+	suite.mux.HandleFunc("/v4/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
+		var wrapper struct {
+			NetworkDesign []map[string]any `json:"networkDesign"`
+		}
+		err := json.NewDecoder(r.Body).Decode(&wrapper)
+		if err != nil {
+			suite.FailNowf("could not decode json", "could not decode json %v", err)
+		}
+		suite.testMethod(r, http.MethodPost)
+		fmt.Fprint(w, jblob)
+		suite.Require().Len(wrapper.NetworkDesign, 1)
+		order := wrapper.NetworkDesign[0]
+		suite.NotContains(order, "aggregationId")
+		suite.NotContains(order, "lagPortCount")
+	})
+	_, err := portSvc.BuyPort(ctx, req)
+	suite.NoError(err)
+}
+
 // TestBuyPortInvalidTerm tests the BuyPort method with an invalid term
 func (suite *PortClientTestSuite) TestBuyPortInvalidTerm() {
 	ctx := context.Background()

@@ -61,7 +61,8 @@ type BuyPortRequest struct {
 	PortSpeed             int    `json:"portSpeed"`
 	LocationId            int    `json:"locationId"`
 	Market                string `json:"market"`
-	LagCount              int    `json:"lagCount"` // A lag count of 1 or higher will order the port as a single LAG
+	LagCount              int    `json:"lagCount"`      // A lag count of 1 or higher will order the port as a single LAG
+	AggregationID         int    `json:"aggregationId"` // Set with LagCount to add that many ports to an existing LAG, read from Port.AggregationID
 	MarketPlaceVisibility bool   `json:"marketPlaceVisibility"`
 	DiversityZone         string `json:"diversityZone"`
 	CostCentre            string `json:"costCentre"`
@@ -153,6 +154,9 @@ func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*Bu
 	if !slices.Contains(VALID_CONTRACT_TERMS, req.Term) {
 		return nil, ErrInvalidTerm
 	}
+	if req.AggregationID != 0 && req.LagCount < 1 {
+		return nil, ErrLagCountRequiredWithAggregationID
+	}
 
 	buyOrder := createPortOrder(req)
 
@@ -233,6 +237,7 @@ func createPortOrder(req *BuyPortRequest) []PortOrder {
 		Virtual:               false,
 		Market:                req.Market,
 		LagPortCount:          req.LagCount,
+		AggregationID:         req.AggregationID,
 		MarketplaceVisibility: req.MarketPlaceVisibility,
 		CostCentre:            req.CostCentre,
 		PromoCode:             req.PromoCode,
@@ -247,6 +252,9 @@ func (svc *PortServiceOp) ValidatePortOrder(ctx context.Context, req *BuyPortReq
 	if !slices.Contains(VALID_CONTRACT_TERMS, req.Term) {
 		// Validate that term is one of the allowed values
 		return ErrInvalidTerm
+	}
+	if req.AggregationID != 0 && req.LagCount < 1 {
+		return ErrLagCountRequiredWithAggregationID
 	}
 
 	buyOrder := createPortOrder(req)

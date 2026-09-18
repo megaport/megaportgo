@@ -173,6 +173,67 @@ func (suite *PortIntegrationTestSuite) TestLAGPort() {
 	suite.testDeletePort(suite.client, ctx, mainPortIDs[0])
 }
 
+// TestLAGPortAddition orders a one-port LAG, then grows it to two ports by
+// sending the LAG's aggregation ID on a second order.
+func (suite *PortIntegrationTestSuite) TestLAGPortAddition() {
+	ctx := context.Background()
+
+	testLocation, err := findActivePortLocation(ctx, suite.T(), suite.client, TEST_PORT_LOCATION_MARKET, TEST_PORT_SPEED)
+	suite.NoError(err)
+
+	orderRes, err := suite.testCreatePort(suite.client, ctx, 1, testLocation)
+	suite.NoError(err)
+	suite.Require().Len(orderRes.TechnicalServiceUIDs, 1)
+
+	primaryUID := orderRes.TechnicalServiceUIDs[0]
+	suite.True(IsGuid(primaryUID))
+
+	primary, err := suite.client.PortService.GetPort(ctx, primaryUID)
+	suite.NoError(err)
+	suite.Require().NotZero(primary.AggregationID, "primary LAG port has no aggregation ID")
+	suite.Equal(1, primary.LagCount)
+
+	suite.client.Logger.DebugContext(ctx, "Adding a port to the LAG",
+		slog.Int("aggregation_id", primary.AggregationID), slog.String("primary_uid", primaryUID))
+
+	addRes, err := suite.client.PortService.BuyPort(ctx, &BuyPortRequest{
+		Name:                  "Add Port To LAG Test",
+		Term:                  1,
+		PortSpeed:             TEST_PORT_SPEED,
+		LocationId:            testLocation.ID,
+		Market:                testLocation.Market,
+		LagCount:              1,
+		AggregationID:         primary.AggregationID,
+		MarketPlaceVisibility: true,
+		DiversityZone:         "red",
+		WaitForProvision:      true,
+		WaitForTime:           5 * time.Minute,
+		ResourceTags:          testResourceTags,
+	})
+	suite.NoError(err)
+	suite.Require().Len(addRes.TechnicalServiceUIDs, 1, "expected one UID per added port")
+
+	addedUID := addRes.TechnicalServiceUIDs[0]
+	suite.True(IsGuid(addedUID))
+	suite.NotEqual(primaryUID, addedUID)
+
+	added, err := suite.client.PortService.GetPort(ctx, addedUID)
+	suite.NoError(err)
+	suite.Equal(primary.AggregationID, added.AggregationID, "added port joined a different LAG")
+	// The docs say an added port inherits the primary's location and speed. The
+	// API validator checks neither, so assert what staging actually returns.
+	suite.Equal(primary.LocationID, added.LocationID)
+	suite.Equal(primary.PortSpeed, added.PortSpeed)
+
+	grown, err := suite.client.PortService.GetPort(ctx, primaryUID)
+	suite.NoError(err)
+	suite.Equal(2, grown.LagCount)
+	suite.ElementsMatch([]string{primaryUID, addedUID}, grown.LagPortUIDs)
+
+	suite.testDeletePort(suite.client, ctx, addedUID)
+	suite.testDeletePort(suite.client, ctx, primaryUID)
+}
+
 func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Context, lagCount int, location *LocationV3) (*BuyPortResponse, error) {
 	suite.client.Logger.DebugContext(ctx, "Buying Port", slog.Int("lag_count", lagCount))
 	orderRes, err := c.PortService.BuyPort(ctx, &BuyPortRequest{
