@@ -179,17 +179,19 @@ func (suite *PortIntegrationTestSuite) TestLAGPortAddition() {
 	ctx := context.Background()
 
 	testLocation, err := findActivePortLocation(ctx, suite.T(), suite.client, TEST_PORT_LOCATION_MARKET, TEST_PORT_SPEED)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 
 	orderRes, err := suite.testCreatePort(suite.client, ctx, 1, testLocation)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.Require().Len(orderRes.TechnicalServiceUIDs, 1)
 
 	primaryUID := orderRes.TechnicalServiceUIDs[0]
+	// Deferred so a failed assertion below still cancels the ports it billed.
+	defer suite.testDeletePort(suite.client, ctx, primaryUID)
 	suite.True(IsGuid(primaryUID))
 
 	primary, err := suite.client.PortService.GetPort(ctx, primaryUID)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.Require().NotZero(primary.AggregationID, "primary LAG port has no aggregation ID")
 	suite.Equal(1, primary.LagCount)
 
@@ -210,28 +212,22 @@ func (suite *PortIntegrationTestSuite) TestLAGPortAddition() {
 		WaitForTime:           5 * time.Minute,
 		ResourceTags:          testResourceTags,
 	})
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.Require().Len(addRes.TechnicalServiceUIDs, 1, "expected one UID per added port")
 
 	addedUID := addRes.TechnicalServiceUIDs[0]
+	defer suite.testDeletePort(suite.client, ctx, addedUID)
 	suite.True(IsGuid(addedUID))
 	suite.NotEqual(primaryUID, addedUID)
 
 	added, err := suite.client.PortService.GetPort(ctx, addedUID)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.Equal(primary.AggregationID, added.AggregationID, "added port joined a different LAG")
-	// The docs say an added port inherits the primary's location and speed. The
-	// API validator checks neither, so assert what staging actually returns.
-	suite.Equal(primary.LocationID, added.LocationID)
-	suite.Equal(primary.PortSpeed, added.PortSpeed)
 
 	grown, err := suite.client.PortService.GetPort(ctx, primaryUID)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.Equal(2, grown.LagCount)
 	suite.ElementsMatch([]string{primaryUID, addedUID}, grown.LagPortUIDs)
-
-	suite.testDeletePort(suite.client, ctx, addedUID)
-	suite.testDeletePort(suite.client, ctx, primaryUID)
 }
 
 func (suite *PortIntegrationTestSuite) testCreatePort(c *Client, ctx context.Context, lagCount int, location *LocationV3) (*BuyPortResponse, error) {

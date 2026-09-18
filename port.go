@@ -61,12 +61,15 @@ type BuyPortRequest struct {
 	PortSpeed             int    `json:"portSpeed"`
 	LocationId            int    `json:"locationId"`
 	Market                string `json:"market"`
-	LagCount              int    `json:"lagCount"`      // A lag count of 1 or higher will order the port as a single LAG
-	AggregationID         int    `json:"aggregationId"` // Set with LagCount to add that many ports to an existing LAG, read from Port.AggregationID
+	LagCount              int    `json:"lagCount"` // A lag count of 1 or higher will order the port as a single LAG
 	MarketPlaceVisibility bool   `json:"marketPlaceVisibility"`
 	DiversityZone         string `json:"diversityZone"`
 	CostCentre            string `json:"costCentre"`
 	PromoCode             string `json:"promoCode"`
+
+	// AggregationID names an existing LAG, read from Port.AggregationID. Set it with LagCount to add that many ports.
+	// Send the LAG's own LocationId and PortSpeed. The API takes both from this request, not from the LAG.
+	AggregationID int `json:"aggregationId"`
 
 	ResourceTags map[string]string `json:"resourceTags"`
 

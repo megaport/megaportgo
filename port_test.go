@@ -110,7 +110,10 @@ func (suite *PortClientTestSuite) TestBuyPortAddToLag() {
 
 	portSvc := suite.client.PortService
 
-	want := &BuyPortResponse{TechnicalServiceUIDs: []string{"36b3f68e-2f54-4331-bf94-f8984449365f"}}
+	want := &BuyPortResponse{TechnicalServiceUIDs: []string{
+		"36b3f68e-2f54-4331-bf94-f8984449365f",
+		"9b6f4a57-0d0e-4a1b-9d63-8b3f0a6a4f21",
+	}}
 
 	req := &BuyPortRequest{
 		Name:                  "test-port-lag-addition",
@@ -127,7 +130,8 @@ func (suite *PortClientTestSuite) TestBuyPortAddToLag() {
 			"message": "test-message",
 			"terms": "test-terms",
 			"data": [
-			{"technicalServiceUid": "36b3f68e-2f54-4331-bf94-f8984449365f"}
+			{"technicalServiceUid": "36b3f68e-2f54-4331-bf94-f8984449365f"},
+			{"technicalServiceUid": "9b6f4a57-0d0e-4a1b-9d63-8b3f0a6a4f21"}
 			]
 			}`
 
@@ -141,7 +145,9 @@ func (suite *PortClientTestSuite) TestBuyPortAddToLag() {
 		}
 		suite.testMethod(r, http.MethodPost)
 		fmt.Fprint(w, jblob)
-		suite.Require().Len(wrapper.NetworkDesign, 1)
+		if !suite.Len(wrapper.NetworkDesign, 1) {
+			return
+		}
 		order := wrapper.NetworkDesign[0]
 		suite.Equal(float64(12345), order["aggregationId"])
 		suite.Equal(float64(2), order["lagPortCount"])
@@ -212,7 +218,9 @@ func (suite *PortClientTestSuite) TestBuyPortOmitsAggregationID() {
 		}
 		suite.testMethod(r, http.MethodPost)
 		fmt.Fprint(w, jblob)
-		suite.Require().Len(wrapper.NetworkDesign, 1)
+		if !suite.Len(wrapper.NetworkDesign, 1) {
+			return
+		}
 		order := wrapper.NetworkDesign[0]
 		suite.NotContains(order, "aggregationId")
 		suite.NotContains(order, "lagPortCount")
