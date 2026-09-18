@@ -499,6 +499,298 @@ func (suite *VXCClientTestSuite) TestGetVXC() {
 	suite.Equal(wantVxc, gotVxc)
 }
 
+// TestGetVXCWithVRouterInterfaces tests that GetVXC decodes the interface
+// type, IPsec tunnel options, description, MTU, VLAN, packet filters and
+// DHCP pools on a VROUTER csp_connection interface.
+func (suite *VXCClientTestSuite) TestGetVXCWithVRouterInterfaces() {
+	ctx := context.Background()
+	vxcSvc := suite.client.VXCService
+
+	vxcUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	wantInterfaces := []CSPConnectionVirtualRouterInterface{
+		{
+			IPAddresses: []string{"192.168.1.1/30"},
+			IPRoutes: []IpRoute{
+				{Prefix: "10.0.0.0/24", NextHop: "192.168.1.2"},
+				{Prefix: "10.0.1.0/24", NextHop: "192.168.1.2"},
+			},
+			NatIPAddresses: []string{"192.168.1.1"},
+			BFD:            BfdConfig{TxInterval: 300, RxInterval: 300, Multiplier: 3},
+			InterfaceType:  InterfaceTypeSubInterface,
+			Description:    "test subinterface",
+			IpMtu:          PtrTo(1500),
+			VLAN:           PtrTo(100),
+			DhcpPools: []DhcpPoolConfig{
+				{
+					Network:        "192.168.50.0/24",
+					StartIpAddress: "192.168.50.10",
+					EndIpAddress:   "192.168.50.100",
+					DefaultGateway: "192.168.50.1",
+					Description:    "office LAN",
+					DnsServers:     []string{"8.8.8.8", "8.8.4.4"},
+				},
+			},
+		},
+		{
+			InterfaceType: InterfaceTypeIPSecTunnel,
+			IpSecTunnelOptions: &IPsecTunnelState{
+				SourceIpAddress:      "192.168.1.1",
+				DestinationIpAddress: "198.51.100.38",
+				Passive:              PtrTo(true),
+				Phase1Lifetime:       PtrTo(28800),
+				Phase2Lifetime:       PtrTo(3600),
+				LocalId:              "local-peer-id",
+				RemoteId:             "remote-peer-id",
+			},
+			PacketFilterIn:  PtrTo(int64(501)),
+			PacketFilterOut: PtrTo(int64(502)),
+		},
+	}
+
+	jblob := `{
+		"message": "Found Product 36b3f68e-2f54-4331-bf94-f8984449365f",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": {
+			"productId": 1,
+			"productUid": "36b3f68e-2f54-4331-bf94-f8984449365f",
+			"productName": "test-vxc",
+			"productType": "VXC",
+			"resources": {
+				"csp_connection": [{
+					"connectType": "VROUTER",
+					"resource_name": "a_csp_connection",
+					"resource_type": "csp_connection",
+					"interfaces": [
+						{
+							"ipAddresses": ["192.168.1.1/30"],
+							"natIpAddresses": ["192.168.1.1"],
+							"bfd": {"txInterval": 300, "rxInterval": 300, "multiplier": 3},
+							"ipMtu": 1500,
+							"vlan": 100,
+							"description": "test subinterface",
+							"ipRoutes": [
+								{"prefix": "10.0.0.0/24", "nextHop": "192.168.1.2"},
+								{"prefix": "10.0.1.0/24", "nextHop": "192.168.1.2"}
+							],
+							"dhcpPools": [
+								{
+									"network": "192.168.50.0/24",
+									"startIpAddress": "192.168.50.10",
+									"endIpAddress": "192.168.50.100",
+									"defaultGateway": "192.168.50.1",
+									"description": "office LAN",
+									"dnsServers": ["8.8.8.8", "8.8.4.4"]
+								}
+							]
+						},
+						{
+							"interfaceType": "ipSecTunnel",
+							"ipSecTunnelOptions": {
+								"sourceIpAddress": "192.168.1.1",
+								"destinationIpAddress": "198.51.100.38",
+								"preSharedKey": "test-psk-1234",
+								"passive": true,
+								"phase1Lifetime": 28800,
+								"phase2Lifetime": 3600,
+								"localId": "local-peer-id",
+								"remoteId": "remote-peer-id"
+							},
+							"packetFilterIn": 501,
+							"packetFilterOut": 502
+						}
+					]
+				}]
+			},
+			"vxcApproval": {
+				"status": null,
+				"message": null,
+				"uid": null,
+				"type": null,
+				"newSpeed": null
+			},
+			"attributeTags": {},
+			"aEnd": {},
+			"bEnd": {}
+		}
+	}`
+	path := "/v2/product/" + vxcUid
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, jblob)
+	})
+
+	gotVxc, err := vxcSvc.GetVXC(ctx, vxcUid)
+	suite.NoError(err)
+	suite.Require().NotNil(gotVxc.Resources.CSPConnection)
+	suite.Require().Len(gotVxc.Resources.CSPConnection.CSPConnection, 1)
+
+	conn, ok := gotVxc.Resources.CSPConnection.CSPConnection[0].(CSPConnectionVirtualRouter)
+	suite.Require().True(ok)
+	// The fixture carries a plaintext preSharedKey, as the API does.
+	// IPsecTunnelState has no field for it, so it never reaches a caller.
+	suite.Equal(wantInterfaces, conn.Interfaces)
+
+	subInterface := conn.Interfaces[0]
+	// The fixture omits interfaceType, as the API does on a plain
+	// subinterface. The decode fills in the default.
+	suite.Equal(InterfaceTypeSubInterface, subInterface.InterfaceType)
+	suite.Nil(subInterface.IpSecTunnelOptions)
+	suite.Nil(subInterface.PacketFilterIn)
+
+	tunnelInterface := conn.Interfaces[1]
+	suite.Nil(tunnelInterface.DhcpPools)
+}
+
+// TestGetVXCWithVRouterInterfaceListFieldsAsObject tests that GetVXC decodes
+// ipRoutes, bgpConnections and dhcpPools fields the API sends as a bare
+// object instead of an array.
+func (suite *VXCClientTestSuite) TestGetVXCWithVRouterInterfaceListFieldsAsObject() {
+	ctx := context.Background()
+	vxcSvc := suite.client.VXCService
+
+	vxcUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	wantInterfaces := []CSPConnectionVirtualRouterInterface{
+		{
+			IPAddresses: []string{"192.168.1.1/30"},
+			IPRoutes: []IpRoute{
+				{Prefix: "10.0.0.0/24", NextHop: "192.168.1.2"},
+			},
+			BGPConnections: []BgpConnectionConfig{
+				{PeerAsn: 65001, LocalIpAddress: "192.168.1.1", PeerIpAddress: "192.168.1.2"},
+			},
+			InterfaceType: InterfaceTypeSubInterface,
+			DhcpPools: []DhcpPoolConfig{
+				{
+					Network:        "10.0.0.0/24",
+					StartIpAddress: "10.0.0.10",
+					EndIpAddress:   "10.0.0.50",
+				},
+			},
+		},
+	}
+
+	jblob := `{
+		"message": "Found Product 36b3f68e-2f54-4331-bf94-f8984449365f",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": {
+			"productId": 1,
+			"productUid": "36b3f68e-2f54-4331-bf94-f8984449365f",
+			"productName": "test-vxc",
+			"productType": "VXC",
+			"resources": {
+				"csp_connection": [{
+					"connectType": "VROUTER",
+					"resource_name": "a_csp_connection",
+					"resource_type": "csp_connection",
+					"interfaces": [
+						{
+							"ipAddresses": ["192.168.1.1/30"],
+							"ipRoutes": {"prefix": "10.0.0.0/24", "nextHop": "192.168.1.2"},
+							"bgpConnections": {"peerAsn": 65001, "localIpAddress": "192.168.1.1", "peerIpAddress": "192.168.1.2"},
+							"dhcpPools": {
+								"network": "10.0.0.0/24",
+								"startIpAddress": "10.0.0.10",
+								"endIpAddress": "10.0.0.50"
+							}
+						}
+					]
+				}]
+			},
+			"vxcApproval": {
+				"status": null,
+				"message": null,
+				"uid": null,
+				"type": null,
+				"newSpeed": null
+			},
+			"attributeTags": {},
+			"aEnd": {},
+			"bEnd": {}
+		}
+	}`
+	path := "/v2/product/" + vxcUid
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, jblob)
+	})
+
+	gotVxc, err := vxcSvc.GetVXC(ctx, vxcUid)
+	suite.NoError(err)
+	suite.Require().NotNil(gotVxc.Resources.CSPConnection)
+	suite.Require().Len(gotVxc.Resources.CSPConnection.CSPConnection, 1)
+
+	conn, ok := gotVxc.Resources.CSPConnection.CSPConnection[0].(CSPConnectionVirtualRouter)
+	suite.Require().True(ok)
+	suite.Equal(wantInterfaces, conn.Interfaces)
+}
+
+// TestGetVXCWithVRouterInterfaceEmptyListShapes tests that a null element, an
+// empty object element and a bare empty object decode to no entry, so a blank
+// entry never reaches the caller looking like a real one.
+func (suite *VXCClientTestSuite) TestGetVXCWithVRouterInterfaceEmptyListShapes() {
+	ctx := context.Background()
+	vxcSvc := suite.client.VXCService
+
+	vxcUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	jblob := `{
+		"message": "Found Product 36b3f68e-2f54-4331-bf94-f8984449365f",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": {
+			"productId": 1,
+			"productUid": "36b3f68e-2f54-4331-bf94-f8984449365f",
+			"productName": "test-vxc",
+			"productType": "VXC",
+			"resources": {
+				"csp_connection": [{
+					"connectType": "VROUTER",
+					"resource_name": "a_csp_connection",
+					"resource_type": "csp_connection",
+					"interfaces": [
+						{
+							"ipAddresses": ["192.168.1.1/30"],
+							"ipRoutes": [{"prefix": "10.0.0.0/24", "nextHop": "192.168.1.2"}, null, {}],
+							"bgpConnections": [{}],
+							"dhcpPools": {}
+						}
+					]
+				}]
+			},
+			"vxcApproval": {
+				"status": null,
+				"message": null,
+				"uid": null,
+				"type": null,
+				"newSpeed": null
+			},
+			"attributeTags": {},
+			"aEnd": {},
+			"bEnd": {}
+		}
+	}`
+	path := "/v2/product/" + vxcUid
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, jblob)
+	})
+
+	gotVxc, err := vxcSvc.GetVXC(ctx, vxcUid)
+	suite.NoError(err)
+	suite.Require().NotNil(gotVxc.Resources.CSPConnection)
+	suite.Require().Len(gotVxc.Resources.CSPConnection.CSPConnection, 1)
+
+	conn, ok := gotVxc.Resources.CSPConnection.CSPConnection[0].(CSPConnectionVirtualRouter)
+	suite.Require().True(ok)
+	suite.Require().Len(conn.Interfaces, 1)
+	iface := conn.Interfaces[0]
+
+	suite.Equal([]IpRoute{{Prefix: "10.0.0.0/24", NextHop: "192.168.1.2"}}, iface.IPRoutes)
+	suite.Empty(iface.BGPConnections)
+	suite.Nil(iface.DhcpPools)
+}
+
 // TestGetAzureVXC tests the GetVXC method for an Azure VXC.
 func (suite *VXCClientTestSuite) TestGetAzureVXC() {
 	ctx := context.Background()
