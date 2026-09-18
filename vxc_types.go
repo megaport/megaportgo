@@ -601,7 +601,7 @@ type CSPConnectionVirtualRouterInterface struct {
 	BGPConnections     []BgpConnectionConfig `json:"bgpConnections"`
 	NatIPAddresses     []string              `json:"natIpAddresses"`
 	BFD                BfdConfig             `json:"bfd"`
-	InterfaceType      string                `json:"interfaceType,omitempty"` // InterfaceTypeSubInterface (default) or InterfaceTypeIPSecTunnel.
+	InterfaceType      string                `json:"interfaceType,omitempty"` // InterfaceTypeSubInterface or InterfaceTypeIPSecTunnel. A read fills in the subinterface default.
 	IpSecTunnelOptions *IPsecTunnelState     `json:"ipSecTunnelOptions,omitempty"`
 	Description        string                `json:"description,omitempty"`
 	IpMtu              *int                  `json:"ipMtu,omitempty"`
@@ -641,6 +641,12 @@ func (i *CSPConnectionVirtualRouterInterface) UnmarshalJSON(data []byte) error {
 	if i.DhcpPools, err = decodeListOrObject[DhcpPoolConfig](aux.DhcpPools); err != nil {
 		return err
 	}
+
+	// The API omits interfaceType on a plain subinterface. Apply the
+	// documented default so a caller never has to map the empty string.
+	if i.InterfaceType == "" {
+		i.InterfaceType = InterfaceTypeSubInterface
+	}
 	return nil
 }
 
@@ -652,7 +658,7 @@ func (i *CSPConnectionVirtualRouterInterface) UnmarshalJSON(data []byte) error {
 func decodeListOrObject[T any](raw json.RawMessage) ([]T, error) {
 	raw = bytes.TrimSpace(raw)
 	switch {
-	case len(raw) == 0 || bytes.Equal(raw, jsonNull):
+	case isBlankJSON(raw):
 		return nil, nil
 	case bytes.HasPrefix(raw, []byte("[")):
 		var elems []json.RawMessage
@@ -661,7 +667,7 @@ func decodeListOrObject[T any](raw json.RawMessage) ([]T, error) {
 		}
 		list := make([]T, 0, len(elems))
 		for _, elem := range elems {
-			if bytes.Equal(bytes.TrimSpace(elem), jsonNull) {
+			if isBlankJSON(bytes.TrimSpace(elem)) {
 				continue
 			}
 			var item T
@@ -672,16 +678,23 @@ func decodeListOrObject[T any](raw json.RawMessage) ([]T, error) {
 		}
 		return list, nil
 	default:
-		var fields map[string]json.RawMessage
-		if err := json.Unmarshal(raw, &fields); err == nil && len(fields) == 0 {
-			return nil, nil
-		}
 		var item T
 		if err := json.Unmarshal(raw, &item); err != nil {
 			return nil, err
 		}
 		return []T{item}, nil
 	}
+}
+
+// isBlankJSON reports whether raw is absent, null, or an object with no
+// fields.
+func isBlankJSON(raw json.RawMessage) bool {
+	if len(raw) == 0 || bytes.Equal(raw, jsonNull) {
+		return true
+	}
+	var fields map[string]json.RawMessage
+	err := json.Unmarshal(raw, &fields)
+	return err == nil && len(fields) == 0
 }
 
 type CSPConnectionOracle struct {

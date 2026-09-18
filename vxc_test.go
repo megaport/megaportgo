@@ -515,9 +515,12 @@ func (suite *VXCClientTestSuite) TestGetVXCWithVRouterInterfaces() {
 				{Prefix: "10.0.0.0/24", NextHop: "192.168.1.2"},
 				{Prefix: "10.0.1.0/24", NextHop: "192.168.1.2"},
 			},
-			Description: "test subinterface",
-			IpMtu:       PtrTo(1500),
-			VLAN:        PtrTo(100),
+			NatIPAddresses: []string{"192.168.1.1"},
+			BFD:            BfdConfig{TxInterval: 300, RxInterval: 300, Multiplier: 3},
+			InterfaceType:  InterfaceTypeSubInterface,
+			Description:    "test subinterface",
+			IpMtu:          PtrTo(1500),
+			VLAN:           PtrTo(100),
 			DhcpPools: []DhcpPoolConfig{
 				{
 					Network:        "192.168.50.0/24",
@@ -561,6 +564,8 @@ func (suite *VXCClientTestSuite) TestGetVXCWithVRouterInterfaces() {
 					"interfaces": [
 						{
 							"ipAddresses": ["192.168.1.1/30"],
+							"natIpAddresses": ["192.168.1.1"],
+							"bfd": {"txInterval": 300, "rxInterval": 300, "multiplier": 3},
 							"ipMtu": 1500,
 							"vlan": 100,
 							"description": "test subinterface",
@@ -627,6 +632,9 @@ func (suite *VXCClientTestSuite) TestGetVXCWithVRouterInterfaces() {
 	suite.Equal(wantInterfaces, conn.Interfaces)
 
 	subInterface := conn.Interfaces[0]
+	// The fixture omits interfaceType, as the API does on a plain
+	// subinterface. The decode fills in the default.
+	suite.Equal(InterfaceTypeSubInterface, subInterface.InterfaceType)
 	suite.Nil(subInterface.IpSecTunnelOptions)
 	suite.Nil(subInterface.PacketFilterIn)
 
@@ -652,6 +660,7 @@ func (suite *VXCClientTestSuite) TestGetVXCWithVRouterInterfaceListFieldsAsObjec
 			BGPConnections: []BgpConnectionConfig{
 				{PeerAsn: 65001, LocalIpAddress: "192.168.1.1", PeerIpAddress: "192.168.1.2"},
 			},
+			InterfaceType: InterfaceTypeSubInterface,
 			DhcpPools: []DhcpPoolConfig{
 				{
 					Network:        "10.0.0.0/24",
@@ -717,9 +726,9 @@ func (suite *VXCClientTestSuite) TestGetVXCWithVRouterInterfaceListFieldsAsObjec
 	suite.Equal(wantInterfaces, conn.Interfaces)
 }
 
-// TestGetVXCWithVRouterInterfaceEmptyListShapes tests that a null element and
-// an empty object decode to no entry, so a blank entry never reaches the
-// caller looking like a real one.
+// TestGetVXCWithVRouterInterfaceEmptyListShapes tests that a null element, an
+// empty object element and a bare empty object decode to no entry, so a blank
+// entry never reaches the caller looking like a real one.
 func (suite *VXCClientTestSuite) TestGetVXCWithVRouterInterfaceEmptyListShapes() {
 	ctx := context.Background()
 	vxcSvc := suite.client.VXCService
@@ -742,8 +751,8 @@ func (suite *VXCClientTestSuite) TestGetVXCWithVRouterInterfaceEmptyListShapes()
 					"interfaces": [
 						{
 							"ipAddresses": ["192.168.1.1/30"],
-							"ipRoutes": [{"prefix": "10.0.0.0/24", "nextHop": "192.168.1.2"}, null],
-							"bgpConnections": [],
+							"ipRoutes": [{"prefix": "10.0.0.0/24", "nextHop": "192.168.1.2"}, null, {}],
+							"bgpConnections": [{}],
 							"dhcpPools": {}
 						}
 					]
