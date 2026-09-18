@@ -2063,6 +2063,116 @@ func (suite *VXCClientTestSuite) TestVXCNilRequestGuards() {
 	}
 }
 
+// TestGetVXCAWSPrefixes tests that the AWS csp_connection read decodes the
+// prefixes key in each shape NetAuto sends it.
+func (suite *VXCClientTestSuite) TestGetVXCAWSPrefixes() {
+	ctx := context.Background()
+	vxcSvc := suite.client.VXCService
+
+	tests := []struct {
+		name         string
+		vxcUid       string
+		prefixesJSON string
+		want         CSPPrefixes
+	}{
+		{
+			name:         "string",
+			vxcUid:       "1b8b7c2e-0000-4000-8000-000000000001",
+			prefixesJSON: `"prefixes": "10.0.1.0/24,10.0.2.0/24",`,
+			want:         "10.0.1.0/24,10.0.2.0/24",
+		},
+		{
+			name:         "array",
+			vxcUid:       "1b8b7c2e-0000-4000-8000-000000000002",
+			prefixesJSON: `"prefixes": ["10.0.1.0/24", "10.0.2.0/24"],`,
+			want:         "10.0.1.0/24,10.0.2.0/24",
+		},
+		{
+			name:         "absent",
+			vxcUid:       "1b8b7c2e-0000-4000-8000-000000000003",
+			prefixesJSON: ``,
+			want:         "",
+		},
+		{
+			name:         "null",
+			vxcUid:       "1b8b7c2e-0000-4000-8000-000000000004",
+			prefixesJSON: `"prefixes": null,`,
+			want:         "",
+		},
+	}
+
+	for _, tt := range tests {
+		suite.Run(tt.name, func() {
+			jblob := fmt.Sprintf(`{
+		"message": "Found Product %s",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": {
+			"productId": 1,
+			"productUid": "%s",
+			"productName": "test-aws-vxc",
+			"productType": "VXC",
+			"resources": {
+				"csp_connection": {
+					"connectType": "AWS",
+					"resource_name": "b_csp_connection",
+					"resource_type": "csp_connection",
+					"vlan": 2191,
+					"account": "123456789012",
+					"amazon_address": "10.0.1.1/30",
+					"asn": 65105,
+					"amazonAsn": 65106,
+					"authKey": "notarealauthkey",
+					"customer_address": "10.0.1.2/30",
+					"customerIpAddress": "10.0.1.2/30",
+					"id": 1,
+					"name": "test-aws-vxc",
+					"ownerAccount": "123456789012",
+					"peerAsn": 65105,
+					%s
+					"type": "private",
+					"vif_id": "test-vif-id"
+				}
+			}
+		}
+	}`, tt.vxcUid, tt.vxcUid, tt.prefixesJSON)
+
+			path := "/v2/product/" + tt.vxcUid
+			suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+				suite.testMethod(r, http.MethodGet)
+				fmt.Fprint(w, jblob)
+			})
+
+			gotVxc, err := vxcSvc.GetVXC(ctx, tt.vxcUid)
+			suite.NoError(err)
+			suite.Require().Len(gotVxc.Resources.CSPConnection.CSPConnection, 1)
+
+			aws, ok := gotVxc.Resources.CSPConnection.CSPConnection[0].(CSPConnectionAWS)
+			suite.Require().True(ok, "csp_connection did not decode as CSPConnectionAWS")
+
+			suite.Equal(CSPConnectionAWS{
+				ConnectType:       "AWS",
+				ResourceName:      "b_csp_connection",
+				ResourceType:      "csp_connection",
+				VLAN:              2191,
+				Account:           "123456789012",
+				AmazonAddress:     "10.0.1.1/30",
+				ASN:               65105,
+				AmazonASN:         65106,
+				AuthKey:           "notarealauthkey",
+				CustomerAddress:   "10.0.1.2/30",
+				CustomerIPAddress: "10.0.1.2/30",
+				ID:                1,
+				Name:              "test-aws-vxc",
+				OwnerAccount:      "123456789012",
+				PeerASN:           65105,
+				Prefixes:          tt.want,
+				Type:              "private",
+				VIFID:             "test-vif-id",
+			}, aws)
+		})
+	}
+}
+
 // TestVXCDhcpPoolOnBuy verifies that a DHCP pool on an MCR interface reaches
 // the order body.
 func (suite *VXCClientTestSuite) TestVXCDhcpPoolOnBuy() {
