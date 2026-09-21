@@ -26,8 +26,7 @@ func NewProductAvailabilityService(c *Client) *ProductAvailabilityServiceOp {
 
 // ListCompanyProductAvailability retrieves the products a company can order and the markets each is available in.
 // A product the company cannot order anywhere is absent rather than listed as unavailable. Markets are not
-// filtered to the company's active billing markets. Requires the service_availability.view permission, and a
-// non-staff caller may only query their own company.
+// filtered to the company's active billing markets. A non-staff caller may only query their own company.
 func (svc *ProductAvailabilityServiceOp) ListCompanyProductAvailability(ctx context.Context, companyUID string) ([]*CompanyProductAvailability, error) {
 	if companyUID == "" {
 		return nil, ErrCompanyUIDRequired
