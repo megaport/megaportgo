@@ -728,7 +728,8 @@ func (suite *VXCClientTestSuite) TestGetVXCWithVRouterInterfaceListFieldsAsObjec
 
 // TestGetVXCWithVRouterInterfaceEmptyListShapes tests that a null element, an
 // empty object element and a bare empty object decode to no entry, so a blank
-// entry never reaches the caller looking like a real one.
+// entry never reaches the caller looking like a real one. It also covers a
+// genuinely empty array, the shape the API sends for "no entries".
 func (suite *VXCClientTestSuite) TestGetVXCWithVRouterInterfaceEmptyListShapes() {
 	ctx := context.Background()
 	vxcSvc := suite.client.VXCService
@@ -754,6 +755,12 @@ func (suite *VXCClientTestSuite) TestGetVXCWithVRouterInterfaceEmptyListShapes()
 							"ipRoutes": [{"prefix": "10.0.0.0/24", "nextHop": "192.168.1.2"}, null, {}],
 							"bgpConnections": [{}],
 							"dhcpPools": {}
+						},
+						{
+							"ipAddresses": ["192.168.1.2/30"],
+							"ipRoutes": [],
+							"bgpConnections": [],
+							"dhcpPools": []
 						}
 					]
 				}]
@@ -783,12 +790,17 @@ func (suite *VXCClientTestSuite) TestGetVXCWithVRouterInterfaceEmptyListShapes()
 
 	conn, ok := gotVxc.Resources.CSPConnection.CSPConnection[0].(CSPConnectionVirtualRouter)
 	suite.Require().True(ok)
-	suite.Require().Len(conn.Interfaces, 1)
+	suite.Require().Len(conn.Interfaces, 2)
 	iface := conn.Interfaces[0]
 
 	suite.Equal([]IpRoute{{Prefix: "10.0.0.0/24", NextHop: "192.168.1.2"}}, iface.IPRoutes)
 	suite.Empty(iface.BGPConnections)
 	suite.Nil(iface.DhcpPools)
+
+	emptyArrays := conn.Interfaces[1]
+	suite.Empty(emptyArrays.IPRoutes)
+	suite.Empty(emptyArrays.BGPConnections)
+	suite.Empty(emptyArrays.DhcpPools)
 }
 
 // TestGetAzureVXC tests the GetVXC method for an Azure VXC.
