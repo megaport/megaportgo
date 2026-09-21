@@ -348,8 +348,7 @@ type PartnerConfigInterface struct {
 
 // DhcpPoolConfig is a DHCP pool served on an MCR interface
 // (PartnerConfigInterface.DhcpPools). Network, StartIpAddress and EndIpAddress
-// are required. The SDK does not decode pools on the VXC read, so this is
-// write-only today. See
+// are required. See
 // https://docs.megaport.com/mcr/configuring-mcr#configuring-a-dhcp-pool.
 type DhcpPoolConfig struct {
 	Network        string   `json:"network"` // CIDR, e.g. 192.168.1.0/24. The API normalizes host bits to zero.
@@ -376,6 +375,20 @@ type IPsecTunnelConfig struct {
 	RemoteId             string `json:"remoteId,omitempty"`       // IKE remote identifier override, for peers behind NAT
 	Phase1Lifetime       *int   `json:"phase1Lifetime,omitempty"` // seconds, 3600-604800, API default 28800
 	Phase2Lifetime       *int   `json:"phase2Lifetime,omitempty"` // seconds, 600-86400, must be < Phase1Lifetime, API default 3600
+}
+
+// IPsecTunnelState is the IPsec tunnel a VXC read returns on an MCR
+// interface. It mirrors IPsecTunnelConfig without PreSharedKey: the API
+// sends the key back in plaintext, and decoding it would carry a live
+// secret into Terraform state and CLI output.
+type IPsecTunnelState struct {
+	SourceIpAddress      string `json:"sourceIpAddress"`
+	DestinationIpAddress string `json:"destinationIpAddress"`
+	Passive              *bool  `json:"passive,omitempty"`
+	LocalId              string `json:"localId,omitempty"`
+	RemoteId             string `json:"remoteId,omitempty"`
+	Phase1Lifetime       *int   `json:"phase1Lifetime,omitempty"`
+	Phase2Lifetime       *int   `json:"phase2Lifetime,omitempty"`
 }
 
 // IpRoute represents an IP route.
@@ -604,11 +617,105 @@ type CSPConnectionVirtualRouter struct {
 
 // CSPConnectionVirtualRouterInterface represents the configuration of a CSP connection for Virtual Router interface.
 type CSPConnectionVirtualRouterInterface struct {
-	IPAddresses    []string              `json:"ipAddresses"`
-	IPRoutes       []IpRoute             `json:"ipRoutes"`
-	BGPConnections []BgpConnectionConfig `json:"bgpConnections"`
-	NatIPAddresses []string              `json:"natIpAddresses"`
-	BFD            BfdConfig             `json:"bfd"`
+	IPAddresses        []string              `json:"ipAddresses"`
+	IPRoutes           []IpRoute             `json:"ipRoutes"`
+	BGPConnections     []BgpConnectionConfig `json:"bgpConnections"`
+	NatIPAddresses     []string              `json:"natIpAddresses"`
+	BFD                BfdConfig             `json:"bfd"`
+	InterfaceType      string                `json:"interfaceType,omitempty"` // InterfaceTypeSubInterface or InterfaceTypeIPSecTunnel. A read fills in the subinterface default.
+	IpSecTunnelOptions *IPsecTunnelState     `json:"ipSecTunnelOptions,omitempty"`
+	Description        string                `json:"description,omitempty"`
+	IpMtu              *int                  `json:"ipMtu,omitempty"`
+	VLAN               *int                  `json:"vlan,omitempty"` // Inner VLAN for Q-in-Q. Not applicable on an IPsec tunnel interface. -1 means no inner VLAN.
+	PacketFilterIn     *int64                `json:"packetFilterIn,omitempty"`
+	PacketFilterOut    *int64                `json:"packetFilterOut,omitempty"`
+	DhcpPools          []DhcpPoolConfig      `json:"dhcpPools,omitempty"`
+}
+
+// UnmarshalJSON decodes a vrouter interface. The API coerces a
+// single-element ipRoutes, bgpConnections or dhcpPools list down to a bare
+// object; accept either shape for each.
+func (i *CSPConnectionVirtualRouterInterface) UnmarshalJSON(data []byte) error {
+	// Decode from zero so a setting the API omits reads back as nil rather
+	// than whatever a reused receiver already held.
+	*i = CSPConnectionVirtualRouterInterface{}
+
+	type alias CSPConnectionVirtualRouterInterface
+	aux := struct {
+		IPRoutes       json.RawMessage `json:"ipRoutes"`
+		BGPConnections json.RawMessage `json:"bgpConnections"`
+		DhcpPools      json.RawMessage `json:"dhcpPools"`
+		*alias
+	}{alias: (*alias)(i)}
+
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	var err error
+	if i.IPRoutes, err = decodeListOrObject[IpRoute](aux.IPRoutes); err != nil {
+		return err
+	}
+	if i.BGPConnections, err = decodeListOrObject[BgpConnectionConfig](aux.BGPConnections); err != nil {
+		return err
+	}
+	if i.DhcpPools, err = decodeListOrObject[DhcpPoolConfig](aux.DhcpPools); err != nil {
+		return err
+	}
+
+	// The API omits interfaceType on a plain subinterface. Apply the
+	// documented default so a caller never has to map the empty string.
+	if i.InterfaceType == "" {
+		i.InterfaceType = InterfaceTypeSubInterface
+	}
+	return nil
+}
+
+// decodeListOrObject decodes raw as a JSON array, or wraps a single JSON
+// object into a one-element slice, matching the API's habit of coercing a
+// singleton list field down to a bare object. A null element and an empty
+// object both decode to no entry, because every item type here has required
+// fields and a blank entry would be indistinguishable from a real one.
+func decodeListOrObject[T any](raw json.RawMessage) ([]T, error) {
+	raw = bytes.TrimSpace(raw)
+	switch {
+	case isBlankJSON(raw):
+		return nil, nil
+	case bytes.HasPrefix(raw, []byte("[")):
+		var elems []json.RawMessage
+		if err := json.Unmarshal(raw, &elems); err != nil {
+			return nil, err
+		}
+		list := make([]T, 0, len(elems))
+		for _, elem := range elems {
+			if isBlankJSON(bytes.TrimSpace(elem)) {
+				continue
+			}
+			var item T
+			if err := json.Unmarshal(elem, &item); err != nil {
+				return nil, err
+			}
+			list = append(list, item)
+		}
+		return list, nil
+	default:
+		var item T
+		if err := json.Unmarshal(raw, &item); err != nil {
+			return nil, err
+		}
+		return []T{item}, nil
+	}
+}
+
+// isBlankJSON reports whether raw is absent, null, or an object with no
+// fields.
+func isBlankJSON(raw json.RawMessage) bool {
+	if len(raw) == 0 || bytes.Equal(raw, jsonNull) {
+		return true
+	}
+	var fields map[string]json.RawMessage
+	err := json.Unmarshal(raw, &fields)
+	return err == nil && len(fields) == 0
 }
 
 type CSPConnectionOracle struct {
