@@ -61,11 +61,15 @@ type BuyPortRequest struct {
 	PortSpeed             int    `json:"portSpeed"`
 	LocationId            int    `json:"locationId"`
 	Market                string `json:"market"`
-	LagCount              int    `json:"lagCount"` // A lag count of 1 or higher will order the port as a single LAG
+	LagCount              int    `json:"lagCount"` // Orders the port as a LAG of this many ports. With AggregationID set, adds this many ports to that LAG.
 	MarketPlaceVisibility bool   `json:"marketPlaceVisibility"`
 	DiversityZone         string `json:"diversityZone"`
 	CostCentre            string `json:"costCentre"`
 	PromoCode             string `json:"promoCode"`
+
+	// AggregationID names an existing LAG, read from Port.AggregationID. Set it with LagCount to add that many ports.
+	// Send the LAG's own LocationId and PortSpeed. The API takes both from this request, not from the LAG.
+	AggregationID int `json:"aggregationId"`
 
 	ResourceTags map[string]string `json:"resourceTags"`
 
@@ -153,6 +157,9 @@ func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*Bu
 	if !slices.Contains(VALID_CONTRACT_TERMS, req.Term) {
 		return nil, ErrInvalidTerm
 	}
+	if req.AggregationID != 0 && req.LagCount < 1 {
+		return nil, ErrLagCountRequiredWithAggregationID
+	}
 
 	buyOrder := createPortOrder(req)
 
@@ -233,6 +240,7 @@ func createPortOrder(req *BuyPortRequest) []PortOrder {
 		Virtual:               false,
 		Market:                req.Market,
 		LagPortCount:          req.LagCount,
+		AggregationID:         req.AggregationID,
 		MarketplaceVisibility: req.MarketPlaceVisibility,
 		CostCentre:            req.CostCentre,
 		PromoCode:             req.PromoCode,
@@ -247,6 +255,9 @@ func (svc *PortServiceOp) ValidatePortOrder(ctx context.Context, req *BuyPortReq
 	if !slices.Contains(VALID_CONTRACT_TERMS, req.Term) {
 		// Validate that term is one of the allowed values
 		return ErrInvalidTerm
+	}
+	if req.AggregationID != 0 && req.LagCount < 1 {
+		return ErrLagCountRequiredWithAggregationID
 	}
 
 	buyOrder := createPortOrder(req)
