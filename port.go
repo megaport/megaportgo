@@ -61,7 +61,7 @@ type BuyPortRequest struct {
 	PortSpeed             int    `json:"portSpeed"`
 	LocationId            int    `json:"locationId"`
 	Market                string `json:"market"`
-	LagCount              int    `json:"lagCount"` // A lag count of 1 or higher will order the port as a single LAG
+	LagCount              int    `json:"lagCount"` // Orders the port as a LAG of this many ports. With AggregationID set, adds this many ports to that LAG.
 	MarketPlaceVisibility bool   `json:"marketPlaceVisibility"`
 	DiversityZone         string `json:"diversityZone"`
 	CostCentre            string `json:"costCentre"`
