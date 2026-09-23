@@ -100,6 +100,29 @@ func (suite *MCRClientTestSuite) TestBuyMCR() {
 	suite.Equal(want, got)
 }
 
+// TestBuyMCRWaitFails tests that BuyMCR returns the order response when the provisioning wait fails.
+func (suite *MCRClientTestSuite) TestBuyMCRWaitFails() {
+	uid, status := suite.handleOrderNotReady()
+	want := &BuyMCRResponse{TechnicalServiceUID: uid}
+	req := &BuyMCRRequest{Name: "test-mcr", Term: 1, PortSpeed: 1000, LocationID: 1, WaitForProvision: true, WaitForTime: 100 * time.Millisecond}
+
+	got, err := suite.client.MCRService.BuyMCR(context.Background(), req)
+	suite.EqualError(err, "time expired waiting for MCR "+uid+" to provision")
+	suite.Equal(want, got)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	req.WaitForTime = time.Minute
+	got, err = suite.client.MCRService.BuyMCR(ctx, req)
+	suite.EqualError(err, "context expired waiting for MCR "+uid+" to provision: context deadline exceeded")
+	suite.Equal(want, got)
+
+	*status = http.StatusBadRequest
+	got, err = suite.client.MCRService.BuyMCR(context.Background(), req)
+	suite.Error(err)
+	suite.Nil(got)
+}
+
 // TestCreateMCROrderMarketplaceVisibility asserts the marshaled MCROrder carries
 // marketplaceVisibility when set, and omits it (preserving the API default) when
 // the request leaves it nil.

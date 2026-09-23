@@ -15,6 +15,7 @@ import (
 // PortService is an interface for interfacing with the Port endpoints of the Megaport API.
 type PortService interface {
 	// BuyPort buys a port from the Megaport Port API.
+	// If the order goes through but the provisioning wait fails, it returns the order response and the error.
 	BuyPort(ctx context.Context, req *BuyPortRequest) (*BuyPortResponse, error)
 	// ValidatePortOrder validates a port order in the Megaport Products API.
 	ValidatePortOrder(ctx context.Context, req *BuyPortRequest) error
@@ -195,15 +196,15 @@ func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*Bu
 		for {
 			select {
 			case <-timer.C:
-				return nil, fmt.Errorf("time expired waiting for Port %s to provision", toReturn.TechnicalServiceUIDs)
+				return toReturn, fmt.Errorf("time expired waiting for Port %s to provision", toReturn.TechnicalServiceUIDs)
 			case <-ctx.Done():
-				return nil, fmt.Errorf("context expired waiting for Port %s to provision", toReturn.TechnicalServiceUIDs)
+				return toReturn, fmt.Errorf("context expired waiting for Port %s to provision", toReturn.TechnicalServiceUIDs)
 			case <-ticker.C:
 				ports := []*Port{}
 				for _, uid := range toReturn.TechnicalServiceUIDs {
 					portDetails, err := svc.GetPort(ctx, uid)
 					if err != nil {
-						return nil, err
+						return toReturn, err
 					}
 
 					ports = append(ports, portDetails)

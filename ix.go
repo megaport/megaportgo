@@ -18,6 +18,7 @@ type IXService interface {
 	GetIX(ctx context.Context, id string) (*IX, error)
 
 	// BuyIX purchases a new Internet Exchange
+	// If the order goes through but the provisioning wait fails, it returns the order response and the error.
 	BuyIX(ctx context.Context, req *BuyIXRequest) (*BuyIXResponse, error)
 
 	// ValidateIXOrder validates an Internet Exchange order without submitting it
@@ -159,13 +160,13 @@ func (svc *IXServiceOp) BuyIX(ctx context.Context, req *BuyIXRequest) (*BuyIXRes
 		for {
 			select {
 			case <-timer.C:
-				return nil, fmt.Errorf("time expired waiting for IX %s to provision", toReturn.TechnicalServiceUID)
+				return toReturn, fmt.Errorf("time expired waiting for IX %s to provision", toReturn.TechnicalServiceUID)
 			case <-ctx.Done():
-				return nil, fmt.Errorf("context expired waiting for IX %s to provision", toReturn.TechnicalServiceUID)
+				return toReturn, fmt.Errorf("context expired waiting for IX %s to provision", toReturn.TechnicalServiceUID)
 			case <-ticker.C:
 				ix, err := svc.GetIX(ctx, toReturn.TechnicalServiceUID)
 				if err != nil {
-					return nil, err
+					return toReturn, err
 				}
 
 				if slices.Contains(SERVICE_STATE_READY, ix.ProvisioningStatus) {
