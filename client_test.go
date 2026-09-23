@@ -436,7 +436,7 @@ func (suite *ClientTestSuite) testMethod(r *http.Request, expected string) {
 	}
 }
 
-// handleOrderNotReady accepts an order and reports the ordered product as still configuring.
+// handleOrderNotReady accepts an order and fails every other request.
 // Set the returned status to make the API reject the next order.
 func (suite *ClientTestSuite) handleOrderNotReady() (string, *int) {
 	uid := "36b3f68e-2f54-4331-bf94-f8984449365f"
@@ -459,13 +459,6 @@ func (suite *ClientTestSuite) handleOrderNotReady() (string, *int) {
 			return
 		}
 		fmt.Fprintf(w, `{"data":[{"technicalServiceUid":%q,"vxcJTechnicalServiceUid":%q}]}`, uid, uid)
-	})
-	suite.mux.HandleFunc("/v2/product/"+uid, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		fmt.Fprintf(w, `{"data":{"productUid":%q,"provisioningStatus":"CONFIGURING"}}`, uid)
 	})
 	suite.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
