@@ -23,7 +23,7 @@
 - `CheckPortVLANAvailability` now returns the response body read error instead of a stale nil error. A truncated or reset body previously came back as `(false, nil)`, which callers read as "VLAN not available".
 - `GetVXC` now decodes `ipRoutes`, `bgpConnections` and `dhcpPools` on a vrouter interface when the API sends a single entry as a bare object instead of an array. Previously this failed with a JSON unmarshal error. A null element, an empty object element and a bare empty object all decode to no entry, because each of these types has required fields and a blank entry would read as a real one.
 - `ListMVEImages` and `ListProductResourceTags` now return `ErrMVEImagesResponseEmpty` and `ErrProductResourceTagsResponseEmpty` instead of panicking with a nil pointer dereference when a 2xx response carries a null `data` envelope. An envelope without the inner list (for example `"data": {}`) remains a valid empty result, as the API spec allows.
-- `BuyPort`, `BuyMCR`, `BuyMVE`, `BuyVXC` and `BuyIX` now return the order response with the error when the provisioning wait fails. Previously they returned nil, and the caller lost the UIDs of an order that went through. The error text is unchanged.
+- `BuyPort`, `BuyMCR`, `BuyMVE`, `BuyVXC` and `BuyIX` now return the order response with the error when the provisioning wait fails. Previously they returned nil, and the caller lost the UIDs of an order that went through. The error text is unchanged. A caller that checks the error before it reads the response sees no change.
 
 # 1.0.0 Release
 
