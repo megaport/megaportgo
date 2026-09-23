@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -101,6 +102,29 @@ func (suite *PortClientTestSuite) TestBuyPort() {
 	got, err := portSvc.BuyPort(ctx, req)
 	suite.NoError(err)
 	suite.Equal(want, got)
+}
+
+// TestBuyPortWaitFails tests that BuyPort returns the order response when the provisioning wait fails.
+func (suite *PortClientTestSuite) TestBuyPortWaitFails() {
+	uid, status := suite.handleOrderNotReady()
+	want := &BuyPortResponse{TechnicalServiceUIDs: []string{uid}}
+	req := &BuyPortRequest{Name: "test-port", Term: 12, PortSpeed: 10000, LocationId: 226, WaitForProvision: true, WaitForTime: 100 * time.Millisecond}
+
+	got, err := suite.client.PortService.BuyPort(context.Background(), req)
+	suite.EqualError(err, "time expired waiting for Port ["+uid+"] to provision")
+	suite.Equal(want, got)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	req.WaitForTime = time.Minute
+	got, err = suite.client.PortService.BuyPort(ctx, req)
+	suite.EqualError(err, "context expired waiting for Port ["+uid+"] to provision")
+	suite.Equal(want, got)
+
+	*status = http.StatusBadRequest
+	got, err = suite.client.PortService.BuyPort(context.Background(), req)
+	suite.Error(err)
+	suite.Nil(got)
 }
 
 // TestBuyPortAddToLag tests that a buy request naming an existing LAG sends

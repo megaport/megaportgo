@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -305,6 +306,29 @@ func (suite *VXCClientTestSuite) TestBuyVXC() {
 	got, err := vxcSvc.BuyVXC(ctx, req)
 	suite.NoError(err)
 	suite.Equal(want, got)
+}
+
+// TestBuyVXCWaitFails tests that BuyVXC returns the order response when the provisioning wait fails.
+func (suite *VXCClientTestSuite) TestBuyVXCWaitFails() {
+	uid, status := suite.handleOrderNotReady()
+	want := &BuyVXCResponse{TechnicalServiceUID: uid}
+	req := &BuyVXCRequest{PortUID: "9b1c46c7-1e8d-4035-bf38-1bc60d346d57", VXCName: "test-vxc", RateLimit: 50, Term: 1, WaitForProvision: true, WaitForTime: 100 * time.Millisecond}
+
+	got, err := suite.client.VXCService.BuyVXC(context.Background(), req)
+	suite.EqualError(err, "time expired waiting for VXC "+uid+" to provision")
+	suite.Equal(want, got)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	req.WaitForTime = time.Minute
+	got, err = suite.client.VXCService.BuyVXC(ctx, req)
+	suite.EqualError(err, "context expired waiting for VXC "+uid+" to provision")
+	suite.Equal(want, got)
+
+	*status = http.StatusBadRequest
+	got, err = suite.client.VXCService.BuyVXC(context.Background(), req)
+	suite.Error(err)
+	suite.Nil(got)
 }
 
 // TestGetVXCs tests the GetVXC method.
