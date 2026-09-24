@@ -628,13 +628,7 @@ func (svc *MCRServiceOp) DeleteMCR(ctx context.Context, req *DeleteMCRRequest) (
 //
 // Deprecated: the Megaport API no longer supports restoring a canceled MCR.
 func (svc *MCRServiceOp) RestoreMCR(ctx context.Context, mcrId string) (*RestoreMCRResponse, error) {
-	_, err := svc.Client.ProductService.RestoreProduct(ctx, mcrId)
-	if err != nil {
-		return nil, err
-	}
-	return &RestoreMCRResponse{
-		IsRestored: true,
-	}, nil
+	return nil, ErrRestoreNotAllowed
 }
 
 // ListMCRResourceTags returns the resource tags for an MCR in the Megaport MCR API.

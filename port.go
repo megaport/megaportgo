@@ -433,13 +433,7 @@ func (svc *PortServiceOp) DeletePort(ctx context.Context, req *DeletePortRequest
 //
 // Deprecated: the Megaport API no longer supports restoring a canceled port.
 func (svc *PortServiceOp) RestorePort(ctx context.Context, portId string) (*RestorePortResponse, error) {
-	_, err := svc.Client.ProductService.RestoreProduct(ctx, portId)
-	if err != nil {
-		return nil, err
-	}
-	return &RestorePortResponse{
-		IsRestored: true,
-	}, nil
+	return nil, ErrRestoreNotAllowed
 }
 
 // LockPort locks a port in the Megaport Port API.
