@@ -20,6 +20,7 @@ type ProductService interface {
 	// ModifyProduct modifies a product in the Megaport Products API. The available fields to modify are Name, Cost Centre, Marketplace Visibility, Contract Term, ASN (MCR only), and Vnics (MVE only).
 	ModifyProduct(ctx context.Context, req *ModifyProductRequest) (*ModifyProductResponse, error)
 	// DeleteProduct deletes a product immediately (CANCEL_NOW). Requests with DeleteNow=false are rejected with ErrCancelLaterNotAllowed.
+	// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 	DeleteProduct(ctx context.Context, req *DeleteProductRequest) (*DeleteProductResponse, error)
 	// RestoreProduct always returns ErrRestoreNotAllowed and sends no request.
 	//
@@ -286,6 +287,7 @@ func (svc *ProductServiceOp) ModifyProduct(ctx context.Context, req *ModifyProdu
 }
 
 // DeleteProduct deletes a product immediately (CANCEL_NOW). Requests with DeleteNow=false are rejected with ErrCancelLaterNotAllowed.
+// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 func (svc *ProductServiceOp) DeleteProduct(ctx context.Context, req *DeleteProductRequest) (*DeleteProductResponse, error) {
 	if req == nil {
 		return nil, ErrDeleteProductRequestNil
@@ -311,10 +313,16 @@ func (svc *ProductServiceOp) DeleteProduct(ctx context.Context, req *DeleteProdu
 		return nil, err
 	}
 
-	_, err = svc.Client.Do(ctx, clientReq, nil)
+	resp, err := svc.Client.Do(ctx, clientReq, io.Discard)
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusAccepted {
+		return nil, ErrCancelPendingApproval
+	}
+
 	return &DeleteProductResponse{}, nil
 }
 

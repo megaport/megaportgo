@@ -24,6 +24,7 @@ type VXCService interface {
 	GetVXC(ctx context.Context, id string) (*VXC, error)
 	// DeleteVXC deletes a VXC in the Megaport VXC API.
 	// Requests with DeleteNow=false are rejected with ErrCancelLaterNotAllowed.
+	// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 	DeleteVXC(ctx context.Context, id string, req *DeleteVXCRequest) error
 	// UpdateVXC updates a VXC in the Megaport VXC API.
 	UpdateVXC(ctx context.Context, id string, req *UpdateVXCRequest) (*VXC, error)
@@ -306,6 +307,7 @@ const connectTypeTransit = "TRANSIT"
 
 // DeleteVXC deletes a VXC in the Megaport VXC API.
 // Requests with DeleteNow=false are rejected with ErrCancelLaterNotAllowed.
+// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 func (svc *VXCServiceOp) DeleteVXC(ctx context.Context, id string, req *DeleteVXCRequest) error {
 	if req == nil {
 		return ErrDeleteVXCRequestNil

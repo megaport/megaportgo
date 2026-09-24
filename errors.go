@@ -111,6 +111,10 @@ var ErrCancelLaterNotAllowed = errors.New("scheduled deletion (cancel later) is 
 // ErrRestoreNotAllowed is returned when attempting to restore a canceled product
 var ErrRestoreNotAllowed = errors.New("restoring a canceled product is no longer supported by the API")
 
+// ErrCancelPendingApproval is returned when the API creates an order approval request instead of canceling.
+// The product stays live until an approver acts on the request.
+var ErrCancelPendingApproval = errors.New("cancel request is pending approval, the product is still live")
+
 // ErrMCRNotFound is returned when an MCR cannot be found (deleted or never existed).
 var ErrMCRNotFound = errors.New("mcr not found or deleted")
 

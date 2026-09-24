@@ -36,6 +36,7 @@ type MCRService interface {
 	// ModifyMCR modifies an MCR in the Megaport MCR API.
 	ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (*ModifyMCRResponse, error)
 	// DeleteMCR deletes an MCR in the Megaport MCR API.
+	// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 	DeleteMCR(ctx context.Context, req *DeleteMCRRequest) (*DeleteMCRResponse, error)
 	// RestoreMCR always returns ErrRestoreNotAllowed and sends no request.
 	//
@@ -602,6 +603,7 @@ func (svc *MCRServiceOp) ModifyMCRPrefixFilterList(ctx context.Context, mcrID st
 // Note: MCR products only support immediate deletion (CANCEL_NOW). Requests with
 // DeleteNow=false are rejected with ErrMCRCancelLaterNotAllowed, and accepted
 // requests always call the underlying API with DeleteNow=true.
+// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 func (svc *MCRServiceOp) DeleteMCR(ctx context.Context, req *DeleteMCRRequest) (*DeleteMCRResponse, error) {
 	if req == nil {
 		return nil, ErrDeleteMCRRequestNil
