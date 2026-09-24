@@ -165,10 +165,11 @@ func (suite *ClientTestSuite) TestNewRequest_withResponseLogging() {
 	})
 
 	req, _ := suite.client.NewRequest(ctx, http.MethodGet, "/a", nil)
-	_, err = suite.client.Do(ctx, req, nil)
+	resp, err := suite.client.Do(ctx, req, nil)
 	if err != nil {
 		suite.FailNowf("Unexpected error: Do()", "Unexpected error: Do(): %v", err.Error())
 	}
+	defer resp.Body.Close()
 
 	// Check the log output for the expected base64 encoded response body
 	expectedBase64 := "eyJBIjoiYSJ9" // base64 encoded {"A":"a"}
@@ -253,10 +254,11 @@ func (suite *ClientTestSuite) TestDo() {
 
 	req, _ := suite.client.NewRequest(ctx, http.MethodGet, "/", nil)
 	body := new(foo)
-	_, err := suite.client.Do(context.Background(), req, body)
+	resp, err := suite.client.Do(context.Background(), req, body)
 	if err != nil {
 		suite.FailNowf("", "Do(): %v", err.Error())
 	}
+	defer resp.Body.Close()
 
 	expected := &foo{"a"}
 	if !reflect.DeepEqual(body, expected) {
@@ -336,9 +338,9 @@ func (suite *ClientTestSuite) TestDo_httpError() {
 	})
 
 	req, _ := suite.client.NewRequest(ctx, http.MethodGet, "/", nil)
-	_, err := suite.client.Do(context.Background(), req, nil)
-
+	resp, err := suite.client.Do(context.Background(), req, nil)
 	if err == nil {
+		resp.Body.Close()
 		suite.FailNow("Expected HTTP 400 error.")
 	}
 }
@@ -378,10 +380,11 @@ func (suite *ClientTestSuite) TestDo_completion_callback() {
 		}
 		completedResp = string(b)
 	})
-	_, err := suite.client.Do(context.Background(), req, body)
+	resp, err := suite.client.Do(context.Background(), req, body)
 	if err != nil {
 		suite.FailNowf("", "Do(): %v", err)
 	}
+	defer resp.Body.Close()
 	if !reflect.DeepEqual(req, completedReq) {
 		suite.FailNowf("", "Completed request = %v, expected %v", completedReq, req)
 	}
@@ -660,8 +663,9 @@ func (suite *ClientTestSuite) TestDo_withTokenProvider() {
 	suite.Require().NoError(err)
 
 	body := new(response)
-	_, err = suite.client.Do(ctx, req, body)
+	resp, err := suite.client.Do(ctx, req, body)
 	suite.Require().NoError(err)
+	defer resp.Body.Close()
 
 	suite.Equal("Bearer integration-test-token", receivedAuthHeader)
 	suite.Equal("ok", body.Status)

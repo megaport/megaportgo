@@ -50,7 +50,8 @@ func TestDoClosesBodyOnError(t *testing.T) {
 		t.Fatalf("NewRequest: %v", err)
 	}
 
-	if _, err := c.Do(ctx, req, nil); err == nil {
+	if resp, err := c.Do(ctx, req, nil); err == nil {
+		resp.Body.Close()
 		t.Fatal("expected Do to return an error for a 400 response")
 	}
 	if got := atomic.LoadInt32(&closes); got < 1 {
@@ -122,7 +123,8 @@ func TestDoClosesBodyOnCopyError(t *testing.T) {
 		t.Fatalf("NewRequest: %v", err)
 	}
 
-	if _, err := c.Do(ctx, req, failingWriter{}); err == nil {
+	if resp, err := c.Do(ctx, req, failingWriter{}); err == nil {
+		resp.Body.Close()
 		t.Fatal("expected Do to return an error when io.Copy fails")
 	}
 	if got := atomic.LoadInt32(&closes); got != 1 {
@@ -156,7 +158,8 @@ func TestDoClosesBodyOnDecodeError(t *testing.T) {
 	var target struct {
 		Message string `json:"message"`
 	}
-	if _, err := c.Do(ctx, req, &target); err == nil {
+	if resp, err := c.Do(ctx, req, &target); err == nil {
+		resp.Body.Close()
 		t.Fatal("expected Do to return an error for malformed JSON")
 	}
 	if got := atomic.LoadInt32(&closes); got != 1 {
@@ -194,7 +197,8 @@ func TestDoClosesBodyOnErrorWithResponseLogging(t *testing.T) {
 		t.Fatalf("NewRequest: %v", err)
 	}
 
-	if _, err := c.Do(ctx, req, nil); err == nil {
+	if resp, err := c.Do(ctx, req, nil); err == nil {
+		resp.Body.Close()
 		t.Fatal("expected Do to return an error for a 400 response")
 	}
 	if got := atomic.LoadInt32(&closes); got != 1 {
