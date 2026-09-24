@@ -482,6 +482,30 @@ func (suite *IXClientTestSuite) TestUpdateIXPendingApproval() {
 	suite.Nil(gotIX)
 }
 
+// TestDeleteIXPendingApproval tests that a 202 pending-approval cancel errors instead of reading as a completed delete.
+func (suite *IXClientTestSuite) TestDeleteIXPendingApproval() {
+	ctx := context.Background()
+
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	jblob := `{
+		"message": "Request accepted and pending for approval",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"
+	}`
+
+	path := "/v3/product/" + productUid + "/action/CANCEL_NOW"
+
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPost)
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, jblob)
+	})
+
+	err := suite.client.IXService.DeleteIX(ctx, productUid, &DeleteIXRequest{DeleteNow: true})
+
+	suite.ErrorIs(err, ErrCancelPendingApproval)
+}
+
 // TestListIXs tests the ListIXs method with various filters
 func (suite *IXClientTestSuite) TestListIXs() {
 	// Define mock response for products list API with associated IXs
