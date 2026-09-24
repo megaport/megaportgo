@@ -101,7 +101,7 @@ func (suite *NATGatewayVXCIntegrationTestSuite) TestVXCAttachedToNATGateway() {
 		Description:   "vxc-integration-private",
 		AddressFamily: AddressFamilyIPv4,
 		Entries: []NATGatewayPrefixListEntry{
-			{Action: PrefixListActionPermit, Prefix: "10.0.0.0/8", Ge: 24, Le: 32},
+			{Action: PrefixListActionPermit, Prefix: "10.0.0.0/8", Ge: PtrTo(24), Le: PtrTo(32)},
 		},
 	})
 	if err != nil {
