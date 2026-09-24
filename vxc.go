@@ -327,9 +327,9 @@ func isTransitVXC(vxc *VXC) bool {
 }
 
 // DeleteVXC deletes a VXC in the Megaport VXC API.
-// Note: Transit VXCs (Megaport Internet) only support immediate deletion (CANCEL_NOW).
-// Attempting to schedule deletion (DeleteNow=false) for Transit VXCs will return an error.
-// When DeleteNow is false, an additional GetVXC call is made to check for Transit VXC status.
+// Note: VXCs only support immediate deletion (CANCEL_NOW). With DeleteNow=false, a
+// GetVXC call picks the error: ErrTransitVXCCancelLaterNotAllowed for a Transit VXC
+// (Megaport Internet), ErrCancelLaterNotAllowed for any other VXC.
 func (svc *VXCServiceOp) DeleteVXC(ctx context.Context, id string, req *DeleteVXCRequest) error {
 	if req == nil {
 		return ErrDeleteVXCRequestNil

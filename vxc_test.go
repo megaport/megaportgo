@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -1578,7 +1579,7 @@ func (suite *VXCClientTestSuite) TestDeleteTransitVXCWithDeleteNow() {
 	suite.NoError(err, "expected no error when deleting Transit VXC with DeleteNow=true")
 }
 
-// TestDeleteNonTransitVXCWithCancelLater tests that scheduling deletion for a non-Transit VXC succeeds.
+// TestDeleteNonTransitVXCWithCancelLater verifies that scheduling deletion for a non-Transit VXC is rejected without a lifecycle action request.
 func (suite *VXCClientTestSuite) TestDeleteNonTransitVXCWithCancelLater() {
 	ctx := context.Background()
 
@@ -1615,18 +1616,14 @@ func (suite *VXCClientTestSuite) TestDeleteNonTransitVXCWithCancelLater() {
 		fmt.Fprint(w, getVxcBlob)
 	})
 
-	deleteBlob := `{
-		"message": "Action [CANCEL Service 36b3f68e-2f54-4331-bf94-f8984449365f] has been done.",
-		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"
-	}`
-
-	suite.mux.HandleFunc("/v3/product/"+productUid+"/action/CANCEL", func(w http.ResponseWriter, r *http.Request) {
-		suite.testMethod(r, http.MethodPost)
-		fmt.Fprint(w, deleteBlob)
+	var actionHit atomic.Bool
+	suite.mux.HandleFunc("/v3/product/", func(w http.ResponseWriter, r *http.Request) {
+		actionHit.Store(true)
 	})
 
 	err := vxcSvc.DeleteVXC(ctx, productUid, req)
-	suite.NoError(err, "expected no error when scheduling deletion for non-Transit VXC")
+	suite.ErrorIs(err, ErrCancelLaterNotAllowed)
+	suite.False(actionHit.Load(), "expected no lifecycle action request")
 }
 
 // TestIsTransitVXC tests the isTransitVXC helper function with various VXC types

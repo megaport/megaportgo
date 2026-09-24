@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -635,33 +636,17 @@ func (suite *PortClientTestSuite) TestDeletePortNilRequest() {
 	suite.ErrorIs(err, ErrDeletePortRequestNil)
 }
 
-// TestRestorePort tests the RestorePort method
+// TestRestorePort verifies that RestorePort returns ErrRestoreNotAllowed without sending a request.
 func (suite *PortClientTestSuite) TestRestorePort() {
-	ctx := context.Background()
-
-	portSvc := suite.client.PortService
-	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
-
-	jblob := `{
-	"message": "Action [UN_CANCEL Service 36b3f68e-2f54-4331-bf94-f8984449365f] has been done.",
-	"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"
-	}`
-
-	path := "/v3/product/" + productUid + "/action/UN_CANCEL"
-
-	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		suite.testMethod(r, http.MethodPost)
-		fmt.Fprint(w, jblob)
+	var hit atomic.Bool
+	suite.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		hit.Store(true)
 	})
 
-	want := &RestorePortResponse{
-		IsRestored: true,
-	}
-
-	got, err := portSvc.RestorePort(ctx, productUid)
-
-	suite.NoError(err)
-	suite.Equal(want, got)
+	got, err := suite.client.PortService.RestorePort(context.Background(), "36b3f68e-2f54-4331-bf94-f8984449365f")
+	suite.ErrorIs(err, ErrRestoreNotAllowed)
+	suite.Nil(got)
+	suite.False(hit.Load(), "expected no request to the API")
 }
 
 // TestLockPort tests the LockPort method

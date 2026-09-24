@@ -29,7 +29,9 @@ type PortService interface {
 	// Note: Port products only support immediate deletion (CANCEL_NOW). Requests
 	// with DeleteNow=false are rejected with ErrPortCancelLaterNotAllowed.
 	DeletePort(ctx context.Context, req *DeletePortRequest) (*DeletePortResponse, error)
-	// RestorePort restores a port in the Megaport Port API.
+	// RestorePort always returns ErrRestoreNotAllowed and sends no request.
+	//
+	// Deprecated: the Megaport API no longer supports restoring a canceled port.
 	RestorePort(ctx context.Context, portId string) (*RestorePortResponse, error)
 	// LockPort locks a port in the Megaport Port API.
 	LockPort(ctx context.Context, portId string) (*LockPortResponse, error)
@@ -427,7 +429,9 @@ func (svc *PortServiceOp) DeletePort(ctx context.Context, req *DeletePortRequest
 	}, nil
 }
 
-// RestorePort restores a port in the Megaport Port API.
+// RestorePort always returns ErrRestoreNotAllowed and sends no request.
+//
+// Deprecated: the Megaport API no longer supports restoring a canceled port.
 func (svc *PortServiceOp) RestorePort(ctx context.Context, portId string) (*RestorePortResponse, error) {
 	_, err := svc.Client.ProductService.RestoreProduct(ctx, portId)
 	if err != nil {

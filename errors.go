@@ -105,6 +105,12 @@ var ErrMCRCancelLaterNotAllowed = errors.New("mcr products do not support schedu
 // ErrPortCancelLaterNotAllowed is returned when attempting to schedule Port deletion for later (only CANCEL_NOW is allowed)
 var ErrPortCancelLaterNotAllowed = errors.New("port products do not support scheduled deletion (cancel later), only immediate deletion (CANCEL_NOW) is allowed")
 
+// ErrCancelLaterNotAllowed is returned when attempting to schedule deletion for later (only CANCEL_NOW is allowed)
+var ErrCancelLaterNotAllowed = errors.New("scheduled deletion (cancel later) is no longer supported by the API, only immediate deletion (CANCEL_NOW) is allowed")
+
+// ErrRestoreNotAllowed is returned when attempting to restore a canceled product
+var ErrRestoreNotAllowed = errors.New("restoring a canceled product is no longer supported by the API")
+
 // ErrMCRNotFound is returned when an MCR cannot be found (deleted or never existed).
 var ErrMCRNotFound = errors.New("mcr not found or deleted")
 

@@ -37,7 +37,9 @@ type MCRService interface {
 	ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (*ModifyMCRResponse, error)
 	// DeleteMCR deletes an MCR in the Megaport MCR API.
 	DeleteMCR(ctx context.Context, req *DeleteMCRRequest) (*DeleteMCRResponse, error)
-	// RestoreMCR restores a deleted MCR in the Megaport MCR API.
+	// RestoreMCR always returns ErrRestoreNotAllowed and sends no request.
+	//
+	// Deprecated: the Megaport API no longer supports restoring a canceled MCR.
 	RestoreMCR(ctx context.Context, mcrId string) (*RestoreMCRResponse, error)
 	// ListMCRResourceTags returns the resource tags for an MCR in the Megaport MCR API.
 	ListMCRResourceTags(ctx context.Context, mcrID string) (map[string]string, error)
@@ -622,7 +624,9 @@ func (svc *MCRServiceOp) DeleteMCR(ctx context.Context, req *DeleteMCRRequest) (
 	}, nil
 }
 
-// Restore restores a deleted MCR in the Megaport MCR API.
+// RestoreMCR always returns ErrRestoreNotAllowed and sends no request.
+//
+// Deprecated: the Megaport API no longer supports restoring a canceled MCR.
 func (svc *MCRServiceOp) RestoreMCR(ctx context.Context, mcrId string) (*RestoreMCRResponse, error) {
 	_, err := svc.Client.ProductService.RestoreProduct(ctx, mcrId)
 	if err != nil {

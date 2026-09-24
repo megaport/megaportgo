@@ -85,7 +85,7 @@ type UpdateIXRequest struct {
 }
 
 type DeleteIXRequest struct {
-	DeleteNow bool // If true, delete immediately; if false, cancel at end of term
+	DeleteNow bool // Must be true; false is rejected with ErrCancelLaterNotAllowed
 }
 
 type ListIXsRequest struct {

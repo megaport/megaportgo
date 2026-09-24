@@ -19,9 +19,11 @@ type ProductService interface {
 	ListProducts(ctx context.Context) ([]Product, error)
 	// ModifyProduct modifies a product in the Megaport Products API. The available fields to modify are Name, Cost Centre, Marketplace Visibility, Contract Term, ASN (MCR only), and Vnics (MVE only).
 	ModifyProduct(ctx context.Context, req *ModifyProductRequest) (*ModifyProductResponse, error)
-	// DeleteProduct is responsible for either scheduling a product for deletion "CANCEL" or deleting a product immediately "CANCEL_NOW" in the Megaport Products API.
+	// DeleteProduct is responsible for deleting a product immediately "CANCEL_NOW" in the Megaport Products API. Requests with DeleteNow=false are rejected with ErrCancelLaterNotAllowed.
 	DeleteProduct(ctx context.Context, req *DeleteProductRequest) (*DeleteProductResponse, error)
-	// RestoreProduct is responsible for restoring a product in the Megaport Products API. The product must be in a "CANCELLED" state to be restored.
+	// RestoreProduct always returns ErrRestoreNotAllowed and sends no request.
+	//
+	// Deprecated: the Megaport API no longer supports restoring a canceled product.
 	RestoreProduct(ctx context.Context, productId string) (*RestoreProductResponse, error)
 	// ManageProductLock is responsible for locking or unlocking a product in the Megaport Products API.
 	ManageProductLock(ctx context.Context, req *ManageProductLockRequest) (*ManageProductLockResponse, error)
@@ -283,20 +285,16 @@ func (svc *ProductServiceOp) ModifyProduct(ctx context.Context, req *ModifyProdu
 	return &ModifyProductResponse{IsUpdated: true}, nil
 }
 
-// DeleteProduct is responsible for either scheduling a product for deletion "CANCEL" or deleting a product immediately "CANCEL_NOW" in the Megaport Products API.
+// DeleteProduct is responsible for deleting a product immediately "CANCEL_NOW" in the Megaport Products API. Requests with DeleteNow=false are rejected with ErrCancelLaterNotAllowed.
 func (svc *ProductServiceOp) DeleteProduct(ctx context.Context, req *DeleteProductRequest) (*DeleteProductResponse, error) {
 	if req == nil {
 		return nil, ErrDeleteProductRequestNil
 	}
-	var action string
-
-	if req.DeleteNow {
-		action = "CANCEL_NOW"
-	} else {
-		action = "CANCEL"
+	if !req.DeleteNow {
+		return nil, ErrCancelLaterNotAllowed
 	}
 
-	path := "/v3/product/" + req.ProductID + "/action/" + action
+	path := "/v3/product/" + req.ProductID + "/action/CANCEL_NOW"
 	urlObj := svc.Client.BaseURL.JoinPath(path)
 
 	// Add safe_delete query parameter if specified - this is used to check if the product has any attached resources before deletion. If the product has attached resources, the API will return an error and the product will not be deleted.
@@ -320,20 +318,11 @@ func (svc *ProductServiceOp) DeleteProduct(ctx context.Context, req *DeleteProdu
 	return &DeleteProductResponse{}, nil
 }
 
-// RestoreProduct is responsible for restoring a product in the Megaport Products API. The product must be in a "CANCELLED" state to be restored.
+// RestoreProduct always returns ErrRestoreNotAllowed and sends no request.
+//
+// Deprecated: the Megaport API no longer supports restoring a canceled product.
 func (svc *ProductServiceOp) RestoreProduct(ctx context.Context, productId string) (*RestoreProductResponse, error) {
-	path := "/v3/product/" + productId + "/action/UN_CANCEL"
-	url := svc.Client.BaseURL.JoinPath(path).String()
-	clientReq, err := svc.Client.NewRequest(ctx, http.MethodPost, url, nil)
-	if err != nil {
-		return nil, err
-	}
-	_, err = svc.Client.Do(ctx, clientReq, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return &RestoreProductResponse{}, nil
+	return nil, ErrRestoreNotAllowed
 }
 
 // ManageProductLock is responsible for locking or unlocking a product in the Megaport Products API.
