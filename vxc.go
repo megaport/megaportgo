@@ -23,6 +23,7 @@ type VXCService interface {
 	// GetVXC gets details about a single VXC from the Megaport VXC API.
 	GetVXC(ctx context.Context, id string) (*VXC, error)
 	// DeleteVXC deletes a VXC in the Megaport VXC API.
+	// Requests with DeleteNow=false are rejected with ErrCancelLaterNotAllowed.
 	DeleteVXC(ctx context.Context, id string, req *DeleteVXCRequest) error
 	// UpdateVXC updates a VXC in the Megaport VXC API.
 	UpdateVXC(ctx context.Context, id string, req *UpdateVXCRequest) (*VXC, error)
@@ -76,7 +77,7 @@ type BuyVXCResponse struct {
 
 // DeleteVXCRequest represents a request to delete a VXC in the Megaport VXC API.
 type DeleteVXCRequest struct {
-	DeleteNow bool
+	DeleteNow bool // Must be true. False is rejected with ErrCancelLaterNotAllowed.
 }
 
 // DeleteVXCResponse represents a response from deleting a VXC in the Megaport VXC API.

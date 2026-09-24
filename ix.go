@@ -27,7 +27,8 @@ type IXService interface {
 	// UpdateIX updates an existing Internet Exchange
 	UpdateIX(ctx context.Context, id string, req *UpdateIXRequest) (*IX, error)
 
-	// DeleteIX deletes an Internet Exchange
+	// DeleteIX deletes an Internet Exchange.
+	// Requests with DeleteNow=false are rejected with ErrCancelLaterNotAllowed.
 	DeleteIX(ctx context.Context, id string, req *DeleteIXRequest) error
 
 	// ListIXs lists all Internet Exchanges with optional filters
@@ -85,7 +86,7 @@ type UpdateIXRequest struct {
 }
 
 type DeleteIXRequest struct {
-	DeleteNow bool // Must be true; false is rejected with ErrCancelLaterNotAllowed
+	DeleteNow bool // Must be true. False is rejected with ErrCancelLaterNotAllowed.
 }
 
 type ListIXsRequest struct {

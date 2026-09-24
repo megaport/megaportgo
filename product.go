@@ -19,7 +19,7 @@ type ProductService interface {
 	ListProducts(ctx context.Context) ([]Product, error)
 	// ModifyProduct modifies a product in the Megaport Products API. The available fields to modify are Name, Cost Centre, Marketplace Visibility, Contract Term, ASN (MCR only), and Vnics (MVE only).
 	ModifyProduct(ctx context.Context, req *ModifyProductRequest) (*ModifyProductResponse, error)
-	// DeleteProduct is responsible for deleting a product immediately "CANCEL_NOW" in the Megaport Products API. Requests with DeleteNow=false are rejected with ErrCancelLaterNotAllowed.
+	// DeleteProduct deletes a product immediately (CANCEL_NOW). Requests with DeleteNow=false are rejected with ErrCancelLaterNotAllowed.
 	DeleteProduct(ctx context.Context, req *DeleteProductRequest) (*DeleteProductResponse, error)
 	// RestoreProduct always returns ErrRestoreNotAllowed and sends no request.
 	//
@@ -285,7 +285,7 @@ func (svc *ProductServiceOp) ModifyProduct(ctx context.Context, req *ModifyProdu
 	return &ModifyProductResponse{IsUpdated: true}, nil
 }
 
-// DeleteProduct is responsible for deleting a product immediately "CANCEL_NOW" in the Megaport Products API. Requests with DeleteNow=false are rejected with ErrCancelLaterNotAllowed.
+// DeleteProduct deletes a product immediately (CANCEL_NOW). Requests with DeleteNow=false are rejected with ErrCancelLaterNotAllowed.
 func (svc *ProductServiceOp) DeleteProduct(ctx context.Context, req *DeleteProductRequest) (*DeleteProductResponse, error) {
 	if req == nil {
 		return nil, ErrDeleteProductRequestNil
