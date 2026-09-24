@@ -1,12 +1,15 @@
 # Unreleased
 
 ## New Features
+- Add `AggregationID` to `BuyPortRequest` so a port order can add ports to an existing LAG. Set it with `LagCount` to say how many ports to add, and send the LAG's own `LocationId` and `PortSpeed`. Leaving it zero keeps today's behavior.
+- Add `InterfaceType`, `IpSecTunnelOptions`, `Description`, `IpMtu`, `VLAN`, `PacketFilterIn`, `PacketFilterOut` and `DhcpPools` to `CSPConnectionVirtualRouterInterface` so `GetVXC` returns the settings the API already stores on an MCR interface, including IPsec tunnel configuration. A setting the API omits decodes as nil, not zero. A read fills in `InterfaceType` with `InterfaceTypeSubInterface` when the API omits it, which it does on every plain subinterface. `IpSecTunnelOptions` uses the new read-only `IPsecTunnelState` type, which deliberately omits the pre-shared key. The API returns the key in plaintext on this path, and decoding it would carry a live secret into Terraform state and CLI output.
 - Add `DhcpPools` to `PartnerConfigInterface` so a VXC order or update can serve a DHCP pool on an MCR interface. The API accepts at most one pool per interface.
 - Add `WithCallContext` client option that sets the `X-Call-Context` header so API calls act on behalf of a managed account (identified by company UID).
 - Add `AsOverride` (`*bool`) to `BgpConnectionConfig` so consumers can enable AS Override for eBGP peering. Unset leaves the API default in place.
 
 ## Changes
 - `DeleteProduct` returns `ErrCancelPendingApproval` when the API creates an order approval request instead of canceling. That case used to read as a successful cancel on a service that was still live. Every product delete method forwards it.
+- Add `Prefixes` to `CSPConnectionAWS` so an AWS VXC read returns the prefixes the API reports. The value decodes from either a JSON string or an array of strings, joined with commas.
 - Bump Go toolchain to 1.26.5 to pick up a `crypto/tls` fix for an Encrypted Client Hello privacy leak ([GO-2026-5856](https://pkg.go.dev/vuln/GO-2026-5856)).
 - Bump Go toolchain to 1.26.7. This clears the four standard library advisories `govulncheck` reports against 1.26.5: [GO-2026-6218](https://pkg.go.dev/vuln/GO-2026-6218) (`net/url`), [GO-2026-6090](https://pkg.go.dev/vuln/GO-2026-6090) (`crypto/tls`), [GO-2026-5972](https://pkg.go.dev/vuln/GO-2026-5972) (`encoding/asn1`), and [GO-2026-5026](https://pkg.go.dev/vuln/GO-2026-5026) (`net/http`).
 - Breaking: the `MCRLookingGlassService` route methods now call the real endpoints under `/v2/product/mcr2/{productUid}/diagnostics/routes/`. The old `lookingGlass` paths never existed, so every call returned 404.
@@ -19,7 +22,9 @@
 - Breaking: the types behind the removed methods are gone too: `RouteProtocol` and its constants, `LookingGlassRouteDirection` and its constants, `BGPSessionStatus`, `LookingGlassBGPSession`, `ListBGPSessionsRequest`, `LookingGlassAsyncStatus`, `LookingGlassAsyncJob`, `AsyncIPRoutesData`, `AsyncBGPNeighborRoutesData`, and every exported `LookingGlass*Response` envelope.
 - The nil-request guards on `ListIPRoutesWithFilter`, `ListBGPRoutesWithFilter`, and `ListBGPNeighborRoutes` now return `ErrListIPRoutesRequestNil`, `ErrListBGPRoutesRequestNil`, and `ErrListBGPNeighborRoutesRequestNil`, so callers can use `errors.Is` instead of matching the message.
 - `CheckPortVLANAvailability` now returns the response body read error instead of a stale nil error. A truncated or reset body previously came back as `(false, nil)`, which callers read as "VLAN not available".
+- `GetVXC` now decodes `ipRoutes`, `bgpConnections` and `dhcpPools` on a vrouter interface when the API sends a single entry as a bare object instead of an array. Previously this failed with a JSON unmarshal error. A null element, an empty object element and a bare empty object all decode to no entry, because each of these types has required fields and a blank entry would read as a real one.
 - `ListMVEImages` and `ListProductResourceTags` now return `ErrMVEImagesResponseEmpty` and `ErrProductResourceTagsResponseEmpty` instead of panicking with a nil pointer dereference when a 2xx response carries a null `data` envelope. An envelope without the inner list (for example `"data": {}`) remains a valid empty result, as the API spec allows.
+- `BuyPort`, `BuyMCR`, `BuyMVE`, `BuyVXC` and `BuyIX` now return the order response with the error when the provisioning wait fails. Previously they returned nil, and the caller lost the UIDs of an order that went through. The error text is unchanged. A caller that checks the error before it reads the response sees no change.
 
 # 1.0.0 Release
 

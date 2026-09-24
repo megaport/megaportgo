@@ -14,6 +14,7 @@ import (
 // MVEService is an interface for interfacing with the MVE endpoints of the Megaport API.
 type MVEService interface {
 	// BuyMVE buys an MVE from the Megaport MVE API.
+	// If the order goes through but the provisioning wait fails, it returns the order response and the error.
 	BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMVEResponse, error)
 	// ValidateMVEOrder validates an MVE order in the Megaport Products API.
 	ValidateMVEOrder(ctx context.Context, req *BuyMVERequest) error
@@ -150,13 +151,13 @@ func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMV
 		for {
 			select {
 			case <-timer.C:
-				return nil, fmt.Errorf("time expired waiting for MVE %s to provision", toReturn.TechnicalServiceUID)
+				return toReturn, fmt.Errorf("time expired waiting for MVE %s to provision", toReturn.TechnicalServiceUID)
 			case <-ctx.Done():
-				return nil, fmt.Errorf("context expired waiting for MVE %s to provision", toReturn.TechnicalServiceUID)
+				return toReturn, fmt.Errorf("context expired waiting for MVE %s to provision", toReturn.TechnicalServiceUID)
 			case <-ticker.C:
 				mveDetails, err := svc.GetMVE(ctx, toReturn.TechnicalServiceUID)
 				if err != nil {
-					return nil, err
+					return toReturn, err
 				}
 
 				if slices.Contains(SERVICE_STATE_READY, mveDetails.ProvisioningStatus) {
