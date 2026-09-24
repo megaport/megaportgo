@@ -630,6 +630,7 @@ func (suite *MCRClientTestSuite) TestModifyMCRPendingApproval() {
 		MCRID:              productUid,
 		ContractTermMonths: PtrTo(12),
 		WaitForUpdate:      true,
+		WaitForTime:        time.Second,
 	}
 	gotRes, err := suite.client.MCRService.ModifyMCR(ctx, req)
 	suite.ErrorIs(err, ErrModifyPendingApproval)

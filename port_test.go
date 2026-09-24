@@ -598,6 +598,7 @@ func (suite *PortClientTestSuite) TestModifyPortPendingApproval() {
 		PortID:             productUid,
 		ContractTermMonths: PtrTo(12),
 		WaitForUpdate:      true,
+		WaitForTime:        time.Second,
 	}
 	gotRes, err := suite.client.PortService.ModifyPort(ctx, req)
 	suite.ErrorIs(err, ErrModifyPendingApproval)

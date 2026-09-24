@@ -706,6 +706,7 @@ func (suite *MVEClientTestSuite) TestModifyMVEPendingApproval() {
 		MVEID:              productUid,
 		ContractTermMonths: PtrTo(12),
 		WaitForUpdate:      true,
+		WaitForTime:        time.Second,
 	}
 	gotRes, err := suite.client.MVEService.ModifyMVE(ctx, req)
 	suite.ErrorIs(err, ErrModifyPendingApproval)
