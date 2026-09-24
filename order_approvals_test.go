@@ -66,6 +66,12 @@ func (suite *OrderApprovalClientTestSuite) TestListOrderApprovals() {
 				"comment": "Please approve this order",
 				"createDate": 1700000000000,
 				"detail": {"type": "NEW_ORDER", "origin": "https://portal.megaport.com", "userName": "user@example.com", "requesterCompanyId": 200, "productRequest": [{"name": "test"}]}
+			},
+			{
+				"uid": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+				"id": 12346,
+				"status": "PENDING",
+				"type": "EARLY_TERMINATION"
 			}
 		]
 	}`
@@ -88,8 +94,14 @@ func (suite *OrderApprovalClientTestSuite) TestListOrderApprovals() {
 				CreateDate:         &Time{GetTime(1700000000000)},
 				Detail:             json.RawMessage(`{"type": "NEW_ORDER", "origin": "https://portal.megaport.com", "userName": "user@example.com", "requesterCompanyId": 200, "productRequest": [{"name": "test"}]}`),
 			},
+			{
+				UID:    "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+				ID:     12346,
+				Status: OrderApprovalStatusPending,
+				Type:   OrderApprovalTypeEarlyTermination,
+			},
 		},
-		TotalCount: 1,
+		TotalCount: 2,
 		Page:       1,
 		Limit:      10,
 		TotalPages: 1,
@@ -100,7 +112,7 @@ func (suite *OrderApprovalClientTestSuite) TestListOrderApprovals() {
 		suite.Equal("PENDING", r.URL.Query().Get("status"))
 		suite.Equal("1", r.URL.Query().Get("pageNumber"))
 		suite.Equal("10", r.URL.Query().Get("pageSize"))
-		w.Header().Set("Pagination-Total-Count", "1")
+		w.Header().Set("Pagination-Total-Count", "2")
 		w.Header().Set("Pagination-Page", "1")
 		w.Header().Set("Pagination-Limit", "10")
 		w.Header().Set("Pagination-Total-Page", "1")
