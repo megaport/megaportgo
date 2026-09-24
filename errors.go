@@ -182,6 +182,11 @@ var ErrListPartnerPortsRequestNil = errors.New("list partner ports request canno
 // ErrBuyPortRequestNil is returned when BuyPort or ValidatePortOrder is called with a nil request.
 var ErrBuyPortRequestNil = errors.New("buy port request cannot be nil")
 
+// ErrLagCountRequiredWithAggregationID is returned when a port order names an
+// existing LAG but asks for no ports. The API reads that as a standalone port
+// order and silently ignores the LAG.
+var ErrLagCountRequiredWithAggregationID = errors.New("lag count must be 1 or higher when aggregation ID is set")
+
 // ErrModifyPortRequestNil is returned when ModifyPort is called with a nil request.
 var ErrModifyPortRequestNil = errors.New("modify port request cannot be nil")
 
