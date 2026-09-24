@@ -17,6 +17,7 @@ type PortOrder struct {
 	Market                string          `json:"market"`
 	CostCentre            string          `json:"costCentre,omitempty"`
 	LagPortCount          int             `json:"lagPortCount,omitempty"`
+	AggregationID         int             `json:"aggregationId,omitempty"`
 	MarketplaceVisibility bool            `json:"marketplaceVisibility"`
 	Config                PortOrderConfig `json:"config"`
 	PromoCode             string          `json:"promoCode,omitempty"`

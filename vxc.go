@@ -15,6 +15,7 @@ import (
 // VXCService is an interface for interfacing with the VXC endpoints in the Megaport VXC API.
 type VXCService interface {
 	// BuyVXC buys a VXC from the Megaport VXC API.
+	// If the order goes through but the provisioning wait fails, it returns the order response and the error.
 	BuyVXC(ctx context.Context, req *BuyVXCRequest) (*BuyVXCResponse, error)
 	// ValidateVXCOrder validates a VXC order in the Megaport Products API.
 	ValidateVXCOrder(ctx context.Context, req *BuyVXCRequest) error
@@ -179,6 +180,9 @@ func (svc *VXCServiceOp) BuyVXC(ctx context.Context, req *BuyVXCRequest) (*BuyVX
 		return nil, err
 	}
 	serviceUID := orderInfo.Data[0].TechnicalServiceUID
+	toReturn := &BuyVXCResponse{
+		TechnicalServiceUID: serviceUID,
+	}
 
 	// wait until the VXC is provisioned before returning if reqested by the user
 	if req.WaitForProvision {
@@ -195,28 +199,24 @@ func (svc *VXCServiceOp) BuyVXC(ctx context.Context, req *BuyVXCRequest) (*BuyVX
 		for {
 			select {
 			case <-timer.C:
-				return nil, fmt.Errorf("time expired waiting for VXC %s to provision", serviceUID)
+				return toReturn, fmt.Errorf("time expired waiting for VXC %s to provision", serviceUID)
 			case <-ctx.Done():
-				return nil, fmt.Errorf("context expired waiting for VXC %s to provision", serviceUID)
+				return toReturn, fmt.Errorf("context expired waiting for VXC %s to provision", serviceUID)
 			case <-ticker.C:
 				vxcDetails, err := svc.GetVXC(ctx, serviceUID)
 				if err != nil {
-					return nil, err
+					return toReturn, err
 				}
 
 				if slices.Contains(SERVICE_STATE_READY, vxcDetails.ProvisioningStatus) {
-					return &BuyVXCResponse{
-						TechnicalServiceUID: serviceUID,
-					}, nil
+					return toReturn, nil
 				}
 
 			}
 		}
 	} else {
 		// return the service UID right away if the user doesn't want to wait for provision
-		return &BuyVXCResponse{
-			TechnicalServiceUID: serviceUID,
-		}, nil
+		return toReturn, nil
 	}
 }
 
