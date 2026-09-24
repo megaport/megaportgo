@@ -147,7 +147,7 @@ type DeleteMCRResponse struct {
 	IsDeleting bool
 }
 
-// RestoreMCRequest represents a request to restore a deleted MCR
+// RestoreMCRResponse represents a response from restoring an MCR.
 type RestoreMCRResponse struct {
 	IsRestored bool
 }
