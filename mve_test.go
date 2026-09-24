@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -188,6 +189,29 @@ func (suite *MVEClientTestSuite) marshalMVEOrder(req *BuyMVERequest) string {
 	b, err := json.Marshal(orders[0])
 	suite.Require().NoError(err)
 	return string(b)
+}
+
+// TestBuyMVEWaitFails tests that BuyMVE returns the order response when the provisioning wait fails.
+func (suite *MVEClientTestSuite) TestBuyMVEWaitFails() {
+	uid, status := suite.handleOrderNotReady()
+	want := &BuyMVEResponse{TechnicalServiceUID: uid}
+	req := &BuyMVERequest{Name: "test-mve", Term: 12, LocationID: 1, WaitForProvision: true, WaitForTime: 100 * time.Millisecond}
+
+	got, err := suite.client.MVEService.BuyMVE(context.Background(), req)
+	suite.EqualError(err, "time expired waiting for MVE "+uid+" to provision")
+	suite.Equal(want, got)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	req.WaitForTime = time.Minute
+	got, err = suite.client.MVEService.BuyMVE(ctx, req)
+	suite.EqualError(err, "context expired waiting for MVE "+uid+" to provision")
+	suite.Equal(want, got)
+
+	*status = http.StatusBadRequest
+	got, err = suite.client.MVEService.BuyMVE(context.Background(), req)
+	suite.Error(err)
+	suite.Nil(got)
 }
 
 // TestListMVEs tests the ListMVEs method which lists provisioned MVE products

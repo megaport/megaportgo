@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -134,6 +135,29 @@ func (suite *IXClientTestSuite) TestBuyIX() {
 	got, err := ixSvc.BuyIX(ctx, req)
 	suite.NoError(err)
 	suite.Equal(want, got)
+}
+
+// TestBuyIXWaitFails tests that BuyIX returns the order response when the provisioning wait fails.
+func (suite *IXClientTestSuite) TestBuyIXWaitFails() {
+	uid, status := suite.handleOrderNotReady()
+	want := &BuyIXResponse{TechnicalServiceUID: uid}
+	req := &BuyIXRequest{ProductUID: "9b1c46c7-1e8d-4035-bf38-1bc60d346d57", Name: "test-ix", NetworkServiceType: "Los Angeles IX", ASN: 12345, RateLimit: 500, VLAN: 2001, WaitForProvision: true, WaitForTime: 100 * time.Millisecond}
+
+	got, err := suite.client.IXService.BuyIX(context.Background(), req)
+	suite.EqualError(err, "time expired waiting for IX "+uid+" to provision")
+	suite.Equal(want, got)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	req.WaitForTime = time.Minute
+	got, err = suite.client.IXService.BuyIX(ctx, req)
+	suite.EqualError(err, "context expired waiting for IX "+uid+" to provision")
+	suite.Equal(want, got)
+
+	*status = http.StatusBadRequest
+	got, err = suite.client.IXService.BuyIX(context.Background(), req)
+	suite.Error(err)
+	suite.Nil(got)
 }
 
 // TestGetIX tests the GetIX method.
