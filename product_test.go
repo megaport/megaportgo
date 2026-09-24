@@ -268,6 +268,37 @@ func (suite *ProductClientTestSuite) TestDeleteProduct() {
 	suite.Equal(wantRes, gotRes)
 }
 
+// TestDeleteProductPendingApproval tests that a 202 pending-approval cancel errors instead of reading as a completed cancel.
+func (suite *ProductClientTestSuite) TestDeleteProductPendingApproval() {
+	ctx := context.Background()
+
+	productSvc := suite.client.ProductService
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	jblob := `{
+    "message": "Request accepted and pending for approval",
+    "terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"
+	}`
+
+	req := &DeleteProductRequest{
+		ProductID: productUid,
+		DeleteNow: true,
+	}
+
+	path := "/v3/product/" + req.ProductID + "/action/CANCEL_NOW"
+
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPost)
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, jblob)
+	})
+
+	gotRes, err := productSvc.DeleteProduct(ctx, req)
+
+	suite.ErrorIs(err, ErrCancelPendingApproval)
+	suite.Nil(gotRes)
+}
+
 // TestRestoreProduct tests the RestoreProduct method
 func (suite *ProductClientTestSuite) TestRestoreProduct() {
 	ctx := context.Background()
