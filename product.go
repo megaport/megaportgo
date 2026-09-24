@@ -315,12 +315,11 @@ func (svc *ProductServiceOp) DeleteProduct(ctx context.Context, req *DeleteProdu
 		return nil, err
 	}
 
-	resp, err := svc.Client.Do(ctx, clientReq, nil)
+	resp, err := svc.Client.Do(ctx, clientReq, io.Discard)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	_, _ = io.Copy(io.Discard, resp.Body)
 
 	if resp.StatusCode == http.StatusAccepted {
 		return nil, ErrCancelPendingApproval
