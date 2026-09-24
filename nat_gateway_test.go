@@ -447,6 +447,29 @@ func (suite *NATGatewayClientTestSuite) TestDeleteNATGatewayProvisioned() {
 	}
 }
 
+// TestDeleteNATGatewayPendingApproval tests that a 202 pending-approval cancel errors instead of reading as a completed delete.
+func (suite *NATGatewayClientTestSuite) TestDeleteNATGatewayPendingApproval() {
+	ctx := context.Background()
+
+	productUID := "c1a2b3c4-d5e6-7890-1234-567890abcdef"
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID, func(w http.ResponseWriter, r *http.Request) {
+		suite.Equal(http.MethodGet, r.Method)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"message":"","terms":"","data":{"productUid":"%s","provisioningStatus":"%s"}}`, productUID, SERVICE_LIVE)
+	})
+
+	suite.mux.HandleFunc("/v3/product/"+productUID+"/action/CANCEL_NOW", func(w http.ResponseWriter, r *http.Request) {
+		suite.Equal(http.MethodPost, r.Method)
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, `{"message":"Request accepted and pending for approval","terms":""}`)
+	})
+
+	err := suite.client.NATGatewayService.DeleteNATGateway(ctx, productUID)
+
+	suite.ErrorIs(err, ErrCancelPendingApproval)
+}
+
 func (suite *NATGatewayClientTestSuite) TestDeleteNATGatewayValidation() {
 	ctx := context.Background()
 	natSvc := suite.client.NATGatewayService
