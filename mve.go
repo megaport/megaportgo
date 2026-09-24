@@ -59,6 +59,9 @@ type BuyMVERequest struct {
 	DiversityZone string
 	PromoCode     string
 	CostCentre    string
+	// MarketplaceVisibility is sent only when non-nil. Leaving it nil omits the
+	// field so the API applies its own default, rather than forcing false.
+	MarketplaceVisibility *bool
 
 	ResourceTags map[string]string `json:"resourceTags,omitempty"`
 
@@ -194,6 +197,7 @@ func createMVEOrder(req *BuyMVERequest) []*MVEOrderConfig {
 		Config: MVEConfig{
 			DiversityZone: req.DiversityZone,
 		},
+		MarketplaceVisibility: req.MarketplaceVisibility,
 	}
 
 	if len(req.Vnics) == 0 {
