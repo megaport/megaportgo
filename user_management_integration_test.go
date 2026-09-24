@@ -45,9 +45,10 @@ func (suite *UserManagementIntegrationTestSuite) TestUserCRD() {
 	suite.NoError(err)
 
 	// Create user
-	createdUser, err := suite.testCreateUser(suite.client, ctx)
-	suite.NoError(err)
-	suite.NotNil(createdUser)
+	email := "megaport.testuser.crd@example.com"
+	createdUser, err := suite.testCreateUser(suite.client, ctx, email)
+	suite.Require().NoError(err)
+	suite.Require().NotNil(createdUser)
 
 	employeeID := createdUser.EmployeeID
 	suite.True(employeeID > 0, "Employee ID should be greater than 0")
@@ -72,7 +73,7 @@ func (suite *UserManagementIntegrationTestSuite) TestUserCRD() {
 			foundNewUser = true
 			suite.Equal("test", u.FirstName)
 			suite.Equal("user staging", u.LastName)
-			suite.Equal("megaport.testuser@sink.megaport.com", u.Email)
+			suite.Equal(email, u.Email)
 			suite.True(u.Active)
 			suite.Equal("Company Admin", u.Position)
 			break
@@ -81,7 +82,7 @@ func (suite *UserManagementIntegrationTestSuite) TestUserCRD() {
 	suite.True(foundNewUser, "Should find the newly created user in the users list")
 
 	// Test Read operation
-	suite.testReadUser(suite.client, ctx, employeeID)
+	suite.testReadUser(suite.client, ctx, employeeID, email)
 
 	// Skip Update operation - requires email confirmation which is not suitable for automated testing
 
@@ -97,9 +98,9 @@ func (suite *UserManagementIntegrationTestSuite) TestUpdateUserPendingConfirmati
 	ctx := context.Background()
 
 	// Create a user first (newly created users have confirmationPending=true)
-	createdUser, err := suite.testCreateUser(suite.client, ctx)
-	suite.NoError(err)
-	suite.NotNil(createdUser)
+	createdUser, err := suite.testCreateUser(suite.client, ctx, "megaport.testuser.pending@example.com")
+	suite.Require().NoError(err)
+	suite.Require().NotNil(createdUser)
 
 	employeeID := createdUser.EmployeeID
 	suite.True(employeeID > 0, "Employee ID should be greater than 0")
@@ -133,14 +134,14 @@ func (suite *UserManagementIntegrationTestSuite) TestUpdateUserPendingConfirmati
 	suite.testDeleteUser(suite.client, ctx, employeeID)
 }
 
-func (suite *UserManagementIntegrationTestSuite) testCreateUser(c *Client, ctx context.Context) (*CreateUserResponse, error) {
+func (suite *UserManagementIntegrationTestSuite) testCreateUser(c *Client, ctx context.Context, email string) (*CreateUserResponse, error) {
 	suite.client.Logger.DebugContext(ctx, "Creating User")
 
 	createReq := &CreateUserRequest{
 		FirstName: "test",
 		LastName:  "user staging",
 		Active:    true,
-		Email:     "megaport.testuser@sink.megaport.com",
+		Email:     email,
 		Phone:     "+14155552671",
 		Position:  USER_POSITION_COMPANY_ADMIN,
 	}
@@ -166,7 +167,7 @@ func (suite *UserManagementIntegrationTestSuite) testCreateUser(c *Client, ctx c
 	return createRes, nil
 }
 
-func (suite *UserManagementIntegrationTestSuite) testReadUser(c *Client, ctx context.Context, employeeID int) {
+func (suite *UserManagementIntegrationTestSuite) testReadUser(c *Client, ctx context.Context, employeeID int, email string) {
 	suite.client.Logger.DebugContext(ctx, "Reading User", slog.Int("employee_id", employeeID))
 
 	user, err := c.UserManagementService.GetUser(ctx, employeeID)
@@ -185,7 +186,7 @@ func (suite *UserManagementIntegrationTestSuite) testReadUser(c *Client, ctx con
 	// Verify user data matches what we created
 	suite.Equal("test", user.FirstName)
 	suite.Equal("user staging", user.LastName)
-	suite.Equal("megaport.testuser@sink.megaport.com", user.Email)
+	suite.Equal(email, user.Email)
 	suite.True(user.Active)
 	suite.Equal("Company Admin", user.Position)
 	suite.Equal(employeeID, user.PartyId)
@@ -221,7 +222,7 @@ func (suite *UserManagementIntegrationTestSuite) testDeactivateUser(c *Client, c
 	suite.Equal(user.LastName, userAfterDeactivation.LastName, "LastName should remain unchanged")
 
 	// Note: When a user is deactivated, Megaport automatically inserts "-deactivated-{randomnumber}"
-	// into the email, e.g. "foo@sink.megaport.com" → "foo@sink-deactivated-abc.megaport.com".
+	// into the email, e.g. "foo@example.com" → "foo@example-deactivated-abc.com".
 	// Check the stable prefix up to the "@" rather than the full original address.
 	suite.Contains(userAfterDeactivation.Email, "megaport.testuser@", "Email should contain the original local-part prefix")
 	suite.Contains(userAfterDeactivation.Email, "-deactivated-", "Email should contain the deactivated marker")
