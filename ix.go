@@ -334,6 +334,7 @@ func (svc *IXServiceOp) UpdateIX(ctx context.Context, id string, req *UpdateIXRe
 }
 
 // DeleteIX deletes an Internet Exchange
+// Requests with DeleteNow=false are rejected with ErrCancelLaterNotAllowed.
 // Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 func (svc *IXServiceOp) DeleteIX(ctx context.Context, id string, req *DeleteIXRequest) error {
 	if req == nil {

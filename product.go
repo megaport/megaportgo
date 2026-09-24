@@ -79,7 +79,7 @@ type ModifyProductResponse struct {
 // DeleteProductRequest represents a request to delete a product in the Megaport Products API.
 type DeleteProductRequest struct {
 	ProductID  string
-	DeleteNow  bool
+	DeleteNow  bool // Must be true. False is rejected with ErrCancelLaterNotAllowed.
 	SafeDelete bool // If true, the call will check if the product has any attached resources. If it does, the API will return an error and the product will not be deleted.
 }
 

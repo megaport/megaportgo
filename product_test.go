@@ -300,6 +300,25 @@ func (suite *ProductClientTestSuite) TestDeleteProductPendingApproval() {
 	suite.Nil(gotRes)
 }
 
+// TestDeleteProductSafeDelete verifies that SafeDelete adds the safeDelete query parameter.
+func (suite *ProductClientTestSuite) TestDeleteProductSafeDelete() {
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	var gotSafeDelete string
+	suite.mux.HandleFunc("/v3/product/"+productUid+"/action/CANCEL_NOW", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPost)
+		gotSafeDelete = r.URL.Query().Get("safeDelete")
+		fmt.Fprint(w, `{"message": "Action [CANCEL_NOW Service 36b3f68e-2f54-4331-bf94-f8984449365f] has been done."}`)
+	})
+
+	_, err := suite.client.ProductService.DeleteProduct(context.Background(), &DeleteProductRequest{
+		ProductID:  productUid,
+		DeleteNow:  true,
+		SafeDelete: true,
+	})
+	suite.NoError(err)
+	suite.Equal("true", gotSafeDelete)
+}
+
 // TestDeleteProductCancelLaterNotAllowed verifies that DeleteProduct rejects DeleteNow=false without sending a request.
 func (suite *ProductClientTestSuite) TestDeleteProductCancelLaterNotAllowed() {
 	var hit atomic.Bool
