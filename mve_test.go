@@ -691,6 +691,27 @@ func (suite *MVEClientTestSuite) TestModifyMVEWithVnics() {
 	suite.Equal(&ModifyMVEResponse{MVEUpdated: true}, gotRes)
 }
 
+// TestModifyMVEPendingApproval verifies ModifyMVE returns
+// ErrModifyPendingApproval on a 202 without entering the wait loop.
+func (suite *MVEClientTestSuite) TestModifyMVEPendingApproval() {
+	ctx := context.Background()
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	path := fmt.Sprintf("/v2/product/%s/%s", PRODUCT_MVE, productUid)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPut)
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, `{"message":"Request accepted and pending for approval","terms":"This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"}`)
+	})
+	req := &ModifyMVERequest{
+		MVEID:              productUid,
+		ContractTermMonths: PtrTo(12),
+		WaitForUpdate:      true,
+	}
+	gotRes, err := suite.client.MVEService.ModifyMVE(ctx, req)
+	suite.ErrorIs(err, ErrModifyPendingApproval)
+	suite.Nil(gotRes)
+}
+
 // TestModifyMVENilRequest verifies ModifyMVE rejects a nil request up front
 // instead of panicking on field access.
 func (suite *MVEClientTestSuite) TestModifyMVENilRequest() {

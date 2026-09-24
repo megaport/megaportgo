@@ -34,6 +34,7 @@ type MCRService interface {
 	// DeleteMCRPrefixFilterList deletes a prefix filter list on an MCR from the Megaport MCR API.
 	DeleteMCRPrefixFilterList(ctx context.Context, mcrID string, prefixFilterListID int) (*DeleteMCRPrefixFilterListResponse, error)
 	// ModifyMCR modifies an MCR in the Megaport MCR API.
+	// Returns ErrModifyPendingApproval without waiting when the API creates an order approval request instead of modifying.
 	ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (*ModifyMCRResponse, error)
 	// DeleteMCR deletes an MCR in the Megaport MCR API.
 	DeleteMCR(ctx context.Context, req *DeleteMCRRequest) (*DeleteMCRResponse, error)
@@ -504,6 +505,7 @@ func (svc *MCRServiceOp) GetMCRPrefixFilterList(ctx context.Context, mcrID strin
 }
 
 // ModifyMCR modifies an MCR in the Megaport MCR API.
+// Returns ErrModifyPendingApproval without waiting when the API creates an order approval request instead of modifying.
 func (svc *MCRServiceOp) ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (*ModifyMCRResponse, error) {
 	if req == nil {
 		return nil, ErrModifyMCRRequestNil

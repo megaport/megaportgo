@@ -24,6 +24,7 @@ type PortService interface {
 	// GetPort gets a single port in the Megaport Port API.
 	GetPort(ctx context.Context, portId string) (*Port, error)
 	// ModifyPort modifies a port in the Megaport Port API.
+	// Returns ErrModifyPendingApproval without waiting when the API creates an order approval request instead of modifying.
 	ModifyPort(ctx context.Context, req *ModifyPortRequest) (*ModifyPortResponse, error)
 	// DeletePort deletes a port in the Megaport Port API.
 	// Note: Port products only support immediate deletion (CANCEL_NOW). Requests
@@ -340,6 +341,7 @@ func (svc *PortServiceOp) GetPort(ctx context.Context, portId string) (*Port, er
 }
 
 // ModifyPort modifies a port in the Megaport Port API.
+// Returns ErrModifyPendingApproval without waiting when the API creates an order approval request instead of modifying.
 func (svc *PortServiceOp) ModifyPort(ctx context.Context, req *ModifyPortRequest) (*ModifyPortResponse, error) {
 	if req == nil {
 		return nil, ErrModifyPortRequestNil
