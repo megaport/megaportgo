@@ -3,9 +3,11 @@ package megaport
 import (
 	"bytes"
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -203,5 +205,84 @@ func TestDoClosesBodyOnErrorWithResponseLogging(t *testing.T) {
 	}
 	if got := atomic.LoadInt32(&closes); got != 1 {
 		t.Fatalf("response body not closed exactly once on error return (Close called %d times)", got)
+	}
+}
+
+// drainTrackingBody keeps its reader in a named field so io.Copy cannot
+// bypass Read through strings.Reader's WriteTo.
+type drainTrackingBody struct {
+	r       *strings.Reader
+	drained bool
+	closes  int
+}
+
+func (b *drainTrackingBody) Read(p []byte) (int, error) {
+	n, err := b.r.Read(p)
+	if err == io.EOF {
+		b.drained = true
+	}
+	return n, err
+}
+
+func (b *drainTrackingBody) Close() error {
+	b.closes++
+	return nil
+}
+
+func TestDiscardingMethodsDrainAndCloseBody(t *testing.T) {
+	tests := []struct {
+		name string
+		call func(c *Client) (any, error)
+		want any
+	}{
+		{"ManageProductLock", func(c *Client) (any, error) {
+			return c.ProductService.ManageProductLock(ctx, &ManageProductLockRequest{ProductID: "p", ShouldLock: true})
+		}, &ManageProductLockResponse{}},
+		{"ValidateProductOrder", func(c *Client) (any, error) {
+			return nil, c.ProductService.ValidateProductOrder(ctx, map[string]string{})
+		}, nil},
+		{"UpdateProductResourceTags", func(c *Client) (any, error) {
+			return nil, c.ProductService.UpdateProductResourceTags(ctx, "p", &UpdateProductResourceTagsRequest{})
+		}, nil},
+		{"DeleteMCRPrefixFilterList", func(c *Client) (any, error) {
+			return c.MCRService.DeleteMCRPrefixFilterList(ctx, "m", 1)
+		}, &DeleteMCRPrefixFilterListResponse{IsDeleted: true}},
+		{"ModifyMCRPrefixFilterList", func(c *Client) (any, error) {
+			return c.MCRService.ModifyMCRPrefixFilterList(ctx, "m", 1, &MCRPrefixFilterList{})
+		}, &ModifyMCRPrefixFilterListResponse{IsUpdated: true}},
+		{"UpdateMCRWithAddOn", func(c *Client) (any, error) {
+			return nil, c.MCRService.UpdateMCRWithAddOn(ctx, "m", MCRAddOnRequest{AddOn: &MCRAddOnIPsecConfig{TunnelCount: 10}})
+		}, nil},
+		{"UpdateMCRIPsecAddOn", func(c *Client) (any, error) {
+			return nil, c.MCRService.UpdateMCRIPsecAddOn(ctx, "m", "a", 10)
+		}, nil},
+		{"UpdateServiceKey", func(c *Client) (any, error) {
+			return c.ServiceKeyService.UpdateServiceKey(ctx, &UpdateServiceKeyRequest{Key: "k"})
+		}, &UpdateServiceKeyResponse{IsUpdated: true}},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			body := &drainTrackingBody{r: strings.NewReader(`{"message":"ok"}`)}
+			c, err := New(nil)
+			if err != nil {
+				t.Fatalf("New: %v", err)
+			}
+			c.BaseURL, _ = url.Parse("https://example.test")
+			c.HTTPClient = &http.Client{Transport: rtFunc(func(r *http.Request) (*http.Response, error) {
+				return &http.Response{StatusCode: http.StatusOK, Body: body, Header: make(http.Header), Request: r}, nil
+			})}
+
+			got, err := tt.call(c)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if tt.want != nil && !reflect.DeepEqual(got, tt.want) {
+				t.Fatalf("got %+v, want %+v", got, tt.want)
+			}
+			if !body.drained || body.closes != 1 {
+				t.Fatalf("body drained=%v closes=%d, want drained and closed once", body.drained, body.closes)
+			}
+		})
 	}
 }
