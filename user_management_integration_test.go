@@ -107,8 +107,8 @@ func (suite *UserManagementIntegrationTestSuite) TestUpdateUserPendingConfirmati
 
 	// Verify the user has confirmationPending=true (newly created users should have this)
 	user, err := suite.client.UserManagementService.GetUser(ctx, employeeID)
-	suite.NoError(err)
-	suite.NotNil(user)
+	suite.Require().NoError(err)
+	suite.Require().NotNil(user)
 
 	// Try to update the user while confirmation is pending - this should fail
 	newFirstName := "UpdatedName"
@@ -123,7 +123,7 @@ func (suite *UserManagementIntegrationTestSuite) TestUpdateUserPendingConfirmati
 	err = suite.client.UserManagementService.UpdateUser(ctx, employeeID, updateReq)
 
 	// This should return an error because the user has invitationPending=true
-	suite.Error(err, "Updating user with pending invitation should return an error")
+	suite.Require().Error(err, "Updating user with pending invitation should return an error")
 	suite.Contains(err.Error(), "invitation pending", "Error should mention invitation pending")
 
 	suite.client.Logger.DebugContext(ctx, "Update correctly failed for user with pending invitation",
@@ -171,8 +171,8 @@ func (suite *UserManagementIntegrationTestSuite) testReadUser(c *Client, ctx con
 	suite.client.Logger.DebugContext(ctx, "Reading User", slog.Int("employee_id", employeeID))
 
 	user, err := c.UserManagementService.GetUser(ctx, employeeID)
-	suite.NoError(err)
-	suite.NotNil(user)
+	suite.Require().NoError(err)
+	suite.Require().NotNil(user)
 
 	suite.client.Logger.DebugContext(ctx, "Retrieved user details",
 		slog.Int("party_id", user.PartyId),
@@ -197,8 +197,8 @@ func (suite *UserManagementIntegrationTestSuite) testDeactivateUser(c *Client, c
 
 	// First verify user is currently active
 	user, err := c.UserManagementService.GetUser(ctx, employeeID)
-	suite.NoError(err)
-	suite.NotNil(user)
+	suite.Require().NoError(err)
+	suite.Require().NotNil(user)
 	suite.True(user.Active, "User should be active before deactivation")
 
 	suite.client.Logger.DebugContext(ctx, "Verified user is currently active",
@@ -213,8 +213,8 @@ func (suite *UserManagementIntegrationTestSuite) testDeactivateUser(c *Client, c
 
 	// Verify user is now deactivated
 	userAfterDeactivation, err := c.UserManagementService.GetUser(ctx, employeeID)
-	suite.NoError(err)
-	suite.NotNil(userAfterDeactivation)
+	suite.Require().NoError(err)
+	suite.Require().NotNil(userAfterDeactivation)
 	suite.False(userAfterDeactivation.Active, "User should be deactivated after update")
 
 	// Verify other user properties remain unchanged
@@ -240,8 +240,8 @@ func (suite *UserManagementIntegrationTestSuite) testDeleteUser(c *Client, ctx c
 
 	// Before attempting deletion, check if the user can be deleted
 	user, err := c.UserManagementService.GetUser(ctx, employeeID)
-	suite.NoError(err)
-	suite.NotNil(user)
+	suite.Require().NoError(err)
+	suite.Require().NotNil(user)
 
 	suite.client.Logger.DebugContext(ctx, "Checking user status before deletion",
 		slog.Int("employee_id", employeeID),
@@ -261,7 +261,7 @@ func (suite *UserManagementIntegrationTestSuite) testDeleteUser(c *Client, ctx c
 		suite.client.Logger.DebugContext(ctx, "Verified user deletion - GetUser returned error as expected")
 	} else {
 		// User has logged in, so deletion should fail
-		suite.Error(err, "Deleting user who has logged in should fail")
+		suite.Require().Error(err, "Deleting user who has logged in should fail")
 		suite.Contains(err.Error(), "cannot be deleted", "Error should indicate user cannot be deleted")
 
 		suite.client.Logger.DebugContext(ctx, "Deletion correctly failed for user who has logged in",
