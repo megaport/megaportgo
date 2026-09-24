@@ -15,8 +15,13 @@ func TestUserManagementIntegrationTestSuite(t *testing.T) {
 }
 
 func (suite *UserManagementIntegrationTestSuite) SetupSuite() {
-	accessKey := os.Getenv("MEGAPORT_ACCESS_KEY")
-	secretKey := os.Getenv("MEGAPORT_SECRET_KEY")
+	// The main test account's company accepts only megaport.com addresses, and
+	// megalith requires a new megaport.com user to start in the admin company.
+	accessKey := os.Getenv("MEGAPORT_CUSTOMER_ACCESS_KEY")
+	secretKey := os.Getenv("MEGAPORT_CUSTOMER_SECRET_KEY")
+	if accessKey == "" || secretKey == "" {
+		suite.T().Skip("user management integration tests require MEGAPORT_CUSTOMER_ACCESS_KEY and MEGAPORT_CUSTOMER_SECRET_KEY to be set")
+	}
 
 	handler := slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: programLevel})
 	programLevel.Set(slog.LevelDebug)
