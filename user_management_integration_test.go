@@ -15,8 +15,13 @@ func TestUserManagementIntegrationTestSuite(t *testing.T) {
 }
 
 func (suite *UserManagementIntegrationTestSuite) SetupSuite() {
-	accessKey := os.Getenv("MEGAPORT_ACCESS_KEY")
-	secretKey := os.Getenv("MEGAPORT_SECRET_KEY")
+	// The main test account's company accepts only megaport.com addresses, and
+	// megalith requires a new megaport.com user to start in the admin company.
+	accessKey := os.Getenv("MEGAPORT_CUSTOMER_ACCESS_KEY")
+	secretKey := os.Getenv("MEGAPORT_CUSTOMER_SECRET_KEY")
+	if accessKey == "" || secretKey == "" {
+		suite.T().Skip("user management integration tests require MEGAPORT_CUSTOMER_ACCESS_KEY and MEGAPORT_CUSTOMER_SECRET_KEY to be set")
+	}
 
 	handler := slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: programLevel})
 	programLevel.Set(slog.LevelDebug)
@@ -45,9 +50,10 @@ func (suite *UserManagementIntegrationTestSuite) TestUserCRD() {
 	suite.NoError(err)
 
 	// Create user
-	createdUser, err := suite.testCreateUser(suite.client, ctx)
-	suite.NoError(err)
-	suite.NotNil(createdUser)
+	email := "megaport.testuser.crd@example.com"
+	createdUser, err := suite.testCreateUser(suite.client, ctx, email)
+	suite.Require().NoError(err)
+	suite.Require().NotNil(createdUser)
 
 	employeeID := createdUser.EmployeeID
 	suite.True(employeeID > 0, "Employee ID should be greater than 0")
@@ -72,7 +78,7 @@ func (suite *UserManagementIntegrationTestSuite) TestUserCRD() {
 			foundNewUser = true
 			suite.Equal("test", u.FirstName)
 			suite.Equal("user staging", u.LastName)
-			suite.Equal("megaport.testuser@sink.megaport.com", u.Email)
+			suite.Equal(email, u.Email)
 			suite.True(u.Active)
 			suite.Equal("Company Admin", u.Position)
 			break
@@ -81,7 +87,7 @@ func (suite *UserManagementIntegrationTestSuite) TestUserCRD() {
 	suite.True(foundNewUser, "Should find the newly created user in the users list")
 
 	// Test Read operation
-	suite.testReadUser(suite.client, ctx, employeeID)
+	suite.testReadUser(suite.client, ctx, employeeID, email)
 
 	// Skip Update operation - requires email confirmation which is not suitable for automated testing
 
@@ -97,17 +103,17 @@ func (suite *UserManagementIntegrationTestSuite) TestUpdateUserPendingConfirmati
 	ctx := context.Background()
 
 	// Create a user first (newly created users have confirmationPending=true)
-	createdUser, err := suite.testCreateUser(suite.client, ctx)
-	suite.NoError(err)
-	suite.NotNil(createdUser)
+	createdUser, err := suite.testCreateUser(suite.client, ctx, "megaport.testuser.pending@example.com")
+	suite.Require().NoError(err)
+	suite.Require().NotNil(createdUser)
 
 	employeeID := createdUser.EmployeeID
 	suite.True(employeeID > 0, "Employee ID should be greater than 0")
 
 	// Verify the user has confirmationPending=true (newly created users should have this)
 	user, err := suite.client.UserManagementService.GetUser(ctx, employeeID)
-	suite.NoError(err)
-	suite.NotNil(user)
+	suite.Require().NoError(err)
+	suite.Require().NotNil(user)
 
 	// Try to update the user while confirmation is pending - this should fail
 	newFirstName := "UpdatedName"
@@ -122,7 +128,7 @@ func (suite *UserManagementIntegrationTestSuite) TestUpdateUserPendingConfirmati
 	err = suite.client.UserManagementService.UpdateUser(ctx, employeeID, updateReq)
 
 	// This should return an error because the user has invitationPending=true
-	suite.Error(err, "Updating user with pending invitation should return an error")
+	suite.Require().Error(err, "Updating user with pending invitation should return an error")
 	suite.Contains(err.Error(), "invitation pending", "Error should mention invitation pending")
 
 	suite.client.Logger.DebugContext(ctx, "Update correctly failed for user with pending invitation",
@@ -133,14 +139,14 @@ func (suite *UserManagementIntegrationTestSuite) TestUpdateUserPendingConfirmati
 	suite.testDeleteUser(suite.client, ctx, employeeID)
 }
 
-func (suite *UserManagementIntegrationTestSuite) testCreateUser(c *Client, ctx context.Context) (*CreateUserResponse, error) {
+func (suite *UserManagementIntegrationTestSuite) testCreateUser(c *Client, ctx context.Context, email string) (*CreateUserResponse, error) {
 	suite.client.Logger.DebugContext(ctx, "Creating User")
 
 	createReq := &CreateUserRequest{
 		FirstName: "test",
 		LastName:  "user staging",
 		Active:    true,
-		Email:     "megaport.testuser@sink.megaport.com",
+		Email:     email,
 		Phone:     "+14155552671",
 		Position:  USER_POSITION_COMPANY_ADMIN,
 	}
@@ -166,12 +172,12 @@ func (suite *UserManagementIntegrationTestSuite) testCreateUser(c *Client, ctx c
 	return createRes, nil
 }
 
-func (suite *UserManagementIntegrationTestSuite) testReadUser(c *Client, ctx context.Context, employeeID int) {
+func (suite *UserManagementIntegrationTestSuite) testReadUser(c *Client, ctx context.Context, employeeID int, email string) {
 	suite.client.Logger.DebugContext(ctx, "Reading User", slog.Int("employee_id", employeeID))
 
 	user, err := c.UserManagementService.GetUser(ctx, employeeID)
-	suite.NoError(err)
-	suite.NotNil(user)
+	suite.Require().NoError(err)
+	suite.Require().NotNil(user)
 
 	suite.client.Logger.DebugContext(ctx, "Retrieved user details",
 		slog.Int("party_id", user.PartyId),
@@ -185,7 +191,7 @@ func (suite *UserManagementIntegrationTestSuite) testReadUser(c *Client, ctx con
 	// Verify user data matches what we created
 	suite.Equal("test", user.FirstName)
 	suite.Equal("user staging", user.LastName)
-	suite.Equal("megaport.testuser@sink.megaport.com", user.Email)
+	suite.Equal(email, user.Email)
 	suite.True(user.Active)
 	suite.Equal("Company Admin", user.Position)
 	suite.Equal(employeeID, user.PartyId)
@@ -196,8 +202,8 @@ func (suite *UserManagementIntegrationTestSuite) testDeactivateUser(c *Client, c
 
 	// First verify user is currently active
 	user, err := c.UserManagementService.GetUser(ctx, employeeID)
-	suite.NoError(err)
-	suite.NotNil(user)
+	suite.Require().NoError(err)
+	suite.Require().NotNil(user)
 	suite.True(user.Active, "User should be active before deactivation")
 
 	suite.client.Logger.DebugContext(ctx, "Verified user is currently active",
@@ -212,8 +218,8 @@ func (suite *UserManagementIntegrationTestSuite) testDeactivateUser(c *Client, c
 
 	// Verify user is now deactivated
 	userAfterDeactivation, err := c.UserManagementService.GetUser(ctx, employeeID)
-	suite.NoError(err)
-	suite.NotNil(userAfterDeactivation)
+	suite.Require().NoError(err)
+	suite.Require().NotNil(userAfterDeactivation)
 	suite.False(userAfterDeactivation.Active, "User should be deactivated after update")
 
 	// Verify other user properties remain unchanged
@@ -221,7 +227,7 @@ func (suite *UserManagementIntegrationTestSuite) testDeactivateUser(c *Client, c
 	suite.Equal(user.LastName, userAfterDeactivation.LastName, "LastName should remain unchanged")
 
 	// Note: When a user is deactivated, Megaport automatically inserts "-deactivated-{randomnumber}"
-	// into the email, e.g. "foo@sink.megaport.com" → "foo@sink-deactivated-abc.megaport.com".
+	// into the email, e.g. "foo@example.com" → "foo@example-deactivated-abc.com".
 	// Check the stable prefix up to the "@" rather than the full original address.
 	suite.Contains(userAfterDeactivation.Email, "megaport.testuser@", "Email should contain the original local-part prefix")
 	suite.Contains(userAfterDeactivation.Email, "-deactivated-", "Email should contain the deactivated marker")
@@ -239,8 +245,8 @@ func (suite *UserManagementIntegrationTestSuite) testDeleteUser(c *Client, ctx c
 
 	// Before attempting deletion, check if the user can be deleted
 	user, err := c.UserManagementService.GetUser(ctx, employeeID)
-	suite.NoError(err)
-	suite.NotNil(user)
+	suite.Require().NoError(err)
+	suite.Require().NotNil(user)
 
 	suite.client.Logger.DebugContext(ctx, "Checking user status before deletion",
 		slog.Int("employee_id", employeeID),
@@ -260,7 +266,7 @@ func (suite *UserManagementIntegrationTestSuite) testDeleteUser(c *Client, ctx c
 		suite.client.Logger.DebugContext(ctx, "Verified user deletion - GetUser returned error as expected")
 	} else {
 		// User has logged in, so deletion should fail
-		suite.Error(err, "Deleting user who has logged in should fail")
+		suite.Require().Error(err, "Deleting user who has logged in should fail")
 		suite.Contains(err.Error(), "cannot be deleted", "Error should indicate user cannot be deleted")
 
 		suite.client.Logger.DebugContext(ctx, "Deletion correctly failed for user who has logged in",
