@@ -132,6 +132,8 @@ func IsServiceNotFoundError(err error) bool {
 }
 
 // ErrTransitVXCCancelLaterNotAllowed is returned when attempting to schedule Transit VXC deletion for later (only CANCEL_NOW is allowed)
+//
+// Deprecated: DeleteVXC returns ErrCancelLaterNotAllowed for every VXC.
 var ErrTransitVXCCancelLaterNotAllowed = errors.New("transit vxc (megaport internet) does not support scheduled deletion (cancel later), only immediate deletion (CANCEL_NOW) is allowed")
 
 // ErrDeleteVXCRequestNil is returned when DeleteVXC is called with a nil request.
