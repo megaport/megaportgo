@@ -996,6 +996,31 @@ func (suite *MVEClientTestSuite) TestDeleteMVE() {
 	suite.Equal(want, got)
 }
 
+// TestDeleteMVEPendingApproval tests that a 202 pending-approval cancel errors instead of reading as a completed delete.
+func (suite *MVEClientTestSuite) TestDeleteMVEPendingApproval() {
+	ctx := context.Background()
+
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	jblob := `{
+		"message": "Request accepted and pending for approval",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"
+	}`
+
+	path := "/v3/product/" + productUid + "/action/CANCEL_NOW"
+
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPost)
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, jblob)
+	})
+
+	got, err := suite.client.MVEService.DeleteMVE(ctx, &DeleteMVERequest{MVEID: productUid})
+
+	suite.ErrorIs(err, ErrCancelPendingApproval)
+	suite.Nil(got)
+}
+
 // TestCiscoConfigAdminPasswordMarshalling verifies that CiscoConfig.AdminPassword
 // round-trips through JSON serialisation under the wire-format key "adminPassword".
 // The Megaport API requires this field for Cisco FTDv MVE buy orders.
