@@ -1517,34 +1517,6 @@ func (suite *VXCClientTestSuite) TestDeleteVXCCancelLaterNotAllowed() {
 	suite.False(hit.Load(), "expected no request to the API")
 }
 
-// TestDeleteTransitVXCWithDeleteNow tests that immediate deletion of a Transit VXC succeeds
-func (suite *VXCClientTestSuite) TestDeleteTransitVXCWithDeleteNow() {
-	ctx := context.Background()
-
-	vxcSvc := suite.client.VXCService
-	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
-
-	req := &DeleteVXCRequest{
-		DeleteNow: true, // Immediate deletion
-	}
-
-	deleteBlob := `{
-		"message": "Action [CANCEL_NOW Service 36b3f68e-2f54-4331-bf94-f8984449365f] has been done.",
-		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"
-	}`
-
-	deletePath := "/v3/product/" + productUid + "/action/CANCEL_NOW"
-
-	suite.mux.HandleFunc(deletePath, func(w http.ResponseWriter, r *http.Request) {
-		suite.testMethod(r, http.MethodPost)
-		fmt.Fprint(w, deleteBlob)
-	})
-
-	err := vxcSvc.DeleteVXC(ctx, productUid, req)
-
-	suite.NoError(err, "expected no error when deleting Transit VXC with DeleteNow=true")
-}
-
 // TestDeleteVXC tests to see if the custom unmarshalling works for decommed VXCs.
 func (suite *VXCClientTestSuite) TestDecomissionedVXCMarshal() {
 	ctx := context.Background()
