@@ -25,6 +25,7 @@ type IXService interface {
 	ValidateIXOrder(ctx context.Context, req *BuyIXRequest) error
 
 	// UpdateIX updates an existing Internet Exchange
+	// Returns ErrModifyPendingApproval without waiting when the API creates an order approval request instead of updating.
 	UpdateIX(ctx context.Context, id string, req *UpdateIXRequest) (*IX, error)
 
 	// DeleteIX deletes an Internet Exchange
@@ -223,6 +224,7 @@ func (svc *IXServiceOp) GetIX(ctx context.Context, id string) (*IX, error) {
 }
 
 // UpdateIX updates an existing Internet Exchange
+// Returns ErrModifyPendingApproval without waiting when the API creates an order approval request instead of updating.
 func (svc *IXServiceOp) UpdateIX(ctx context.Context, id string, req *UpdateIXRequest) (*IX, error) {
 	if req == nil {
 		return nil, ErrUpdateIXRequestNil
@@ -289,6 +291,10 @@ func (svc *IXServiceOp) UpdateIX(ctx context.Context, id string, req *UpdateIXRe
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		return nil, err
+	}
+
+	if response.StatusCode == http.StatusAccepted {
+		return nil, ErrModifyPendingApproval
 	}
 
 	// Parse the response

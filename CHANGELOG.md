@@ -8,6 +8,7 @@
 - Add `AsOverride` (`*bool`) to `BgpConnectionConfig` so consumers can enable AS Override for eBGP peering. Unset leaves the API default in place.
 
 ## Changes
+- `ModifyProduct` and `UpdateIX` return `ErrModifyPendingApproval` when the API creates an order approval request instead of applying the change. That case used to read as a successful update, though the API applied no field in the request. `ModifyPort`, `ModifyMCR`, `ModifyMVE` and `UpdateIX` return it without waiting.
 - `DeleteProduct` returns `ErrCancelPendingApproval` when the API creates an order approval request instead of canceling. That case used to read as a successful cancel on a product that was still live. Every product delete method forwards it.
 - Add `Prefixes` to `CSPConnectionAWS` so an AWS VXC read returns the prefixes the API reports. The value decodes from either a JSON string or an array of strings, joined with commas.
 - Bump Go toolchain to 1.26.5 to pick up a `crypto/tls` fix for an Encrypted Client Hello privacy leak ([GO-2026-5856](https://pkg.go.dev/vuln/GO-2026-5856)).

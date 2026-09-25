@@ -583,6 +583,28 @@ func (suite *PortClientTestSuite) TestModifyPort() {
 	suite.Equal(want, got)
 }
 
+// TestModifyPortPendingApproval verifies ModifyPort returns
+// ErrModifyPendingApproval on a 202 without entering the wait loop.
+func (suite *PortClientTestSuite) TestModifyPortPendingApproval() {
+	ctx := context.Background()
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	path := fmt.Sprintf("/v2/product/%s/%s", PRODUCT_MEGAPORT, productUid)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPut)
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, `{"message":"Request accepted and pending for approval","terms":"This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"}`)
+	})
+	req := &ModifyPortRequest{
+		PortID:             productUid,
+		ContractTermMonths: PtrTo(12),
+		WaitForUpdate:      true,
+		WaitForTime:        time.Second,
+	}
+	gotRes, err := suite.client.PortService.ModifyPort(ctx, req)
+	suite.ErrorIs(err, ErrModifyPendingApproval)
+	suite.Nil(gotRes)
+}
+
 // TestDeletePort tests the DeletePort method
 func (suite *PortClientTestSuite) TestDeletePort() {
 	ctx := context.Background()
