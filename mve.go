@@ -23,6 +23,7 @@ type MVEService interface {
 	// GetMVE gets details about a single MVE from the Megaport MVE API.
 	GetMVE(ctx context.Context, mveId string) (*MVE, error)
 	// ModifyMVE modifies an MVE in the Megaport MVE API.
+	// Returns ErrModifyPendingApproval without waiting when the API creates an order approval request instead of modifying.
 	ModifyMVE(ctx context.Context, req *ModifyMVERequest) (*ModifyMVEResponse, error)
 	// DeleteMVE deletes an MVE in the Megaport MVE API.
 	// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
@@ -263,6 +264,7 @@ func (svc *MVEServiceOp) GetMVE(ctx context.Context, mveId string) (*MVE, error)
 }
 
 // ModifyMVE modifies an MVE in the Megaport MVE API.
+// Returns ErrModifyPendingApproval without waiting when the API creates an order approval request instead of modifying.
 func (svc *MVEServiceOp) ModifyMVE(ctx context.Context, req *ModifyMVERequest) (*ModifyMVEResponse, error) {
 	if req == nil {
 		return nil, ErrModifyMVERequestNil
