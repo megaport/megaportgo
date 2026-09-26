@@ -878,9 +878,11 @@ func (suite *VXCIntegrationTestSuite) TestMCRVXCWithIPsec() {
 			} `json:"ipSecConfiguredVxcs"`
 		} `json:"data"`
 	}
-	if _, doErr := suite.client.Do(ctx, req, &ipsecRes); doErr != nil {
+	ipsecResp, doErr := suite.client.Do(ctx, req, &ipsecRes)
+	if doErr != nil {
 		suite.FailNowf("cannot read mcr ipsec config", "cannot read mcr ipsec config %v", doErr)
 	}
+	ipsecResp.Body.Close()
 
 	suite.Equal(1, ipsecRes.Data.TotalTunnelCount, "expected exactly one configured tunnel on the mcr")
 	suite.Require().Len(ipsecRes.Data.IpSecConfiguredVxcs, 1, "expected the vxc to appear in the mcr ipsec config")
