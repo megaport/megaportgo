@@ -109,6 +109,12 @@ var ErrMCRCancelLaterNotAllowed = errors.New("mcr products do not support schedu
 // ErrPortCancelLaterNotAllowed is returned when attempting to schedule Port deletion for later (only CANCEL_NOW is allowed)
 var ErrPortCancelLaterNotAllowed = errors.New("port products do not support scheduled deletion (cancel later), only immediate deletion (CANCEL_NOW) is allowed")
 
+// ErrCancelLaterNotAllowed is returned when attempting to schedule deletion for later (only CANCEL_NOW is allowed)
+var ErrCancelLaterNotAllowed = errors.New("scheduled deletion (cancel later) is no longer supported by the API, only immediate deletion (CANCEL_NOW) is allowed")
+
+// ErrRestoreNotAllowed is returned when attempting to restore a canceled product
+var ErrRestoreNotAllowed = errors.New("restoring a canceled product is no longer supported by the API")
+
 // ErrCancelPendingApproval is returned when the API creates an order approval request instead of canceling.
 // The product stays live until an approver acts on the request.
 var ErrCancelPendingApproval = errors.New("cancel request is pending approval, the product is still live")
@@ -134,6 +140,8 @@ func IsServiceNotFoundError(err error) bool {
 }
 
 // ErrTransitVXCCancelLaterNotAllowed is returned when attempting to schedule Transit VXC deletion for later (only CANCEL_NOW is allowed)
+//
+// Deprecated: DeleteVXC returns ErrCancelLaterNotAllowed for every VXC.
 var ErrTransitVXCCancelLaterNotAllowed = errors.New("transit vxc (megaport internet) does not support scheduled deletion (cancel later), only immediate deletion (CANCEL_NOW) is allowed")
 
 // ErrDeleteVXCRequestNil is returned when DeleteVXC is called with a nil request.

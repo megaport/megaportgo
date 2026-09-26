@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -984,4 +985,31 @@ func (suite *IXClientTestSuite) TestIXNilRequestGuards() {
 			suite.ErrorIs(tt.call(), tt.want)
 		})
 	}
+}
+
+// TestDeleteIX tests the DeleteIX method.
+func (suite *IXClientTestSuite) TestDeleteIX() {
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	var hit atomic.Bool
+	suite.mux.HandleFunc("/v3/product/"+productUid+"/action/CANCEL_NOW", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPost)
+		hit.Store(true)
+		fmt.Fprint(w, `{"message": "Action [CANCEL_NOW Service 36b3f68e-2f54-4331-bf94-f8984449365f] has been done."}`)
+	})
+
+	err := suite.client.IXService.DeleteIX(context.Background(), productUid, &DeleteIXRequest{DeleteNow: true})
+	suite.NoError(err)
+	suite.True(hit.Load(), "expected a CANCEL_NOW request")
+}
+
+// TestDeleteIXCancelLaterNotAllowed verifies that DeleteIX rejects DeleteNow=false without sending a request.
+func (suite *IXClientTestSuite) TestDeleteIXCancelLaterNotAllowed() {
+	var hit atomic.Bool
+	suite.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		hit.Store(true)
+	})
+
+	err := suite.client.IXService.DeleteIX(context.Background(), "36b3f68e-2f54-4331-bf94-f8984449365f", &DeleteIXRequest{DeleteNow: false})
+	suite.ErrorIs(err, ErrCancelLaterNotAllowed)
+	suite.False(hit.Load(), "expected no request to the API")
 }

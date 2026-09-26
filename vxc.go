@@ -23,6 +23,7 @@ type VXCService interface {
 	// GetVXC gets details about a single VXC from the Megaport VXC API.
 	GetVXC(ctx context.Context, id string) (*VXC, error)
 	// DeleteVXC deletes a VXC in the Megaport VXC API.
+	// Requests with DeleteNow=false are rejected with ErrCancelLaterNotAllowed.
 	// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 	DeleteVXC(ctx context.Context, id string, req *DeleteVXCRequest) error
 	// UpdateVXC updates a VXC in the Megaport VXC API.
@@ -77,7 +78,7 @@ type BuyVXCResponse struct {
 
 // DeleteVXCRequest represents a request to delete a VXC in the Megaport VXC API.
 type DeleteVXCRequest struct {
-	DeleteNow bool
+	DeleteNow bool // Must be true. False is rejected with ErrCancelLaterNotAllowed.
 }
 
 // DeleteVXCResponse represents a response from deleting a VXC in the Megaport VXC API.
@@ -304,50 +305,13 @@ func (svc *VXCServiceOp) ValidateVXCOrder(ctx context.Context, req *BuyVXCReques
 // connectTypeTransit is the CSP connect type for Transit VXCs (Megaport Internet).
 const connectTypeTransit = "TRANSIT"
 
-// isTransitVXC checks if a VXC is a Transit VXC (Megaport Internet) by examining
-// its CSP connection resources. A VXC is considered a Transit VXC if any
-// CSPConnection entry has ConnectType "TRANSIT".
-func isTransitVXC(vxc *VXC) bool {
-	if vxc == nil || vxc.Resources == nil || vxc.Resources.CSPConnection == nil {
-		return false
-	}
-
-	for _, csp := range vxc.Resources.CSPConnection.CSPConnection {
-		switch v := csp.(type) {
-		case CSPConnectionTransit:
-			if v.ConnectType == connectTypeTransit {
-				return true
-			}
-		case *CSPConnectionTransit:
-			if v != nil && v.ConnectType == connectTypeTransit {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 // DeleteVXC deletes a VXC in the Megaport VXC API.
-// Note: Transit VXCs (Megaport Internet) only support immediate deletion (CANCEL_NOW).
-// Attempting to schedule deletion (DeleteNow=false) for Transit VXCs will return an error.
-// When DeleteNow is false, an additional GetVXC call is made to check for Transit VXC status.
+// Requests with DeleteNow=false are rejected with ErrCancelLaterNotAllowed.
 // Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 func (svc *VXCServiceOp) DeleteVXC(ctx context.Context, id string, req *DeleteVXCRequest) error {
 	if req == nil {
 		return ErrDeleteVXCRequestNil
 	}
-	// Only validate Transit VXC restriction when scheduling deletion.
-	// Immediate deletions skip the extra API call entirely.
-	if !req.DeleteNow {
-		vxc, err := svc.GetVXC(ctx, id)
-		if err != nil {
-			return err
-		}
-		if isTransitVXC(vxc) {
-			return ErrTransitVXCCancelLaterNotAllowed
-		}
-	}
-
 	_, err := svc.Client.ProductService.DeleteProduct(ctx, &DeleteProductRequest{
 		ProductID: id,
 		DeleteNow: req.DeleteNow,

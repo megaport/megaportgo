@@ -28,7 +28,8 @@ type IXService interface {
 	// Returns ErrModifyPendingApproval without waiting when the API creates an order approval request instead of updating.
 	UpdateIX(ctx context.Context, id string, req *UpdateIXRequest) (*IX, error)
 
-	// DeleteIX deletes an Internet Exchange
+	// DeleteIX deletes an Internet Exchange.
+	// Requests with DeleteNow=false are rejected with ErrCancelLaterNotAllowed.
 	// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 	DeleteIX(ctx context.Context, id string, req *DeleteIXRequest) error
 
@@ -87,7 +88,7 @@ type UpdateIXRequest struct {
 }
 
 type DeleteIXRequest struct {
-	DeleteNow bool // If true, delete immediately; if false, cancel at end of term
+	DeleteNow bool // Must be true. False is rejected with ErrCancelLaterNotAllowed.
 }
 
 type ListIXsRequest struct {
@@ -339,6 +340,7 @@ func (svc *IXServiceOp) UpdateIX(ctx context.Context, id string, req *UpdateIXRe
 }
 
 // DeleteIX deletes an Internet Exchange
+// Requests with DeleteNow=false are rejected with ErrCancelLaterNotAllowed.
 // Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 func (svc *IXServiceOp) DeleteIX(ctx context.Context, id string, req *DeleteIXRequest) error {
 	if req == nil {
