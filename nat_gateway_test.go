@@ -138,6 +138,49 @@ func (suite *NATGatewayClientTestSuite) TestCreateNATGateway() {
 	suite.Equal("test", gw.ResourceTags[0].Value)
 }
 
+func (suite *NATGatewayClientTestSuite) TestCreateNATGatewayDiversityZoneBody() {
+	tests := []struct {
+		name     string
+		zone     string
+		wantSent bool
+	}{
+		{name: "unset zone is omitted", zone: "", wantSent: false},
+		{name: "red zone is sent", zone: "red", wantSent: true},
+	}
+
+	var config map[string]json.RawMessage
+	suite.mux.HandleFunc("/v3/products/nat_gateways", func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Config map[string]json.RawMessage `json:"config"`
+		}
+		suite.NoError(json.NewDecoder(r.Body).Decode(&body))
+		config = body.Config
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"data": {"productUid": "e900d0d5-1030-4e29-b2d8-816ad4263190"}}`)
+	})
+
+	for _, tc := range tests {
+		suite.Run(tc.name, func() {
+			config = nil
+			_, err := suite.client.NATGatewayService.CreateNATGateway(context.Background(), &CreateNATGatewayRequest{
+				Config:      NATGatewayNetworkConfig{ASN: 64512, DiversityZone: tc.zone, SessionCount: 100},
+				LocationID:  123456,
+				ProductName: "NAT Gateway",
+				Speed:       1000,
+				Term:        1,
+			})
+			suite.NoError(err)
+			suite.Require().NotNil(config)
+
+			zone, sent := config["diversityZone"]
+			suite.Equal(tc.wantSent, sent)
+			if tc.wantSent {
+				suite.JSONEq(`"`+tc.zone+`"`, string(zone))
+			}
+		})
+	}
+}
+
 func (suite *NATGatewayClientTestSuite) TestCreateNATGatewayValidation() {
 	ctx := context.Background()
 	natSvc := suite.client.NATGatewayService
