@@ -39,6 +39,10 @@ var ErrWrongProductModify = errors.New("you can only update Ports, MCR, and MVE 
 // ErrVnicsOnNonMVE is returned when vNIC updates are supplied for a non-MVE product
 var ErrVnicsOnNonMVE = errors.New("vNICs can only be modified on MVE products")
 
+// ErrModifyPendingApproval is returned when the API creates an order approval request instead of modifying.
+// The API applies no field in the request until an approver acts on it.
+var ErrModifyPendingApproval = errors.New("modify request is pending approval, no change was applied")
+
 // ErrInvalidTerm creates an error indicating an invalid contract term, dynamically listing the valid terms.
 var ErrInvalidTerm = fmt.Errorf("invalid term, valid terms are %s months", intSliceToString(VALID_CONTRACT_TERMS))
 

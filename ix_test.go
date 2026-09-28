@@ -461,6 +461,27 @@ func (suite *IXClientTestSuite) TestUpdateIX() {
 	suite.Equal(wantIX.ASN, gotIX.ASN)
 }
 
+// TestUpdateIXPendingApproval verifies UpdateIX returns
+// ErrModifyPendingApproval on a 202 without entering the wait loop.
+func (suite *IXClientTestSuite) TestUpdateIXPendingApproval() {
+	ctx := context.Background()
+	ixUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	path := fmt.Sprintf("/v2/product/%s/%s", PRODUCT_IX, ixUid)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPut)
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, `{"message":"IX service update request accepted and pending for approval","terms":"This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"}`)
+	})
+	req := &UpdateIXRequest{
+		RateLimit:     PtrTo(1000),
+		WaitForUpdate: true,
+		WaitForTime:   time.Second,
+	}
+	gotIX, err := suite.client.IXService.UpdateIX(ctx, ixUid, req)
+	suite.ErrorIs(err, ErrModifyPendingApproval)
+	suite.Nil(gotIX)
+}
+
 // TestDeleteIXPendingApproval tests that a 202 pending-approval cancel errors instead of reading as a completed delete.
 func (suite *IXClientTestSuite) TestDeleteIXPendingApproval() {
 	ctx := context.Background()

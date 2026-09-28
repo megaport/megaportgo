@@ -193,6 +193,27 @@ func (suite *ProductClientTestSuite) TestModifyProduct() {
 	suite.Equal(wantRes, gotRes)
 }
 
+// TestModifyProductPendingApproval verifies ModifyProduct returns
+// ErrModifyPendingApproval when the API answers the PUT with 202.
+func (suite *ProductClientTestSuite) TestModifyProductPendingApproval() {
+	ctx := context.Background()
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	path := fmt.Sprintf("/v2/product/%s/%s", PRODUCT_MEGAPORT, productUid)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPut)
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, `{"message":"Request accepted and pending for approval","terms":"This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"}`)
+	})
+	req := &ModifyProductRequest{
+		ProductID:          productUid,
+		ProductType:        PRODUCT_MEGAPORT,
+		ContractTermMonths: 12,
+	}
+	gotRes, err := suite.client.ProductService.ModifyProduct(ctx, req)
+	suite.ErrorIs(err, ErrModifyPendingApproval)
+	suite.Nil(gotRes)
+}
+
 // TestModifyProductVnicsOnNonMVE verifies ModifyProduct rejects vNIC updates
 // when the product is not an MVE, without dispatching the HTTP request.
 func (suite *ProductClientTestSuite) TestModifyProductVnicsOnNonMVE() {
