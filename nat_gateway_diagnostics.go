@@ -130,12 +130,9 @@ func (svc *NATGatewayServiceOp) GetNATGatewayDiagnosticsRoutes(ctx context.Conte
 }
 
 // pollDiagnosticsRoutes polls GetNATGatewayDiagnosticsRoutes until the
-// operation completes, the SDK-managed diagnosticsPollTimeout elapses, or the
-// caller's context is cancelled. While the operation is still processing the
-// endpoint returns an HTTP 400 that isNATGatewayDiagnosticsInProgress
-// detects, and the loop keeps polling; any other error is returned to the
-// caller. A 200 response is the completed result and is returned as-is,
-// including an empty route slice.
+// operation completes, the SDK-managed poll timeout elapses, or the caller's
+// context is cancelled. The endpoint returns an HTTP 400 while the operation
+// runs, and a 200 when it completes, with an empty route slice included.
 func (svc *NATGatewayServiceOp) pollDiagnosticsRoutes(ctx context.Context, productUID, operationID string) ([]*NATGatewayRoute, error) {
 	pollCtx, cancel := context.WithTimeout(ctx, svc.effectivePollTimeout())
 	defer cancel()
@@ -162,14 +159,12 @@ func (svc *NATGatewayServiceOp) pollDiagnosticsRoutes(ctx context.Context, produ
 		if err == nil {
 			return routes, nil
 		}
+		// A timeout or cancel mid-request can surface as any error, including
+		// a 400 with no message when it fires during the body read.
+		if pollCtx.Err() != nil {
+			return nil, pollDoneErr()
+		}
 		if !isNATGatewayDiagnosticsInProgress(err) {
-			// A poll-context expiry mid-request surfaces as a wrapped context
-			// error; attribute it to the deadline/cancellation via pollDoneErr
-			// so callers get a consistent error, leaving genuine API failures
-			// untouched.
-			if pollCtx.Err() != nil && (errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled)) {
-				return nil, pollDoneErr()
-			}
 			return nil, err
 		}
 		select {

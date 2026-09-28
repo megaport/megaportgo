@@ -1259,6 +1259,7 @@ func (suite *NATGatewayClientTestSuite) fastPollNATService() *NATGatewayServiceO
 	suite.Require().True(ok)
 	op.pollInitialDelay = time.Millisecond
 	op.pollInterval = time.Millisecond
+	op.pollTimeout = time.Second
 	return op
 }
 
@@ -1295,7 +1296,7 @@ func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesPollInProgress
 	suite.Require().NoError(err)
 	suite.Len(routes, 1) // only the IP route is extracted; the BGP route is dropped
 	suite.Equal("10.0.0.0/24", routes[0].Prefix)
-	suite.GreaterOrEqual(opCalls.Load(), int32(2))
+	suite.Equal(int32(2), opCalls.Load())
 }
 
 // TestListNATGatewayIPRoutesPollEmptyComplete verifies a 200 with an empty data
@@ -1343,8 +1344,10 @@ func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesPollFatalError
 	})
 
 	_, err := natSvc.ListNATGatewayIPRoutes(ctx, productUID, "")
-	suite.Require().Error(err)
-	suite.False(isNATGatewayDiagnosticsInProgress(err))
+	var apiErr *ErrorResponse
+	suite.Require().ErrorAs(err, &apiErr)
+	suite.Equal(http.StatusBadRequest, apiErr.Response.StatusCode)
+	suite.Equal("unknown operationId", apiErr.Message)
 	suite.Equal(int32(1), opCalls.Load())
 }
 
@@ -1373,6 +1376,34 @@ func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesPollTimeout() 
 	suite.GreaterOrEqual(opCalls.Load(), int32(1)) // at least one in-progress poll was tolerated before the timeout
 }
 
+// TestListNATGatewayIPRoutesPollTimeoutDuringBodyRead verifies a poll timeout
+// that fires while the client reads a 400 body still returns the timeout
+// sentinel. The body read fails, so the 400 arrives with no message.
+func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesPollTimeoutDuringBodyRead() {
+	ctx := context.Background()
+	natSvc := suite.fastPollNATService()
+	natSvc.pollTimeout = 20 * time.Millisecond
+	productUID := "uid-body-stall"
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/ip", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":"op-body-stall"}`)
+	})
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/operation", func(w http.ResponseWriter, r *http.Request) {
+		flusher, ok := w.(http.Flusher)
+		suite.Require().True(ok)
+		w.WriteHeader(http.StatusBadRequest)
+		flusher.Flush()
+		select {
+		case <-r.Context().Done():
+		case <-time.After(5 * time.Second):
+		}
+	})
+
+	_, err := natSvc.ListNATGatewayIPRoutes(ctx, productUID, "")
+	suite.ErrorIs(err, ErrNATGatewayDiagnosticsTimeout)
+}
+
 // TestListNATGatewayIPRoutesPollCallerCancelled verifies that when the caller's
 // own context is cancelled mid-poll, the poll returns that cancellation error
 // rather than the SDK-managed timeout sentinel.
@@ -1382,20 +1413,27 @@ func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesPollCallerCanc
 	natSvc := suite.fastPollNATService()
 	productUID := "uid-cancel"
 
+	var opCalls atomic.Int32
+
 	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/ip", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprint(w, `{"message":"ok","terms":"","data":"op-cancel"}`)
 	})
 	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/operation", func(w http.ResponseWriter, r *http.Request) {
-		// Deliver one in-progress 400, then cancel the caller's context so the
-		// next poll iteration surfaces the caller's cancellation.
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, diagnosticsInProgressBody)
+		// The handler buffers its response until it returns, so a cancel on
+		// the first call would stop the 400 from reaching the client.
+		if opCalls.Add(1) == 1 {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, diagnosticsInProgressBody)
+			return
+		}
 		cancel()
+		<-r.Context().Done()
 	})
 
 	_, err := natSvc.ListNATGatewayIPRoutes(ctx, productUID, "")
 	suite.ErrorIs(err, context.Canceled)
+	suite.Equal(int32(2), opCalls.Load())
 }
 
 // --- Prefix list round-trip ----------------------------------------------

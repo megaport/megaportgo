@@ -8,7 +8,7 @@
 - Add `AsOverride` (`*bool`) to `BgpConnectionConfig` so consumers can enable AS Override for eBGP peering. Unset leaves the API default in place.
 
 ## Changes
-- Fix NAT gateway diagnostics polling treating the API's in-progress signal (HTTP 400 `The polling result for async mode is not ready yet`) as a fatal error. The poll now keeps polling while the operation is processing, returns a completed 200 result including an empty route array, and leaves every other error fatal.
+- `ListNATGatewayIPRoutes`, `ListNATGatewayBGPRoutes` and `ListNATGatewayBGPNeighborRoutes` keep polling while the API reports the operation as still running (HTTP 400 `The polling result for async mode is not ready yet`). They used to fail on the first poll for any operation slower than 2s. A 200 with an empty route list now returns at once. A poll timeout mid-request returns `ErrNATGatewayDiagnosticsTimeout`, and every other error returns unchanged.
 - `ModifyProduct` and `UpdateIX` return `ErrModifyPendingApproval` when the API creates an order approval request instead of applying the change. That case used to read as a successful update, though the API applied no field in the request. `ModifyPort`, `ModifyMCR`, `ModifyMVE` and `UpdateIX` return it without waiting.
 - `DeleteProduct` returns `ErrCancelPendingApproval` when the API creates an order approval request instead of canceling. That case used to read as a successful cancel on a product that was still live. Every product delete method forwards it.
 - Add `Prefixes` to `CSPConnectionAWS` so an AWS VXC read returns the prefixes the API reports. The value decodes from either a JSON string or an array of strings, joined with commas.
