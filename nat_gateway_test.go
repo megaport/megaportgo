@@ -388,6 +388,33 @@ func (suite *NATGatewayClientTestSuite) TestUpdateNATGateway() {
 	suite.Equal(200, gw.Config.SessionCount)
 }
 
+func (suite *NATGatewayClientTestSuite) TestUpdateNATGatewayOmitsUnsetDiversityZone() {
+	productUID := "e900d0d5-1030-4e29-b2d8-816ad4263190"
+
+	var config map[string]json.RawMessage
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID, func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Config map[string]json.RawMessage `json:"config"`
+		}
+		suite.NoError(json.NewDecoder(r.Body).Decode(&body))
+		config = body.Config
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"data": {"productUid": "%s"}}`, productUID)
+	})
+
+	_, err := suite.client.NATGatewayService.UpdateNATGateway(context.Background(), &UpdateNATGatewayRequest{
+		ProductUID:  productUID,
+		Config:      NATGatewayNetworkConfig{ASN: 64512, SessionCount: 100},
+		LocationID:  123456,
+		ProductName: "NAT Gateway",
+		Speed:       1000,
+		Term:        1,
+	})
+	suite.NoError(err)
+	suite.Require().NotNil(config)
+	suite.NotContains(config, "diversityZone")
+}
+
 func (suite *NATGatewayClientTestSuite) TestUpdateNATGatewayValidation() {
 	ctx := context.Background()
 	natSvc := suite.client.NATGatewayService
