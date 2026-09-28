@@ -27,8 +27,8 @@ func (b closeCountingBody) Close() error {
 	return nil
 }
 
-// Do must close the response body on its error-return paths, otherwise the
-// underlying connection leaks.
+// Do must close the response body on every error return, because the caller
+// gets a nil response and cannot close it.
 func TestDoClosesBodyOnError(t *testing.T) {
 	var closes int32
 
