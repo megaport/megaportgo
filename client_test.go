@@ -436,6 +436,36 @@ func (suite *ClientTestSuite) testMethod(r *http.Request, expected string) {
 	}
 }
 
+// handleOrderNotReady accepts an order and fails every other request.
+// Set the returned status to make the API reject the next order.
+func (suite *ClientTestSuite) handleOrderNotReady() (string, *int) {
+	uid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	status := http.StatusOK
+	suite.mux.HandleFunc("/v3/networkdesign/validate", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		fmt.Fprint(w, `{"message":"ok"}`)
+	})
+	suite.mux.HandleFunc("/v4/networkdesign/buy", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if status != http.StatusOK {
+			w.WriteHeader(status)
+			fmt.Fprint(w, `{"message":"order rejected"}`)
+			return
+		}
+		fmt.Fprintf(w, `{"data":[{"technicalServiceUid":%q,"vxcJTechnicalServiceUid":%q}]}`, uid, uid)
+	})
+	suite.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	})
+	return uid, &status
+}
+
 // MockTokenProvider is a mock implementation of TokenProvider for testing.
 type MockTokenProvider struct {
 	Token string

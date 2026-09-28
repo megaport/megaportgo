@@ -15,6 +15,7 @@ import (
 // PortService is an interface for interfacing with the Port endpoints of the Megaport API.
 type PortService interface {
 	// BuyPort buys a port from the Megaport Port API.
+	// If the order goes through but the provisioning wait fails, it returns the order response and the error.
 	BuyPort(ctx context.Context, req *BuyPortRequest) (*BuyPortResponse, error)
 	// ValidatePortOrder validates a port order in the Megaport Products API.
 	ValidatePortOrder(ctx context.Context, req *BuyPortRequest) error
@@ -23,10 +24,12 @@ type PortService interface {
 	// GetPort gets a single port in the Megaport Port API.
 	GetPort(ctx context.Context, portId string) (*Port, error)
 	// ModifyPort modifies a port in the Megaport Port API.
+	// Returns ErrModifyPendingApproval without waiting when the API creates an order approval request instead of modifying.
 	ModifyPort(ctx context.Context, req *ModifyPortRequest) (*ModifyPortResponse, error)
 	// DeletePort deletes a port in the Megaport Port API.
 	// Note: Port products only support immediate deletion (CANCEL_NOW). Requests
 	// with DeleteNow=false are rejected with ErrPortCancelLaterNotAllowed.
+	// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 	DeletePort(ctx context.Context, req *DeletePortRequest) (*DeletePortResponse, error)
 	// RestorePort restores a port in the Megaport Port API.
 	RestorePort(ctx context.Context, portId string) (*RestorePortResponse, error)
@@ -61,11 +64,15 @@ type BuyPortRequest struct {
 	PortSpeed             int    `json:"portSpeed"`
 	LocationId            int    `json:"locationId"`
 	Market                string `json:"market"`
-	LagCount              int    `json:"lagCount"` // A lag count of 1 or higher will order the port as a single LAG
+	LagCount              int    `json:"lagCount"` // Orders the port as a LAG of this many ports. With AggregationID set, adds this many ports to that LAG.
 	MarketPlaceVisibility bool   `json:"marketPlaceVisibility"`
 	DiversityZone         string `json:"diversityZone"`
 	CostCentre            string `json:"costCentre"`
 	PromoCode             string `json:"promoCode"`
+
+	// AggregationID names an existing LAG, read from Port.AggregationID. Set it with LagCount to add that many ports.
+	// Send the LAG's own LocationId and PortSpeed. The API takes both from this request, not from the LAG.
+	AggregationID int `json:"aggregationId"`
 
 	ResourceTags map[string]string `json:"resourceTags"`
 
@@ -153,6 +160,9 @@ func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*Bu
 	if !slices.Contains(VALID_CONTRACT_TERMS, req.Term) {
 		return nil, ErrInvalidTerm
 	}
+	if req.AggregationID != 0 && req.LagCount < 1 {
+		return nil, ErrLagCountRequiredWithAggregationID
+	}
 
 	buyOrder := createPortOrder(req)
 
@@ -188,15 +198,15 @@ func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*Bu
 		for {
 			select {
 			case <-timer.C:
-				return nil, fmt.Errorf("time expired waiting for Port %s to provision", toReturn.TechnicalServiceUIDs)
+				return toReturn, fmt.Errorf("time expired waiting for Port %s to provision", toReturn.TechnicalServiceUIDs)
 			case <-ctx.Done():
-				return nil, fmt.Errorf("context expired waiting for Port %s to provision", toReturn.TechnicalServiceUIDs)
+				return toReturn, fmt.Errorf("context expired waiting for Port %s to provision", toReturn.TechnicalServiceUIDs)
 			case <-ticker.C:
 				ports := []*Port{}
 				for _, uid := range toReturn.TechnicalServiceUIDs {
 					portDetails, err := svc.GetPort(ctx, uid)
 					if err != nil {
-						return nil, err
+						return toReturn, err
 					}
 
 					ports = append(ports, portDetails)
@@ -233,6 +243,7 @@ func createPortOrder(req *BuyPortRequest) []PortOrder {
 		Virtual:               false,
 		Market:                req.Market,
 		LagPortCount:          req.LagCount,
+		AggregationID:         req.AggregationID,
 		MarketplaceVisibility: req.MarketPlaceVisibility,
 		CostCentre:            req.CostCentre,
 		PromoCode:             req.PromoCode,
@@ -247,6 +258,9 @@ func (svc *PortServiceOp) ValidatePortOrder(ctx context.Context, req *BuyPortReq
 	if !slices.Contains(VALID_CONTRACT_TERMS, req.Term) {
 		// Validate that term is one of the allowed values
 		return ErrInvalidTerm
+	}
+	if req.AggregationID != 0 && req.LagCount < 1 {
+		return ErrLagCountRequiredWithAggregationID
 	}
 
 	buyOrder := createPortOrder(req)
@@ -328,6 +342,7 @@ func (svc *PortServiceOp) GetPort(ctx context.Context, portId string) (*Port, er
 }
 
 // ModifyPort modifies a port in the Megaport Port API.
+// Returns ErrModifyPendingApproval without waiting when the API creates an order approval request instead of modifying.
 func (svc *PortServiceOp) ModifyPort(ctx context.Context, req *ModifyPortRequest) (*ModifyPortResponse, error) {
 	if req == nil {
 		return nil, ErrModifyPortRequestNil
@@ -393,6 +408,7 @@ func (svc *PortServiceOp) ModifyPort(ctx context.Context, req *ModifyPortRequest
 // Note: Port products only support immediate deletion (CANCEL_NOW). Requests with
 // DeleteNow=false are rejected with ErrPortCancelLaterNotAllowed, and accepted
 // requests always call the underlying API with DeleteNow=true.
+// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 func (svc *PortServiceOp) DeletePort(ctx context.Context, req *DeletePortRequest) (*DeletePortResponse, error) {
 	if req == nil {
 		return nil, ErrDeletePortRequestNil

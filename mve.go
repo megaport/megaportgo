@@ -14,6 +14,7 @@ import (
 // MVEService is an interface for interfacing with the MVE endpoints of the Megaport API.
 type MVEService interface {
 	// BuyMVE buys an MVE from the Megaport MVE API.
+	// If the order goes through but the provisioning wait fails, it returns the order response and the error.
 	BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMVEResponse, error)
 	// ValidateMVEOrder validates an MVE order in the Megaport Products API.
 	ValidateMVEOrder(ctx context.Context, req *BuyMVERequest) error
@@ -22,8 +23,10 @@ type MVEService interface {
 	// GetMVE gets details about a single MVE from the Megaport MVE API.
 	GetMVE(ctx context.Context, mveId string) (*MVE, error)
 	// ModifyMVE modifies an MVE in the Megaport MVE API.
+	// Returns ErrModifyPendingApproval without waiting when the API creates an order approval request instead of modifying.
 	ModifyMVE(ctx context.Context, req *ModifyMVERequest) (*ModifyMVEResponse, error)
 	// DeleteMVE deletes an MVE in the Megaport MVE API.
+	// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 	DeleteMVE(ctx context.Context, req *DeleteMVERequest) (*DeleteMVEResponse, error)
 	// ListMVEImages returns a list of currently supported MVE images and details for each image, including image ID, version, product, and vendor. The image id returned indicates the software version and key configuration parameters of the image. The releaseImage value returned indicates whether the MVE image is available for selection when ordering an MVE.
 	ListMVEImages(ctx context.Context) ([]*MVEImage, error)
@@ -149,13 +152,13 @@ func (svc *MVEServiceOp) BuyMVE(ctx context.Context, req *BuyMVERequest) (*BuyMV
 		for {
 			select {
 			case <-timer.C:
-				return nil, fmt.Errorf("time expired waiting for MVE %s to provision", toReturn.TechnicalServiceUID)
+				return toReturn, fmt.Errorf("time expired waiting for MVE %s to provision", toReturn.TechnicalServiceUID)
 			case <-ctx.Done():
-				return nil, fmt.Errorf("context expired waiting for MVE %s to provision", toReturn.TechnicalServiceUID)
+				return toReturn, fmt.Errorf("context expired waiting for MVE %s to provision", toReturn.TechnicalServiceUID)
 			case <-ticker.C:
 				mveDetails, err := svc.GetMVE(ctx, toReturn.TechnicalServiceUID)
 				if err != nil {
-					return nil, err
+					return toReturn, err
 				}
 
 				if slices.Contains(SERVICE_STATE_READY, mveDetails.ProvisioningStatus) {
@@ -261,6 +264,7 @@ func (svc *MVEServiceOp) GetMVE(ctx context.Context, mveId string) (*MVE, error)
 }
 
 // ModifyMVE modifies an MVE in the Megaport MVE API.
+// Returns ErrModifyPendingApproval without waiting when the API creates an order approval request instead of modifying.
 func (svc *MVEServiceOp) ModifyMVE(ctx context.Context, req *ModifyMVERequest) (*ModifyMVEResponse, error) {
 	if req == nil {
 		return nil, ErrModifyMVERequestNil
@@ -328,6 +332,7 @@ func (svc *MVEServiceOp) ModifyMVE(ctx context.Context, req *ModifyMVERequest) (
 }
 
 // DeleteMVE deletes an MVE in the Megaport MVE API.
+// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 func (svc *MVEServiceOp) DeleteMVE(ctx context.Context, req *DeleteMVERequest) (*DeleteMVEResponse, error) {
 	if req == nil {
 		return nil, ErrDeleteMVERequestNil

@@ -16,6 +16,7 @@ import (
 // of the Megaport API.
 type MCRService interface {
 	// BuyMCR buys an MCR from the Megaport MCR API.
+	// If the order goes through but the provisioning wait fails, it returns the order response and the error.
 	BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMCRResponse, error)
 	// ValidateMCROrder validates an MCR order in the Megaport Products API.
 	ValidateMCROrder(ctx context.Context, req *BuyMCRRequest) error
@@ -34,8 +35,10 @@ type MCRService interface {
 	// DeleteMCRPrefixFilterList deletes a prefix filter list on an MCR from the Megaport MCR API.
 	DeleteMCRPrefixFilterList(ctx context.Context, mcrID string, prefixFilterListID int) (*DeleteMCRPrefixFilterListResponse, error)
 	// ModifyMCR modifies an MCR in the Megaport MCR API.
+	// Returns ErrModifyPendingApproval without waiting when the API creates an order approval request instead of modifying.
 	ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (*ModifyMCRResponse, error)
 	// DeleteMCR deletes an MCR in the Megaport MCR API.
+	// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 	DeleteMCR(ctx context.Context, req *DeleteMCRRequest) (*DeleteMCRResponse, error)
 	// RestoreMCR restores a deleted MCR in the Megaport MCR API.
 	RestoreMCR(ctx context.Context, mcrId string) (*RestoreMCRResponse, error)
@@ -210,13 +213,13 @@ func (svc *MCRServiceOp) BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMC
 		for {
 			select {
 			case <-timer.C:
-				return nil, fmt.Errorf("time expired waiting for MCR %s to provision", toReturn.TechnicalServiceUID)
+				return toReturn, fmt.Errorf("time expired waiting for MCR %s to provision", toReturn.TechnicalServiceUID)
 			case <-ctx.Done():
-				return nil, fmt.Errorf("context expired waiting for MCR %s to provision: %w", toReturn.TechnicalServiceUID, ctx.Err())
+				return toReturn, fmt.Errorf("context expired waiting for MCR %s to provision: %w", toReturn.TechnicalServiceUID, ctx.Err())
 			case <-ticker.C:
 				mcrDetails, err := svc.GetMCR(ctx, toReturn.TechnicalServiceUID)
 				if err != nil {
-					return nil, err
+					return toReturn, err
 				}
 
 				if slices.Contains(SERVICE_STATE_READY, mcrDetails.ProvisioningStatus) {
@@ -506,6 +509,7 @@ func (svc *MCRServiceOp) GetMCRPrefixFilterList(ctx context.Context, mcrID strin
 }
 
 // ModifyMCR modifies an MCR in the Megaport MCR API.
+// Returns ErrModifyPendingApproval without waiting when the API creates an order approval request instead of modifying.
 func (svc *MCRServiceOp) ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (*ModifyMCRResponse, error) {
 	if req == nil {
 		return nil, ErrModifyMCRRequestNil
@@ -602,6 +606,7 @@ func (svc *MCRServiceOp) ModifyMCRPrefixFilterList(ctx context.Context, mcrID st
 // Note: MCR products only support immediate deletion (CANCEL_NOW). Requests with
 // DeleteNow=false are rejected with ErrMCRCancelLaterNotAllowed, and accepted
 // requests always call the underlying API with DeleteNow=true.
+// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 func (svc *MCRServiceOp) DeleteMCR(ctx context.Context, req *DeleteMCRRequest) (*DeleteMCRResponse, error) {
 	if req == nil {
 		return nil, ErrDeleteMCRRequestNil

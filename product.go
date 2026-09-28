@@ -18,8 +18,10 @@ type ProductService interface {
 	// ListProducts retrieves a list of products from the Megaport Products API. It returns a slice of Product interfaces, which can be of different types (Port, MCR, MVE). The function handles the parsing of the response and unmarshals it into the appropriate product type based on the product type field.
 	ListProducts(ctx context.Context) ([]Product, error)
 	// ModifyProduct modifies a product in the Megaport Products API. The available fields to modify are Name, Cost Centre, Marketplace Visibility, Contract Term, ASN (MCR only), and Vnics (MVE only).
+	// Returns ErrModifyPendingApproval when the API creates an order approval request instead of modifying.
 	ModifyProduct(ctx context.Context, req *ModifyProductRequest) (*ModifyProductResponse, error)
 	// DeleteProduct is responsible for either scheduling a product for deletion "CANCEL" or deleting a product immediately "CANCEL_NOW" in the Megaport Products API.
+	// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 	DeleteProduct(ctx context.Context, req *DeleteProductRequest) (*DeleteProductResponse, error)
 	// RestoreProduct is responsible for restoring a product in the Megaport Products API. The product must be in a "CANCELLED" state to be restored.
 	RestoreProduct(ctx context.Context, productId string) (*RestoreProductResponse, error)
@@ -258,6 +260,7 @@ func (svc *ProductServiceOp) ListProducts(ctx context.Context) ([]Product, error
 // ModifyProduct modifies a product in the Megaport Products API. The available
 // fields to modify are Name, Cost Centre, Marketplace Visibility, Contract Term,
 // ASN (MCR only), and Vnics (MVE only).
+// Returns ErrModifyPendingApproval when the API creates an order approval request instead of modifying.
 func (svc *ProductServiceOp) ModifyProduct(ctx context.Context, req *ModifyProductRequest) (*ModifyProductResponse, error) {
 	if req == nil {
 		return nil, ErrModifyProductRequestNil
@@ -277,13 +280,21 @@ func (svc *ProductServiceOp) ModifyProduct(ctx context.Context, req *ModifyProdu
 		return nil, err
 	}
 
-	if _, err := svc.Client.Do(ctx, httpReq, nil); err != nil {
+	resp, err := svc.Client.Do(ctx, httpReq, io.Discard)
+	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusAccepted {
+		return nil, ErrModifyPendingApproval
+	}
+
 	return &ModifyProductResponse{IsUpdated: true}, nil
 }
 
 // DeleteProduct is responsible for either scheduling a product for deletion "CANCEL" or deleting a product immediately "CANCEL_NOW" in the Megaport Products API.
+// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 func (svc *ProductServiceOp) DeleteProduct(ctx context.Context, req *DeleteProductRequest) (*DeleteProductResponse, error) {
 	if req == nil {
 		return nil, ErrDeleteProductRequestNil
@@ -313,10 +324,16 @@ func (svc *ProductServiceOp) DeleteProduct(ctx context.Context, req *DeleteProdu
 		return nil, err
 	}
 
-	_, err = svc.Client.Do(ctx, clientReq, nil)
+	resp, err := svc.Client.Do(ctx, clientReq, io.Discard)
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusAccepted {
+		return nil, ErrCancelPendingApproval
+	}
+
 	return &DeleteProductResponse{}, nil
 }
 

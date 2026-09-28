@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -134,6 +135,29 @@ func (suite *IXClientTestSuite) TestBuyIX() {
 	got, err := ixSvc.BuyIX(ctx, req)
 	suite.NoError(err)
 	suite.Equal(want, got)
+}
+
+// TestBuyIXWaitFails tests that BuyIX returns the order response when the provisioning wait fails.
+func (suite *IXClientTestSuite) TestBuyIXWaitFails() {
+	uid, status := suite.handleOrderNotReady()
+	want := &BuyIXResponse{TechnicalServiceUID: uid}
+	req := &BuyIXRequest{ProductUID: "9b1c46c7-1e8d-4035-bf38-1bc60d346d57", Name: "test-ix", NetworkServiceType: "Los Angeles IX", ASN: 12345, RateLimit: 500, VLAN: 2001, WaitForProvision: true, WaitForTime: 100 * time.Millisecond}
+
+	got, err := suite.client.IXService.BuyIX(context.Background(), req)
+	suite.EqualError(err, "time expired waiting for IX "+uid+" to provision")
+	suite.Equal(want, got)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	req.WaitForTime = time.Minute
+	got, err = suite.client.IXService.BuyIX(ctx, req)
+	suite.EqualError(err, "context expired waiting for IX "+uid+" to provision")
+	suite.Equal(want, got)
+
+	*status = http.StatusBadRequest
+	got, err = suite.client.IXService.BuyIX(context.Background(), req)
+	suite.Error(err)
+	suite.Nil(got)
 }
 
 // TestGetIX tests the GetIX method.
@@ -435,6 +459,51 @@ func (suite *IXClientTestSuite) TestUpdateIX() {
 	suite.Equal(wantIX.UsageAlgorithm, gotIX.UsageAlgorithm)
 	suite.Equal(wantIX.Resources, gotIX.Resources)
 	suite.Equal(wantIX.ASN, gotIX.ASN)
+}
+
+// TestUpdateIXPendingApproval verifies UpdateIX returns
+// ErrModifyPendingApproval on a 202 without entering the wait loop.
+func (suite *IXClientTestSuite) TestUpdateIXPendingApproval() {
+	ctx := context.Background()
+	ixUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	path := fmt.Sprintf("/v2/product/%s/%s", PRODUCT_IX, ixUid)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPut)
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, `{"message":"IX service update request accepted and pending for approval","terms":"This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"}`)
+	})
+	req := &UpdateIXRequest{
+		RateLimit:     PtrTo(1000),
+		WaitForUpdate: true,
+		WaitForTime:   time.Second,
+	}
+	gotIX, err := suite.client.IXService.UpdateIX(ctx, ixUid, req)
+	suite.ErrorIs(err, ErrModifyPendingApproval)
+	suite.Nil(gotIX)
+}
+
+// TestDeleteIXPendingApproval tests that a 202 pending-approval cancel errors instead of reading as a completed delete.
+func (suite *IXClientTestSuite) TestDeleteIXPendingApproval() {
+	ctx := context.Background()
+
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	jblob := `{
+		"message": "Request accepted and pending for approval",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"
+	}`
+
+	path := "/v3/product/" + productUid + "/action/CANCEL_NOW"
+
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPost)
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, jblob)
+	})
+
+	err := suite.client.IXService.DeleteIX(ctx, productUid, &DeleteIXRequest{DeleteNow: true})
+
+	suite.ErrorIs(err, ErrCancelPendingApproval)
 }
 
 // TestListIXs tests the ListIXs method with various filters

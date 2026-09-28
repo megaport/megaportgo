@@ -30,9 +30,13 @@ const (
 type OrderApprovalType string
 
 const (
-	OrderApprovalTypeNewOrder    OrderApprovalType = "NEW_ORDER"
-	OrderApprovalTypeTermChange  OrderApprovalType = "TERM_CHANGE"
-	OrderApprovalTypeSpeedChange OrderApprovalType = "SPEED_CHANGE"
+	OrderApprovalTypeNewOrder              OrderApprovalType = "NEW_ORDER"
+	OrderApprovalTypeTermChange            OrderApprovalType = "TERM_CHANGE"
+	OrderApprovalTypeSpeedChange           OrderApprovalType = "SPEED_CHANGE"
+	OrderApprovalTypeEarlyTermination      OrderApprovalType = "EARLY_TERMINATION"
+	OrderApprovalTypeAddOn                 OrderApprovalType = "ADD_ON"
+	OrderApprovalTypeIPAddressPartnerOrder OrderApprovalType = "IP_ADDRESS_PARTNER_ORDER"
+	OrderApprovalTypeIPAddressCompliance   OrderApprovalType = "IP_ADDRESS_COMPLIANCE"
 )
 
 // OrderApprovalService is an interface for interfacing with the Order Approval endpoints in the Megaport API.

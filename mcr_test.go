@@ -101,6 +101,29 @@ func (suite *MCRClientTestSuite) TestBuyMCR() {
 	suite.Equal(want, got)
 }
 
+// TestBuyMCRWaitFails tests that BuyMCR returns the order response when the provisioning wait fails.
+func (suite *MCRClientTestSuite) TestBuyMCRWaitFails() {
+	uid, status := suite.handleOrderNotReady()
+	want := &BuyMCRResponse{TechnicalServiceUID: uid}
+	req := &BuyMCRRequest{Name: "test-mcr", Term: 1, PortSpeed: 1000, LocationID: 1, WaitForProvision: true, WaitForTime: 100 * time.Millisecond}
+
+	got, err := suite.client.MCRService.BuyMCR(context.Background(), req)
+	suite.EqualError(err, "time expired waiting for MCR "+uid+" to provision")
+	suite.Equal(want, got)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	req.WaitForTime = time.Minute
+	got, err = suite.client.MCRService.BuyMCR(ctx, req)
+	suite.EqualError(err, "context expired waiting for MCR "+uid+" to provision: context deadline exceeded")
+	suite.Equal(want, got)
+
+	*status = http.StatusBadRequest
+	got, err = suite.client.MCRService.BuyMCR(context.Background(), req)
+	suite.Error(err)
+	suite.Nil(got)
+}
+
 // TestCreateMCROrderMarketplaceVisibility asserts the marshaled MCROrder carries
 // marketplaceVisibility when set, and omits it (preserving the API default) when
 // the request leaves it nil.
@@ -791,6 +814,28 @@ func (suite *MCRClientTestSuite) TestModifyMCR() {
 	suite.Equal(wantModify, gotModify)
 }
 
+// TestModifyMCRPendingApproval verifies ModifyMCR returns
+// ErrModifyPendingApproval on a 202 without entering the wait loop.
+func (suite *MCRClientTestSuite) TestModifyMCRPendingApproval() {
+	ctx := context.Background()
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	path := fmt.Sprintf("/v2/product/%s/%s", PRODUCT_MCR, productUid)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPut)
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, `{"message":"Request accepted and pending for approval","terms":"This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"}`)
+	})
+	req := &ModifyMCRRequest{
+		MCRID:              productUid,
+		ContractTermMonths: PtrTo(12),
+		WaitForUpdate:      true,
+		WaitForTime:        time.Second,
+	}
+	gotRes, err := suite.client.MCRService.ModifyMCR(ctx, req)
+	suite.ErrorIs(err, ErrModifyPendingApproval)
+	suite.Nil(gotRes)
+}
+
 // TestDeleteMCR tests the DeleteMCR method.
 func (suite *MCRClientTestSuite) TestDeleteMCR() {
 	ctx := context.Background()
@@ -820,6 +865,31 @@ func (suite *MCRClientTestSuite) TestDeleteMCR() {
 
 	suite.NoError(err)
 	suite.Equal(want, got)
+}
+
+// TestDeleteMCRPendingApproval tests that a 202 pending-approval cancel errors instead of reading as a completed delete.
+func (suite *MCRClientTestSuite) TestDeleteMCRPendingApproval() {
+	ctx := context.Background()
+
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	jblob := `{
+		"message": "Request accepted and pending for approval",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"
+	}`
+
+	path := "/v3/product/" + productUid + "/action/CANCEL_NOW"
+
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPost)
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, jblob)
+	})
+
+	got, err := suite.client.MCRService.DeleteMCR(ctx, &DeleteMCRRequest{MCRID: productUid, DeleteNow: true})
+
+	suite.ErrorIs(err, ErrCancelPendingApproval)
+	suite.Nil(got)
 }
 
 // TestDeleteMCRCancelLaterNotAllowed verifies that DeleteMCR rejects DeleteNow=false.

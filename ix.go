@@ -18,15 +18,18 @@ type IXService interface {
 	GetIX(ctx context.Context, id string) (*IX, error)
 
 	// BuyIX purchases a new Internet Exchange
+	// If the order goes through but the provisioning wait fails, it returns the order response and the error.
 	BuyIX(ctx context.Context, req *BuyIXRequest) (*BuyIXResponse, error)
 
 	// ValidateIXOrder validates an Internet Exchange order without submitting it
 	ValidateIXOrder(ctx context.Context, req *BuyIXRequest) error
 
 	// UpdateIX updates an existing Internet Exchange
+	// Returns ErrModifyPendingApproval without waiting when the API creates an order approval request instead of updating.
 	UpdateIX(ctx context.Context, id string, req *UpdateIXRequest) (*IX, error)
 
 	// DeleteIX deletes an Internet Exchange
+	// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 	DeleteIX(ctx context.Context, id string, req *DeleteIXRequest) error
 
 	// ListIXs lists all Internet Exchanges with optional filters
@@ -159,13 +162,13 @@ func (svc *IXServiceOp) BuyIX(ctx context.Context, req *BuyIXRequest) (*BuyIXRes
 		for {
 			select {
 			case <-timer.C:
-				return nil, fmt.Errorf("time expired waiting for IX %s to provision", toReturn.TechnicalServiceUID)
+				return toReturn, fmt.Errorf("time expired waiting for IX %s to provision", toReturn.TechnicalServiceUID)
 			case <-ctx.Done():
-				return nil, fmt.Errorf("context expired waiting for IX %s to provision", toReturn.TechnicalServiceUID)
+				return toReturn, fmt.Errorf("context expired waiting for IX %s to provision", toReturn.TechnicalServiceUID)
 			case <-ticker.C:
 				ix, err := svc.GetIX(ctx, toReturn.TechnicalServiceUID)
 				if err != nil {
-					return nil, err
+					return toReturn, err
 				}
 
 				if slices.Contains(SERVICE_STATE_READY, ix.ProvisioningStatus) {
@@ -221,6 +224,7 @@ func (svc *IXServiceOp) GetIX(ctx context.Context, id string) (*IX, error) {
 }
 
 // UpdateIX updates an existing Internet Exchange
+// Returns ErrModifyPendingApproval without waiting when the API creates an order approval request instead of updating.
 func (svc *IXServiceOp) UpdateIX(ctx context.Context, id string, req *UpdateIXRequest) (*IX, error) {
 	if req == nil {
 		return nil, ErrUpdateIXRequestNil
@@ -289,6 +293,10 @@ func (svc *IXServiceOp) UpdateIX(ctx context.Context, id string, req *UpdateIXRe
 		return nil, err
 	}
 
+	if response.StatusCode == http.StatusAccepted {
+		return nil, ErrModifyPendingApproval
+	}
+
 	// Parse the response
 	resp := ixResponse{}
 	if err = json.Unmarshal(body, &resp); err != nil {
@@ -331,6 +339,7 @@ func (svc *IXServiceOp) UpdateIX(ctx context.Context, id string, req *UpdateIXRe
 }
 
 // DeleteIX deletes an Internet Exchange
+// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 func (svc *IXServiceOp) DeleteIX(ctx context.Context, id string, req *DeleteIXRequest) error {
 	if req == nil {
 		return ErrDeleteIXRequestNil

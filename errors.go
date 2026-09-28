@@ -39,6 +39,10 @@ var ErrWrongProductModify = errors.New("you can only update Ports, MCR, and MVE 
 // ErrVnicsOnNonMVE is returned when vNIC updates are supplied for a non-MVE product
 var ErrVnicsOnNonMVE = errors.New("vNICs can only be modified on MVE products")
 
+// ErrModifyPendingApproval is returned when the API creates an order approval request instead of modifying.
+// The API applies no field in the request until an approver acts on it.
+var ErrModifyPendingApproval = errors.New("modify request is pending approval, no change was applied")
+
 // ErrInvalidTerm creates an error indicating an invalid contract term, dynamically listing the valid terms.
 var ErrInvalidTerm = fmt.Errorf("invalid term, valid terms are %s months", intSliceToString(VALID_CONTRACT_TERMS))
 
@@ -104,6 +108,10 @@ var ErrMCRCancelLaterNotAllowed = errors.New("mcr products do not support schedu
 
 // ErrPortCancelLaterNotAllowed is returned when attempting to schedule Port deletion for later (only CANCEL_NOW is allowed)
 var ErrPortCancelLaterNotAllowed = errors.New("port products do not support scheduled deletion (cancel later), only immediate deletion (CANCEL_NOW) is allowed")
+
+// ErrCancelPendingApproval is returned when the API creates an order approval request instead of canceling.
+// The product stays live until an approver acts on the request.
+var ErrCancelPendingApproval = errors.New("cancel request is pending approval, the product is still live")
 
 // ErrMCRNotFound is returned when an MCR cannot be found (deleted or never existed).
 var ErrMCRNotFound = errors.New("mcr not found or deleted")
@@ -184,6 +192,11 @@ var ErrListPartnerPortsRequestNil = errors.New("list partner ports request canno
 
 // ErrBuyPortRequestNil is returned when BuyPort or ValidatePortOrder is called with a nil request.
 var ErrBuyPortRequestNil = errors.New("buy port request cannot be nil")
+
+// ErrLagCountRequiredWithAggregationID is returned when a port order names an
+// existing LAG but asks for no ports. The API reads that as a standalone port
+// order and silently ignores the LAG.
+var ErrLagCountRequiredWithAggregationID = errors.New("lag count must be 1 or higher when aggregation ID is set")
 
 // ErrModifyPortRequestNil is returned when ModifyPort is called with a nil request.
 var ErrModifyPortRequestNil = errors.New("modify port request cannot be nil")

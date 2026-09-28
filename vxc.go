@@ -14,6 +14,7 @@ import (
 // VXCService is an interface for interfacing with the VXC endpoints in the Megaport VXC API.
 type VXCService interface {
 	// BuyVXC buys a VXC from the Megaport VXC API.
+	// If the order goes through but the provisioning wait fails, it returns the order response and the error.
 	BuyVXC(ctx context.Context, req *BuyVXCRequest) (*BuyVXCResponse, error)
 	// ValidateVXCOrder validates a VXC order in the Megaport Products API.
 	ValidateVXCOrder(ctx context.Context, req *BuyVXCRequest) error
@@ -22,6 +23,7 @@ type VXCService interface {
 	// GetVXC gets details about a single VXC from the Megaport VXC API.
 	GetVXC(ctx context.Context, id string) (*VXC, error)
 	// DeleteVXC deletes a VXC in the Megaport VXC API.
+	// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 	DeleteVXC(ctx context.Context, id string, req *DeleteVXCRequest) error
 	// UpdateVXC updates a VXC in the Megaport VXC API.
 	UpdateVXC(ctx context.Context, id string, req *UpdateVXCRequest) (*VXC, error)
@@ -176,6 +178,9 @@ func (svc *VXCServiceOp) BuyVXC(ctx context.Context, req *BuyVXCRequest) (*BuyVX
 		return nil, err
 	}
 	serviceUID := orderInfo.Data[0].TechnicalServiceUID
+	toReturn := &BuyVXCResponse{
+		TechnicalServiceUID: serviceUID,
+	}
 
 	// wait until the VXC is provisioned before returning if reqested by the user
 	if req.WaitForProvision {
@@ -192,28 +197,24 @@ func (svc *VXCServiceOp) BuyVXC(ctx context.Context, req *BuyVXCRequest) (*BuyVX
 		for {
 			select {
 			case <-timer.C:
-				return nil, fmt.Errorf("time expired waiting for VXC %s to provision", serviceUID)
+				return toReturn, fmt.Errorf("time expired waiting for VXC %s to provision", serviceUID)
 			case <-ctx.Done():
-				return nil, fmt.Errorf("context expired waiting for VXC %s to provision", serviceUID)
+				return toReturn, fmt.Errorf("context expired waiting for VXC %s to provision", serviceUID)
 			case <-ticker.C:
 				vxcDetails, err := svc.GetVXC(ctx, serviceUID)
 				if err != nil {
-					return nil, err
+					return toReturn, err
 				}
 
 				if slices.Contains(SERVICE_STATE_READY, vxcDetails.ProvisioningStatus) {
-					return &BuyVXCResponse{
-						TechnicalServiceUID: serviceUID,
-					}, nil
+					return toReturn, nil
 				}
 
 			}
 		}
 	} else {
 		// return the service UID right away if the user doesn't want to wait for provision
-		return &BuyVXCResponse{
-			TechnicalServiceUID: serviceUID,
-		}, nil
+		return toReturn, nil
 	}
 }
 
@@ -330,6 +331,7 @@ func isTransitVXC(vxc *VXC) bool {
 // Note: Transit VXCs (Megaport Internet) only support immediate deletion (CANCEL_NOW).
 // Attempting to schedule deletion (DeleteNow=false) for Transit VXCs will return an error.
 // When DeleteNow is false, an additional GetVXC call is made to check for Transit VXC status.
+// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 func (svc *VXCServiceOp) DeleteVXC(ctx context.Context, id string, req *DeleteVXCRequest) error {
 	if req == nil {
 		return ErrDeleteVXCRequestNil
