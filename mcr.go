@@ -718,6 +718,7 @@ func (svc *MCRServiceOp) UpdateMCRIPsecAddOn(ctx context.Context, mcrID string, 
 
 // GetMCRIPsec returns the IPsec tunnel configuration for an MCR.
 // GET /v3/products/mcrs/{productUid}/ipsec
+// A decommissioned MCR returns an empty configuration, not an error.
 func (svc *MCRServiceOp) GetMCRIPsec(ctx context.Context, mcrID string) (*MCRIPsecConfiguration, error) {
 	path := "/v3/products/mcrs/" + url.PathEscape(mcrID) + "/ipsec"
 

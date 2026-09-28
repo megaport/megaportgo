@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -226,14 +227,14 @@ func mcrIPsecFixture() (jblob string, want *MCRIPsecConfiguration) {
 					{
 						Description:          "Primary IPsec tunnel",
 						SourceIpAddress:      "192.168.1.2",
-						DestinationIpAddress: "192.200.1.2",
+						DestinationIpAddress: "198.51.100.2",
 						LocalID:              "local-peer-id",
 						RemoteID:             "remote-peer-id",
 						VLAN:                 100,
 					},
 					{
 						SourceIpAddress:      "192.168.1.6",
-						DestinationIpAddress: "192.200.1.6",
+						DestinationIpAddress: "198.51.100.6",
 					},
 				},
 			},
@@ -253,14 +254,14 @@ func mcrIPsecFixture() (jblob string, want *MCRIPsecConfiguration) {
 						{
 							"description": "Primary IPsec tunnel",
 							"sourceIpAddress": "192.168.1.2",
-							"destinationIpAddress": "192.200.1.2",
+							"destinationIpAddress": "198.51.100.2",
 							"localId": "local-peer-id",
 							"remoteId": "remote-peer-id",
 							"vlan": 100
 						},
 						{
 							"sourceIpAddress": "192.168.1.6",
-							"destinationIpAddress": "192.200.1.6"
+							"destinationIpAddress": "198.51.100.6"
 						}
 					]
 				}
@@ -332,18 +333,22 @@ func (suite *MCRClientTestSuite) TestGetMCRIPsecWithLogResponseBody() {
 }
 
 // TestGetMCRIPsecNotFound tests error handling when the MCR does not exist.
+// The API answers an unknown UID with a 400, not a 404.
 func (suite *MCRClientTestSuite) TestGetMCRIPsecNotFound() {
 	ctx := context.Background()
 	mcrSvc := suite.client.MCRService
 	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	message := "MCR service not found for UID: " + mcrId
 	suite.mux.HandleFunc(fmt.Sprintf("/v3/products/mcrs/%s/ipsec", mcrId), func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprint(w, `{"message": "MCR not found", "data": ""}`)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"message": %q, "terms": "test-terms", "data": null}`, message)
 	})
 	got, err := mcrSvc.GetMCRIPsec(ctx, mcrId)
-	suite.Error(err)
-	suite.True(IsServiceNotFoundError(err))
+	var apiErr *ErrorResponse
+	suite.Require().ErrorAs(err, &apiErr)
+	suite.Equal(http.StatusBadRequest, apiErr.Response.StatusCode)
+	suite.Equal(message, apiErr.Message)
 	suite.Nil(got)
 }
 
@@ -355,10 +360,56 @@ func (suite *MCRClientTestSuite) TestGetMCRIPsecNoData() {
 	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
 	suite.mux.HandleFunc(fmt.Sprintf("/v3/products/mcrs/%s/ipsec", mcrId), func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
+		w.Header().Set("Trace-Id", "test-trace-id")
 		fmt.Fprint(w, `{"message": "test-message", "terms": "test-terms"}`)
 	})
 	got, err := mcrSvc.GetMCRIPsec(ctx, mcrId)
 	suite.ErrorIs(err, ErrMCRIPsecNoData)
+	suite.ErrorContains(err, "test-trace-id")
+	suite.Nil(got)
+}
+
+// TestGetMCRIPsecEscapesUID ensures the MCR UID stays one path segment.
+func (suite *MCRClientTestSuite) TestGetMCRIPsecEscapesUID() {
+	ctx := context.Background()
+	mcrSvc := suite.client.MCRService
+	jblob, want := mcrIPsecFixture()
+	suite.mux.HandleFunc("/v3/products/mcrs/", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		suite.Equal("/v3/products/mcrs/a%2Fb/ipsec", r.URL.EscapedPath())
+		fmt.Fprint(w, jblob)
+	})
+	got, err := mcrSvc.GetMCRIPsec(ctx, "a/b")
+	suite.NoError(err)
+	suite.Equal(want, got)
+}
+
+// TestGetMCRIPsecBodyReadError ensures a truncated body returns the read error.
+func (suite *MCRClientTestSuite) TestGetMCRIPsecBodyReadError() {
+	ctx := context.Background()
+	mcrSvc := suite.client.MCRService
+	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	suite.mux.HandleFunc(fmt.Sprintf("/v3/products/mcrs/%s/ipsec", mcrId), func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Length", "4096")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, `{"message": "test-message", "data": {`)
+	})
+	got, err := mcrSvc.GetMCRIPsec(ctx, mcrId)
+	suite.ErrorIs(err, io.ErrUnexpectedEOF)
+	suite.Nil(got)
+}
+
+// TestGetMCRIPsecMalformedJSON ensures malformed JSON returns a syntax error, not ErrMCRIPsecNoData.
+func (suite *MCRClientTestSuite) TestGetMCRIPsecMalformedJSON() {
+	ctx := context.Background()
+	mcrSvc := suite.client.MCRService
+	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	suite.mux.HandleFunc(fmt.Sprintf("/v3/products/mcrs/%s/ipsec", mcrId), func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{not valid json`)
+	})
+	got, err := mcrSvc.GetMCRIPsec(ctx, mcrId)
+	var syntaxErr *json.SyntaxError
+	suite.ErrorAs(err, &syntaxErr)
 	suite.Nil(got)
 }
 
