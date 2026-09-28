@@ -53,15 +53,23 @@ var (
 	SERVICE_STATE_READY = []string{SERVICE_CONFIGURED, SERVICE_LIVE}
 )
 
+// GetTelemetryRequest is the request for the Port, MCR, MVE, VXC, and IX telemetry methods.
+// Set Days or From/To. The API validates the range.
+type GetTelemetryRequest struct {
+	ProductUID string
+	Types      []string // Metric types to retrieve. Each Get*Telemetry method lists the types its product supports.
+	From       *time.Time
+	To         *time.Time
+	Days       *int32
+}
+
 // ServiceTelemetryResponse is the API response for service telemetry data.
 // This response is NOT wrapped in the standard message/terms/data envelope.
-// It is shared across Port, MCR, MVE, VXC, IX, and NAT Gateway services.
 type ServiceTelemetryResponse struct {
 	ServiceUID string                 `json:"serviceUid"`
 	Type       string                 `json:"type"`
 	TimeFrame  TelemetryTimeFrame     `json:"timeFrame"`
 	Data       []*TelemetryMetricData `json:"data"`
-	PeerUID    string                 `json:"peerUid"` // only present for IX flow metrics
 }
 
 // TelemetryTimeFrame represents the time range of a telemetry response.
@@ -98,8 +106,7 @@ func (s *TelemetrySample) UnmarshalJSON(data []byte) error {
 	if err != nil {
 		return fmt.Errorf("telemetry sample timestamp: %w", err)
 	}
-	// A null value means the metric had no reading at this timestamp. The API's
-	// own aggregation treats that as zero, so one gap must not fail the decode.
+	// A null value means the metric had no reading at this timestamp. It decodes as zero.
 	var val float64
 	if tuple[1] != "" {
 		val, err = tuple[1].Float64()

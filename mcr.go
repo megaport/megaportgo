@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/url"
 	"slices"
 	"strconv"
 	"strings"
@@ -58,8 +57,8 @@ type MCRService interface {
 	//
 	// Deprecated: Use ListMCRPrefixFilterLists instead.
 	GetMCRPrefixFilterLists(ctx context.Context, mcrId string) ([]*PrefixFilterList, error)
-	// GetMCRTelemetry returns telemetry metrics for an MCR.
-	GetMCRTelemetry(ctx context.Context, req *GetMCRTelemetryRequest) (*ServiceTelemetryResponse, error)
+	// GetMCRTelemetry returns telemetry metrics for an MCR. Supported types are BITS, PACKETS, and SPEED.
+	GetMCRTelemetry(ctx context.Context, req *GetTelemetryRequest) (*ServiceTelemetryResponse, error)
 }
 
 // MCRServiceOp handles communication with MCR methods of the Megaport API.
@@ -766,14 +765,7 @@ func (svc *MCRServiceOp) WaitForMCRReady(ctx context.Context, mcrID string, time
 	}
 }
 
-// GetMCRTelemetry returns telemetry data for an MCR product.
-func (svc *MCRServiceOp) GetMCRTelemetry(ctx context.Context, req *GetMCRTelemetryRequest) (*ServiceTelemetryResponse, error) {
-	if req == nil {
-		return nil, ErrMCRTelemetryRequestRequired
-	}
-	if err := validateTelemetryRequest(req.ProductUID, req.Types, req.From, req.To, req.Days, mcrTelemetryValidationErrors); err != nil {
-		return nil, err
-	}
-	path := fmt.Sprintf("/v2/product/%s/%s/telemetry", PRODUCT_MCR, url.PathEscape(req.ProductUID))
-	return fetchTelemetry(ctx, svc.Client, path, req.Types, req.From, req.To, req.Days)
+// GetMCRTelemetry returns telemetry metrics for an MCR.
+func (svc *MCRServiceOp) GetMCRTelemetry(ctx context.Context, req *GetTelemetryRequest) (*ServiceTelemetryResponse, error) {
+	return getProductTelemetry(ctx, svc.Client, PRODUCT_MCR, req)
 }
