@@ -586,6 +586,9 @@ func (svc *MCRServiceOp) DeleteMCRPrefixFilterList(ctx context.Context, mcrID st
 
 // ModifyMCRPrefixFilterList modifies a prefix filter list on an MCR in the Megaport MCR API.
 func (svc *MCRServiceOp) ModifyMCRPrefixFilterList(ctx context.Context, mcrID string, prefixFilterListID int, prefixFilterList *MCRPrefixFilterList) (*ModifyMCRPrefixFilterListResponse, error) {
+	if prefixFilterList == nil {
+		return nil, ErrMCRPrefixFilterListNil
+	}
 	url := fmt.Sprintf("/v2/product/mcr2/%s/prefixList/%d", mcrID, prefixFilterListID)
 	reqBody, err := prefixFilterList.toAPI()
 	if err != nil {

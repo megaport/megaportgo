@@ -251,17 +251,15 @@ func (e *APIMCRPrefixFilterListEntry) ToMCRPrefixFilterListEntry() (*MCRPrefixLi
 }
 
 // toAPI converts the user-facing MCRPrefixFilterList to its wire-level
-// representation, where the API expects Ge/Le as strings. A nil list, a nil
-// Entries, or a nil entry is refused here rather than sent: the API 400s on all
-// three. An empty Entries is valid and clears the list.
+// representation, where the API expects Ge/Le as strings. A nil entry is an
+// error rather than a null on the wire.
 func (l *MCRPrefixFilterList) toAPI() (*APIMCRPrefixFilterList, error) {
-	if l == nil {
-		return nil, ErrMCRPrefixFilterListNil
+	// Allocate only for a non-nil slice. A nil Entries then goes out as null,
+	// which the API rejects, rather than [], which clears the list.
+	var entries []*APIMCRPrefixFilterListEntry
+	if l.Entries != nil {
+		entries = make([]*APIMCRPrefixFilterListEntry, len(l.Entries))
 	}
-	if l.Entries == nil {
-		return nil, ErrMCRPrefixFilterListEntriesNil
-	}
-	entries := make([]*APIMCRPrefixFilterListEntry, len(l.Entries))
 	for i, entry := range l.Entries {
 		if entry == nil {
 			return nil, fmt.Errorf("prefix list entry %d: nil entry", i)

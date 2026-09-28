@@ -1374,6 +1374,8 @@ func (suite *NATGatewayClientTestSuite) TestPrefixListGeLeRoundTrip() {
 			// A 0 is only valid on a default route: the API requires ge to be
 			// at least the prefix length.
 			{Action: PrefixListActionPermit, Prefix: "0.0.0.0/0", Ge: PtrTo(0), Le: PtrTo(0)},
+			// A negative goes out as sent, for the API to reject.
+			{Action: PrefixListActionDeny, Prefix: "10.1.0.0/16", Ge: PtrTo(-1)},
 		},
 	}
 
@@ -1395,7 +1397,8 @@ func (suite *NATGatewayClientTestSuite) TestPrefixListGeLeRoundTrip() {
 		"entries": [
 			{"action": "permit", "prefix": "10.0.0.0/8", "ge": "24", "le": "32"},
 			{"action": "deny", "prefix": "172.16.0.0/12"},
-			{"action": "permit", "prefix": "0.0.0.0/0", "ge": "0", "le": "0"}
+			{"action": "permit", "prefix": "0.0.0.0/0", "ge": "0", "le": "0"},
+			{"action": "deny", "prefix": "10.1.0.0/16", "ge": "-1"}
 		]
 	}`, string(body))
 

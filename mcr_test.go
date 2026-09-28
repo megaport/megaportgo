@@ -288,7 +288,7 @@ func mcrPrefixListGeLeFixture() MCRPrefixFilterList {
 
 // wantMCRPrefixListGeLeBody pins ge/le as strings per PrefixEntryDto, a
 // deliberate 0 present as "0", an unset one absent. The leading id is not part
-// of PrefixListRequest; it is pre-existing and out of scope here.
+// of PrefixListRequest.
 const wantMCRPrefixListGeLeBody = `{
 	"id": 0,
 	"description": "ge-le-list",
@@ -344,66 +344,64 @@ func (suite *MCRClientTestSuite) TestModifyMCRPrefixFilterListGeLeEncoding() {
 	suite.True(got.IsUpdated)
 }
 
-// TestModifyMCRPrefixFilterListNullBodies covers the two bodies the API answers
-// with a 400: a bare null and a null entries array. Both are refused locally, so
-// no request goes out.
-func (suite *MCRClientTestSuite) TestModifyMCRPrefixFilterListNullBodies() {
+// TestModifyMCRPrefixFilterListNil checks a nil list is refused before the
+// request goes out.
+func (suite *MCRClientTestSuite) TestModifyMCRPrefixFilterListNil() {
 	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
-	mcrSvc := suite.client.MCRService
+
+	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/mcr2/%s/prefixList/%d", mcrId, 1), func(w http.ResponseWriter, r *http.Request) {
+		suite.Fail("request should not have been sent")
+	})
+
+	_, err := suite.client.MCRService.ModifyMCRPrefixFilterList(ctx, mcrId, 1, nil)
+	suite.ErrorIs(err, ErrMCRPrefixFilterListNil)
+}
+
+// TestModifyMCRPrefixFilterListEntriesNilVersusEmpty pins a nil Entries as null
+// on the wire and an empty one as [], which clears the list.
+func (suite *MCRClientTestSuite) TestModifyMCRPrefixFilterListEntriesNilVersusEmpty() {
+	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
 
 	cases := []struct {
-		name string
-		id   int
-		list *MCRPrefixFilterList
-		want error
+		name    string
+		id      int
+		entries []*MCRPrefixListEntry
+		want    string
 	}{
 		{
-			name: "nil list",
-			id:   1,
-			list: nil,
-			want: ErrMCRPrefixFilterListNil,
+			name:    "nil entries",
+			id:      8,
+			entries: nil,
+			want:    `{"id":7,"description":"d","addressFamily":"IPv4","entries":null}`,
 		},
 		{
-			name: "nil entries",
-			id:   2,
-			list: &MCRPrefixFilterList{ID: 7, Description: "d", AddressFamily: "IPv4"},
-			want: ErrMCRPrefixFilterListEntriesNil,
+			name:    "empty entries",
+			id:      9,
+			entries: []*MCRPrefixListEntry{},
+			want:    `{"id":7,"description":"d","addressFamily":"IPv4","entries":[]}`,
 		},
 	}
 
 	for _, tc := range cases {
-		tc := tc
 		suite.mux.HandleFunc(fmt.Sprintf("/v2/product/mcr2/%s/prefixList/%d", mcrId, tc.id), func(w http.ResponseWriter, r *http.Request) {
-			suite.Failf("request should not have been sent", "case %q reached the API", tc.name)
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				suite.FailNowf("could not read body", "%v", err)
+			}
+			suite.JSONEq(tc.want, string(body))
+			fmt.Fprint(w, `{"message":"ok","terms":""}`)
 		})
 
 		suite.Run(tc.name, func() {
-			_, err := mcrSvc.ModifyMCRPrefixFilterList(ctx, mcrId, tc.id, tc.list)
-			suite.ErrorIs(err, tc.want)
+			_, err := suite.client.MCRService.ModifyMCRPrefixFilterList(ctx, mcrId, tc.id, &MCRPrefixFilterList{
+				ID:            7,
+				Description:   "d",
+				AddressFamily: "IPv4",
+				Entries:       tc.entries,
+			})
+			suite.NoError(err)
 		})
 	}
-}
-
-// TestModifyMCRPrefixFilterListEmptyEntries pins an empty Entries as still
-// reaching the wire, unlike a nil one.
-func (suite *MCRClientTestSuite) TestModifyMCRPrefixFilterListEmptyEntries() {
-	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
-
-	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/mcr2/%s/prefixList/%d", mcrId, 9), func(w http.ResponseWriter, r *http.Request) {
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			suite.FailNowf("could not read body", "%v", err)
-		}
-		suite.JSONEq(`{"id":0,"description":"d","addressFamily":"IPv4","entries":[]}`, string(body))
-		fmt.Fprint(w, `{"message":"ok","terms":""}`)
-	})
-
-	_, err := suite.client.MCRService.ModifyMCRPrefixFilterList(ctx, mcrId, 9, &MCRPrefixFilterList{
-		Description:   "d",
-		AddressFamily: "IPv4",
-		Entries:       []*MCRPrefixListEntry{},
-	})
-	suite.NoError(err)
 }
 
 // TestModifyMCRPrefixFilterListNilEntry checks a nil entry is refused before the
@@ -436,11 +434,6 @@ func (suite *MCRClientTestSuite) TestCreatePrefixFilterListConversionError() {
 		list MCRPrefixFilterList
 		want string
 	}{
-		{
-			name: "nil entries",
-			list: MCRPrefixFilterList{Description: "d", AddressFamily: "IPv4"},
-			want: ErrMCRPrefixFilterListEntriesNil.Error(),
-		},
 		{
 			name: "nil entry",
 			list: MCRPrefixFilterList{
@@ -499,8 +492,8 @@ func (suite *MCRClientTestSuite) TestPrefixFilterListGeLeDecoding() {
 	suite.Equal(PtrTo(0), got.Entries[2].Le)
 }
 
-// TestPrefixFilterListNullEntriesStaysNil pins the read path's nil Entries, which
-// the list endpoint returns on every call.
+// TestPrefixFilterListNullEntriesStaysNil pins a malformed null entries array
+// as a nil Entries, not an empty one.
 func (suite *MCRClientTestSuite) TestPrefixFilterListNullEntriesStaysNil() {
 	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
 
