@@ -1373,6 +1373,7 @@ func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesPollTimeout() 
 
 	_, err := natSvc.ListNATGatewayIPRoutes(ctx, productUID, "")
 	suite.ErrorIs(err, ErrNATGatewayDiagnosticsTimeout)
+	suite.ErrorContains(err, "op-timeout")
 	suite.GreaterOrEqual(opCalls.Load(), int32(1)) // at least one in-progress poll was tolerated before the timeout
 }
 

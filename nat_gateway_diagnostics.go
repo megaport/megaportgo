@@ -145,7 +145,7 @@ func (svc *NATGatewayServiceOp) pollDiagnosticsRoutes(ctx context.Context, produ
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		return ErrNATGatewayDiagnosticsTimeout
+		return fmt.Errorf("%w: operation %s", ErrNATGatewayDiagnosticsTimeout, operationID)
 	}
 	select {
 	case <-pollCtx.Done():
