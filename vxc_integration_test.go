@@ -2,9 +2,7 @@ package megaport
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
-	"net/http"
 	"os"
 	"testing"
 	"time"
@@ -857,35 +855,16 @@ func (suite *VXCIntegrationTestSuite) TestMCRVXCWithIPsec() {
 
 	// A READY VXC alone is a false positive: the API silently drops
 	// unrecognized partner config fields, so read the tunnel state back
-	// from the MCR's IPsec endpoint. Raw request until ESD-1311 adds a
-	// GetMCRIPsec wrapper.
-	req, reqErr := suite.client.NewRequest(ctx, http.MethodGet, fmt.Sprintf("/v3/products/mcrs/%s/ipsec", mcrUid), nil)
-	if reqErr != nil {
-		suite.FailNowf("cannot build ipsec read request", "cannot build ipsec read request %v", reqErr)
-	}
-	var ipsecRes struct {
-		Data struct {
-			TotalTunnelCount    int `json:"totalTunnelCount"`
-			IpSecConfiguredVxcs []struct {
-				ProductUid string `json:"productUid"`
-				Tunnels    []struct {
-					Description          string `json:"description"`
-					SourceIpAddress      string `json:"sourceIpAddress"`
-					DestinationIpAddress string `json:"destinationIpAddress"`
-					LocalId              string `json:"localId"`
-					RemoteId             string `json:"remoteId"`
-				} `json:"tunnels"`
-			} `json:"ipSecConfiguredVxcs"`
-		} `json:"data"`
-	}
-	if _, doErr := suite.client.Do(ctx, req, &ipsecRes); doErr != nil {
-		suite.FailNowf("cannot read mcr ipsec config", "cannot read mcr ipsec config %v", doErr)
+	// from the MCR's IPsec endpoint.
+	ipsec, ipsecErr := suite.client.MCRService.GetMCRIPsec(ctx, mcrUid)
+	if ipsecErr != nil {
+		suite.FailNowf("cannot read mcr ipsec config", "cannot read mcr ipsec config %v", ipsecErr)
 	}
 
-	suite.Equal(1, ipsecRes.Data.TotalTunnelCount, "expected exactly one configured tunnel on the mcr")
-	suite.Require().Len(ipsecRes.Data.IpSecConfiguredVxcs, 1, "expected the vxc to appear in the mcr ipsec config")
-	configuredVxc := ipsecRes.Data.IpSecConfiguredVxcs[0]
-	suite.Equal(vxcUid, configuredVxc.ProductUid)
+	suite.Equal(1, ipsec.TotalTunnelCount, "expected exactly one configured tunnel on the mcr")
+	suite.Require().Len(ipsec.IPsecConfiguredVXCs, 1, "expected the vxc to appear in the mcr ipsec config")
+	configuredVxc := ipsec.IPsecConfiguredVXCs[0]
+	suite.Equal(vxcUid, configuredVxc.ProductUID)
 	suite.Require().Len(configuredVxc.Tunnels, 1)
 	tunnel := configuredVxc.Tunnels[0]
 	suite.Equal("integration-test-tunnel", tunnel.Description)
