@@ -235,6 +235,9 @@ func TestDiscardingMethodsDrainAndCloseBody(t *testing.T) {
 		call func(c *Client) (any, error)
 		want any
 	}{
+		{"RestoreProduct", func(c *Client) (any, error) {
+			return c.ProductService.RestoreProduct(ctx, "p")
+		}, &RestoreProductResponse{}},
 		{"ManageProductLock", func(c *Client) (any, error) {
 			return c.ProductService.ManageProductLock(ctx, &ManageProductLockRequest{ProductID: "p", ShouldLock: true})
 		}, &ManageProductLockResponse{}},
@@ -261,7 +264,6 @@ func TestDiscardingMethodsDrainAndCloseBody(t *testing.T) {
 		}, &UpdateServiceKeyResponse{IsUpdated: true}},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			body := &drainTrackingBody{r: strings.NewReader(`{"message":"ok"}`)}
 			c, err := New(nil)
