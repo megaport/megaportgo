@@ -195,9 +195,9 @@ type IPsecTunnel struct {
 	Description          string `json:"description,omitempty"`
 	SourceIpAddress      string `json:"sourceIpAddress"`
 	DestinationIpAddress string `json:"destinationIpAddress"`
-	LocalID              string `json:"localId,omitempty"`
-	RemoteID             string `json:"remoteId,omitempty"`
-	VLAN                 int    `json:"vlan"`
+	LocalId              string `json:"localId,omitempty"`
+	RemoteId             string `json:"remoteId,omitempty"`
+	VLAN                 *int   `json:"vlan,omitempty"` // nil when the source interface is untagged
 }
 
 // mcrIPsecResponse represents a response from the Megaport MCR API after querying an MCR's IPsec configuration.

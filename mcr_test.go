@@ -251,9 +251,9 @@ func mcrIPsecFixture() (jblob string, want *MCRIPsecConfiguration) {
 						Description:          "Primary IPsec tunnel",
 						SourceIpAddress:      "192.168.1.2",
 						DestinationIpAddress: "198.51.100.2",
-						LocalID:              "local-peer-id",
-						RemoteID:             "remote-peer-id",
-						VLAN:                 100,
+						LocalId:              "local-peer-id",
+						RemoteId:             "remote-peer-id",
+						VLAN:                 PtrTo(100),
 					},
 					{
 						SourceIpAddress:      "192.168.1.6",
@@ -283,8 +283,12 @@ func mcrIPsecFixture() (jblob string, want *MCRIPsecConfiguration) {
 							"vlan": 100
 						},
 						{
+							"description": null,
 							"sourceIpAddress": "192.168.1.6",
-							"destinationIpAddress": "198.51.100.6"
+							"destinationIpAddress": "198.51.100.6",
+							"localId": null,
+							"remoteId": null,
+							"vlan": null
 						}
 					]
 				}
@@ -330,16 +334,13 @@ func (suite *MCRClientTestSuite) TestGetMCRIPsecNoVXCs() {
 		fmt.Fprint(w, jblob)
 	})
 	got, err := mcrSvc.GetMCRIPsec(ctx, mcrId)
-	suite.NoError(err)
+	suite.Require().NoError(err)
 	suite.Empty(got.IPsecConfiguredVXCs)
 	suite.Equal(0, got.TotalTunnelCount)
 	suite.Equal(10, got.MaxTunnelCountLimit)
 }
 
-// TestGetMCRIPsecWithLogResponseBody ensures the full response body survives the
-// LogResponseBody debug path in Client.Do and decodes intact for the caller.
-// It uses the populated fixture so a truncated or corrupted body would change the
-// decoded result, not just the trailing field.
+// TestGetMCRIPsecWithLogResponseBody ensures the body still decodes when LogResponseBody is on.
 func (suite *MCRClientTestSuite) TestGetMCRIPsecWithLogResponseBody() {
 	ctx := context.Background()
 	suite.client.LogResponseBody = true
@@ -376,7 +377,7 @@ func (suite *MCRClientTestSuite) TestGetMCRIPsecNotFound() {
 }
 
 // TestGetMCRIPsecNoData ensures a 2xx response without a data payload returns
-// ErrMCRIPsecNoData rather than a nil configuration that callers would panic on.
+// ErrMCRIPsecResponseEmpty rather than a nil configuration that callers would panic on.
 func (suite *MCRClientTestSuite) TestGetMCRIPsecNoData() {
 	ctx := context.Background()
 	mcrSvc := suite.client.MCRService
@@ -387,7 +388,7 @@ func (suite *MCRClientTestSuite) TestGetMCRIPsecNoData() {
 		fmt.Fprint(w, `{"message": "test-message", "terms": "test-terms"}`)
 	})
 	got, err := mcrSvc.GetMCRIPsec(ctx, mcrId)
-	suite.ErrorIs(err, ErrMCRIPsecNoData)
+	suite.ErrorIs(err, ErrMCRIPsecResponseEmpty)
 	suite.ErrorContains(err, "test-trace-id")
 	suite.Nil(got)
 }
@@ -413,6 +414,7 @@ func (suite *MCRClientTestSuite) TestGetMCRIPsecBodyReadError() {
 	mcrSvc := suite.client.MCRService
 	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
 	suite.mux.HandleFunc(fmt.Sprintf("/v3/products/mcrs/%s/ipsec", mcrId), func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
 		w.Header().Set("Content-Length", "4096")
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, `{"message": "test-message", "data": {`)
@@ -422,12 +424,13 @@ func (suite *MCRClientTestSuite) TestGetMCRIPsecBodyReadError() {
 	suite.Nil(got)
 }
 
-// TestGetMCRIPsecMalformedJSON ensures malformed JSON returns a syntax error, not ErrMCRIPsecNoData.
+// TestGetMCRIPsecMalformedJSON ensures malformed JSON returns a syntax error, not ErrMCRIPsecResponseEmpty.
 func (suite *MCRClientTestSuite) TestGetMCRIPsecMalformedJSON() {
 	ctx := context.Background()
 	mcrSvc := suite.client.MCRService
 	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
 	suite.mux.HandleFunc(fmt.Sprintf("/v3/products/mcrs/%s/ipsec", mcrId), func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
 		fmt.Fprint(w, `{not valid json`)
 	})
 	got, err := mcrSvc.GetMCRIPsec(ctx, mcrId)
