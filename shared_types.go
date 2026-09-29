@@ -67,8 +67,8 @@ type GetTelemetryRequest struct {
 // This response is NOT wrapped in the standard message/terms/data envelope.
 type ServiceTelemetryResponse struct {
 	ServiceUID string                 `json:"serviceUid"`
-	Type       string                 `json:"type"`
-	TimeFrame  TelemetryTimeFrame     `json:"timeFrame"`
+	Type       string                 `json:"type"`      // Empty when the request asks for more than one type.
+	TimeFrame  TelemetryTimeFrame     `json:"timeFrame"` // Zero when the request sets no Days or From/To.
 	Data       []*TelemetryMetricData `json:"data"`
 }
 
