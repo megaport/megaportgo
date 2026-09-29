@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/http/httptest"
 	"net/url"
 	"testing"
 	"time"
@@ -23,19 +22,6 @@ type TelemetryClientTestSuite struct {
 func TestTelemetryClientTestSuite(t *testing.T) {
 	t.Parallel()
 	suite.Run(t, new(TelemetryClientTestSuite))
-}
-
-func (suite *TelemetryClientTestSuite) SetupTest() {
-	suite.mux = http.NewServeMux()
-	suite.server = httptest.NewServer(suite.mux)
-
-	suite.client = NewClient(nil, nil)
-	url, _ := url.Parse(suite.server.URL)
-	suite.client.BaseURL = url
-}
-
-func (suite *TelemetryClientTestSuite) TearDownTest() {
-	suite.server.Close()
 }
 
 const telemetryTestUID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
@@ -134,6 +120,21 @@ func (suite *TelemetryClientTestSuite) TestGetTelemetryQuery() {
 		suite.Require().NoError(err, tt.name)
 		suite.Equal(tt.want, got, tt.name)
 	}
+}
+
+func (suite *TelemetryClientTestSuite) TestGetTelemetryEscapesProductUID() {
+	var gotPath string
+	suite.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.EscapedPath()
+		fmt.Fprint(w, `{"data":[]}`)
+	})
+
+	_, err := suite.client.PortService.GetPortTelemetry(context.Background(), &GetTelemetryRequest{
+		ProductUID: "a/b?c",
+		Days:       PtrTo[int32](1),
+	})
+	suite.Require().NoError(err)
+	suite.Equal("/v2/product/megaport/a%2Fb%3Fc/telemetry", gotPath)
 }
 
 func (suite *TelemetryClientTestSuite) TestGetTelemetryRequestErrors() {
@@ -238,4 +239,10 @@ func TestTelemetrySampleNullWithinSeries(t *testing.T) {
 	assert.Equal(t, 0.0, metric.Samples[1].Value)
 	assert.Equal(t, int64(1700000060000), metric.Samples[1].Timestamp)
 	assert.Equal(t, 2.5, metric.Samples[2].Value)
+}
+
+func TestTelemetrySampleNullSample(t *testing.T) {
+	var metric TelemetryMetricData
+	err := json.Unmarshal([]byte(`{"samples": [null]}`), &metric)
+	assert.ErrorContains(t, err, "telemetry sample must be a [timestamp, value] pair, got null")
 }

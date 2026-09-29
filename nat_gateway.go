@@ -366,7 +366,7 @@ func (svc *NATGatewayServiceOp) GetNATGatewayTelemetry(ctx context.Context, req 
 		return nil, err
 	}
 	path := fmt.Sprintf("/v3/products/nat_gateways/%s/telemetry", url.PathEscape(req.ProductUID))
-	return fetchTelemetry(ctx, svc.Client, path, req.Types, req.From, req.To, req.Days)
+	return fetchTelemetry(ctx, svc.Client, path, (*GetTelemetryRequest)(req))
 }
 
 // doJSON sends a JSON request and decodes the response into out (or discards

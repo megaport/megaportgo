@@ -100,7 +100,7 @@ func (s *TelemetrySample) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("telemetry sample must be a JSON array: %w", err)
 	}
 	if len(tuple) != 2 {
-		return fmt.Errorf("telemetry sample must have exactly 2 elements, got %d", len(tuple))
+		return fmt.Errorf("telemetry sample must be a [timestamp, value] pair, got %s", data)
 	}
 	ts, err := tuple[0].Int64()
 	if err != nil {

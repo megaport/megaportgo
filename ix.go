@@ -34,11 +34,12 @@ type IXService interface {
 
 	// ListIXs lists all Internet Exchanges with optional filters
 	ListIXs(ctx context.Context, req *ListIXsRequest) ([]*IX, error)
-	// GetIXTelemetry returns telemetry metrics for an IX. Supported types are BITS, PACKETS, SPEED, ROUTES_IMPORTED, ROUTES_FILTERED, BM_BYTES, BM_PACKETS, UU_BYTES, and UU_PACKETS.
-	GetIXTelemetry(ctx context.Context, req *GetTelemetryRequest) (*ServiceTelemetryResponse, error)
 
 	// ListIXPs returns all globally available Internet Exchange Points with optional filters.
 	ListIXPs(ctx context.Context, req *ListIXPsRequest) ([]*IXP, error)
+
+	// GetIXTelemetry returns telemetry metrics for an IX. Supported types are BITS, PACKETS, SPEED, ROUTES_IMPORTED, ROUTES_FILTERED, BM_BYTES, BM_PACKETS, UU_BYTES, and UU_PACKETS.
+	GetIXTelemetry(ctx context.Context, req *GetTelemetryRequest) (*ServiceTelemetryResponse, error)
 }
 
 // IXServiceOp handles communication with the IX related methods of the Megaport API

@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"time"
 )
 
 // getProductTelemetry queries GET /v2/product/{productType}/{productUid}/telemetry.
@@ -20,23 +19,23 @@ func getProductTelemetry(ctx context.Context, c *Client, productType string, req
 		return nil, ErrTelemetryProductUIDRequired
 	}
 	path := fmt.Sprintf("/v2/product/%s/%s/telemetry", productType, url.PathEscape(req.ProductUID))
-	return fetchTelemetry(ctx, c, path, req.Types, req.From, req.To, req.Days)
+	return fetchTelemetry(ctx, c, path, req)
 }
 
 // fetchTelemetry queries a product telemetry endpoint and decodes the response.
-func fetchTelemetry(ctx context.Context, c *Client, path string, types []string, from, to *time.Time, days *int32) (*ServiceTelemetryResponse, error) {
+func fetchTelemetry(ctx context.Context, c *Client, path string, req *GetTelemetryRequest) (*ServiceTelemetryResponse, error) {
 	params := url.Values{}
-	for _, t := range types {
+	for _, t := range req.Types {
 		params.Add("type", t)
 	}
-	if from != nil {
-		params.Set("from", strconv.FormatInt(from.UnixMilli(), 10))
+	if req.From != nil {
+		params.Set("from", strconv.FormatInt(req.From.UnixMilli(), 10))
 	}
-	if to != nil {
-		params.Set("to", strconv.FormatInt(to.UnixMilli(), 10))
+	if req.To != nil {
+		params.Set("to", strconv.FormatInt(req.To.UnixMilli(), 10))
 	}
-	if days != nil {
-		params.Set("days", strconv.FormatInt(int64(*days), 10))
+	if req.Days != nil {
+		params.Set("days", strconv.FormatInt(int64(*req.Days), 10))
 	}
 
 	clientReq, err := c.NewRequest(ctx, http.MethodGet, path+"?"+params.Encode(), nil)
