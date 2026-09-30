@@ -44,7 +44,7 @@ type NATGateway struct {
 type NATGatewayNetworkConfig struct {
 	ASN                int    `json:"asn"`
 	BGPShutdownDefault bool   `json:"bgpShutdownDefault"`
-	DiversityZone      string `json:"diversityZone"`
+	DiversityZone      string `json:"diversityZone,omitempty"`
 	SessionCount       int    `json:"sessionCount"`
 }
 
