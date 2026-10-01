@@ -2,15 +2,16 @@ package megaport
 
 // MVEOrderConfig represents a request to buy an MVE from the Megaport Products API.
 type MVEOrderConfig struct {
-	LocationID        int                   `json:"locationId"`
-	Name              string                `json:"productName"`
-	Term              int                   `json:"term"`
-	ProductType       string                `json:"productType"`
-	PromoCode         string                `json:"promoCode,omitempty"`
-	CostCentre        string                `json:"costCentre,omitempty"`
-	NetworkInterfaces []MVENetworkInterface `json:"vnics"`
-	VendorConfig      VendorConfig          `json:"vendorConfig"`
-	Config            MVEConfig             `json:"config"`
+	LocationID            int                   `json:"locationId"`
+	Name                  string                `json:"productName"`
+	Term                  int                   `json:"term"`
+	ProductType           string                `json:"productType"`
+	PromoCode             string                `json:"promoCode,omitempty"`
+	CostCentre            string                `json:"costCentre,omitempty"`
+	NetworkInterfaces     []MVENetworkInterface `json:"vnics"`
+	VendorConfig          VendorConfig          `json:"vendorConfig"`
+	Config                MVEConfig             `json:"config"`
+	MarketplaceVisibility *bool                 `json:"marketplaceVisibility,omitempty"`
 
 	ResourceTags []ResourceTag `json:"resourceTags,omitempty"`
 }
