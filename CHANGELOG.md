@@ -9,6 +9,7 @@
 - Add the `OrderApprovalType` constants `OrderApprovalTypeEarlyTermination`, `OrderApprovalTypeAddOn`, `OrderApprovalTypeIPAddressPartnerOrder` and `OrderApprovalTypeIPAddressCompliance`. A cancel approval has the type `EARLY_TERMINATION`.
 
 ## Changes
+- `GetProductType` accepts a 206 Partial Content response. `GET /v2/product/{productUid}` returns a 206 when the API cannot load a product's service details, as it does for an AWS Interconnect. The method used to reject a 206 with an error.
 - `CreateNATGateway` and `UpdateNATGateway` leave `diversityZone` out of the request when `NATGatewayNetworkConfig.DiversityZone` is empty. A create with no zone used to fail with a 400 "Malformed request body". The API now picks the zone on a create and keeps the current zone on an update.
 - `ModifyProduct` and `UpdateIX` return `ErrModifyPendingApproval` when the API creates an order approval request instead of applying the change. That case used to read as a successful update, though the API applied no field in the request. `ModifyPort`, `ModifyMCR`, `ModifyMVE` and `UpdateIX` return it without waiting.
 - `DeleteProduct` returns `ErrCancelPendingApproval` when the API creates an order approval request instead of canceling. That case used to read as a successful cancel on a product that was still live. Every product delete method forwards it.
