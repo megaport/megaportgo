@@ -859,7 +859,23 @@ func (suite *ProductClientTestSuite) TestProductNilRequestGuards() {
 	}
 }
 
-// TestGetProductTypePartialContent covers the 206 the API returns for every AWS Interconnect read.
+func (suite *ProductClientTestSuite) TestGetProductType() {
+	ctx := context.Background()
+	productSvc := suite.client.ProductService
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	suite.mux.HandleFunc("/v2/product/"+productUid, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprintf(w, `{"message":"Found Product %s","terms":"terms","data":{"productUid":"%s","productType":"MEGAPORT","associatedVxcs":[]}}`, productUid, productUid)
+	})
+
+	productType, err := productSvc.GetProductType(ctx, productUid)
+
+	suite.NoError(err)
+	suite.Equal("MEGAPORT", productType)
+}
+
+// TestGetProductTypePartialContent covers the 206 the API returns when it cannot load a product's service details, as for an AWS Interconnect.
 func (suite *ProductClientTestSuite) TestGetProductTypePartialContent() {
 	ctx := context.Background()
 	productSvc := suite.client.ProductService
@@ -885,7 +901,7 @@ func (suite *ProductClientTestSuite) TestGetProductTypeBadRequest() {
 	suite.mux.HandleFunc("/v2/product/"+productUid, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, `{"message":"Error occurred while looking up product [123] - unsupported product type [AWS_INTERCONNECT]","terms":"terms","data":null}`)
+		fmt.Fprint(w, `{"message":"Error occurred while looking up product [123] - unsupported product type [AWS_INTERCONNECT]","terms":"terms"}`)
 	})
 
 	productType, err := productSvc.GetProductType(ctx, productUid)
