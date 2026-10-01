@@ -1203,7 +1203,7 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnect() {
 	// Attempt to prematurely delete the ports with safe delete enabled. This should fail.
 	_, err = portSvc.DeletePort(ctx, &DeletePortRequest{
 		PortID:     portUid,
-		DeleteNow:  false,
+		DeleteNow:  true,
 		SafeDelete: true,
 	})
 	suite.Error(err, "expected error when deleting port with safe delete enabled")
