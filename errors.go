@@ -133,6 +133,17 @@ func IsServiceNotFoundError(err error) bool {
 		strings.Contains(apiErr.Message, "Could not find a service with UID")
 }
 
+// isNATGatewayDiagnosticsInProgress reports whether err is the HTTP 400 the NAT
+// gateway routes operation endpoint returns while the result is not ready.
+func isNATGatewayDiagnosticsInProgress(err error) bool {
+	apiErr, ok := err.(*ErrorResponse)
+	if !ok || apiErr.Response == nil {
+		return false
+	}
+	return apiErr.Response.StatusCode == http.StatusBadRequest &&
+		strings.Contains(apiErr.Message, "The polling result for async mode is not ready yet")
+}
+
 // ErrTransitVXCCancelLaterNotAllowed is returned when attempting to schedule Transit VXC deletion for later (only CANCEL_NOW is allowed)
 var ErrTransitVXCCancelLaterNotAllowed = errors.New("transit vxc (megaport internet) does not support scheduled deletion (cancel later), only immediate deletion (CANCEL_NOW) is allowed")
 

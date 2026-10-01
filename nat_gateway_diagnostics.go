@@ -26,6 +26,30 @@ const (
 	diagnosticsPollTimeout      = 60 * time.Second
 )
 
+// effectivePollInitialDelay returns the initial delay before the first poll.
+func (svc *NATGatewayServiceOp) effectivePollInitialDelay() time.Duration {
+	if svc.pollInitialDelay != 0 {
+		return svc.pollInitialDelay
+	}
+	return diagnosticsPollInitialDelay
+}
+
+// effectivePollInterval returns the interval between polls.
+func (svc *NATGatewayServiceOp) effectivePollInterval() time.Duration {
+	if svc.pollInterval != 0 {
+		return svc.pollInterval
+	}
+	return diagnosticsPollInterval
+}
+
+// effectivePollTimeout returns the SDK-managed overall poll timeout.
+func (svc *NATGatewayServiceOp) effectivePollTimeout() time.Duration {
+	if svc.pollTimeout != 0 {
+		return svc.pollTimeout
+	}
+	return diagnosticsPollTimeout
+}
+
 // ListNATGatewayIPRoutesAsync submits an IP routes diagnostics request.
 func (svc *NATGatewayServiceOp) ListNATGatewayIPRoutesAsync(ctx context.Context, productUID, ipAddress string) (string, error) {
 	if productUID == "" {
@@ -106,11 +130,11 @@ func (svc *NATGatewayServiceOp) GetNATGatewayDiagnosticsRoutes(ctx context.Conte
 }
 
 // pollDiagnosticsRoutes polls GetNATGatewayDiagnosticsRoutes until the
-// operation returns a non-empty result, the SDK-managed
-// diagnosticsPollTimeout elapses, or the caller's context is cancelled.
-// Empty responses are treated as "still processing".
+// operation completes, the SDK-managed poll timeout elapses, or the caller's
+// context is cancelled. The endpoint returns an HTTP 400 while the operation
+// runs, and a 200 when it completes, with an empty route slice included.
 func (svc *NATGatewayServiceOp) pollDiagnosticsRoutes(ctx context.Context, productUID, operationID string) ([]*NATGatewayRoute, error) {
-	pollCtx, cancel := context.WithTimeout(ctx, diagnosticsPollTimeout)
+	pollCtx, cancel := context.WithTimeout(ctx, svc.effectivePollTimeout())
 	defer cancel()
 	// pollDoneErr returns ctx.Err() when the caller's context is the one that
 	// fired (cancellation or caller-imposed deadline) and
@@ -121,22 +145,27 @@ func (svc *NATGatewayServiceOp) pollDiagnosticsRoutes(ctx context.Context, produ
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		return ErrNATGatewayDiagnosticsTimeout
+		return fmt.Errorf("%w: operation %s", ErrNATGatewayDiagnosticsTimeout, operationID)
 	}
 	select {
 	case <-pollCtx.Done():
 		return nil, pollDoneErr()
-	case <-time.After(diagnosticsPollInitialDelay):
+	case <-time.After(svc.effectivePollInitialDelay()):
 	}
-	ticker := time.NewTicker(diagnosticsPollInterval)
+	ticker := time.NewTicker(svc.effectivePollInterval())
 	defer ticker.Stop()
 	for {
 		routes, err := svc.GetNATGatewayDiagnosticsRoutes(pollCtx, productUID, operationID)
-		if err != nil {
-			return nil, err
-		}
-		if len(routes) > 0 {
+		if err == nil {
 			return routes, nil
+		}
+		// A timeout or cancel mid-request can surface as any error, including
+		// a 400 with no message when it fires during the body read.
+		if pollCtx.Err() != nil {
+			return nil, pollDoneErr()
+		}
+		if !isNATGatewayDiagnosticsInProgress(err) {
+			return nil, err
 		}
 		select {
 		case <-pollCtx.Done():
