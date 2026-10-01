@@ -653,10 +653,6 @@ func (svc *ProductServiceOp) GetProductType(ctx context.Context, productUID stri
 	}
 	defer response.Body.Close()
 
-	if response.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("failed to get product %s type: %s", productUID, response.Status)
-	}
-
 	// Parse the response to get the product type
 	// We need to decode the response body into a struct that contains the product type
 	// and then return that type.
