@@ -58,6 +58,8 @@ type MCRService interface {
 	//
 	// Deprecated: Use ListMCRPrefixFilterLists instead.
 	GetMCRPrefixFilterLists(ctx context.Context, mcrId string) ([]*PrefixFilterList, error)
+	// GetMCRTelemetry returns telemetry metrics for an MCR. Supported types are BITS, PACKETS, and SPEED.
+	GetMCRTelemetry(ctx context.Context, req *GetTelemetryRequest) (*ServiceTelemetryResponse, error)
 }
 
 // MCRServiceOp handles communication with MCR methods of the Megaport API.
@@ -763,4 +765,9 @@ func (svc *MCRServiceOp) WaitForMCRReady(ctx context.Context, mcrID string, time
 			}
 		}
 	}
+}
+
+// GetMCRTelemetry returns telemetry metrics for an MCR.
+func (svc *MCRServiceOp) GetMCRTelemetry(ctx context.Context, req *GetTelemetryRequest) (*ServiceTelemetryResponse, error) {
+	return getProductTelemetry(ctx, svc.Client, PRODUCT_MCR, req)
 }

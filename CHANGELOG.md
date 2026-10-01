@@ -6,9 +6,13 @@
 - Add `DhcpPools` to `PartnerConfigInterface` so a VXC order or update can serve a DHCP pool on an MCR interface. The API accepts at most one pool per interface.
 - Add `WithCallContext` client option that sets the `X-Call-Context` header so API calls act on behalf of a managed account (identified by company UID).
 - Add `AsOverride` (`*bool`) to `BgpConnectionConfig` so consumers can enable AS Override for eBGP peering. Unset leaves the API default in place.
+- Add `GetPortTelemetry`, `GetMCRTelemetry`, `GetMVETelemetry`, `GetVXCTelemetry`, and `GetIXTelemetry`. Each takes a `GetTelemetryRequest` and returns a `ServiceTelemetryResponse`. The API validates the metric types and the time range.
 - Add the `OrderApprovalType` constants `OrderApprovalTypeEarlyTermination`, `OrderApprovalTypeAddOn`, `OrderApprovalTypeIPAddressPartnerOrder` and `OrderApprovalTypeIPAddressCompliance`. A cancel approval has the type `EARLY_TERMINATION`.
 
 ## Changes
+- Breaking: `PortService`, `MCRService`, `MVEService`, `VXCService`, and `IXService` each gain a `Get*Telemetry` method. A type that implements one of these interfaces, such as a test mock, must add the method.
+- A telemetry sample with a null value now decodes as zero instead of failing the whole response. This also applies to `GetNATGatewayTelemetry`.
+- `GetNATGatewayTelemetry` now wraps a response decode error with the request path and the trace ID. Code that matches the old error text must change.
 - `CreateNATGateway` and `UpdateNATGateway` leave `diversityZone` out of the request when `NATGatewayNetworkConfig.DiversityZone` is empty. A create with no zone used to fail with a 400 "Malformed request body". The API now picks the zone on a create and keeps the current zone on an update.
 - `ModifyProduct` and `UpdateIX` return `ErrModifyPendingApproval` when the API creates an order approval request instead of applying the change. That case used to read as a successful update, though the API applied no field in the request. `ModifyPort`, `ModifyMCR`, `ModifyMVE` and `UpdateIX` return it without waiting.
 - `DeleteProduct` returns `ErrCancelPendingApproval` when the API creates an order approval request instead of canceling. That case used to read as a successful cancel on a product that was still live. Every product delete method forwards it.

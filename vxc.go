@@ -35,6 +35,8 @@ type VXCService interface {
 	ListVXCResourceTags(ctx context.Context, vxcID string) (map[string]string, error)
 	// UpdateVXCResourceTags updates the resource tags for a VXC in the Megaport Products API.
 	UpdateVXCResourceTags(ctx context.Context, vxcID string, tags map[string]string) error
+	// GetVXCTelemetry returns telemetry metrics for a VXC. Supported types are A_BITS, B_BITS, A_PACKETS, B_PACKETS, and SPEED.
+	GetVXCTelemetry(ctx context.Context, req *GetTelemetryRequest) (*ServiceTelemetryResponse, error)
 }
 
 // NewVXCService creates a new instance of the VXC Service.
@@ -645,4 +647,9 @@ func shouldIncludeVXC(vxc *VXC, req *ListVXCsRequest) bool {
 	}
 
 	return true
+}
+
+// GetVXCTelemetry returns telemetry metrics for a VXC.
+func (svc *VXCServiceOp) GetVXCTelemetry(ctx context.Context, req *GetTelemetryRequest) (*ServiceTelemetryResponse, error) {
+	return getProductTelemetry(ctx, svc.Client, PRODUCT_VXC, req)
 }

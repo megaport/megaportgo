@@ -252,3 +252,9 @@ func outageStatesToString(states []OutageState) []string {
 }
 
 var ErrInvalidOutageState = fmt.Errorf("invalid outage state, valid states are %s", strings.Join(outageStatesToString(VALID_OUTAGE_STATES), ", "))
+
+// ErrTelemetryRequestNil is returned when a Get*Telemetry method is called with a nil request.
+var ErrTelemetryRequestNil = errors.New("telemetry request cannot be nil")
+
+// ErrTelemetryProductUIDRequired is returned when a Get*Telemetry request has no ProductUID.
+var ErrTelemetryProductUIDRequired = errors.New("telemetry product UID is required")
