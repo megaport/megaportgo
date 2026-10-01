@@ -875,7 +875,7 @@ func (suite *ProductClientTestSuite) TestGetProductType() {
 	suite.Equal("MEGAPORT", productType)
 }
 
-// TestGetProductTypePartialContent covers the 206 the API returns when it cannot load a product's service details, as for an AWS Interconnect.
+// TestGetProductTypePartialContent covers the 206 the API returns for an AWS Interconnect read.
 func (suite *ProductClientTestSuite) TestGetProductTypePartialContent() {
 	ctx := context.Background()
 	productSvc := suite.client.ProductService
