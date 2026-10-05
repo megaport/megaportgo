@@ -6,7 +6,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"net/url"
 	"reflect"
 	"strings"
 	"sync/atomic"
@@ -16,6 +15,19 @@ import (
 type rtFunc func(*http.Request) (*http.Response, error)
 
 func (f rtFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+// newStubClient returns a client that answers every request with status and body.
+func newStubClient(t *testing.T, status int, body io.ReadCloser, opts ...ClientOpt) *Client {
+	t.Helper()
+	rt := rtFunc(func(r *http.Request) (*http.Response, error) {
+		return &http.Response{StatusCode: status, Body: body, Header: make(http.Header), Request: r}, nil
+	})
+	c, err := New(&http.Client{Transport: rt}, append([]ClientOpt{WithBaseURL("https://example.test")}, opts...)...)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	return c
+}
 
 type closeCountingBody struct {
 	*strings.Reader
@@ -32,20 +44,7 @@ func (b closeCountingBody) Close() error {
 func TestDoClosesBodyOnError(t *testing.T) {
 	var closes int32
 
-	c, err := New(nil)
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
-	u, _ := url.Parse("https://example.test")
-	c.BaseURL = u
-	c.HTTPClient = &http.Client{Transport: rtFunc(func(r *http.Request) (*http.Response, error) {
-		return &http.Response{
-			StatusCode: http.StatusBadRequest,
-			Body:       closeCountingBody{Reader: strings.NewReader(`{"message":"bad request"}`), closes: &closes},
-			Header:     make(http.Header),
-			Request:    r,
-		}, nil
-	})}
+	c := newStubClient(t, http.StatusBadRequest, closeCountingBody{Reader: strings.NewReader(`{"message":"bad request"}`), closes: &closes})
 
 	req, err := c.NewRequest(ctx, http.MethodGet, "/x", nil)
 	if err != nil {
@@ -67,24 +66,8 @@ type errCloseBody struct {
 
 func (errCloseBody) Close() error { return errors.New("close failed") }
 
-// A close error means the connection was already broken, not that the request
-// failed. doDiscard backs mutations whose response payload is ignored, so it
-// must not report one as a failed mutation.
 func TestDoDiscardIgnoresCloseError(t *testing.T) {
-	c, err := New(nil)
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
-	u, _ := url.Parse("https://example.test")
-	c.BaseURL = u
-	c.HTTPClient = &http.Client{Transport: rtFunc(func(r *http.Request) (*http.Response, error) {
-		return &http.Response{
-			StatusCode: http.StatusOK,
-			Body:       errCloseBody{Reader: strings.NewReader(`{"message":"deleted"}`)},
-			Header:     make(http.Header),
-			Request:    r,
-		}, nil
-	})}
+	c := newStubClient(t, http.StatusOK, errCloseBody{Reader: strings.NewReader(`{"message":"deleted"}`)})
 
 	req, err := c.NewRequest(ctx, http.MethodDelete, "/x", nil)
 	if err != nil {
@@ -105,20 +88,7 @@ func (failingWriter) Write(p []byte) (int, error) {
 func TestDoClosesBodyOnCopyError(t *testing.T) {
 	var closes int32
 
-	c, err := New(nil)
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
-	u, _ := url.Parse("https://example.test")
-	c.BaseURL = u
-	c.HTTPClient = &http.Client{Transport: rtFunc(func(r *http.Request) (*http.Response, error) {
-		return &http.Response{
-			StatusCode: http.StatusOK,
-			Body:       closeCountingBody{Reader: strings.NewReader(`some body`), closes: &closes},
-			Header:     make(http.Header),
-			Request:    r,
-		}, nil
-	})}
+	c := newStubClient(t, http.StatusOK, closeCountingBody{Reader: strings.NewReader(`some body`), closes: &closes})
 
 	req, err := c.NewRequest(ctx, http.MethodGet, "/x", nil)
 	if err != nil {
@@ -137,20 +107,7 @@ func TestDoClosesBodyOnCopyError(t *testing.T) {
 func TestDoClosesBodyOnDecodeError(t *testing.T) {
 	var closes int32
 
-	c, err := New(nil)
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
-	u, _ := url.Parse("https://example.test")
-	c.BaseURL = u
-	c.HTTPClient = &http.Client{Transport: rtFunc(func(r *http.Request) (*http.Response, error) {
-		return &http.Response{
-			StatusCode: http.StatusOK,
-			Body:       closeCountingBody{Reader: strings.NewReader(`not json`), closes: &closes},
-			Header:     make(http.Header),
-			Request:    r,
-		}, nil
-	})}
+	c := newStubClient(t, http.StatusOK, closeCountingBody{Reader: strings.NewReader(`not json`), closes: &closes})
 
 	req, err := c.NewRequest(ctx, http.MethodGet, "/x", nil)
 	if err != nil {
@@ -176,23 +133,11 @@ func TestDoClosesBodyOnErrorWithResponseLogging(t *testing.T) {
 	var closes int32
 
 	logCapture := &bytes.Buffer{}
-	c, err := New(nil,
+	c := newStubClient(t, http.StatusBadRequest,
+		closeCountingBody{Reader: strings.NewReader(`{"message":"bad request"}`), closes: &closes},
 		WithLogResponseBody(),
 		WithLogHandler(NewLevelFilterHandler(slog.LevelDebug, slog.NewJSONHandler(logCapture, nil))),
 	)
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
-	u, _ := url.Parse("https://example.test")
-	c.BaseURL = u
-	c.HTTPClient = &http.Client{Transport: rtFunc(func(r *http.Request) (*http.Response, error) {
-		return &http.Response{
-			StatusCode: http.StatusBadRequest,
-			Body:       closeCountingBody{Reader: strings.NewReader(`{"message":"bad request"}`), closes: &closes},
-			Header:     make(http.Header),
-			Request:    r,
-		}, nil
-	})}
 
 	req, err := c.NewRequest(ctx, http.MethodGet, "/x", nil)
 	if err != nil {
@@ -266,16 +211,7 @@ func TestDiscardingMethodsDrainAndCloseBody(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			body := &drainTrackingBody{r: strings.NewReader(`{"message":"ok"}`)}
-			c, err := New(nil)
-			if err != nil {
-				t.Fatalf("New: %v", err)
-			}
-			c.BaseURL, _ = url.Parse("https://example.test")
-			c.HTTPClient = &http.Client{Transport: rtFunc(func(r *http.Request) (*http.Response, error) {
-				return &http.Response{StatusCode: http.StatusOK, Body: body, Header: make(http.Header), Request: r}, nil
-			})}
-
-			got, err := tt.call(c)
+			got, err := tt.call(newStubClient(t, http.StatusOK, body))
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
