@@ -153,7 +153,8 @@ type APIMCRPrefixFilterListEntry struct {
 
 // MCRPrefixListEntry represents an entry in a prefix filter list.
 // Ge/Le are pointers because 0 is a valid prefix length the API treats
-// differently from an absent value.
+// differently from an absent value. A read returns nil for a bound equal to
+// the prefix length.
 type MCRPrefixListEntry struct {
 	Action string `json:"action"`
 	Prefix string `json:"prefix"`

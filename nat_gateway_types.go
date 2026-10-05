@@ -291,7 +291,8 @@ type NATGatewayPrefixList struct {
 
 // NATGatewayPrefixListEntry is a single entry in a prefix list. Ge/Le are
 // pointers because 0 is a valid prefix length, distinct from absent; the SDK
-// converts them to and from the API's strings.
+// converts them to and from the API's strings. A read returns nil for a bound
+// equal to the prefix length.
 type NATGatewayPrefixListEntry struct {
 	Action string `json:"action"` // PrefixListActionPermit or PrefixListActionDeny.
 	Prefix string `json:"prefix"`
