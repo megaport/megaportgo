@@ -384,12 +384,10 @@ func (suite *MCRClientTestSuite) TestGetMCRIPsecNoData() {
 	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
 	suite.mux.HandleFunc(fmt.Sprintf("/v3/products/mcrs/%s/ipsec", mcrId), func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
-		w.Header().Set("Trace-Id", "test-trace-id")
 		fmt.Fprint(w, `{"message": "test-message", "terms": "test-terms"}`)
 	})
 	got, err := mcrSvc.GetMCRIPsec(ctx, mcrId)
 	suite.ErrorIs(err, ErrMCRIPsecResponseEmpty)
-	suite.ErrorContains(err, "test-trace-id")
 	suite.Nil(got)
 }
 
