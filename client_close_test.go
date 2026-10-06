@@ -180,9 +180,6 @@ func TestDiscardingMethodsDrainAndCloseBody(t *testing.T) {
 		call func(c *Client) (any, error)
 		want any
 	}{
-		{"RestoreProduct", func(c *Client) (any, error) {
-			return c.ProductService.RestoreProduct(ctx, "p")
-		}, &RestoreProductResponse{}},
 		{"ManageProductLock", func(c *Client) (any, error) {
 			return c.ProductService.ManageProductLock(ctx, &ManageProductLockRequest{ProductID: "p", ShouldLock: true})
 		}, &ManageProductLockResponse{}},

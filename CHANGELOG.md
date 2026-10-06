@@ -6,8 +6,10 @@
 - Add `DhcpPools` to `PartnerConfigInterface` so a VXC order or update can serve a DHCP pool on an MCR interface. The API accepts at most one pool per interface.
 - Add `WithCallContext` client option that sets the `X-Call-Context` header so API calls act on behalf of a managed account (identified by company UID).
 - Add `AsOverride` (`*bool`) to `BgpConnectionConfig` so consumers can enable AS Override for eBGP peering. Unset leaves the API default in place.
+- Add the `OrderApprovalType` constants `OrderApprovalTypeEarlyTermination`, `OrderApprovalTypeAddOn`, `OrderApprovalTypeIPAddressPartnerOrder` and `OrderApprovalTypeIPAddressCompliance`. A cancel approval has the type `EARLY_TERMINATION`.
 
 ## Changes
+- `CreateNATGateway` and `UpdateNATGateway` leave `diversityZone` out of the request when `NATGatewayNetworkConfig.DiversityZone` is empty. A create with no zone used to fail with a 400 "Malformed request body". The API now picks the zone on a create and keeps the current zone on an update.
 - `ModifyProduct` and `UpdateIX` return `ErrModifyPendingApproval` when the API creates an order approval request instead of applying the change. That case used to read as a successful update, though the API applied no field in the request. `ModifyPort`, `ModifyMCR`, `ModifyMVE` and `UpdateIX` return it without waiting.
 - `DeleteProduct` returns `ErrCancelPendingApproval` when the API creates an order approval request instead of canceling. That case used to read as a successful cancel on a product that was still live. Every product delete method forwards it.
 - Add `Prefixes` to `CSPConnectionAWS` so an AWS VXC read returns the prefixes the API reports. The value decodes from either a JSON string or an array of strings, joined with commas.
@@ -27,6 +29,7 @@
 - `ListMVEImages` and `ListProductResourceTags` now return `ErrMVEImagesResponseEmpty` and `ErrProductResourceTagsResponseEmpty` instead of panicking with a nil pointer dereference when a 2xx response carries a null `data` envelope. An envelope without the inner list (for example `"data": {}`) remains a valid empty result, as the API spec allows.
 - `BuyPort`, `BuyMCR`, `BuyMVE`, `BuyVXC` and `BuyIX` now return the order response with the error when the provisioning wait fails. Previously they returned nil, and the caller lost the UIDs of an order that went through. The error text is unchanged. A caller that checks the error before it reads the response sees no change.
 - `Do` now closes the response body when it returns an error, and `ManageProductLock`, `ValidateProductOrder`, `UpdateProductResourceTags`, `DeleteMCRPrefixFilterList`, `ModifyMCRPrefixFilterList`, `UpdateMCRWithAddOn`, `UpdateMCRIPsecAddOn` and `UpdateServiceKey` now drain and close it on success. Previously, on an HTTP/1.1 connection, a successful call to one of these methods or a response `Do` failed to decode kept its connection open until the request context ended. HTTP/2 connections, which Go's default transport uses with the Megaport API, were not affected.
+- Breaking: `DeleteProduct`, `DeleteVXC` and `DeleteIX` now return `ErrCancelLaterNotAllowed` when `DeleteNow` is false, and `RestoreProduct`, `RestorePort` and `RestoreMCR` now return `ErrRestoreNotAllowed`. None of them sends a request. The API removed both actions, and these calls already failed with a 403 permission error. The restore methods are deprecated. `ErrTransitVXCCancelLaterNotAllowed` is deprecated too, and `DeleteVXC` no longer returns it.
 
 # 1.0.0 Release
 
