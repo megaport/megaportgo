@@ -1200,13 +1200,17 @@ func (suite *VXCIntegrationTestSuite) TestBuyGoogleInterconnect() {
 	}
 	suite.EqualValues(testResourceTags, tags, "resource tags are not equal")
 
-	// Attempt to prematurely delete the ports with safe delete enabled. This should fail.
+	// Safe delete must reject the port while the VXC is still active.
 	_, err = portSvc.DeletePort(ctx, &DeletePortRequest{
 		PortID:     portUid,
 		DeleteNow:  true,
 		SafeDelete: true,
 	})
-	suite.Error(err, "expected error when deleting port with safe delete enabled")
+	var apiErr *ErrorResponse
+	if suite.ErrorAs(err, &apiErr, "expected an API error when deleting port with safe delete enabled") {
+		suite.Equal(http.StatusBadRequest, apiErr.Response.StatusCode)
+		suite.Contains(apiErr.Message, "has active VXCs")
+	}
 
 	logger.InfoContext(ctx, "deleting vxc", slog.String("vxc_uid", vxcRes.TechnicalServiceUID))
 
