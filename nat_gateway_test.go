@@ -59,6 +59,13 @@ func (suite *NATGatewayClientTestSuite) SetupTest() {
 	suite.client = NewClient(nil, nil)
 	url, _ := url.Parse(suite.server.URL)
 	suite.client.BaseURL = url
+
+	// Keep the poll cadence short for every test. Tests that need a different cadence set their own values.
+	op, ok := suite.client.NATGatewayService.(*NATGatewayServiceOp)
+	suite.Require().True(ok)
+	op.pollInitialDelay = time.Millisecond
+	op.pollInterval = time.Millisecond
+	op.pollTimeout = time.Second
 }
 
 func (suite *NATGatewayClientTestSuite) TearDownTest() {
@@ -1321,7 +1328,11 @@ func (suite *NATGatewayClientTestSuite) TestGetNATGatewayDiagnosticsRoutesValida
 	suite.ErrorIs(err, ErrNATGatewayDiagnosticsOperationEmpty)
 }
 
-func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesPolling() {
+const diagnosticsInProgressBody = `{"message":"The polling result for async mode is not ready yet"}`
+
+// TestListNATGatewayIPRoutesPollInProgressThenComplete drives the poll through
+// the real API contract: an in-progress HTTP 400 followed by a completed 200.
+func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesPollInProgressThenComplete() {
 	ctx := context.Background()
 	natSvc := suite.client.NATGatewayService
 	productUID := "uid-poll"
@@ -1333,46 +1344,168 @@ func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesPolling() {
 		fmt.Fprint(w, `{"message":"ok","terms":"","data":"op-poll"}`)
 	})
 	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/operation", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		// First call returns empty (still processing); subsequent calls return data.
+		// First poll: still processing (HTTP 400). Subsequent: completed 200.
 		if opCalls.Add(1) == 1 {
-			fmt.Fprint(w, `{"message":"ok","terms":"","data":[]}`)
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, diagnosticsInProgressBody)
 			return
 		}
+		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprint(w, `{"message":"ok","terms":"","data":[
 			{"prefix":"10.0.0.0/24","protocol":"STATIC","nextHop":{"ip":"10.0.0.1","vxc":{"id":"vxc-1","name":"v1"}}},
 			{"prefix":"192.168.0.0/16","asPath":"65000","origin":"IGP","best":true,"nextHop":{"ip":"10.0.0.2","vxc":{"id":"vxc-2","name":"v2"}}}
 		]}`)
 	})
 
-	// Bypass the long polling defaults by polling directly via the async + Get methods,
-	// so this test stays fast. The poll timeout/interval are package-level constants
-	// and not worth plumbing through a setter just for testing.
-	opID, err := natSvc.ListNATGatewayIPRoutesAsync(ctx, productUID, "")
+	routes, err := natSvc.ListNATGatewayIPRoutes(ctx, productUID, "")
 	suite.Require().NoError(err)
-	suite.Equal("op-poll", opID)
+	suite.Len(routes, 1) // only the IP route is extracted; the BGP route is dropped
+	suite.Equal("10.0.0.0/24", routes[0].Prefix)
+	suite.Equal(int32(2), opCalls.Load())
+}
 
-	// Drain the empty response then the populated one.
-	routes, err := natSvc.GetNATGatewayDiagnosticsRoutes(ctx, productUID, opID)
+// TestListNATGatewayIPRoutesPollEmptyComplete verifies a 200 with an empty data
+// array is a completed result: the poll returns empty without further polling.
+func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesPollEmptyComplete() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "uid-empty"
+
+	var opCalls atomic.Int32
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/ip", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":"op-empty"}`)
+	})
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/operation", func(w http.ResponseWriter, r *http.Request) {
+		opCalls.Add(1)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":[]}`)
+	})
+
+	routes, err := natSvc.ListNATGatewayIPRoutes(ctx, productUID, "")
 	suite.Require().NoError(err)
 	suite.Empty(routes)
+	suite.Equal(int32(1), opCalls.Load())
+}
 
-	routes, err = natSvc.GetNATGatewayDiagnosticsRoutes(ctx, productUID, opID)
-	suite.Require().NoError(err)
-	suite.Len(routes, 2)
+// TestListNATGatewayIPRoutesPollFatalError verifies a non-in-progress error is
+// returned unchanged rather than swallowed as "still processing".
+func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesPollFatalError() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "uid-fatal"
 
-	// Discriminator: one IP, one BGP.
-	var ipCount, bgpCount int
-	for _, r := range routes {
-		if r.IP != nil {
-			ipCount++
-		}
-		if r.BGP != nil {
-			bgpCount++
-		}
+	var opCalls atomic.Int32
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/ip", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":"op-fatal"}`)
+	})
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/operation", func(w http.ResponseWriter, r *http.Request) {
+		opCalls.Add(1)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, `{"message":"unknown operationId"}`)
+	})
+
+	_, err := natSvc.ListNATGatewayIPRoutes(ctx, productUID, "")
+	var apiErr *ErrorResponse
+	suite.Require().ErrorAs(err, &apiErr)
+	suite.Equal(http.StatusBadRequest, apiErr.Response.StatusCode)
+	suite.Equal("unknown operationId", apiErr.Message)
+	suite.Equal(int32(1), opCalls.Load())
+}
+
+func (suite *NATGatewayClientTestSuite) TestNATGatewayDiagnosticsInProgressNeedsA400() {
+	err := &ErrorResponse{
+		Response: &http.Response{StatusCode: http.StatusInternalServerError},
+		Message:  "The polling result for async mode is not ready yet",
 	}
-	suite.Equal(1, ipCount)
-	suite.Equal(1, bgpCount)
+	suite.False(isNATGatewayDiagnosticsInProgress(err))
+}
+
+// TestListNATGatewayIPRoutesPollTimeout verifies an operation that never
+// completes surfaces ErrNATGatewayDiagnosticsTimeout.
+func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesPollTimeout() {
+	ctx := context.Background()
+	natSvc, ok := suite.client.NATGatewayService.(*NATGatewayServiceOp)
+	suite.Require().True(ok)
+	natSvc.pollTimeout = 20 * time.Millisecond
+	productUID := "uid-timeout"
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/ip", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":"op-timeout"}`)
+	})
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/operation", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, diagnosticsInProgressBody)
+	})
+
+	_, err := natSvc.ListNATGatewayIPRoutes(ctx, productUID, "")
+	suite.ErrorIs(err, ErrNATGatewayDiagnosticsTimeout)
+	suite.ErrorContains(err, "op-timeout")
+}
+
+// TestListNATGatewayIPRoutesPollTimeoutDuringBodyRead verifies a poll timeout
+// that fires while the client reads a 400 body still returns the timeout
+// sentinel. The body read fails, so the 400 arrives with no message.
+func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesPollTimeoutDuringBodyRead() {
+	ctx := context.Background()
+	natSvc, ok := suite.client.NATGatewayService.(*NATGatewayServiceOp)
+	suite.Require().True(ok)
+	natSvc.pollTimeout = 20 * time.Millisecond
+	productUID := "uid-body-stall"
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/ip", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":"op-body-stall"}`)
+	})
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/operation", func(w http.ResponseWriter, r *http.Request) {
+		flusher, ok := w.(http.Flusher)
+		suite.Require().True(ok)
+		w.WriteHeader(http.StatusBadRequest)
+		flusher.Flush()
+		select {
+		case <-r.Context().Done():
+		case <-time.After(5 * time.Second):
+		}
+	})
+
+	_, err := natSvc.ListNATGatewayIPRoutes(ctx, productUID, "")
+	suite.ErrorIs(err, ErrNATGatewayDiagnosticsTimeout)
+}
+
+// TestListNATGatewayIPRoutesPollCallerCancelled verifies that when the caller's
+// own context is cancelled mid-poll, the poll returns that cancellation error
+// rather than the SDK-managed timeout sentinel.
+func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesPollCallerCancelled() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	natSvc := suite.client.NATGatewayService
+	productUID := "uid-cancel"
+
+	var opCalls atomic.Int32
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/ip", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":"op-cancel"}`)
+	})
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/operation", func(w http.ResponseWriter, r *http.Request) {
+		// The handler buffers its response until it returns, so a cancel on
+		// the first call would stop the 400 from reaching the client.
+		if opCalls.Add(1) == 1 {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, diagnosticsInProgressBody)
+			return
+		}
+		cancel()
+		<-r.Context().Done()
+	})
+
+	_, err := natSvc.ListNATGatewayIPRoutes(ctx, productUID, "")
+	suite.ErrorIs(err, context.Canceled)
+	suite.Equal(int32(2), opCalls.Load())
 }
 
 // --- Prefix list round-trip ----------------------------------------------
