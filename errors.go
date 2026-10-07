@@ -179,6 +179,9 @@ var ErrBuyMCRRequestNil = errors.New("buy MCR request cannot be nil")
 // ErrCreateMCRPrefixFilterListRequestNil is returned when CreatePrefixFilterList is called with a nil request.
 var ErrCreateMCRPrefixFilterListRequestNil = errors.New("create MCR prefix filter list request cannot be nil")
 
+// ErrMCRPrefixFilterListNil is returned when ModifyMCRPrefixFilterList is called with a nil prefix filter list.
+var ErrMCRPrefixFilterListNil = errors.New("MCR prefix filter list cannot be nil")
+
 // ErrModifyMCRRequestNil is returned when ModifyMCR is called with a nil request.
 var ErrModifyMCRRequestNil = errors.New("modify MCR request cannot be nil")
 
