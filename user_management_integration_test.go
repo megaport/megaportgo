@@ -228,8 +228,8 @@ func (suite *UserManagementIntegrationTestSuite) testDeactivateUser(c *Client, c
 
 	// Note: When a user is deactivated, Megaport automatically inserts "-deactivated-{randomnumber}"
 	// into the email, e.g. "foo@example.com" → "foo@example-deactivated-abc.com".
-	// Check the stable prefix up to the "@" rather than the full original address.
-	suite.Contains(userAfterDeactivation.Email, "megaport.testuser@", "Email should contain the original local-part prefix")
+	// Check the stable local-part prefix rather than the full original address.
+	suite.Contains(userAfterDeactivation.Email, "megaport.testuser.", "Email should contain the original local-part prefix")
 	suite.Contains(userAfterDeactivation.Email, "-deactivated-", "Email should contain the deactivated marker")
 
 	suite.Equal(user.Position, userAfterDeactivation.Position, "Position should remain unchanged")
