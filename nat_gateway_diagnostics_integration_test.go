@@ -13,8 +13,8 @@ import (
 // "looking-glass" diagnostics endpoints. The list endpoints are strictly
 // rate-limited and the looking-glass backend itself can be transiently
 // unavailable for freshly-provisioned gateways; on 429 or 5xx we t.Skip
-// the affected sub-case so the test remains green in those cases. The route
-// sub-cases retry first.
+// the affected sub-case so the test remains green in those cases. The
+// ip-routes and bgp-routes sub-cases retry first.
 type NATGatewayDiagnosticsIntegrationTestSuite IntegrationTestSuite
 
 func TestNATGatewayDiagnosticsIntegrationTestSuite(t *testing.T) {
