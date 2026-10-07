@@ -12,8 +12,8 @@ import (
 // NATGatewayDiagnosticsIntegrationTestSuite exercises the async
 // "looking-glass" diagnostics endpoints. The list endpoints are strictly
 // rate-limited and the looking-glass backend itself can be transiently
-// unavailable for freshly-provisioned gateways; on 429 or 5xx we t.Skip
-// the affected sub-case so the test remains green in those cases.
+// unavailable for freshly-provisioned gateways; on 429 or 5xx we retry,
+// then t.Skip the affected sub-case so the test remains green in those cases.
 type NATGatewayDiagnosticsIntegrationTestSuite IntegrationTestSuite
 
 func TestNATGatewayDiagnosticsIntegrationTestSuite(t *testing.T) {
@@ -44,6 +44,28 @@ func isTransientDiagnosticsError(err error) bool {
 	return code == http.StatusTooManyRequests || code >= 500
 }
 
+// retryTransientDiagnostics retries call while it fails with a 429 or 5xx.
+// Staging returns 503 for about 10s after a gateway reaches CONFIGURED.
+func retryTransientDiagnostics[T any](t *testing.T, call func() (T, error)) (T, error) {
+	const (
+		budget   = 90 * time.Second
+		interval = 10 * time.Second
+	)
+	start := time.Now()
+	for attempt := 1; ; attempt++ {
+		got, err := call()
+		if !isTransientDiagnosticsError(err) {
+			return got, err
+		}
+		time.Sleep(interval)
+		if elapsed := time.Since(start); elapsed >= budget {
+			var apiErr *ErrorResponse
+			errors.As(err, &apiErr)
+			t.Skipf("HTTP %d after %d attempts in %s: %v", apiErr.Response.StatusCode, attempt, elapsed.Round(time.Second), err)
+		}
+	}
+}
+
 func (suite *NATGatewayDiagnosticsIntegrationTestSuite) TestNATGatewayDiagnostics() {
 	ctx := context.Background()
 	logger := suite.client.Logger
@@ -56,66 +78,29 @@ func (suite *NATGatewayDiagnosticsIntegrationTestSuite) TestNATGatewayDiagnostic
 	}
 	defer prov.Teardown()
 
-	// Allow the gateway a moment after CONFIGURED/LIVE before calling the
-	// looking-glass — otherwise the data plane may not have populated yet.
-	time.Sleep(10 * time.Second)
-
 	suite.Run("ip-routes", func() {
-		opID, err := natSvc.ListNATGatewayIPRoutesAsync(ctx, prov.ProductUID, "")
-		if isTransientDiagnosticsError(err) {
-			suite.T().Skip("transient backend error (429/5xx); skipping ip-routes sub-case")
-			return
-		}
+		routes, err := retryTransientDiagnostics(suite.T(), func() ([]*NATGatewayIPRoute, error) {
+			return natSvc.ListNATGatewayIPRoutes(ctx, prov.ProductUID, "")
+		})
 		if err != nil {
-			suite.FailNowf("could not submit IP routes diag", "%v", err)
+			suite.FailNowf("could not list IP routes", "%v", err)
 		}
-		suite.NotEmpty(opID, "expected non-empty operation ID")
-		logger.InfoContext(ctx, "ip routes diagnostics submitted", slog.String("operation_id", opID))
-
-		// Poll the operation endpoint directly; we don't assert content,
-		// only that decoding succeeds (staging route table drifts).
-		routes, err := pollDiagnosticsForTest(ctx, natSvc, prov.ProductUID, opID)
-		if isTransientDiagnosticsError(err) {
-			suite.T().Skip("transient backend error during poll; skipping ip-routes sub-case")
-			return
-		}
-		if err != nil {
-			suite.FailNowf("could not get IP routes diag", "%v", err)
-		}
+		// Staging route tables drift, so check only that each route decoded a prefix.
 		for _, r := range routes {
-			// Each route must be exactly one of IP / BGP — no nil-on-both,
-			// no both-set.
-			ipSet := r.IP != nil
-			bgpSet := r.BGP != nil
-			suite.True(ipSet != bgpSet, "route must be IP xor BGP")
+			suite.NotEmpty(r.Prefix, "IP route has no prefix")
 		}
 		logger.InfoContext(ctx, "ip routes diagnostics decoded", slog.Int("route_count", len(routes)))
 	})
 
 	suite.Run("bgp-routes", func() {
-		opID, err := natSvc.ListNATGatewayBGPRoutesAsync(ctx, prov.ProductUID, "")
-		if isTransientDiagnosticsError(err) {
-			suite.T().Skip("transient backend error (429/5xx); skipping bgp-routes sub-case")
-			return
-		}
+		routes, err := retryTransientDiagnostics(suite.T(), func() ([]*NATGatewayBGPRoute, error) {
+			return natSvc.ListNATGatewayBGPRoutes(ctx, prov.ProductUID, "")
+		})
 		if err != nil {
-			suite.FailNowf("could not submit BGP routes diag", "%v", err)
-		}
-		suite.NotEmpty(opID, "expected non-empty operation ID")
-		logger.InfoContext(ctx, "bgp routes diagnostics submitted", slog.String("operation_id", opID))
-
-		routes, err := pollDiagnosticsForTest(ctx, natSvc, prov.ProductUID, opID)
-		if isTransientDiagnosticsError(err) {
-			suite.T().Skip("transient backend error during poll; skipping bgp-routes sub-case")
-			return
-		}
-		if err != nil {
-			suite.FailNowf("could not get BGP routes diag", "%v", err)
+			suite.FailNowf("could not list BGP routes", "%v", err)
 		}
 		for _, r := range routes {
-			ipSet := r.IP != nil
-			bgpSet := r.BGP != nil
-			suite.True(ipSet != bgpSet, "route must be IP xor BGP")
+			suite.NotEmpty(r.Prefix, "BGP route has no prefix")
 		}
 		logger.InfoContext(ctx, "bgp routes diagnostics decoded", slog.Int("route_count", len(routes)))
 	})
@@ -146,45 +131,4 @@ func (suite *NATGatewayDiagnosticsIntegrationTestSuite) TestNATGatewayDiagnostic
 			slog.String("error", err.Error()),
 		)
 	})
-}
-
-// pollDiagnosticsForTest is a copy of the SDK's internal poller specialised
-// for tests: shorter timeout, accepts an empty result as terminal so we
-// don't hang the suite on quiet route tables.
-func pollDiagnosticsForTest(ctx context.Context, natSvc NATGatewayService, productUID, opID string) ([]*NATGatewayRoute, error) {
-	const (
-		initial = 2 * time.Second
-		tick    = 3 * time.Second
-		timeout = 60 * time.Second
-	)
-	pollCtx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-
-	select {
-	case <-pollCtx.Done():
-		return nil, pollCtx.Err()
-	case <-time.After(initial):
-	}
-
-	deadline := time.Now().Add(timeout - initial)
-	ticker := time.NewTicker(tick)
-	defer ticker.Stop()
-	for {
-		routes, err := natSvc.GetNATGatewayDiagnosticsRoutes(pollCtx, productUID, opID)
-		if err != nil {
-			return nil, err
-		}
-		if len(routes) > 0 {
-			return routes, nil
-		}
-		// Empty response — accept after deadline rather than hanging.
-		if time.Now().After(deadline) {
-			return routes, nil
-		}
-		select {
-		case <-pollCtx.Done():
-			return routes, nil
-		case <-ticker.C:
-		}
-	}
 }
