@@ -6,6 +6,7 @@
 - Add `DhcpPools` to `PartnerConfigInterface` so a VXC order or update can serve a DHCP pool on an MCR interface. The API accepts at most one pool per interface.
 - Add `WithCallContext` client option that sets the `X-Call-Context` header so API calls act on behalf of a managed account (identified by company UID).
 - Add `AsOverride` (`*bool`) to `BgpConnectionConfig` so consumers can enable AS Override for eBGP peering. Unset leaves the API default in place.
+- Add `MCRService.GetMCRIPsec` to read an MCR's IPsec tunnels and tunnel counts. This endpoint does not return the pre-shared key or the phase lifetimes.
 - Add the `OrderApprovalType` constants `OrderApprovalTypeEarlyTermination`, `OrderApprovalTypeAddOn`, `OrderApprovalTypeIPAddressPartnerOrder` and `OrderApprovalTypeIPAddressCompliance`. A cancel approval has the type `EARLY_TERMINATION`.
 
 ## Changes
