@@ -2,6 +2,7 @@ package megaport
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"time"
 )
@@ -52,6 +53,78 @@ var (
 	// SERVICE_STATE_READY is a list of service states that are considered ready for use.
 	SERVICE_STATE_READY = []string{SERVICE_CONFIGURED, SERVICE_LIVE}
 )
+
+// GetTelemetryRequest is the request for the Port, MCR, MVE, VXC, and IX telemetry methods.
+// Set Days or From/To. The API validates the range.
+type GetTelemetryRequest struct {
+	ProductUID string
+	Types      []string // Metric types to retrieve. Each Get*Telemetry method lists the types its product supports.
+	From       *time.Time
+	To         *time.Time
+	Days       *int32
+}
+
+// ServiceTelemetryResponse is the API response for service telemetry data.
+// This response is NOT wrapped in the standard message/terms/data envelope.
+type ServiceTelemetryResponse struct {
+	ServiceUID string                 `json:"serviceUid"`
+	Type       string                 `json:"type"`      // Empty when the request asks for more than one type.
+	TimeFrame  TelemetryTimeFrame     `json:"timeFrame"` // Zero when the request sets no Days or From/To.
+	Data       []*TelemetryMetricData `json:"data"`
+}
+
+// TelemetryTimeFrame represents the time range of a telemetry response.
+type TelemetryTimeFrame struct {
+	From int64 `json:"from"`
+	To   int64 `json:"to"`
+}
+
+// TelemetryMetricData represents a single metric series in a telemetry response.
+type TelemetryMetricData struct {
+	Type    string            `json:"type"`
+	Subtype string            `json:"subtype"`
+	Samples []TelemetrySample `json:"samples"`
+	Unit    TelemetryUnit     `json:"unit"`
+}
+
+// TelemetrySample represents a single data point in a telemetry series.
+// The API returns samples as [timestamp, value] tuples.
+type TelemetrySample struct {
+	Timestamp int64
+	Value     float64
+}
+
+// UnmarshalJSON handles the [int64, float64] tuple format from the API.
+func (s *TelemetrySample) UnmarshalJSON(data []byte) error {
+	var tuple []json.Number
+	if err := json.Unmarshal(data, &tuple); err != nil {
+		return fmt.Errorf("telemetry sample must be a JSON array: %w", err)
+	}
+	if len(tuple) != 2 {
+		return fmt.Errorf("telemetry sample must be a [timestamp, value] pair, got %s", data)
+	}
+	ts, err := tuple[0].Int64()
+	if err != nil {
+		return fmt.Errorf("telemetry sample timestamp: %w", err)
+	}
+	// A null value means the metric had no reading at this timestamp. It decodes as zero.
+	var val float64
+	if tuple[1] != "" {
+		val, err = tuple[1].Float64()
+		if err != nil {
+			return fmt.Errorf("telemetry sample value: %w", err)
+		}
+	}
+	s.Timestamp = ts
+	s.Value = val
+	return nil
+}
+
+// TelemetryUnit describes the unit of measurement for a telemetry metric.
+type TelemetryUnit struct {
+	Name     string `json:"name"`
+	FullName string `json:"fullName"`
+}
 
 // Time is a custom time type that allows for unmarshalling of Unix timestamps.
 type Time struct {

@@ -36,6 +36,8 @@ type MVEService interface {
 	ListMVEResourceTags(ctx context.Context, mveID string) (map[string]string, error)
 	// UpdateMVEResourceTags updates the resource tags for an MVE in the Megaport MVE API.
 	UpdateMVEResourceTags(ctx context.Context, mveID string, tags map[string]string) error
+	// GetMVETelemetry returns telemetry metrics for an MVE. Supported types are BITS and PACKETS.
+	GetMVETelemetry(ctx context.Context, req *GetTelemetryRequest) (*ServiceTelemetryResponse, error)
 }
 
 // NewMVEService creates a new instance of the MVE Service.
@@ -444,4 +446,9 @@ func (svc *MVEServiceOp) UpdateMVEResourceTags(ctx context.Context, mveID string
 	return svc.Client.ProductService.UpdateProductResourceTags(ctx, mveID, &UpdateProductResourceTagsRequest{
 		ResourceTags: toProductResourceTags(tags),
 	})
+}
+
+// GetMVETelemetry returns telemetry metrics for an MVE.
+func (svc *MVEServiceOp) GetMVETelemetry(ctx context.Context, req *GetTelemetryRequest) (*ServiceTelemetryResponse, error) {
+	return getProductTelemetry(ctx, svc.Client, PRODUCT_MVE, req)
 }
