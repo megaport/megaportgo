@@ -12,8 +12,9 @@ import (
 // NATGatewayDiagnosticsIntegrationTestSuite exercises the async
 // "looking-glass" diagnostics endpoints. The list endpoints are strictly
 // rate-limited and the looking-glass backend itself can be transiently
-// unavailable for freshly-provisioned gateways; on 429 or 5xx we retry,
-// then t.Skip the affected sub-case so the test remains green in those cases.
+// unavailable for freshly-provisioned gateways; on 429 or 5xx we t.Skip
+// the affected sub-case so the test remains green in those cases. The route
+// sub-cases retry first.
 type NATGatewayDiagnosticsIntegrationTestSuite IntegrationTestSuite
 
 func TestNATGatewayDiagnosticsIntegrationTestSuite(t *testing.T) {
@@ -45,7 +46,7 @@ func isTransientDiagnosticsError(err error) bool {
 }
 
 // retryTransientDiagnostics retries call while it fails with a 429 or 5xx.
-// Staging returns 503 for about 10s after a gateway reaches CONFIGURED.
+// Staging returns 503 for a short time after a gateway reaches CONFIGURED.
 func retryTransientDiagnostics[T any](t *testing.T, call func() (T, error)) (T, error) {
 	const (
 		budget   = 90 * time.Second
@@ -59,9 +60,7 @@ func retryTransientDiagnostics[T any](t *testing.T, call func() (T, error)) (T, 
 		}
 		time.Sleep(interval)
 		if elapsed := time.Since(start); elapsed >= budget {
-			var apiErr *ErrorResponse
-			errors.As(err, &apiErr)
-			t.Skipf("HTTP %d after %d attempts in %s: %v", apiErr.Response.StatusCode, attempt, elapsed.Round(time.Second), err)
+			t.Skipf("still failing after %d attempts in %s: %v", attempt, elapsed.Round(time.Second), err)
 		}
 	}
 }
