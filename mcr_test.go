@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -711,33 +712,17 @@ func (suite *MCRClientTestSuite) TestDeleteMCRNilRequest() {
 	suite.ErrorIs(err, ErrDeleteMCRRequestNil)
 }
 
-// TestRestoreMCR tests the RestoreMCR method.
+// TestRestoreMCR verifies that RestoreMCR returns ErrRestoreNotAllowed without sending a request.
 func (suite *MCRClientTestSuite) TestRestoreMCR() {
-	ctx := context.Background()
-
-	mcrSvc := suite.client.MCRService
-
-	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
-
-	jblob := `{
-	"message": "Action [UN_CANCEL Service 36b3f68e-2f54-4331-bf94-f8984449365f] has been done.",
-	"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"
-	}`
-	path := "/v3/product/" + productUid + "/action/UN_CANCEL"
-
-	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		suite.testMethod(r, http.MethodPost)
-		fmt.Fprint(w, jblob)
+	var hit atomic.Bool
+	suite.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		hit.Store(true)
 	})
 
-	want := &RestoreMCRResponse{
-		IsRestored: true,
-	}
-
-	got, err := mcrSvc.RestoreMCR(ctx, productUid)
-
-	suite.NoError(err)
-	suite.Equal(want, got)
+	got, err := suite.client.MCRService.RestoreMCR(context.Background(), "36b3f68e-2f54-4331-bf94-f8984449365f")
+	suite.ErrorIs(err, ErrRestoreNotAllowed)
+	suite.Nil(got)
+	suite.False(hit.Load(), "expected no request to the API")
 }
 
 // TestValidateIPsecAddOn tests the validation of IPsec add-on configurations
