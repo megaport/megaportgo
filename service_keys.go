@@ -286,7 +286,7 @@ func (svc *ServiceKeyServiceOp) UpdateServiceKey(ctx context.Context, req *Updat
 	if err != nil {
 		return nil, err
 	}
-	_, resErr := svc.Client.Do(ctx, clientReq, nil)
+	resErr := svc.Client.doDiscard(ctx, clientReq)
 	if resErr != nil {
 		return nil, resErr
 	}
