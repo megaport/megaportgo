@@ -424,6 +424,7 @@ func (c *Client) SetOnRequestCompleted(rc RequestCompletionCallback) {
 // Do sends an API request and returns the API response. The API response is JSON decoded and stored in the value
 // pointed to by v, or returned as an error if an API error has occurred. If v implements the io.Writer interface,
 // the raw response will be written to v, without attempting to decode it.
+// On success, the caller must close the response body. On error, Do closes it.
 func (c *Client) Do(ctx context.Context, req *http.Request, v any) (*http.Response, error) {
 	reqStart := time.Now()
 	resp, err := DoRequestWithClient(ctx, c.HTTPClient, req)
@@ -501,9 +502,8 @@ func (c *Client) doDiscard(ctx context.Context, req *http.Request) error {
 	if err != nil {
 		return err
 	}
+	// Ignore drain and close errors: the request already succeeded.
 	_, _ = io.Copy(io.Discard, resp.Body)
-	// A close error here means the connection was already broken, not that the
-	// request failed, so it must not turn a completed mutation into an error.
 	_ = resp.Body.Close()
 	return nil
 }
