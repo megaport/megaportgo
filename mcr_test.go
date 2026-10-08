@@ -1195,6 +1195,7 @@ func (suite *MCRClientTestSuite) TestUpdateMCRWithAddOnWaitTimeout() {
 
 	suite.mux.HandleFunc(fmt.Sprintf("/v3/product/%s/addon", mcrID), func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodPost)
+		w.WriteHeader(http.StatusCreated)
 		fmt.Fprint(w, `{"message":"ok"}`)
 	})
 	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/%s", mcrID), func(w http.ResponseWriter, r *http.Request) {

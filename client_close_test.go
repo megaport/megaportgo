@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"testing/iotest"
 )
 
 type rtFunc func(*http.Request) (*http.Response, error)
@@ -198,6 +199,25 @@ func TestDiscardingMethodsDrainAndCloseBody(t *testing.T) {
 			}
 			if !body.drained || body.closes != 1 {
 				t.Fatalf("body drained=%v closes=%d, want drained and closed once", body.drained, body.closes)
+			}
+		})
+	}
+}
+
+func TestUpdateMCRWithAddOnIgnoresDrainError(t *testing.T) {
+	tests := []struct {
+		status int
+		want   error
+	}{
+		{http.StatusCreated, nil},
+		{http.StatusAccepted, ErrModifyPendingApproval},
+	}
+	for _, tt := range tests {
+		t.Run(http.StatusText(tt.status), func(t *testing.T) {
+			c := newStubClient(t, tt.status, io.NopCloser(iotest.ErrReader(io.ErrUnexpectedEOF)))
+			err := c.MCRService.UpdateMCRWithAddOn(ctx, "m", MCRAddOnRequest{AddOn: &MCRAddOnIPsecConfig{TunnelCount: 10}})
+			if !errors.Is(err, tt.want) {
+				t.Fatalf("got %v, want %v", err, tt.want)
 			}
 		})
 	}

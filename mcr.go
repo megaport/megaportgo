@@ -693,10 +693,12 @@ func (svc *MCRServiceOp) UpdateMCRWithAddOn(ctx context.Context, mcrID string, r
 		if err != nil {
 			return err
 		}
-		resp, err := svc.Client.Do(ctx, clientReq, io.Discard)
+		resp, err := svc.Client.Do(ctx, clientReq, nil)
 		if err != nil {
 			return err
 		}
+		// Ignore drain errors, as doDiscard does: the API already took the order.
+		_, _ = io.Copy(io.Discard, resp.Body)
 		_ = resp.Body.Close()
 		if resp.StatusCode == http.StatusAccepted {
 			return ErrModifyPendingApproval
