@@ -1148,6 +1148,7 @@ func (suite *MCRClientTestSuite) TestUpdateMCRWithAddOn() {
 		suite.Equal(AddOnTypeIPsec, v["addOnType"])
 		suite.Equal(float64(10), v["tunnelCount"])
 
+		w.WriteHeader(http.StatusCreated)
 		fmt.Fprint(w, `{"message":"ok"}`)
 	})
 
@@ -1158,6 +1159,32 @@ func (suite *MCRClientTestSuite) TestUpdateMCRWithAddOn() {
 		},
 	})
 	suite.NoError(err)
+}
+
+// TestUpdateMCRWithAddOnPendingApproval verifies UpdateMCRWithAddOn returns
+// ErrModifyPendingApproval on a 202 without entering the wait loop.
+func (suite *MCRClientTestSuite) TestUpdateMCRWithAddOnPendingApproval() {
+	ctx := context.Background()
+	mcrID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	suite.mux.HandleFunc(fmt.Sprintf("/v3/product/%s/addon", mcrID), func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPost)
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, `{"message":"Request accepted and pending for approval","terms":"This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"}`)
+	})
+	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/%s", mcrID), func(w http.ResponseWriter, r *http.Request) {
+		suite.Fail("UpdateMCRWithAddOn read the MCR after a 202")
+	})
+
+	err := suite.client.MCRService.UpdateMCRWithAddOn(ctx, mcrID, MCRAddOnRequest{
+		AddOn: &MCRAddOnIPsecConfig{
+			AddOnType:   AddOnTypeIPsec,
+			TunnelCount: 10,
+		},
+		WaitForProvision: true,
+		WaitForTime:      time.Second,
+	})
+	suite.ErrorIs(err, ErrModifyPendingApproval)
 }
 
 // TestUpdateMCRWithAddOnWaitTimeout tests that WaitForProvision returns an error on timeout.
