@@ -1,14 +1,11 @@
 package megaport
 
 import (
-	"bytes"
 	"errors"
 	"io"
-	"log/slog"
 	"net/http"
 	"reflect"
 	"strings"
-	"sync/atomic"
 	"testing"
 )
 
@@ -29,22 +26,35 @@ func newStubClient(t *testing.T, status int, body io.ReadCloser, opts ...ClientO
 	return c
 }
 
-type closeCountingBody struct {
-	*strings.Reader
-	closes *int32
+// drainTrackingBody keeps its reader in a named field so io.Copy cannot
+// bypass Read through strings.Reader's WriteTo.
+type drainTrackingBody struct {
+	r       *strings.Reader
+	drained bool
+	closes  int
 }
 
-func (b closeCountingBody) Close() error {
-	atomic.AddInt32(b.closes, 1)
+func (b *drainTrackingBody) Read(p []byte) (int, error) {
+	if b.closes > 0 {
+		return 0, errors.New("http: read on closed response body")
+	}
+	n, err := b.r.Read(p)
+	if err == io.EOF {
+		b.drained = true
+	}
+	return n, err
+}
+
+func (b *drainTrackingBody) Close() error {
+	b.closes++
 	return nil
 }
 
 // Do must close the response body on every error return, because the caller
 // gets a nil response and cannot close it.
 func TestDoClosesBodyOnError(t *testing.T) {
-	var closes int32
-
-	c := newStubClient(t, http.StatusBadRequest, closeCountingBody{Reader: strings.NewReader(`{"message":"bad request"}`), closes: &closes})
+	body := &drainTrackingBody{r: strings.NewReader(`{"message":"bad request"}`)}
+	c := newStubClient(t, http.StatusBadRequest, body)
 
 	req, err := c.NewRequest(ctx, http.MethodGet, "/x", nil)
 	if err != nil {
@@ -55,8 +65,8 @@ func TestDoClosesBodyOnError(t *testing.T) {
 		resp.Body.Close()
 		t.Fatal("expected Do to return an error for a 400 response")
 	}
-	if got := atomic.LoadInt32(&closes); got < 1 {
-		t.Fatalf("response body not closed on error return (Close called %d times)", got)
+	if body.closes != 1 {
+		t.Fatalf("response body not closed exactly once on error return (Close called %d times)", body.closes)
 	}
 }
 
@@ -86,9 +96,8 @@ func (failingWriter) Write(p []byte) (int, error) {
 }
 
 func TestDoClosesBodyOnCopyError(t *testing.T) {
-	var closes int32
-
-	c := newStubClient(t, http.StatusOK, closeCountingBody{Reader: strings.NewReader(`some body`), closes: &closes})
+	body := &drainTrackingBody{r: strings.NewReader(`some body`)}
+	c := newStubClient(t, http.StatusOK, body)
 
 	req, err := c.NewRequest(ctx, http.MethodGet, "/x", nil)
 	if err != nil {
@@ -99,15 +108,14 @@ func TestDoClosesBodyOnCopyError(t *testing.T) {
 		resp.Body.Close()
 		t.Fatal("expected Do to return an error when io.Copy fails")
 	}
-	if got := atomic.LoadInt32(&closes); got != 1 {
-		t.Fatalf("response body not closed exactly once on error return (Close called %d times)", got)
+	if body.closes != 1 {
+		t.Fatalf("response body not closed exactly once on error return (Close called %d times)", body.closes)
 	}
 }
 
 func TestDoClosesBodyOnDecodeError(t *testing.T) {
-	var closes int32
-
-	c := newStubClient(t, http.StatusOK, closeCountingBody{Reader: strings.NewReader(`not json`), closes: &closes})
+	body := &drainTrackingBody{r: strings.NewReader(`not json`)}
+	c := newStubClient(t, http.StatusOK, body)
 
 	req, err := c.NewRequest(ctx, http.MethodGet, "/x", nil)
 	if err != nil {
@@ -121,8 +129,8 @@ func TestDoClosesBodyOnDecodeError(t *testing.T) {
 		resp.Body.Close()
 		t.Fatal("expected Do to return an error for malformed JSON")
 	}
-	if got := atomic.LoadInt32(&closes); got != 1 {
-		t.Fatalf("response body not closed exactly once on error return (Close called %d times)", got)
+	if body.closes != 1 {
+		t.Fatalf("response body not closed exactly once on error return (Close called %d times)", body.closes)
 	}
 }
 
@@ -130,14 +138,8 @@ func TestDoClosesBodyOnDecodeError(t *testing.T) {
 // replacement reader, so the deferred close lands on the replacement. The
 // original body must still be closed exactly once.
 func TestDoClosesBodyOnErrorWithResponseLogging(t *testing.T) {
-	var closes int32
-
-	logCapture := &bytes.Buffer{}
-	c := newStubClient(t, http.StatusBadRequest,
-		closeCountingBody{Reader: strings.NewReader(`{"message":"bad request"}`), closes: &closes},
-		WithLogResponseBody(),
-		WithLogHandler(NewLevelFilterHandler(slog.LevelDebug, slog.NewJSONHandler(logCapture, nil))),
-	)
+	body := &drainTrackingBody{r: strings.NewReader(`{"message":"bad request"}`)}
+	c := newStubClient(t, http.StatusBadRequest, body, WithLogResponseBody())
 
 	req, err := c.NewRequest(ctx, http.MethodGet, "/x", nil)
 	if err != nil {
@@ -148,30 +150,9 @@ func TestDoClosesBodyOnErrorWithResponseLogging(t *testing.T) {
 		resp.Body.Close()
 		t.Fatal("expected Do to return an error for a 400 response")
 	}
-	if got := atomic.LoadInt32(&closes); got != 1 {
-		t.Fatalf("response body not closed exactly once on error return (Close called %d times)", got)
+	if body.closes != 1 {
+		t.Fatalf("response body not closed exactly once on error return (Close called %d times)", body.closes)
 	}
-}
-
-// drainTrackingBody keeps its reader in a named field so io.Copy cannot
-// bypass Read through strings.Reader's WriteTo.
-type drainTrackingBody struct {
-	r       *strings.Reader
-	drained bool
-	closes  int
-}
-
-func (b *drainTrackingBody) Read(p []byte) (int, error) {
-	n, err := b.r.Read(p)
-	if err == io.EOF {
-		b.drained = true
-	}
-	return n, err
-}
-
-func (b *drainTrackingBody) Close() error {
-	b.closes++
-	return nil
 }
 
 func TestDiscardingMethodsDrainAndCloseBody(t *testing.T) {
