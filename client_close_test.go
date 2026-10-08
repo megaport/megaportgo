@@ -2,6 +2,7 @@ package megaport
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"reflect"
@@ -200,5 +201,32 @@ func TestDiscardingMethodsDrainAndCloseBody(t *testing.T) {
 				t.Fatalf("body drained=%v closes=%d, want drained and closed once", body.drained, body.closes)
 			}
 		})
+	}
+}
+
+func TestDeleteNATGatewayDesignDrainsAndClosesBody(t *testing.T) {
+	body := &drainTrackingBody{r: strings.NewReader(`{"message":"Nat gateway order item deleted successfully"}`)}
+	rt := rtFunc(func(r *http.Request) (*http.Response, error) {
+		resp := &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Request: r}
+		switch r.Method {
+		case http.MethodGet:
+			resp.Body = io.NopCloser(strings.NewReader(`{"data":{"provisioningStatus":"DESIGN"}}`))
+		case http.MethodDelete:
+			resp.Body = body
+		default:
+			return nil, fmt.Errorf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		return resp, nil
+	})
+	c, err := New(&http.Client{Transport: rt}, WithBaseURL("https://example.test"))
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	if err := c.NATGatewayService.DeleteNATGateway(ctx, "n"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !body.drained || body.closes != 1 {
+		t.Fatalf("body drained=%v closes=%d, want drained and closed once", body.drained, body.closes)
 	}
 }

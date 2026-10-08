@@ -271,12 +271,7 @@ func (svc *NATGatewayServiceOp) DeleteNATGateway(ctx context.Context, productUID
 		if err != nil {
 			return err
 		}
-		resp, err := svc.Client.Do(ctx, clientReq, nil)
-		if err != nil {
-			return err
-		}
-		defer resp.Body.Close()
-		return nil
+		return svc.Client.doDiscard(ctx, clientReq)
 	}
 
 	_, err = svc.Client.ProductService.DeleteProduct(ctx, &DeleteProductRequest{
