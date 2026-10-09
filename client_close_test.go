@@ -222,3 +222,16 @@ func TestUpdateMCRWithAddOnIgnoresDrainError(t *testing.T) {
 		})
 	}
 }
+
+func TestUpdateMCRWithAddOnPendingApprovalDrainsAndClosesBody(t *testing.T) {
+	body := &drainTrackingBody{r: strings.NewReader(`{"message":"Request accepted and pending for approval"}`)}
+	c := newStubClient(t, http.StatusAccepted, body)
+
+	err := c.MCRService.UpdateMCRWithAddOn(ctx, "m", MCRAddOnRequest{AddOn: &MCRAddOnIPsecConfig{TunnelCount: 10}})
+	if !errors.Is(err, ErrModifyPendingApproval) {
+		t.Fatalf("got %v, want %v", err, ErrModifyPendingApproval)
+	}
+	if !body.drained || body.closes != 1 {
+		t.Fatalf("body drained=%v closes=%d, want drained and closed once", body.drained, body.closes)
+	}
+}
