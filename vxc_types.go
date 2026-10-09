@@ -49,7 +49,7 @@ var emptyVLL = []byte(`[]`)
 var jsonNull = []byte(`null`)
 
 // we need to have a custom unmarshal function because the API returns an "[]" (empty array)
-// for vll when the VXC is decommissioned, which will break the regular unmarhsal.
+// for vll when the VXC is decommissioned, which will break the regular unmarshal.
 func (w *VXCResources) UnmarshalJSON(data []byte) error {
 	// these are all the empty cases for this type
 	if len(data) == 0 || bytes.Equal(data, jsonNull) {
@@ -92,7 +92,7 @@ type VXCResources struct {
 }
 
 // we need to have a custom unmarshal function because the API returns an "[]" (empty array)
-// when the VXC is decommissioned, which will break the regular unmarhsal.
+// when the VXC is decommissioned, which will break the regular unmarshal.
 func (w *VLLConfig) UnmarshalJSON(data []byte) error {
 	// these are all the empty cases for this type
 	if len(data) == 0 || bytes.Equal(data, emptyVLL) || bytes.Equal(data, jsonNull) {
@@ -295,7 +295,7 @@ type VXCPartnerConfigTransit struct {
 type VXCPartnerConfigIBM struct {
 	VXCPartnerConfiguration `json:"-"`
 	ConnectType             string `json:"connectType"`
-	AccountID               string `json:"account_id"`          // Customer's IBM Acount ID.  32 Hexadecimal Characters. REQUIRED
+	AccountID               string `json:"account_id"`          // Customer's IBM Account ID.  32 Hexadecimal Characters. REQUIRED
 	CustomerASN             int    `json:"customer_asn"`        // Customer's ASN. Valid ranges: 1-64495, 64999, 131072-4199999999, 4201000000-4201064511. Required unless the connection at the other end of the VXC is an MCR.
 	Name                    string `json:"name"`                // Description of this connection for identification purposes. Max 100 characters from 0-9 a-z A-Z / - _ , Defaults to "MEGAPORT".
 	CustomerIPAddress       string `json:"customer_ip_address"` // IPv4 network address including subnet mask. Default is /30 assigned from 169.254.0.0/16.
@@ -781,94 +781,11 @@ func (c *CSPConnection) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &i); err != nil {
 		return err
 	}
-	switch v := i.(type) {
-	case map[string]interface{}:
-		cn := v
-		switch v["connectType"] {
-		case "AWSHC":
-			marshaled, err := json.Marshal(cn)
-			if err != nil {
-				return err
-			}
-			awsHC := CSPConnectionAWSHC{}
-			if err := json.Unmarshal(marshaled, &awsHC); err != nil {
-				return err
-			}
-			c.CSPConnection = append(c.CSPConnection, awsHC)
-		case "AWS":
-			marshaled, err := json.Marshal(cn)
-			if err != nil {
-				return err
-			}
-			aws := CSPConnectionAWS{}
-			if err := json.Unmarshal(marshaled, &aws); err != nil {
-				return err
-			}
-			c.CSPConnection = append(c.CSPConnection, aws)
-		case "GOOGLE":
-			marshaled, err := json.Marshal(cn)
-			if err != nil {
-				return err
-			}
-			google := CSPConnectionGoogle{}
-			if err := json.Unmarshal(marshaled, &google); err != nil {
-				return err
-			}
-			c.CSPConnection = append(c.CSPConnection, google)
-		case "AZURE":
-			marshaled, err := json.Marshal(cn)
-			if err != nil {
-				return err
-			}
-			azure := CSPConnectionAzure{}
-			if err := json.Unmarshal(marshaled, &azure); err != nil {
-				return err
-			}
-			c.CSPConnection = append(c.CSPConnection, azure)
-		case "VROUTER":
-			marshaled, err := json.Marshal(cn)
-			if err != nil {
-				return err
-			}
-			vr := CSPConnectionVirtualRouter{}
-			if err := json.Unmarshal(marshaled, &vr); err != nil {
-				return err
-			}
-			c.CSPConnection = append(c.CSPConnection, vr)
-		case connectTypeTransit:
-			marshaled, err := json.Marshal(cn)
-			if err != nil {
-				return err
-			}
-			transit := CSPConnectionTransit{}
-			if err := json.Unmarshal(marshaled, &transit); err != nil {
-				return err
-			}
-			c.CSPConnection = append(c.CSPConnection, transit)
-		case "ORACLE":
-			marshaled, err := json.Marshal(cn)
-			if err != nil {
-				return err
-			}
-			oracle := CSPConnectionOracle{}
-			if err := json.Unmarshal(marshaled, &oracle); err != nil {
-				return err
-			}
-			c.CSPConnection = append(c.CSPConnection, oracle)
-		default: // Any other cases will be marshaled into a map[string]interface{}
-			marshaled, err := json.Marshal(cn)
-			if err != nil {
-				return err
-			}
-			other := CSPConnectionOther{}
-			cspMap := map[string]interface{}{}
-			if err := json.Unmarshal(marshaled, &cspMap); err != nil {
-				return err
-			}
-			other.CSPConnection = cspMap
-			c.CSPConnection = append(c.CSPConnection, other)
-		}
-	case []interface{}:
+	// The API sends a single connection as a bare object, not a one-element array.
+	if obj, ok := i.(map[string]interface{}); ok {
+		i = []interface{}{obj}
+	}
+	if v, ok := i.([]interface{}); ok {
 		for _, m := range v {
 			cn, ok := m.(map[string]interface{})
 			if !ok {
