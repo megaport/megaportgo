@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"slices"
 	"strconv"
 	"strings"
@@ -48,6 +49,7 @@ type MCRService interface {
 	// UpdateMCRResourceTags updates the resource tags for an MCR in the Megaport MCR API.
 	UpdateMCRResourceTags(ctx context.Context, mcrID string, tags map[string]string) error
 	// UpdateMCRWithAddOn adds an IPsec add-on to an existing MCR.
+	// Returns ErrModifyPendingApproval without waiting when the API creates an order approval request instead of adding it.
 	UpdateMCRWithAddOn(ctx context.Context, mcrID string, req MCRAddOnRequest) error
 	// UpdateMCRIPsecAddOn updates an existing IPsec add-on on an MCR. Setting tunnelCount to 0 will disable IPsec.
 	UpdateMCRIPsecAddOn(ctx context.Context, mcrID string, addOnUID string, tunnelCount int) error
@@ -663,6 +665,8 @@ func (svc *MCRServiceOp) UpdateMCRResourceTags(ctx context.Context, mcrID string
 	})
 }
 
+// UpdateMCRWithAddOn adds an IPsec add-on to an existing MCR.
+// Returns ErrModifyPendingApproval without waiting when the API creates an order approval request instead of adding it.
 func (svc *MCRServiceOp) UpdateMCRWithAddOn(ctx context.Context, mcrID string, req MCRAddOnRequest) error {
 	if req.AddOn == nil {
 		return fmt.Errorf("AddOn cannot be nil")
@@ -689,9 +693,15 @@ func (svc *MCRServiceOp) UpdateMCRWithAddOn(ctx context.Context, mcrID string, r
 		if err != nil {
 			return err
 		}
-		err = svc.Client.doDiscard(ctx, clientReq)
+		resp, err := svc.Client.Do(ctx, clientReq, nil)
 		if err != nil {
 			return err
+		}
+		// Ignore drain errors, as doDiscard does: the API already took the order.
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
+		if resp.StatusCode == http.StatusAccepted {
+			return ErrModifyPendingApproval
 		}
 	default:
 		return ErrInvalidAddOnType
