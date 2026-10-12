@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -320,30 +321,51 @@ func (suite *ProductClientTestSuite) TestDeleteProductPendingApproval() {
 	suite.Nil(gotRes)
 }
 
-// TestRestoreProduct tests the RestoreProduct method
-func (suite *ProductClientTestSuite) TestRestoreProduct() {
-	ctx := context.Background()
-
-	productSvc := suite.client.ProductService
+// TestDeleteProductSafeDelete verifies that SafeDelete adds the safeDelete query parameter.
+func (suite *ProductClientTestSuite) TestDeleteProductSafeDelete() {
 	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
-
-	jblob := `{
-	"message": "Action [UN_CANCEL Service 36b3f68e-2f54-4331-bf94-f8984449365f] has been done.",
-	"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"
-	}`
-
-	path := "/v3/product/" + productUid + "/action/UN_CANCEL"
-
-	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+	var gotSafeDelete string
+	suite.mux.HandleFunc("/v3/product/"+productUid+"/action/CANCEL_NOW", func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodPost)
-		fmt.Fprint(w, jblob)
+		gotSafeDelete = r.URL.Query().Get("safeDelete")
+		fmt.Fprint(w, `{"message": "Action [CANCEL_NOW Service 36b3f68e-2f54-4331-bf94-f8984449365f] has been done."}`)
 	})
 
-	wantRes := &RestoreProductResponse{}
-
-	gotRes, err := productSvc.RestoreProduct(ctx, productUid)
+	_, err := suite.client.ProductService.DeleteProduct(context.Background(), &DeleteProductRequest{
+		ProductID:  productUid,
+		DeleteNow:  true,
+		SafeDelete: true,
+	})
 	suite.NoError(err)
-	suite.Equal(wantRes, gotRes)
+	suite.Equal("true", gotSafeDelete)
+}
+
+// TestDeleteProductCancelLaterNotAllowed verifies that DeleteProduct rejects DeleteNow=false without sending a request.
+func (suite *ProductClientTestSuite) TestDeleteProductCancelLaterNotAllowed() {
+	var hit atomic.Bool
+	suite.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		hit.Store(true)
+	})
+
+	_, err := suite.client.ProductService.DeleteProduct(context.Background(), &DeleteProductRequest{
+		ProductID: "36b3f68e-2f54-4331-bf94-f8984449365f",
+		DeleteNow: false,
+	})
+	suite.ErrorIs(err, ErrCancelLaterNotAllowed)
+	suite.False(hit.Load(), "expected no request to the API")
+}
+
+// TestRestoreProduct verifies that RestoreProduct returns ErrRestoreNotAllowed without sending a request.
+func (suite *ProductClientTestSuite) TestRestoreProduct() {
+	var hit atomic.Bool
+	suite.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		hit.Store(true)
+	})
+
+	gotRes, err := suite.client.ProductService.RestoreProduct(context.Background(), "36b3f68e-2f54-4331-bf94-f8984449365f")
+	suite.ErrorIs(err, ErrRestoreNotAllowed)
+	suite.Nil(gotRes)
+	suite.False(hit.Load(), "expected no request to the API")
 }
 
 // TestManageProductLuck tests the ManageProductLock method

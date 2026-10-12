@@ -40,7 +40,9 @@ type MCRService interface {
 	// DeleteMCR deletes an MCR in the Megaport MCR API.
 	// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 	DeleteMCR(ctx context.Context, req *DeleteMCRRequest) (*DeleteMCRResponse, error)
-	// RestoreMCR restores a deleted MCR in the Megaport MCR API.
+	// RestoreMCR always returns ErrRestoreNotAllowed and sends no request.
+	//
+	// Deprecated: the Megaport API no longer supports restoring a canceled MCR.
 	RestoreMCR(ctx context.Context, mcrId string) (*RestoreMCRResponse, error)
 	// ListMCRResourceTags returns the resource tags for an MCR in the Megaport MCR API.
 	ListMCRResourceTags(ctx context.Context, mcrID string) (map[string]string, error)
@@ -150,7 +152,7 @@ type DeleteMCRResponse struct {
 	IsDeleting bool
 }
 
-// RestoreMCRequest represents a request to restore a deleted MCR
+// RestoreMCRResponse represents a response from restoring an MCR.
 type RestoreMCRResponse struct {
 	IsRestored bool
 }
@@ -403,7 +405,12 @@ func (svc *MCRServiceOp) CreatePrefixFilterList(ctx context.Context, req *Create
 	}
 	url := "/v2/product/mcr2/" + req.MCRID + "/prefixList"
 
-	clientReq, err := svc.Client.NewRequest(ctx, "POST", url, req.PrefixFilterList)
+	reqBody, err := req.PrefixFilterList.toAPI()
+	if err != nil {
+		return nil, err
+	}
+
+	clientReq, err := svc.Client.NewRequest(ctx, "POST", url, reqBody)
 
 	if err != nil {
 		return nil, err
@@ -577,7 +584,7 @@ func (svc *MCRServiceOp) DeleteMCRPrefixFilterList(ctx context.Context, mcrID st
 	if err != nil {
 		return nil, err
 	}
-	_, err = svc.Client.Do(ctx, clientReq, nil)
+	err = svc.Client.doDiscard(ctx, clientReq)
 	if err != nil {
 		return nil, err
 	}
@@ -588,12 +595,19 @@ func (svc *MCRServiceOp) DeleteMCRPrefixFilterList(ctx context.Context, mcrID st
 
 // ModifyMCRPrefixFilterList modifies a prefix filter list on an MCR in the Megaport MCR API.
 func (svc *MCRServiceOp) ModifyMCRPrefixFilterList(ctx context.Context, mcrID string, prefixFilterListID int, prefixFilterList *MCRPrefixFilterList) (*ModifyMCRPrefixFilterListResponse, error) {
+	if prefixFilterList == nil {
+		return nil, ErrMCRPrefixFilterListNil
+	}
 	url := fmt.Sprintf("/v2/product/mcr2/%s/prefixList/%d", mcrID, prefixFilterListID)
-	clientReq, err := svc.Client.NewRequest(ctx, "PUT", url, prefixFilterList)
+	reqBody, err := prefixFilterList.toAPI()
 	if err != nil {
 		return nil, err
 	}
-	_, err = svc.Client.Do(ctx, clientReq, nil)
+	clientReq, err := svc.Client.NewRequest(ctx, "PUT", url, reqBody)
+	if err != nil {
+		return nil, err
+	}
+	err = svc.Client.doDiscard(ctx, clientReq)
 	if err != nil {
 		return nil, err
 	}
@@ -629,15 +643,11 @@ func (svc *MCRServiceOp) DeleteMCR(ctx context.Context, req *DeleteMCRRequest) (
 	}, nil
 }
 
-// Restore restores a deleted MCR in the Megaport MCR API.
+// RestoreMCR always returns ErrRestoreNotAllowed and sends no request.
+//
+// Deprecated: the Megaport API no longer supports restoring a canceled MCR.
 func (svc *MCRServiceOp) RestoreMCR(ctx context.Context, mcrId string) (*RestoreMCRResponse, error) {
-	_, err := svc.Client.ProductService.RestoreProduct(ctx, mcrId)
-	if err != nil {
-		return nil, err
-	}
-	return &RestoreMCRResponse{
-		IsRestored: true,
-	}, nil
+	return nil, ErrRestoreNotAllowed
 }
 
 // ListMCRResourceTags returns the resource tags for an MCR in the Megaport MCR API.
@@ -682,7 +692,7 @@ func (svc *MCRServiceOp) UpdateMCRWithAddOn(ctx context.Context, mcrID string, r
 		if err != nil {
 			return err
 		}
-		_, err = svc.Client.Do(ctx, clientReq, nil)
+		err = svc.Client.doDiscard(ctx, clientReq)
 		if err != nil {
 			return err
 		}
@@ -717,7 +727,7 @@ func (svc *MCRServiceOp) UpdateMCRIPsecAddOn(ctx context.Context, mcrID string, 
 	if err != nil {
 		return err
 	}
-	_, err = svc.Client.Do(ctx, clientReq, nil)
+	err = svc.Client.doDiscard(ctx, clientReq)
 	return err
 }
 

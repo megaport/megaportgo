@@ -2,6 +2,7 @@ package megaport
 
 import (
 	"encoding/json"
+	"strconv"
 	"time"
 )
 
@@ -66,4 +67,26 @@ func (t *Time) UnmarshalJSON(b []byte) error {
 	}
 	t.Time = time.Unix(timestamp/1000, 0) // Divide by 1000 to convert from milliseconds to seconds
 	return nil
+}
+
+// prefixLenToAPI renders an optional prefix-list ge/le as the string the API
+// declares. Unset is "", which the wire types omit.
+func prefixLenToAPI(v *int) string {
+	if v == nil {
+		return ""
+	}
+	return strconv.Itoa(*v)
+}
+
+// prefixLenFromAPI parses an optional prefix-list ge/le. An absent value is
+// nil, distinct from a deliberate 0.
+func prefixLenFromAPI(s string) (*int, error) {
+	if s == "" {
+		return nil, nil
+	}
+	v, err := strconv.Atoi(s)
+	if err != nil {
+		return nil, err
+	}
+	return &v, nil
 }

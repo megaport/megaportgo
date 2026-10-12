@@ -59,6 +59,13 @@ func (suite *NATGatewayClientTestSuite) SetupTest() {
 	suite.client = NewClient(nil, nil)
 	url, _ := url.Parse(suite.server.URL)
 	suite.client.BaseURL = url
+
+	// Keep the poll cadence short for every test. Tests that need a different cadence set their own values.
+	op, ok := suite.client.NATGatewayService.(*NATGatewayServiceOp)
+	suite.Require().True(ok)
+	op.pollInitialDelay = time.Millisecond
+	op.pollInterval = time.Millisecond
+	op.pollTimeout = time.Second
 }
 
 func (suite *NATGatewayClientTestSuite) TearDownTest() {
@@ -136,6 +143,49 @@ func (suite *NATGatewayClientTestSuite) TestCreateNATGateway() {
 	suite.Len(gw.ResourceTags, 1)
 	suite.Equal("env", gw.ResourceTags[0].Key)
 	suite.Equal("test", gw.ResourceTags[0].Value)
+}
+
+func (suite *NATGatewayClientTestSuite) TestCreateNATGatewayDiversityZoneBody() {
+	tests := []struct {
+		name     string
+		zone     string
+		wantSent bool
+	}{
+		{name: "unset zone is omitted", zone: "", wantSent: false},
+		{name: "red zone is sent", zone: "red", wantSent: true},
+	}
+
+	var config map[string]json.RawMessage
+	suite.mux.HandleFunc("/v3/products/nat_gateways", func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Config map[string]json.RawMessage `json:"config"`
+		}
+		suite.NoError(json.NewDecoder(r.Body).Decode(&body))
+		config = body.Config
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"data": {"productUid": "e900d0d5-1030-4e29-b2d8-816ad4263190"}}`)
+	})
+
+	for _, tc := range tests {
+		suite.Run(tc.name, func() {
+			config = nil
+			_, err := suite.client.NATGatewayService.CreateNATGateway(context.Background(), &CreateNATGatewayRequest{
+				Config:      NATGatewayNetworkConfig{ASN: 64512, DiversityZone: tc.zone, SessionCount: 100},
+				LocationID:  123456,
+				ProductName: "NAT Gateway",
+				Speed:       1000,
+				Term:        1,
+			})
+			suite.NoError(err)
+			suite.Require().NotNil(config)
+
+			zone, sent := config["diversityZone"]
+			suite.Equal(tc.wantSent, sent)
+			if tc.wantSent {
+				suite.JSONEq(`"`+tc.zone+`"`, string(zone))
+			}
+		})
+	}
 }
 
 func (suite *NATGatewayClientTestSuite) TestCreateNATGatewayValidation() {
@@ -343,6 +393,33 @@ func (suite *NATGatewayClientTestSuite) TestUpdateNATGateway() {
 	suite.True(gw.Config.BGPShutdownDefault)
 	suite.Equal("blue", gw.Config.DiversityZone)
 	suite.Equal(200, gw.Config.SessionCount)
+}
+
+func (suite *NATGatewayClientTestSuite) TestUpdateNATGatewayOmitsUnsetDiversityZone() {
+	productUID := "e900d0d5-1030-4e29-b2d8-816ad4263190"
+
+	var config map[string]json.RawMessage
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID, func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Config map[string]json.RawMessage `json:"config"`
+		}
+		suite.NoError(json.NewDecoder(r.Body).Decode(&body))
+		config = body.Config
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"data": {"productUid": "%s"}}`, productUID)
+	})
+
+	_, err := suite.client.NATGatewayService.UpdateNATGateway(context.Background(), &UpdateNATGatewayRequest{
+		ProductUID:  productUID,
+		Config:      NATGatewayNetworkConfig{ASN: 64512, SessionCount: 100},
+		LocationID:  123456,
+		ProductName: "NAT Gateway",
+		Speed:       1000,
+		Term:        1,
+	})
+	suite.NoError(err)
+	suite.Require().NotNil(config)
+	suite.NotContains(config, "diversityZone")
 }
 
 func (suite *NATGatewayClientTestSuite) TestUpdateNATGatewayValidation() {
@@ -1004,13 +1081,13 @@ func (suite *NATGatewayClientTestSuite) TestCreateNATGatewayPrefixList() {
 		Description:   "private",
 		AddressFamily: AddressFamilyIPv4,
 		Entries: []NATGatewayPrefixListEntry{
-			{Action: PrefixListActionPermit, Prefix: "10.0.0.0/8", Ge: 24, Le: 32},
+			{Action: PrefixListActionPermit, Prefix: "10.0.0.0/8", Ge: PtrTo(24), Le: PtrTo(32)},
 		},
 	})
 	suite.NoError(err)
 	suite.Equal(11, pl.ID)
-	suite.Equal(24, pl.Entries[0].Ge)
-	suite.Equal(32, pl.Entries[0].Le)
+	suite.Equal(PtrTo(24), pl.Entries[0].Ge)
+	suite.Equal(PtrTo(32), pl.Entries[0].Le)
 }
 
 func (suite *NATGatewayClientTestSuite) TestCreateNATGatewayPrefixListValidation() {
@@ -1048,8 +1125,8 @@ func (suite *NATGatewayClientTestSuite) TestGetNATGatewayPrefixList() {
 	pl, err := natSvc.GetNATGatewayPrefixList(ctx, productUID, 3)
 	suite.NoError(err)
 	suite.Equal(AddressFamilyIPv6, pl.AddressFamily)
-	suite.Equal(0, pl.Entries[0].Ge)
-	suite.Equal(0, pl.Entries[0].Le)
+	suite.Nil(pl.Entries[0].Ge)
+	suite.Nil(pl.Entries[0].Le)
 	suite.Equal(PrefixListActionDeny, pl.Entries[0].Action)
 }
 
@@ -1060,11 +1137,76 @@ func (suite *NATGatewayClientTestSuite) TestGetNATGatewayPrefixListInvalidGe() {
 
 	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/prefix_lists/4", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"message":"ok","terms":"","data":{"id":4,"description":"x","addressFamily":"IPv4","entries":[{"action":"permit","prefix":"10.0.0.0/8","ge":"not-a-number"}]}}`)
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":{"id":4,"description":"x","addressFamily":"IPv4","entries":[{"action":"permit","prefix":"10.0.0.0/8"},{"action":"permit","prefix":"10.0.1.0/24","ge":"not-a-number"}]}}`)
 	})
 
 	_, err := natSvc.GetNATGatewayPrefixList(ctx, productUID, 4)
-	suite.Error(err)
+	suite.ErrorContains(err, `prefix list entry 1: invalid ge "not-a-number"`)
+}
+
+func (suite *NATGatewayClientTestSuite) TestGetNATGatewayPrefixListInvalidLe() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "uid-pl-bad-le"
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/prefix_lists/4", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":{"id":4,"description":"x","addressFamily":"IPv4","entries":[{"action":"permit","prefix":"10.0.0.0/8"},{"action":"permit","prefix":"10.0.1.0/24","le":"not-a-number"}]}}`)
+	})
+
+	_, err := natSvc.GetNATGatewayPrefixList(ctx, productUID, 4)
+	suite.ErrorContains(err, `prefix list entry 1: invalid le "not-a-number"`)
+}
+
+// TestGetNATGatewayPrefixListNullEntry covers the NAT read path's null entry,
+// which a value-typed wire slice would smooth into a blank entry.
+func (suite *NATGatewayClientTestSuite) TestGetNATGatewayPrefixListNullEntry() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "uid-pl-null-entry"
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/prefix_lists/4", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":{"id":4,"description":"x","addressFamily":"IPv4","entries":[{"action":"permit","prefix":"10.0.0.0/8"},null]}}`)
+	})
+
+	_, err := natSvc.GetNATGatewayPrefixList(ctx, productUID, 4)
+	suite.ErrorContains(err, "prefix list entry 1: null entry in response")
+}
+
+// TestNATGatewayPrefixListNullEntryOnWrite covers the create and update
+// read-backs, which decode the same envelope through their own call sites.
+func (suite *NATGatewayClientTestSuite) TestNATGatewayPrefixListNullEntryOnWrite() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "uid-pl-null-write"
+	const nullEntryBody = `{"message":"ok","terms":"","data":{"id":4,"description":"x","addressFamily":"IPv4","entries":[{"action":"permit","prefix":"10.0.0.0/8"},null]}}`
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/prefix_lists", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, nullEntryBody)
+	})
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/prefix_lists/4", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, nullEntryBody)
+	})
+
+	req := &NATGatewayPrefixList{
+		Description:   "x",
+		AddressFamily: AddressFamilyIPv4,
+		Entries: []NATGatewayPrefixListEntry{
+			{Action: PrefixListActionPermit, Prefix: "10.0.0.0/8"},
+		},
+	}
+
+	suite.Run("create", func() {
+		_, err := natSvc.CreateNATGatewayPrefixList(ctx, productUID, req)
+		suite.ErrorContains(err, "prefix list entry 1: null entry in response")
+	})
+	suite.Run("update", func() {
+		_, err := natSvc.UpdateNATGatewayPrefixList(ctx, productUID, 4, req)
+		suite.ErrorContains(err, "prefix list entry 1: null entry in response")
+	})
 }
 
 func (suite *NATGatewayClientTestSuite) TestGetNATGatewayPrefixListValidation() {
@@ -1082,6 +1224,18 @@ func (suite *NATGatewayClientTestSuite) TestUpdateNATGatewayPrefixList() {
 
 	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/prefix_lists/5", func(w http.ResponseWriter, r *http.Request) {
 		suite.Equal(http.MethodPut, r.Method)
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			suite.FailNowf("could not read body", "%v", err)
+		}
+		suite.JSONEq(`{
+			"description": "updated",
+			"addressFamily": "IPv4",
+			"entries": [
+				{"action": "permit", "prefix": "172.16.0.0/12", "ge": "0", "le": "24"},
+				{"action": "deny", "prefix": "10.0.0.0/8"}
+			]
+		}`, string(body))
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprint(w, `{"message":"ok","terms":"","data":{"id":5,"description":"updated","addressFamily":"IPv4","entries":[{"action":"permit","prefix":"172.16.0.0/12"}]}}`)
 	})
@@ -1089,7 +1243,10 @@ func (suite *NATGatewayClientTestSuite) TestUpdateNATGatewayPrefixList() {
 	pl, err := natSvc.UpdateNATGatewayPrefixList(ctx, productUID, 5, &NATGatewayPrefixList{
 		Description:   "updated",
 		AddressFamily: AddressFamilyIPv4,
-		Entries:       []NATGatewayPrefixListEntry{{Action: PrefixListActionPermit, Prefix: "172.16.0.0/12"}},
+		Entries: []NATGatewayPrefixListEntry{
+			{Action: PrefixListActionPermit, Prefix: "172.16.0.0/12", Ge: PtrTo(0), Le: PtrTo(24)},
+			{Action: PrefixListActionDeny, Prefix: "10.0.0.0/8"},
+		},
 	})
 	suite.NoError(err)
 	suite.Equal("updated", pl.Description)
@@ -1251,7 +1408,11 @@ func (suite *NATGatewayClientTestSuite) TestGetNATGatewayDiagnosticsRoutesValida
 	suite.ErrorIs(err, ErrNATGatewayDiagnosticsOperationEmpty)
 }
 
-func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesPolling() {
+const diagnosticsInProgressBody = `{"message":"The polling result for async mode is not ready yet"}`
+
+// TestListNATGatewayIPRoutesPollInProgressThenComplete drives the poll through
+// the real API contract: an in-progress HTTP 400 followed by a completed 200.
+func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesPollInProgressThenComplete() {
 	ctx := context.Background()
 	natSvc := suite.client.NATGatewayService
 	productUID := "uid-poll"
@@ -1263,46 +1424,168 @@ func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesPolling() {
 		fmt.Fprint(w, `{"message":"ok","terms":"","data":"op-poll"}`)
 	})
 	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/operation", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		// First call returns empty (still processing); subsequent calls return data.
+		// First poll: still processing (HTTP 400). Subsequent: completed 200.
 		if opCalls.Add(1) == 1 {
-			fmt.Fprint(w, `{"message":"ok","terms":"","data":[]}`)
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, diagnosticsInProgressBody)
 			return
 		}
+		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprint(w, `{"message":"ok","terms":"","data":[
 			{"prefix":"10.0.0.0/24","protocol":"STATIC","nextHop":{"ip":"10.0.0.1","vxc":{"id":"vxc-1","name":"v1"}}},
 			{"prefix":"192.168.0.0/16","asPath":"65000","origin":"IGP","best":true,"nextHop":{"ip":"10.0.0.2","vxc":{"id":"vxc-2","name":"v2"}}}
 		]}`)
 	})
 
-	// Bypass the long polling defaults by polling directly via the async + Get methods,
-	// so this test stays fast. The poll timeout/interval are package-level constants
-	// and not worth plumbing through a setter just for testing.
-	opID, err := natSvc.ListNATGatewayIPRoutesAsync(ctx, productUID, "")
+	routes, err := natSvc.ListNATGatewayIPRoutes(ctx, productUID, "")
 	suite.Require().NoError(err)
-	suite.Equal("op-poll", opID)
+	suite.Len(routes, 1) // only the IP route is extracted; the BGP route is dropped
+	suite.Equal("10.0.0.0/24", routes[0].Prefix)
+	suite.Equal(int32(2), opCalls.Load())
+}
 
-	// Drain the empty response then the populated one.
-	routes, err := natSvc.GetNATGatewayDiagnosticsRoutes(ctx, productUID, opID)
+// TestListNATGatewayIPRoutesPollEmptyComplete verifies a 200 with an empty data
+// array is a completed result: the poll returns empty without further polling.
+func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesPollEmptyComplete() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "uid-empty"
+
+	var opCalls atomic.Int32
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/ip", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":"op-empty"}`)
+	})
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/operation", func(w http.ResponseWriter, r *http.Request) {
+		opCalls.Add(1)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":[]}`)
+	})
+
+	routes, err := natSvc.ListNATGatewayIPRoutes(ctx, productUID, "")
 	suite.Require().NoError(err)
 	suite.Empty(routes)
+	suite.Equal(int32(1), opCalls.Load())
+}
 
-	routes, err = natSvc.GetNATGatewayDiagnosticsRoutes(ctx, productUID, opID)
-	suite.Require().NoError(err)
-	suite.Len(routes, 2)
+// TestListNATGatewayIPRoutesPollFatalError verifies a non-in-progress error is
+// returned unchanged rather than swallowed as "still processing".
+func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesPollFatalError() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "uid-fatal"
 
-	// Discriminator: one IP, one BGP.
-	var ipCount, bgpCount int
-	for _, r := range routes {
-		if r.IP != nil {
-			ipCount++
-		}
-		if r.BGP != nil {
-			bgpCount++
-		}
+	var opCalls atomic.Int32
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/ip", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":"op-fatal"}`)
+	})
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/operation", func(w http.ResponseWriter, r *http.Request) {
+		opCalls.Add(1)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, `{"message":"unknown operationId"}`)
+	})
+
+	_, err := natSvc.ListNATGatewayIPRoutes(ctx, productUID, "")
+	var apiErr *ErrorResponse
+	suite.Require().ErrorAs(err, &apiErr)
+	suite.Equal(http.StatusBadRequest, apiErr.Response.StatusCode)
+	suite.Equal("unknown operationId", apiErr.Message)
+	suite.Equal(int32(1), opCalls.Load())
+}
+
+func (suite *NATGatewayClientTestSuite) TestNATGatewayDiagnosticsInProgressNeedsA400() {
+	err := &ErrorResponse{
+		Response: &http.Response{StatusCode: http.StatusInternalServerError},
+		Message:  "The polling result for async mode is not ready yet",
 	}
-	suite.Equal(1, ipCount)
-	suite.Equal(1, bgpCount)
+	suite.False(isNATGatewayDiagnosticsInProgress(err))
+}
+
+// TestListNATGatewayIPRoutesPollTimeout verifies an operation that never
+// completes surfaces ErrNATGatewayDiagnosticsTimeout.
+func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesPollTimeout() {
+	ctx := context.Background()
+	natSvc, ok := suite.client.NATGatewayService.(*NATGatewayServiceOp)
+	suite.Require().True(ok)
+	natSvc.pollTimeout = 20 * time.Millisecond
+	productUID := "uid-timeout"
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/ip", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":"op-timeout"}`)
+	})
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/operation", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, diagnosticsInProgressBody)
+	})
+
+	_, err := natSvc.ListNATGatewayIPRoutes(ctx, productUID, "")
+	suite.ErrorIs(err, ErrNATGatewayDiagnosticsTimeout)
+	suite.ErrorContains(err, "op-timeout")
+}
+
+// TestListNATGatewayIPRoutesPollTimeoutDuringBodyRead verifies a poll timeout
+// that fires while the client reads a 400 body still returns the timeout
+// sentinel. The body read fails, so the 400 arrives with no message.
+func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesPollTimeoutDuringBodyRead() {
+	ctx := context.Background()
+	natSvc, ok := suite.client.NATGatewayService.(*NATGatewayServiceOp)
+	suite.Require().True(ok)
+	natSvc.pollTimeout = 20 * time.Millisecond
+	productUID := "uid-body-stall"
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/ip", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":"op-body-stall"}`)
+	})
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/operation", func(w http.ResponseWriter, r *http.Request) {
+		flusher, ok := w.(http.Flusher)
+		suite.Require().True(ok)
+		w.WriteHeader(http.StatusBadRequest)
+		flusher.Flush()
+		select {
+		case <-r.Context().Done():
+		case <-time.After(5 * time.Second):
+		}
+	})
+
+	_, err := natSvc.ListNATGatewayIPRoutes(ctx, productUID, "")
+	suite.ErrorIs(err, ErrNATGatewayDiagnosticsTimeout)
+}
+
+// TestListNATGatewayIPRoutesPollCallerCancelled verifies that when the caller's
+// own context is cancelled mid-poll, the poll returns that cancellation error
+// rather than the SDK-managed timeout sentinel.
+func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesPollCallerCancelled() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	natSvc := suite.client.NATGatewayService
+	productUID := "uid-cancel"
+
+	var opCalls atomic.Int32
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/ip", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":"op-cancel"}`)
+	})
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/operation", func(w http.ResponseWriter, r *http.Request) {
+		// The handler buffers its response until it returns, so a cancel on
+		// the first call would stop the 400 from reaching the client.
+		if opCalls.Add(1) == 1 {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, diagnosticsInProgressBody)
+			return
+		}
+		cancel()
+		<-r.Context().Done()
+	})
+
+	_, err := natSvc.ListNATGatewayIPRoutes(ctx, productUID, "")
+	suite.ErrorIs(err, context.Canceled)
+	suite.Equal(int32(2), opCalls.Load())
 }
 
 // --- Prefix list round-trip ----------------------------------------------
@@ -1312,8 +1595,13 @@ func (suite *NATGatewayClientTestSuite) TestPrefixListGeLeRoundTrip() {
 		Description:   "rt",
 		AddressFamily: AddressFamilyIPv4,
 		Entries: []NATGatewayPrefixListEntry{
-			{Action: PrefixListActionPermit, Prefix: "10.0.0.0/8", Ge: 24, Le: 32},
-			{Action: PrefixListActionDeny, Prefix: "0.0.0.0/0"}, // ge/le omitted
+			{Action: PrefixListActionPermit, Prefix: "10.0.0.0/8", Ge: PtrTo(24), Le: PtrTo(32)},
+			{Action: PrefixListActionDeny, Prefix: "172.16.0.0/12"}, // ge/le omitted
+			// A 0 is only valid on a default route: the API requires ge to be
+			// at least the prefix length.
+			{Action: PrefixListActionPermit, Prefix: "0.0.0.0/0", Ge: PtrTo(0), Le: PtrTo(0)},
+			// A negative goes out as sent, for the API to reject.
+			{Action: PrefixListActionDeny, Prefix: "10.1.0.0/16", Ge: PtrTo(-1)},
 		},
 	}
 
@@ -1322,11 +1610,37 @@ func (suite *NATGatewayClientTestSuite) TestPrefixListGeLeRoundTrip() {
 	suite.Equal("32", api.Entries[0].Le)
 	suite.Equal("", api.Entries[1].Ge)
 	suite.Equal("", api.Entries[1].Le)
+	suite.Equal("0", api.Entries[2].Ge)
+	suite.Equal("0", api.Entries[2].Le)
+
+	// A deliberate 0 has to survive the wire type's omitempty, and an unset
+	// ge/le has to stay absent.
+	body, err := json.Marshal(api)
+	suite.Require().NoError(err)
+	suite.JSONEq(`{
+		"description": "rt",
+		"addressFamily": "IPv4",
+		"entries": [
+			{"action": "permit", "prefix": "10.0.0.0/8", "ge": "24", "le": "32"},
+			{"action": "deny", "prefix": "172.16.0.0/12"},
+			{"action": "permit", "prefix": "0.0.0.0/0", "ge": "0", "le": "0"},
+			{"action": "deny", "prefix": "10.1.0.0/16", "ge": "-1"}
+		]
+	}`, string(body))
 
 	back, err := api.toPrefixList()
 	suite.Require().NoError(err)
-	suite.Equal(24, back.Entries[0].Ge)
-	suite.Equal(32, back.Entries[0].Le)
-	suite.Equal(0, back.Entries[1].Ge)
-	suite.Equal(0, back.Entries[1].Le)
+	suite.Equal("rt", back.Description)
+	suite.Equal(AddressFamilyIPv4, back.AddressFamily)
+	suite.Equal(PrefixListActionPermit, back.Entries[0].Action)
+	suite.Equal("10.0.0.0/8", back.Entries[0].Prefix)
+	suite.Equal(PtrTo(24), back.Entries[0].Ge)
+	suite.Equal(PtrTo(32), back.Entries[0].Le)
+	suite.Equal(PrefixListActionDeny, back.Entries[1].Action)
+	suite.Equal("172.16.0.0/12", back.Entries[1].Prefix)
+	suite.Nil(back.Entries[1].Ge)
+	suite.Nil(back.Entries[1].Le)
+	suite.Equal("0.0.0.0/0", back.Entries[2].Prefix)
+	suite.Equal(PtrTo(0), back.Entries[2].Ge)
+	suite.Equal(PtrTo(0), back.Entries[2].Le)
 }

@@ -160,22 +160,11 @@ func (suite *IXIntegrationTestSuite) TestIXLifecycle() {
 	suite.Equal(newRateLimit, ix.RateLimit)
 	suite.Equal(newVLAN, ix.VLAN)
 
-	// Testing IX Cancel (soft delete)
-	logger.InfoContext(ctx, "Scheduling IX for deletion (30 days)", slog.String("ix_id", ixID))
-
+	// Testing IX Cancel - the API only supports immediate deletion (CANCEL_NOW)
 	deleteErr := ixSvc.DeleteIX(ctx, ixID, &DeleteIXRequest{
 		DeleteNow: false,
 	})
-	if deleteErr != nil {
-		suite.FailNowf("could not schedule ix for deletion", "could not schedule ix for deletion %v", deleteErr)
-	}
-
-	ix, getErr = ixSvc.GetIX(ctx, ixID)
-	if getErr != nil {
-		suite.FailNowf("could not get ix", "could not get ix %v", getErr)
-	}
-	suite.Equal(STATUS_CANCELLED, ix.ProvisioningStatus)
-	logger.InfoContext(ctx, "IX scheduled for cancellation", slog.String("status", ix.ProvisioningStatus))
+	suite.Require().ErrorIs(deleteErr, ErrCancelLaterNotAllowed, "expected ErrCancelLaterNotAllowed error")
 
 	// Hard delete the IX
 	logger.InfoContext(ctx, "Deleting IX now", slog.String("ix_id", ixID))

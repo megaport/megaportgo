@@ -109,6 +109,12 @@ var ErrMCRCancelLaterNotAllowed = errors.New("mcr products do not support schedu
 // ErrPortCancelLaterNotAllowed is returned when attempting to schedule Port deletion for later (only CANCEL_NOW is allowed)
 var ErrPortCancelLaterNotAllowed = errors.New("port products do not support scheduled deletion (cancel later), only immediate deletion (CANCEL_NOW) is allowed")
 
+// ErrCancelLaterNotAllowed is returned when attempting to schedule deletion for later (only CANCEL_NOW is allowed)
+var ErrCancelLaterNotAllowed = errors.New("scheduled deletion (cancel later) is no longer supported by the API, only immediate deletion (CANCEL_NOW) is allowed")
+
+// ErrRestoreNotAllowed is returned when attempting to restore a canceled product
+var ErrRestoreNotAllowed = errors.New("restoring a canceled product is no longer supported by the API")
+
 // ErrCancelPendingApproval is returned when the API creates an order approval request instead of canceling.
 // The product stays live until an approver acts on the request.
 var ErrCancelPendingApproval = errors.New("cancel request is pending approval, the product is still live")
@@ -136,7 +142,20 @@ func IsServiceNotFoundError(err error) bool {
 		strings.Contains(apiErr.Message, "Could not find a service with UID")
 }
 
+// isNATGatewayDiagnosticsInProgress reports whether err is the HTTP 400 the NAT
+// gateway routes operation endpoint returns while the result is not ready.
+func isNATGatewayDiagnosticsInProgress(err error) bool {
+	apiErr, ok := err.(*ErrorResponse)
+	if !ok || apiErr.Response == nil {
+		return false
+	}
+	return apiErr.Response.StatusCode == http.StatusBadRequest &&
+		strings.Contains(apiErr.Message, "The polling result for async mode is not ready yet")
+}
+
 // ErrTransitVXCCancelLaterNotAllowed is returned when attempting to schedule Transit VXC deletion for later (only CANCEL_NOW is allowed)
+//
+// Deprecated: DeleteVXC returns ErrCancelLaterNotAllowed for every VXC.
 var ErrTransitVXCCancelLaterNotAllowed = errors.New("transit vxc (megaport internet) does not support scheduled deletion (cancel later), only immediate deletion (CANCEL_NOW) is allowed")
 
 // ErrDeleteVXCRequestNil is returned when DeleteVXC is called with a nil request.
@@ -162,6 +181,9 @@ var ErrBuyMCRRequestNil = errors.New("buy MCR request cannot be nil")
 
 // ErrCreateMCRPrefixFilterListRequestNil is returned when CreatePrefixFilterList is called with a nil request.
 var ErrCreateMCRPrefixFilterListRequestNil = errors.New("create MCR prefix filter list request cannot be nil")
+
+// ErrMCRPrefixFilterListNil is returned when ModifyMCRPrefixFilterList is called with a nil prefix filter list.
+var ErrMCRPrefixFilterListNil = errors.New("MCR prefix filter list cannot be nil")
 
 // ErrModifyMCRRequestNil is returned when ModifyMCR is called with a nil request.
 var ErrModifyMCRRequestNil = errors.New("modify MCR request cannot be nil")
