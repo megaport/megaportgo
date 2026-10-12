@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
+	"net/url"
 	"slices"
 	"strconv"
 	"strings"
@@ -48,9 +50,12 @@ type MCRService interface {
 	// UpdateMCRResourceTags updates the resource tags for an MCR in the Megaport MCR API.
 	UpdateMCRResourceTags(ctx context.Context, mcrID string, tags map[string]string) error
 	// UpdateMCRWithAddOn adds an IPsec add-on to an existing MCR.
+	// Returns ErrModifyPendingApproval without waiting when the API creates an order approval request instead of adding it.
 	UpdateMCRWithAddOn(ctx context.Context, mcrID string, req MCRAddOnRequest) error
 	// UpdateMCRIPsecAddOn updates an existing IPsec add-on on an MCR. Setting tunnelCount to 0 will disable IPsec.
 	UpdateMCRIPsecAddOn(ctx context.Context, mcrID string, addOnUID string, tunnelCount int) error
+	// GetMCRIPsec returns the IPsec tunnel configuration for an MCR.
+	GetMCRIPsec(ctx context.Context, mcrID string) (*MCRIPsecConfiguration, error)
 	// WaitForMCRReady polls until the MCR reaches a ready provisioning state.
 	// A zero timeout defaults to 5 minutes. Returns ErrMCRNotFound or ErrMCRDecommissioned
 	// if the MCR is deleted or decommissioned while polling.
@@ -663,6 +668,8 @@ func (svc *MCRServiceOp) UpdateMCRResourceTags(ctx context.Context, mcrID string
 	})
 }
 
+// UpdateMCRWithAddOn adds an IPsec add-on to an existing MCR.
+// Returns ErrModifyPendingApproval without waiting when the API creates an order approval request instead of adding it.
 func (svc *MCRServiceOp) UpdateMCRWithAddOn(ctx context.Context, mcrID string, req MCRAddOnRequest) error {
 	if req.AddOn == nil {
 		return fmt.Errorf("AddOn cannot be nil")
@@ -689,9 +696,15 @@ func (svc *MCRServiceOp) UpdateMCRWithAddOn(ctx context.Context, mcrID string, r
 		if err != nil {
 			return err
 		}
-		err = svc.Client.doDiscard(ctx, clientReq)
+		resp, err := svc.Client.Do(ctx, clientReq, nil)
 		if err != nil {
 			return err
+		}
+		// Ignore drain errors, as doDiscard does: the API already took the order.
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
+		if resp.StatusCode == http.StatusAccepted {
+			return ErrModifyPendingApproval
 		}
 	default:
 		return ErrInvalidAddOnType
@@ -726,6 +739,41 @@ func (svc *MCRServiceOp) UpdateMCRIPsecAddOn(ctx context.Context, mcrID string, 
 	}
 	err = svc.Client.doDiscard(ctx, clientReq)
 	return err
+}
+
+// GetMCRIPsec returns the IPsec tunnel configuration for an MCR.
+// GET /v3/products/mcrs/{productUid}/ipsec
+// A decommissioned MCR returns an empty configuration, not an error.
+func (svc *MCRServiceOp) GetMCRIPsec(ctx context.Context, mcrID string) (*MCRIPsecConfiguration, error) {
+	path := "/v3/products/mcrs/" + url.PathEscape(mcrID) + "/ipsec"
+
+	clientReq, err := svc.Client.NewRequest(ctx, "GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := svc.Client.Do(ctx, clientReq, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	body, fileErr := io.ReadAll(response.Body)
+	if fileErr != nil {
+		return nil, fileErr
+	}
+
+	ipsecRes := &mcrIPsecResponse{}
+	unmarshalErr := json.Unmarshal(body, ipsecRes)
+	if unmarshalErr != nil {
+		return nil, unmarshalErr
+	}
+
+	if ipsecRes.Data == nil {
+		return nil, ErrMCRIPsecResponseEmpty
+	}
+
+	return ipsecRes.Data, nil
 }
 
 // WaitForMCRReady polls until the MCR identified by mcrID reaches a ready

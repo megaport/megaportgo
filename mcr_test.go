@@ -239,6 +239,205 @@ func (suite *MCRClientTestSuite) TestGetMCR() {
 	suite.Equal(want, got)
 }
 
+// mcrIPsecFixture returns a populated IPsec response body and the configuration
+// it should decode into, shared by tests that need a non-trivial payload.
+func mcrIPsecFixture() (jblob string, want *MCRIPsecConfiguration) {
+	want = &MCRIPsecConfiguration{
+		IPsecConfiguredVXCs: []IPsecConfiguredVXC{
+			{
+				Name:       "VXC-12345",
+				ProductUID: "123e4567-e89b-12d3-a456-426614174000",
+				Tunnels: []IPsecTunnel{
+					{
+						Description:          "Primary IPsec tunnel",
+						SourceIpAddress:      "192.168.1.2",
+						DestinationIpAddress: "198.51.100.2",
+						LocalId:              "local-peer-id",
+						RemoteId:             "remote-peer-id",
+						VLAN:                 PtrTo(100),
+					},
+					{
+						SourceIpAddress:      "192.168.1.6",
+						DestinationIpAddress: "198.51.100.6",
+					},
+				},
+			},
+		},
+		TotalTunnelCount:    2,
+		MaxTunnelCountLimit: 10,
+	}
+	jblob = `{
+		"message": "test-message",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": {
+			"ipSecConfiguredVxcs": [
+				{
+					"name": "VXC-12345",
+					"productUid": "123e4567-e89b-12d3-a456-426614174000",
+					"tunnels": [
+						{
+							"description": "Primary IPsec tunnel",
+							"sourceIpAddress": "192.168.1.2",
+							"destinationIpAddress": "198.51.100.2",
+							"localId": "local-peer-id",
+							"remoteId": "remote-peer-id",
+							"vlan": 100
+						},
+						{
+							"description": null,
+							"sourceIpAddress": "192.168.1.6",
+							"destinationIpAddress": "198.51.100.6",
+							"localId": null,
+							"remoteId": null,
+							"vlan": null
+						}
+					]
+				}
+			],
+			"totalTunnelCount": 2,
+			"maxTunnelCountLimit": 10
+		}
+	}`
+	return jblob, want
+}
+
+// TestGetMCRIPsec tests the GetMCRIPsec method.
+func (suite *MCRClientTestSuite) TestGetMCRIPsec() {
+	ctx := context.Background()
+	mcrSvc := suite.client.MCRService
+	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	jblob, want := mcrIPsecFixture()
+	suite.mux.HandleFunc(fmt.Sprintf("/v3/products/mcrs/%s/ipsec", mcrId), func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, jblob)
+	})
+	got, err := mcrSvc.GetMCRIPsec(ctx, mcrId)
+	suite.NoError(err)
+	suite.Equal(want, got)
+}
+
+// TestGetMCRIPsecNoVXCs tests GetMCRIPsec when no VXCs have IPsec tunnels configured.
+func (suite *MCRClientTestSuite) TestGetMCRIPsecNoVXCs() {
+	ctx := context.Background()
+	mcrSvc := suite.client.MCRService
+	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	jblob := `{
+		"message": "test-message",
+		"terms": "test-terms",
+		"data": {
+			"ipSecConfiguredVxcs": [],
+			"totalTunnelCount": 0,
+			"maxTunnelCountLimit": 10
+		}
+	}`
+	suite.mux.HandleFunc(fmt.Sprintf("/v3/products/mcrs/%s/ipsec", mcrId), func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, jblob)
+	})
+	got, err := mcrSvc.GetMCRIPsec(ctx, mcrId)
+	suite.Require().NoError(err)
+	suite.Empty(got.IPsecConfiguredVXCs)
+	suite.Equal(0, got.TotalTunnelCount)
+	suite.Equal(10, got.MaxTunnelCountLimit)
+}
+
+// TestGetMCRIPsecWithLogResponseBody ensures the body still decodes when LogResponseBody is on.
+func (suite *MCRClientTestSuite) TestGetMCRIPsecWithLogResponseBody() {
+	ctx := context.Background()
+	suite.client.LogResponseBody = true
+	mcrSvc := suite.client.MCRService
+	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	jblob, want := mcrIPsecFixture()
+	suite.mux.HandleFunc(fmt.Sprintf("/v3/products/mcrs/%s/ipsec", mcrId), func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, jblob)
+	})
+	got, err := mcrSvc.GetMCRIPsec(ctx, mcrId)
+	suite.NoError(err)
+	suite.Equal(want, got)
+}
+
+// TestGetMCRIPsecNotFound tests error handling when the MCR does not exist.
+// The API answers an unknown UID with a 400, not a 404.
+func (suite *MCRClientTestSuite) TestGetMCRIPsecNotFound() {
+	ctx := context.Background()
+	mcrSvc := suite.client.MCRService
+	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	message := "MCR service not found for UID: " + mcrId
+	suite.mux.HandleFunc(fmt.Sprintf("/v3/products/mcrs/%s/ipsec", mcrId), func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"message": %q, "terms": "test-terms", "data": null}`, message)
+	})
+	got, err := mcrSvc.GetMCRIPsec(ctx, mcrId)
+	var apiErr *ErrorResponse
+	suite.Require().ErrorAs(err, &apiErr)
+	suite.Equal(http.StatusBadRequest, apiErr.Response.StatusCode)
+	suite.Equal(message, apiErr.Message)
+	suite.Nil(got)
+}
+
+// TestGetMCRIPsecNoData ensures a 2xx response without a data payload returns
+// ErrMCRIPsecResponseEmpty rather than a nil configuration that callers would panic on.
+func (suite *MCRClientTestSuite) TestGetMCRIPsecNoData() {
+	ctx := context.Background()
+	mcrSvc := suite.client.MCRService
+	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	suite.mux.HandleFunc(fmt.Sprintf("/v3/products/mcrs/%s/ipsec", mcrId), func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, `{"message": "test-message", "terms": "test-terms"}`)
+	})
+	got, err := mcrSvc.GetMCRIPsec(ctx, mcrId)
+	suite.ErrorIs(err, ErrMCRIPsecResponseEmpty)
+	suite.Nil(got)
+}
+
+// TestGetMCRIPsecEscapesUID ensures the MCR UID stays one path segment.
+func (suite *MCRClientTestSuite) TestGetMCRIPsecEscapesUID() {
+	ctx := context.Background()
+	mcrSvc := suite.client.MCRService
+	jblob, want := mcrIPsecFixture()
+	suite.mux.HandleFunc("/v3/products/mcrs/", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		suite.Equal("/v3/products/mcrs/a%2Fb/ipsec", r.URL.EscapedPath())
+		fmt.Fprint(w, jblob)
+	})
+	got, err := mcrSvc.GetMCRIPsec(ctx, "a/b")
+	suite.NoError(err)
+	suite.Equal(want, got)
+}
+
+// TestGetMCRIPsecBodyReadError ensures a truncated body returns the read error.
+func (suite *MCRClientTestSuite) TestGetMCRIPsecBodyReadError() {
+	ctx := context.Background()
+	mcrSvc := suite.client.MCRService
+	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	suite.mux.HandleFunc(fmt.Sprintf("/v3/products/mcrs/%s/ipsec", mcrId), func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		w.Header().Set("Content-Length", "4096")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, `{"message": "test-message", "data": {`)
+	})
+	got, err := mcrSvc.GetMCRIPsec(ctx, mcrId)
+	suite.ErrorIs(err, io.ErrUnexpectedEOF)
+	suite.Nil(got)
+}
+
+// TestGetMCRIPsecMalformedJSON ensures malformed JSON returns a syntax error, not ErrMCRIPsecResponseEmpty.
+func (suite *MCRClientTestSuite) TestGetMCRIPsecMalformedJSON() {
+	ctx := context.Background()
+	mcrSvc := suite.client.MCRService
+	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	suite.mux.HandleFunc(fmt.Sprintf("/v3/products/mcrs/%s/ipsec", mcrId), func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, `{not valid json`)
+	})
+	got, err := mcrSvc.GetMCRIPsec(ctx, mcrId)
+	var syntaxErr *json.SyntaxError
+	suite.ErrorAs(err, &syntaxErr)
+	suite.Nil(got)
+}
+
 // TestCreatePrefixFilterList tests the CreatePrefixFilterList method.
 func (suite *MCRClientTestSuite) TestCreatePrefixFilterList() {
 	mcrId := "36b3f68e-2f54-4331-bf94-f8984449365f"
@@ -1148,6 +1347,7 @@ func (suite *MCRClientTestSuite) TestUpdateMCRWithAddOn() {
 		suite.Equal(AddOnTypeIPsec, v["addOnType"])
 		suite.Equal(float64(10), v["tunnelCount"])
 
+		w.WriteHeader(http.StatusCreated)
 		fmt.Fprint(w, `{"message":"ok"}`)
 	})
 
@@ -1160,6 +1360,32 @@ func (suite *MCRClientTestSuite) TestUpdateMCRWithAddOn() {
 	suite.NoError(err)
 }
 
+// TestUpdateMCRWithAddOnPendingApproval verifies UpdateMCRWithAddOn returns
+// ErrModifyPendingApproval on a 202 without entering the wait loop.
+func (suite *MCRClientTestSuite) TestUpdateMCRWithAddOnPendingApproval() {
+	ctx := context.Background()
+	mcrID := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	suite.mux.HandleFunc(fmt.Sprintf("/v3/product/%s/addon", mcrID), func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPost)
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, `{"message":"Request accepted and pending for approval","terms":"This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"}`)
+	})
+	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/%s", mcrID), func(w http.ResponseWriter, r *http.Request) {
+		suite.Fail("UpdateMCRWithAddOn read the MCR after a 202")
+	})
+
+	err := suite.client.MCRService.UpdateMCRWithAddOn(ctx, mcrID, MCRAddOnRequest{
+		AddOn: &MCRAddOnIPsecConfig{
+			AddOnType:   AddOnTypeIPsec,
+			TunnelCount: 10,
+		},
+		WaitForProvision: true,
+		WaitForTime:      time.Second,
+	})
+	suite.ErrorIs(err, ErrModifyPendingApproval)
+}
+
 // TestUpdateMCRWithAddOnWaitTimeout tests that WaitForProvision returns an error on timeout.
 func (suite *MCRClientTestSuite) TestUpdateMCRWithAddOnWaitTimeout() {
 	ctx := context.Background()
@@ -1168,6 +1394,7 @@ func (suite *MCRClientTestSuite) TestUpdateMCRWithAddOnWaitTimeout() {
 
 	suite.mux.HandleFunc(fmt.Sprintf("/v3/product/%s/addon", mcrID), func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodPost)
+		w.WriteHeader(http.StatusCreated)
 		fmt.Fprint(w, `{"message":"ok"}`)
 	})
 	suite.mux.HandleFunc(fmt.Sprintf("/v2/product/%s", mcrID), func(w http.ResponseWriter, r *http.Request) {
