@@ -185,7 +185,7 @@ func (suite *EventsTestSuite) TestGetOutageEvents() {
 	suite.Len(events, 2)
 	suite.Equal("c2037361-eb5b-48a3-9c73-fb4efbf2c886", events[0].OutageID)
 	suite.Equal("CSS-12345", events[1].EventID)
-	suite.Equal([]OutageNotice{
+	suite.Equal([]OutageEventNotice{
 		{
 			Description: "We are still investigating the packet loss.",
 			CreatedDate: "2024-05-23T10:05:00.000Z",
