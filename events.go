@@ -138,7 +138,7 @@ type OutageEvent struct {
 	// UpdatedDate is the date and time when an outage event is updated, in ISO 8601 UTC format (yyyy-MM-dd'T'HH:mm:ss.SSSX).
 	UpdatedDate string `json:"updatedDate"`
 
-	// Notices is the list of progress notices on the outage. Recorded notices come first, newest to oldest.
+	// Notices is the list of progress notices on the outage. Follow-up notices come first, newest to oldest.
 	// The opening notice is always last. Its CreatedDate is when the outage was last updated.
 	Notices []OutageEventNotice `json:"notices"`
 }
