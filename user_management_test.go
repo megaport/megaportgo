@@ -209,7 +209,7 @@ func (suite *UserManagementClientTestSuite) TestUserPhoneCheckedByAPI() {
 		fmt.Fprint(w, `{"data": {"partyId": 9012, "firstName": "John", "lastName": "Doe", "email": "john.doe@example.com", "position": "Company Admin", "active": true}}`)
 	})
 
-	for _, phone := range []string{"14155552671", "+1 415 555 2671"} {
+	for _, phone := range []string{"14155552671", "(415) 555-2671"} {
 		suite.Run(phone, func() {
 			sent.Phone = ""
 			_, err := suite.client.UserManagementService.CreateUser(ctx, &CreateUserRequest{
@@ -223,7 +223,8 @@ func (suite *UserManagementClientTestSuite) TestUserPhoneCheckedByAPI() {
 			suite.Equal(phone, sent.Phone)
 
 			sent.Phone = ""
-			err = suite.client.UserManagementService.UpdateUser(ctx, employeeID, &UpdateUserRequest{Phone: &phone})
+			p := phone
+			err = suite.client.UserManagementService.UpdateUser(ctx, employeeID, &UpdateUserRequest{Phone: &p})
 			suite.ErrorContains(err, "User's phone is not in international format.")
 			suite.Equal(phone, sent.Phone)
 		})
