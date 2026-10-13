@@ -828,6 +828,99 @@ func (suite *VXCClientTestSuite) TestGetVXCWithVRouterInterfaceEmptyListShapes()
 	suite.Empty(emptyArrays.DhcpPools)
 }
 
+// TestCSPConnectionObjectMatchesArray tests that a CSP connection sent as a
+// bare object decodes to the same value as a one-element array.
+func (suite *VXCClientTestSuite) TestCSPConnectionObjectMatchesArray() {
+	tests := []struct {
+		name string
+		conn string
+		want CSPConnectionConfig
+	}{
+		{
+			name: "AWSHC",
+			conn: `{"connectType": "AWSHC", "resource_name": "b_csp_connection", "connectionId": "test-connection-id"}`,
+			want: CSPConnectionAWSHC{ConnectType: "AWSHC", ResourceName: "b_csp_connection", ConnectionID: "test-connection-id"},
+		},
+		{
+			name: "AWS",
+			conn: `{"connectType": "AWS", "resource_name": "b_csp_connection", "ownerAccount": "test-owner-account"}`,
+			want: CSPConnectionAWS{ConnectType: "AWS", ResourceName: "b_csp_connection", OwnerAccount: "test-owner-account"},
+		},
+		{
+			name: "GOOGLE",
+			conn: `{"connectType": "GOOGLE", "resource_name": "b_csp_connection", "pairingKey": "test-pairing-key"}`,
+			want: CSPConnectionGoogle{ConnectType: "GOOGLE", ResourceName: "b_csp_connection", PairingKey: "test-pairing-key"},
+		},
+		{
+			name: "AZURE",
+			conn: `{"connectType": "AZURE", "resource_name": "b_csp_connection", "service_key": "test-service-key"}`,
+			want: CSPConnectionAzure{ConnectType: "AZURE", ResourceName: "b_csp_connection", ServiceKey: "test-service-key"},
+		},
+		{
+			name: "VROUTER",
+			conn: `{"connectType": "VROUTER", "resource_name": "a_csp_connection", "virtualRouterName": "test-router"}`,
+			want: CSPConnectionVirtualRouter{ConnectType: "VROUTER", ResourceName: "a_csp_connection", VirtualRouterName: "test-router"},
+		},
+		{
+			name: "TRANSIT",
+			conn: `{"connectType": "TRANSIT", "resource_name": "b_csp_connection", "customer_ip4_address": "10.0.0.1/30"}`,
+			want: CSPConnectionTransit{ConnectType: "TRANSIT", ResourceName: "b_csp_connection", CustomerIP4Address: "10.0.0.1/30"},
+		},
+		{
+			name: "ORACLE",
+			conn: `{"connectType": "ORACLE", "resource_name": "b_csp_connection", "virtualCircuitId": "test-circuit-id"}`,
+			want: CSPConnectionOracle{ConnectType: "ORACLE", ResourceName: "b_csp_connection", VirtualCircuitId: "test-circuit-id"},
+		},
+		{
+			name: "IBM",
+			conn: `{
+				"connectType": "IBM",
+				"resource_name": "b_csp_connection",
+				"resource_type": "csp_connection",
+				"csp_name": "IBM",
+				"bandwidth": 100,
+				"account_id": "test-account-id",
+				"customer_asn": 65001,
+				"provider_ip_address": "169.254.0.1/30",
+				"customer_ip_address": "169.254.0.2/30",
+				"bandwidths": [100]
+			}`,
+			want: CSPConnectionIBM{
+				ConnectType:       "IBM",
+				ResourceName:      "b_csp_connection",
+				ResourceType:      "csp_connection",
+				CSPName:           "IBM",
+				Bandwidth:         100,
+				AccountID:         "test-account-id",
+				CustomerASN:       65001,
+				ProviderIPAddress: "169.254.0.1/30",
+				CustomerIPAddress: "169.254.0.2/30",
+				Bandwidths:        []int{100},
+			},
+		},
+		{
+			name: "unknown connect type",
+			conn: `{"connectType": "ALIBABA", "resource_name": "b_csp_connection"}`,
+			want: CSPConnectionOther{CSPConnection: map[string]interface{}{"connectType": "ALIBABA", "resource_name": "b_csp_connection"}},
+		},
+		{
+			name: "missing connect type",
+			conn: `{"resource_name": "b_csp_connection"}`,
+			want: CSPConnectionOther{CSPConnection: map[string]interface{}{"resource_name": "b_csp_connection"}},
+		},
+	}
+
+	for _, tc := range tests {
+		suite.Run(tc.name, func() {
+			for _, raw := range []string{tc.conn, "[" + tc.conn + "]"} {
+				var got CSPConnection
+				suite.Require().NoError(json.Unmarshal([]byte(raw), &got))
+				suite.Equal([]CSPConnectionConfig{tc.want}, got.CSPConnection, raw)
+			}
+		})
+	}
+}
+
 // TestGetAzureVXC tests the GetVXC method for an Azure VXC.
 func (suite *VXCClientTestSuite) TestGetAzureVXC() {
 	ctx := context.Background()
