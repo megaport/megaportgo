@@ -10,7 +10,7 @@
 - Add the `OrderApprovalType` constants `OrderApprovalTypeEarlyTermination`, `OrderApprovalTypeAddOn`, `OrderApprovalTypeIPAddressPartnerOrder` and `OrderApprovalTypeIPAddressCompliance`. A cancel approval has the type `EARLY_TERMINATION`.
 
 ## Changes
-- `CreateUser` and `UpdateUser` no longer check the phone format and leave that check to the API. The SDK's own pattern used to let through a number with no leading +, which the API's E.164 check rejects.
+- `CreateUser` and `UpdateUser` send the phone as given and leave the format check to the API. They used to reject a phone that failed the SDK's own pattern, such as `+1 415 555 2671`, before sending the request.
 - `GetProductType` accepts a 206 Partial Content response. `GET /v2/product/{productUid}` returns a 206 for any product whose service details the API cannot load, such as an AWS Interconnect. The method used to reject a 206 with an error.
 - `ListNATGatewayIPRoutes`, `ListNATGatewayBGPRoutes` and `ListNATGatewayBGPNeighborRoutes` keep polling while the API reports the operation as still running (HTTP 400 `The polling result for async mode is not ready yet`). They used to fail on the first poll for any operation slower than 2s. A 200 with an empty route list now returns at once. A poll timeout mid-request returns `ErrNATGatewayDiagnosticsTimeout`, and every other error returns unchanged. The timeout error now names the operation ID.
 - `CreateNATGateway` and `UpdateNATGateway` leave `diversityZone` out of the request when `NATGatewayNetworkConfig.DiversityZone` is empty. A create with no zone used to fail with a 400 "Malformed request body". The API now picks the zone on a create and keeps the current zone on an update.
