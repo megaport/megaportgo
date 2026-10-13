@@ -223,8 +223,7 @@ func (suite *UserManagementClientTestSuite) TestUserPhoneCheckedByAPI() {
 			suite.Equal(phone, sent.Phone)
 
 			sent.Phone = ""
-			p := phone
-			err = suite.client.UserManagementService.UpdateUser(ctx, employeeID, &UpdateUserRequest{Phone: &p})
+			err = suite.client.UserManagementService.UpdateUser(ctx, employeeID, &UpdateUserRequest{Phone: PtrTo(phone)})
 			suite.ErrorContains(err, "User's phone is not in international format.")
 			suite.Equal(phone, sent.Phone)
 		})
