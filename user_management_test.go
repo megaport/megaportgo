@@ -186,6 +186,40 @@ func (suite *UserManagementClientTestSuite) TestUpdateUser() {
 	suite.NoError(err)
 }
 
+// TestUserPhoneCheckedByAPI verifies CreateUser and UpdateUser send any phone and return the API's error.
+func (suite *UserManagementClientTestSuite) TestUserPhoneCheckedByAPI() {
+	ctx := context.Background()
+	employeeID := 9012
+	suite.mux.HandleFunc("/v2/employment", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, `{"message": "Error Creating User - The following issues prevented this user from being created: phone number is not valid."}`)
+	})
+	suite.mux.HandleFunc(fmt.Sprintf("/v2/employee/%d", employeeID), func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPut {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, `{"message": "User's phone is not in international format."}`)
+			return
+		}
+		fmt.Fprint(w, `{"data": {"partyId": 9012, "firstName": "John", "lastName": "Doe", "email": "john.doe@example.com", "position": "Company Admin", "active": true}}`)
+	})
+
+	for _, phone := range []string{"14155552671", "+1 415 555 2671"} {
+		suite.Run(phone, func() {
+			_, err := suite.client.UserManagementService.CreateUser(ctx, &CreateUserRequest{
+				FirstName: "John",
+				LastName:  "Doe",
+				Email:     "john.doe@example.com",
+				Phone:     phone,
+				Position:  USER_POSITION_COMPANY_ADMIN,
+			})
+			suite.ErrorContains(err, "phone number is not valid")
+
+			err = suite.client.UserManagementService.UpdateUser(ctx, employeeID, &UpdateUserRequest{Phone: &phone})
+			suite.ErrorContains(err, "User's phone is not in international format.")
+		})
+	}
+}
+
 // TestDeleteUser tests the DeleteUser method
 func (suite *UserManagementClientTestSuite) TestDeleteUser() {
 	ctx := context.Background()
