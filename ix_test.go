@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -459,6 +460,51 @@ func (suite *IXClientTestSuite) TestUpdateIX() {
 	suite.Equal(wantIX.UsageAlgorithm, gotIX.UsageAlgorithm)
 	suite.Equal(wantIX.Resources, gotIX.Resources)
 	suite.Equal(wantIX.ASN, gotIX.ASN)
+}
+
+// TestUpdateIXPendingApproval verifies UpdateIX returns
+// ErrModifyPendingApproval on a 202 without entering the wait loop.
+func (suite *IXClientTestSuite) TestUpdateIXPendingApproval() {
+	ctx := context.Background()
+	ixUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	path := fmt.Sprintf("/v2/product/%s/%s", PRODUCT_IX, ixUid)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPut)
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, `{"message":"IX service update request accepted and pending for approval","terms":"This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"}`)
+	})
+	req := &UpdateIXRequest{
+		RateLimit:     PtrTo(1000),
+		WaitForUpdate: true,
+		WaitForTime:   time.Second,
+	}
+	gotIX, err := suite.client.IXService.UpdateIX(ctx, ixUid, req)
+	suite.ErrorIs(err, ErrModifyPendingApproval)
+	suite.Nil(gotIX)
+}
+
+// TestDeleteIXPendingApproval tests that a 202 pending-approval cancel errors instead of reading as a completed delete.
+func (suite *IXClientTestSuite) TestDeleteIXPendingApproval() {
+	ctx := context.Background()
+
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	jblob := `{
+		"message": "Request accepted and pending for approval",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"
+	}`
+
+	path := "/v3/product/" + productUid + "/action/CANCEL_NOW"
+
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPost)
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, jblob)
+	})
+
+	err := suite.client.IXService.DeleteIX(ctx, productUid, &DeleteIXRequest{DeleteNow: true})
+
+	suite.ErrorIs(err, ErrCancelPendingApproval)
 }
 
 // TestListIXs tests the ListIXs method with various filters
@@ -939,4 +985,31 @@ func (suite *IXClientTestSuite) TestIXNilRequestGuards() {
 			suite.ErrorIs(tt.call(), tt.want)
 		})
 	}
+}
+
+// TestDeleteIX tests the DeleteIX method.
+func (suite *IXClientTestSuite) TestDeleteIX() {
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	var hit atomic.Bool
+	suite.mux.HandleFunc("/v3/product/"+productUid+"/action/CANCEL_NOW", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPost)
+		hit.Store(true)
+		fmt.Fprint(w, `{"message": "Action [CANCEL_NOW Service 36b3f68e-2f54-4331-bf94-f8984449365f] has been done."}`)
+	})
+
+	err := suite.client.IXService.DeleteIX(context.Background(), productUid, &DeleteIXRequest{DeleteNow: true})
+	suite.NoError(err)
+	suite.True(hit.Load(), "expected a CANCEL_NOW request")
+}
+
+// TestDeleteIXCancelLaterNotAllowed verifies that DeleteIX rejects DeleteNow=false without sending a request.
+func (suite *IXClientTestSuite) TestDeleteIXCancelLaterNotAllowed() {
+	var hit atomic.Bool
+	suite.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		hit.Store(true)
+	})
+
+	err := suite.client.IXService.DeleteIX(context.Background(), "36b3f68e-2f54-4331-bf94-f8984449365f", &DeleteIXRequest{DeleteNow: false})
+	suite.ErrorIs(err, ErrCancelLaterNotAllowed)
+	suite.False(hit.Load(), "expected no request to the API")
 }

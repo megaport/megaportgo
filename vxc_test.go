@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -827,6 +828,99 @@ func (suite *VXCClientTestSuite) TestGetVXCWithVRouterInterfaceEmptyListShapes()
 	suite.Empty(emptyArrays.DhcpPools)
 }
 
+// TestCSPConnectionObjectMatchesArray tests that a CSP connection sent as a
+// bare object decodes to the same value as a one-element array.
+func (suite *VXCClientTestSuite) TestCSPConnectionObjectMatchesArray() {
+	tests := []struct {
+		name string
+		conn string
+		want CSPConnectionConfig
+	}{
+		{
+			name: "AWSHC",
+			conn: `{"connectType": "AWSHC", "resource_name": "b_csp_connection", "connectionId": "test-connection-id"}`,
+			want: CSPConnectionAWSHC{ConnectType: "AWSHC", ResourceName: "b_csp_connection", ConnectionID: "test-connection-id"},
+		},
+		{
+			name: "AWS",
+			conn: `{"connectType": "AWS", "resource_name": "b_csp_connection", "ownerAccount": "test-owner-account"}`,
+			want: CSPConnectionAWS{ConnectType: "AWS", ResourceName: "b_csp_connection", OwnerAccount: "test-owner-account"},
+		},
+		{
+			name: "GOOGLE",
+			conn: `{"connectType": "GOOGLE", "resource_name": "b_csp_connection", "pairingKey": "test-pairing-key"}`,
+			want: CSPConnectionGoogle{ConnectType: "GOOGLE", ResourceName: "b_csp_connection", PairingKey: "test-pairing-key"},
+		},
+		{
+			name: "AZURE",
+			conn: `{"connectType": "AZURE", "resource_name": "b_csp_connection", "service_key": "test-service-key"}`,
+			want: CSPConnectionAzure{ConnectType: "AZURE", ResourceName: "b_csp_connection", ServiceKey: "test-service-key"},
+		},
+		{
+			name: "VROUTER",
+			conn: `{"connectType": "VROUTER", "resource_name": "a_csp_connection", "virtualRouterName": "test-router"}`,
+			want: CSPConnectionVirtualRouter{ConnectType: "VROUTER", ResourceName: "a_csp_connection", VirtualRouterName: "test-router"},
+		},
+		{
+			name: "TRANSIT",
+			conn: `{"connectType": "TRANSIT", "resource_name": "b_csp_connection", "customer_ip4_address": "10.0.0.1/30"}`,
+			want: CSPConnectionTransit{ConnectType: "TRANSIT", ResourceName: "b_csp_connection", CustomerIP4Address: "10.0.0.1/30"},
+		},
+		{
+			name: "ORACLE",
+			conn: `{"connectType": "ORACLE", "resource_name": "b_csp_connection", "virtualCircuitId": "test-circuit-id"}`,
+			want: CSPConnectionOracle{ConnectType: "ORACLE", ResourceName: "b_csp_connection", VirtualCircuitId: "test-circuit-id"},
+		},
+		{
+			name: "IBM",
+			conn: `{
+				"connectType": "IBM",
+				"resource_name": "b_csp_connection",
+				"resource_type": "csp_connection",
+				"csp_name": "IBM",
+				"bandwidth": 100,
+				"account_id": "test-account-id",
+				"customer_asn": 65001,
+				"provider_ip_address": "169.254.0.1/30",
+				"customer_ip_address": "169.254.0.2/30",
+				"bandwidths": [100]
+			}`,
+			want: CSPConnectionIBM{
+				ConnectType:       "IBM",
+				ResourceName:      "b_csp_connection",
+				ResourceType:      "csp_connection",
+				CSPName:           "IBM",
+				Bandwidth:         100,
+				AccountID:         "test-account-id",
+				CustomerASN:       65001,
+				ProviderIPAddress: "169.254.0.1/30",
+				CustomerIPAddress: "169.254.0.2/30",
+				Bandwidths:        []int{100},
+			},
+		},
+		{
+			name: "unknown connect type",
+			conn: `{"connectType": "ALIBABA", "resource_name": "b_csp_connection"}`,
+			want: CSPConnectionOther{CSPConnection: map[string]interface{}{"connectType": "ALIBABA", "resource_name": "b_csp_connection"}},
+		},
+		{
+			name: "missing connect type",
+			conn: `{"resource_name": "b_csp_connection"}`,
+			want: CSPConnectionOther{CSPConnection: map[string]interface{}{"resource_name": "b_csp_connection"}},
+		},
+	}
+
+	for _, tc := range tests {
+		suite.Run(tc.name, func() {
+			for _, raw := range []string{tc.conn, "[" + tc.conn + "]"} {
+				var got CSPConnection
+				suite.Require().NoError(json.Unmarshal([]byte(raw), &got))
+				suite.Equal([]CSPConnectionConfig{tc.want}, got.CSPConnection, raw)
+			}
+		})
+	}
+}
+
 // TestGetAzureVXC tests the GetVXC method for an Azure VXC.
 func (suite *VXCClientTestSuite) TestGetAzureVXC() {
 	ctx := context.Background()
@@ -1497,72 +1591,19 @@ func (suite *VXCClientTestSuite) TestDeleteVXC() {
 	suite.NoError(err)
 }
 
-// TestDeleteVXCNilRequest verifies that DeleteVXC rejects a nil request.
-func (suite *VXCClientTestSuite) TestDeleteVXCNilRequest() {
-	ctx := context.Background()
-	err := suite.client.VXCService.DeleteVXC(ctx, "some-id", nil)
-	suite.ErrorIs(err, ErrDeleteVXCRequestNil)
-}
-
-// TestDeleteTransitVXCWithCancelLater tests that attempting to schedule deletion (cancel later) for a Transit VXC returns an error
-func (suite *VXCClientTestSuite) TestDeleteTransitVXCWithCancelLater() {
+// TestDeleteVXCPendingApproval tests that a 202 pending-approval cancel errors instead of reading as a completed delete.
+func (suite *VXCClientTestSuite) TestDeleteVXCPendingApproval() {
 	ctx := context.Background()
 
 	vxcSvc := suite.client.VXCService
 	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
 
 	req := &DeleteVXCRequest{
-		DeleteNow: false, // Attempt to schedule deletion
-	}
-
-	// Mock GetVXC call returning a Transit VXC
-	getVxcBlob := `{
-		"message": "Found Product 36b3f68e-2f54-4331-bf94-f8984449365f",
-		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
-		"data": {
-			"productId": 1,
-			"productUid": "36b3f68e-2f54-4331-bf94-f8984449365f",
-			"productName": "test-transit-vxc",
-			"productType": "VXC",
-			"rateLimit": 50,
-			"provisioningStatus": "LIVE",
-			"resources": {
-				"csp_connection": {
-					"connectType": "TRANSIT",
-					"resource_name": "csp_connection",
-					"resource_type": "csp_connection",
-					"customer_ip4_address": "203.0.113.1/30",
-					"ipv4_gateway_address": "203.0.113.2"
-				}
-			}
-		}
-	}`
-
-	getPath := "/v2/product/" + productUid
-	suite.mux.HandleFunc(getPath, func(w http.ResponseWriter, r *http.Request) {
-		suite.testMethod(r, http.MethodGet)
-		fmt.Fprint(w, getVxcBlob)
-	})
-
-	err := vxcSvc.DeleteVXC(ctx, productUid, req)
-
-	suite.Error(err, "expected error when attempting to cancel Transit VXC later")
-	suite.ErrorIs(err, ErrTransitVXCCancelLaterNotAllowed, "expected ErrTransitVXCCancelLaterNotAllowed")
-}
-
-// TestDeleteTransitVXCWithDeleteNow tests that immediate deletion of a Transit VXC succeeds
-func (suite *VXCClientTestSuite) TestDeleteTransitVXCWithDeleteNow() {
-	ctx := context.Background()
-
-	vxcSvc := suite.client.VXCService
-	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
-
-	req := &DeleteVXCRequest{
-		DeleteNow: true, // Immediate deletion
+		DeleteNow: true,
 	}
 
 	deleteBlob := `{
-		"message": "Action [CANCEL_NOW Service 36b3f68e-2f54-4331-bf94-f8984449365f] has been done.",
+		"message": "Request accepted and pending for approval",
 		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"
 	}`
 
@@ -1570,143 +1611,32 @@ func (suite *VXCClientTestSuite) TestDeleteTransitVXCWithDeleteNow() {
 
 	suite.mux.HandleFunc(deletePath, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodPost)
+		w.WriteHeader(http.StatusAccepted)
 		fmt.Fprint(w, deleteBlob)
 	})
 
 	err := vxcSvc.DeleteVXC(ctx, productUid, req)
 
-	suite.NoError(err, "expected no error when deleting Transit VXC with DeleteNow=true")
+	suite.ErrorIs(err, ErrCancelPendingApproval)
 }
 
-// TestDeleteNonTransitVXCWithCancelLater tests that scheduling deletion for a non-Transit VXC succeeds.
-func (suite *VXCClientTestSuite) TestDeleteNonTransitVXCWithCancelLater() {
+// TestDeleteVXCNilRequest verifies that DeleteVXC rejects a nil request.
+func (suite *VXCClientTestSuite) TestDeleteVXCNilRequest() {
 	ctx := context.Background()
-
-	vxcSvc := suite.client.VXCService
-	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
-
-	req := &DeleteVXCRequest{
-		DeleteNow: false,
-	}
-
-	// Mock GetVXC returning a non-Transit VXC (AWS)
-	getVxcBlob := `{
-		"message": "Found Product 36b3f68e-2f54-4331-bf94-f8984449365f",
-		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
-		"data": {
-			"productId": 1,
-			"productUid": "36b3f68e-2f54-4331-bf94-f8984449365f",
-			"productName": "test-vxc",
-			"productType": "VXC",
-			"rateLimit": 50,
-			"provisioningStatus": "LIVE",
-			"resources": {
-				"csp_connection": {
-					"connectType": "AWS",
-					"resource_name": "csp_connection",
-					"resource_type": "csp_connection"
-				}
-			}
-		}
-	}`
-
-	suite.mux.HandleFunc("/v2/product/"+productUid, func(w http.ResponseWriter, r *http.Request) {
-		suite.testMethod(r, http.MethodGet)
-		fmt.Fprint(w, getVxcBlob)
-	})
-
-	deleteBlob := `{
-		"message": "Action [CANCEL Service 36b3f68e-2f54-4331-bf94-f8984449365f] has been done.",
-		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"
-	}`
-
-	suite.mux.HandleFunc("/v3/product/"+productUid+"/action/CANCEL", func(w http.ResponseWriter, r *http.Request) {
-		suite.testMethod(r, http.MethodPost)
-		fmt.Fprint(w, deleteBlob)
-	})
-
-	err := vxcSvc.DeleteVXC(ctx, productUid, req)
-	suite.NoError(err, "expected no error when scheduling deletion for non-Transit VXC")
+	err := suite.client.VXCService.DeleteVXC(ctx, "some-id", nil)
+	suite.ErrorIs(err, ErrDeleteVXCRequestNil)
 }
 
-// TestIsTransitVXC tests the isTransitVXC helper function with various VXC types
-func (suite *VXCClientTestSuite) TestIsTransitVXC() {
-	// Test nil VXC
-	suite.False(isTransitVXC(nil), "nil VXC should return false")
+// TestDeleteVXCCancelLaterNotAllowed verifies that DeleteVXC rejects DeleteNow=false without sending a request.
+func (suite *VXCClientTestSuite) TestDeleteVXCCancelLaterNotAllowed() {
+	var hit atomic.Bool
+	suite.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		hit.Store(true)
+	})
 
-	// Test VXC with no resources
-	vxc := &VXC{}
-	suite.False(isTransitVXC(vxc), "VXC with no resources should return false")
-
-	// Test VXC with no CSP connection
-	vxc.Resources = &VXCResources{}
-	suite.False(isTransitVXC(vxc), "VXC with no CSP connection should return false")
-
-	// Test Transit VXC
-	transitVXC := &VXC{
-		Resources: &VXCResources{
-			CSPConnection: &CSPConnection{
-				CSPConnection: []CSPConnectionConfig{
-					CSPConnectionTransit{
-						ConnectType:        connectTypeTransit,
-						ResourceName:       "csp_connection",
-						ResourceType:       "csp_connection",
-						CustomerIP4Address: "203.0.113.1/30",
-						IPv4GatewayAddress: "203.0.113.2",
-					},
-				},
-			},
-		},
-	}
-	suite.True(isTransitVXC(transitVXC), "VXC with TRANSIT connectType should return true")
-
-	// Test AWS VXC (non-Transit)
-	awsVXC := &VXC{
-		Resources: &VXCResources{
-			CSPConnection: &CSPConnection{
-				CSPConnection: []CSPConnectionConfig{
-					CSPConnectionAWS{
-						ConnectType:  "AWS",
-						ResourceName: "csp_connection",
-						ResourceType: "csp_connection",
-					},
-				},
-			},
-		},
-	}
-	suite.False(isTransitVXC(awsVXC), "VXC with AWS connectType should return false")
-
-	// Test Azure VXC (non-Transit)
-	azureVXC := &VXC{
-		Resources: &VXCResources{
-			CSPConnection: &CSPConnection{
-				CSPConnection: []CSPConnectionConfig{
-					CSPConnectionAzure{
-						ConnectType:  "AZURE",
-						ResourceName: "csp_connection",
-						ResourceType: "csp_connection",
-					},
-				},
-			},
-		},
-	}
-	suite.False(isTransitVXC(azureVXC), "VXC with AZURE connectType should return false")
-
-	// Test Google VXC (non-Transit)
-	googleVXC := &VXC{
-		Resources: &VXCResources{
-			CSPConnection: &CSPConnection{
-				CSPConnection: []CSPConnectionConfig{
-					CSPConnectionGoogle{
-						ConnectType:  "GOOGLE",
-						ResourceName: "csp_connection",
-						ResourceType: "csp_connection",
-					},
-				},
-			},
-		},
-	}
-	suite.False(isTransitVXC(googleVXC), "VXC with GOOGLE connectType should return false")
+	err := suite.client.VXCService.DeleteVXC(context.Background(), "36b3f68e-2f54-4331-bf94-f8984449365f", &DeleteVXCRequest{DeleteNow: false})
+	suite.ErrorIs(err, ErrCancelLaterNotAllowed)
+	suite.False(hit.Load(), "expected no request to the API")
 }
 
 // TestDeleteVXC tests to see if the custom unmarshalling works for decommed VXCs.

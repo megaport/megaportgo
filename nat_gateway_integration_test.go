@@ -579,7 +579,7 @@ func (suite *NATGatewayIntegrationTestSuite) TestNATGatewayPrefixListLifecycle()
 	cases := []struct {
 		name               string
 		create             *NATGatewayPrefixList
-		expectGe, expectLe int
+		expectGe, expectLe *int
 		// extraPrefix is appended on update — must differ from the create
 		// entries' prefix to avoid the API's duplicate-prefix rejection.
 		extraPrefix string
@@ -590,11 +590,11 @@ func (suite *NATGatewayIntegrationTestSuite) TestNATGatewayPrefixListLifecycle()
 				Description:   "integration-test-v4",
 				AddressFamily: AddressFamilyIPv4,
 				Entries: []NATGatewayPrefixListEntry{
-					{Action: PrefixListActionPermit, Prefix: "10.0.0.0/8", Ge: 24, Le: 32},
+					{Action: PrefixListActionPermit, Prefix: "10.0.0.0/8", Ge: PtrTo(24), Le: PtrTo(32)},
 				},
 			},
-			expectGe:    24,
-			expectLe:    32,
+			expectGe:    PtrTo(24),
+			expectLe:    PtrTo(32),
 			extraPrefix: "172.16.0.0/12",
 		},
 		{

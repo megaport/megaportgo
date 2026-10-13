@@ -18,7 +18,7 @@ type ManagedAccountClientTestSuite struct {
 
 func TestManagedAccountClientTestSuite(t *testing.T) {
 	t.Parallel()
-	suite.Run(t, new(PortClientTestSuite))
+	suite.Run(t, new(ManagedAccountClientTestSuite))
 }
 
 func (suite *ManagedAccountClientTestSuite) SetupTest() {
@@ -128,7 +128,7 @@ func (suite *ManagedAccountClientTestSuite) TestUpdateManagedAccount() {
 		CompanyUID:  "fd404dc9-9efd-43c1-9e0b-a58a9d250130",
 	}
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		suite.testMethod(r, http.MethodPatch)
+		suite.testMethod(r, http.MethodPut)
 		fmt.Fprint(w, jblob)
 	})
 	updateRes, err := suite.client.ManagedAccountService.UpdateManagedAccount(ctx, "fd404dc9-9efd-43c1-9e0b-a58a9d250130", updateReq)
@@ -139,15 +139,22 @@ func (suite *ManagedAccountClientTestSuite) TestUpdateManagedAccount() {
 
 func (suite *ManagedAccountClientTestSuite) TestGetManagedAccount() {
 	ctx := context.Background()
-	path := "/v2/managedCompanies/fd404dc9-9efd-43c1-9e0b-a58a9d250130"
+	path := "/v2/managedCompanies"
 	jblob := `{
-        "message": "Managed company details.",
+        "message": "Managed Accounts.",
         "terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
-        "data": {
-          "accountRef": "555-1212-0317-1967",
-          "accountName": "Best Company Ever",
-          "companyUid": "fd404dc9-9efd-43c1-9e0b-a58a9d250130"
-        }
+        "data": [
+          {
+            "accountRef": "AUS-BNE-4101-KK",
+            "accountName": "Demo Company",
+            "companyUid": "ccfcf1dc-cf38-4526-9f2f-13d36a2441db"
+          },
+          {
+            "accountRef": "555-1212-0317-1967",
+            "accountName": "Best Company Ever",
+            "companyUid": "fd404dc9-9efd-43c1-9e0b-a58a9d250130"
+          }
+        ]
       }`
 	want := &ManagedAccount{
 		AccountRef:  "555-1212-0317-1967",
@@ -160,6 +167,9 @@ func (suite *ManagedAccountClientTestSuite) TestGetManagedAccount() {
 	})
 	getRes, err := suite.client.ManagedAccountService.GetManagedAccount(ctx, "fd404dc9-9efd-43c1-9e0b-a58a9d250130", "Best Company Ever")
 	suite.NoError(err)
-	suite.NotNil(getRes)
 	suite.Equal(want, getRes)
+
+	missingRes, err := suite.client.ManagedAccountService.GetManagedAccount(ctx, "fd404dc9-9efd-43c1-9e0b-a58a9d250130", "No Such Company")
+	suite.ErrorIs(err, ErrManagedAccountNotFound)
+	suite.Nil(missingRes)
 }

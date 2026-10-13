@@ -23,8 +23,10 @@ type MVEService interface {
 	// GetMVE gets details about a single MVE from the Megaport MVE API.
 	GetMVE(ctx context.Context, mveId string) (*MVE, error)
 	// ModifyMVE modifies an MVE in the Megaport MVE API.
+	// Returns ErrModifyPendingApproval without waiting when the API creates an order approval request instead of modifying.
 	ModifyMVE(ctx context.Context, req *ModifyMVERequest) (*ModifyMVEResponse, error)
 	// DeleteMVE deletes an MVE in the Megaport MVE API.
+	// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 	DeleteMVE(ctx context.Context, req *DeleteMVERequest) (*DeleteMVEResponse, error)
 	// ListMVEImages returns a list of currently supported MVE images and details for each image, including image ID, version, product, and vendor. The image id returned indicates the software version and key configuration parameters of the image. The releaseImage value returned indicates whether the MVE image is available for selection when ordering an MVE.
 	ListMVEImages(ctx context.Context) ([]*MVEImage, error)
@@ -58,6 +60,9 @@ type BuyMVERequest struct {
 	DiversityZone string
 	PromoCode     string
 	CostCentre    string
+	// MarketplaceVisibility is sent only when non-nil. Leaving it nil omits the
+	// field so the API applies its own default, rather than forcing false.
+	MarketplaceVisibility *bool
 
 	ResourceTags map[string]string `json:"resourceTags,omitempty"`
 
@@ -193,6 +198,7 @@ func createMVEOrder(req *BuyMVERequest) []*MVEOrderConfig {
 		Config: MVEConfig{
 			DiversityZone: req.DiversityZone,
 		},
+		MarketplaceVisibility: req.MarketplaceVisibility,
 	}
 
 	if len(req.Vnics) == 0 {
@@ -262,6 +268,7 @@ func (svc *MVEServiceOp) GetMVE(ctx context.Context, mveId string) (*MVE, error)
 }
 
 // ModifyMVE modifies an MVE in the Megaport MVE API.
+// Returns ErrModifyPendingApproval without waiting when the API creates an order approval request instead of modifying.
 func (svc *MVEServiceOp) ModifyMVE(ctx context.Context, req *ModifyMVERequest) (*ModifyMVEResponse, error) {
 	if req == nil {
 		return nil, ErrModifyMVERequestNil
@@ -329,6 +336,7 @@ func (svc *MVEServiceOp) ModifyMVE(ctx context.Context, req *ModifyMVERequest) (
 }
 
 // DeleteMVE deletes an MVE in the Megaport MVE API.
+// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 func (svc *MVEServiceOp) DeleteMVE(ctx context.Context, req *DeleteMVERequest) (*DeleteMVEResponse, error) {
 	if req == nil {
 		return nil, ErrDeleteMVERequestNil

@@ -39,6 +39,10 @@ var ErrWrongProductModify = errors.New("you can only update Ports, MCR, and MVE 
 // ErrVnicsOnNonMVE is returned when vNIC updates are supplied for a non-MVE product
 var ErrVnicsOnNonMVE = errors.New("vNICs can only be modified on MVE products")
 
+// ErrModifyPendingApproval is returned when the API creates an order approval request instead of modifying.
+// The API applies no field in the request until an approver acts on it.
+var ErrModifyPendingApproval = errors.New("modify request is pending approval, no change was applied")
+
 // ErrInvalidTerm creates an error indicating an invalid contract term, dynamically listing the valid terms.
 var ErrInvalidTerm = fmt.Errorf("invalid term, valid terms are %s months", intSliceToString(VALID_CONTRACT_TERMS))
 
@@ -105,11 +109,24 @@ var ErrMCRCancelLaterNotAllowed = errors.New("mcr products do not support schedu
 // ErrPortCancelLaterNotAllowed is returned when attempting to schedule Port deletion for later (only CANCEL_NOW is allowed)
 var ErrPortCancelLaterNotAllowed = errors.New("port products do not support scheduled deletion (cancel later), only immediate deletion (CANCEL_NOW) is allowed")
 
+// ErrCancelLaterNotAllowed is returned when attempting to schedule deletion for later (only CANCEL_NOW is allowed)
+var ErrCancelLaterNotAllowed = errors.New("scheduled deletion (cancel later) is no longer supported by the API, only immediate deletion (CANCEL_NOW) is allowed")
+
+// ErrRestoreNotAllowed is returned when attempting to restore a canceled product
+var ErrRestoreNotAllowed = errors.New("restoring a canceled product is no longer supported by the API")
+
+// ErrCancelPendingApproval is returned when the API creates an order approval request instead of canceling.
+// The product stays live until an approver acts on the request.
+var ErrCancelPendingApproval = errors.New("cancel request is pending approval, the product is still live")
+
 // ErrMCRNotFound is returned when an MCR cannot be found (deleted or never existed).
 var ErrMCRNotFound = errors.New("mcr not found or deleted")
 
 // ErrMCRDecommissioned is returned when an MCR has been decommissioned.
 var ErrMCRDecommissioned = errors.New("mcr has been decommissioned")
+
+// ErrMCRIPsecResponseEmpty is returned when GetMCRIPsec gets a successful response with no data payload.
+var ErrMCRIPsecResponseEmpty = errors.New("mcr ipsec response contained no data")
 
 // IsServiceNotFoundError reports whether err is a Megaport API not-found response —
 // either HTTP 404 or the non-standard HTTP 400 "Could not find a service with UID" form.
@@ -125,7 +142,20 @@ func IsServiceNotFoundError(err error) bool {
 		strings.Contains(apiErr.Message, "Could not find a service with UID")
 }
 
+// isNATGatewayDiagnosticsInProgress reports whether err is the HTTP 400 the NAT
+// gateway routes operation endpoint returns while the result is not ready.
+func isNATGatewayDiagnosticsInProgress(err error) bool {
+	apiErr, ok := err.(*ErrorResponse)
+	if !ok || apiErr.Response == nil {
+		return false
+	}
+	return apiErr.Response.StatusCode == http.StatusBadRequest &&
+		strings.Contains(apiErr.Message, "The polling result for async mode is not ready yet")
+}
+
 // ErrTransitVXCCancelLaterNotAllowed is returned when attempting to schedule Transit VXC deletion for later (only CANCEL_NOW is allowed)
+//
+// Deprecated: DeleteVXC returns ErrCancelLaterNotAllowed for every VXC.
 var ErrTransitVXCCancelLaterNotAllowed = errors.New("transit vxc (megaport internet) does not support scheduled deletion (cancel later), only immediate deletion (CANCEL_NOW) is allowed")
 
 // ErrDeleteVXCRequestNil is returned when DeleteVXC is called with a nil request.
@@ -151,6 +181,9 @@ var ErrBuyMCRRequestNil = errors.New("buy MCR request cannot be nil")
 
 // ErrCreateMCRPrefixFilterListRequestNil is returned when CreatePrefixFilterList is called with a nil request.
 var ErrCreateMCRPrefixFilterListRequestNil = errors.New("create MCR prefix filter list request cannot be nil")
+
+// ErrMCRPrefixFilterListNil is returned when ModifyMCRPrefixFilterList is called with a nil prefix filter list.
+var ErrMCRPrefixFilterListNil = errors.New("MCR prefix filter list cannot be nil")
 
 // ErrModifyMCRRequestNil is returned when ModifyMCR is called with a nil request.
 var ErrModifyMCRRequestNil = errors.New("modify MCR request cannot be nil")

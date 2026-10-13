@@ -44,10 +44,11 @@ func (suite *MVEClientTestSuite) TestBuyMVE() {
 	mveSvc := suite.client.MVEService
 	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
 	req := &BuyMVERequest{
-		Name:          "test-mve",
-		Term:          12,
-		LocationID:    1,
-		DiversityZone: "blue",
+		Name:                  "test-mve",
+		Term:                  12,
+		LocationID:            1,
+		DiversityZone:         "blue",
+		MarketplaceVisibility: PtrTo(false),
 	}
 	jblob := `{
     "message": "MVE [36b3f68e-2f54-4331-bf94-f8984449365f] created.",
@@ -135,6 +136,7 @@ func (suite *MVEClientTestSuite) TestBuyMVE() {
 		Config: MVEConfig{
 			DiversityZone: req.DiversityZone,
 		},
+		MarketplaceVisibility: PtrTo(false),
 	}}
 	want := &BuyMVEResponse{TechnicalServiceUID: productUid}
 
@@ -159,11 +161,34 @@ func (suite *MVEClientTestSuite) TestBuyMVE() {
 		suite.Equal(wantOrder.LocationID, gotOrder.LocationID)
 		suite.Equal(wantOrder.NetworkInterfaces, gotOrder.NetworkInterfaces)
 		suite.Equal(wantOrder.Config, gotOrder.Config)
+		suite.Equal(wantOrder.MarketplaceVisibility, gotOrder.MarketplaceVisibility)
 		suite.Equal([]string{}, wrapper.DiscountCodes)
 	})
 	got, err := mveSvc.BuyMVE(ctx, req)
 	suite.NoError(err)
 	suite.Equal(want, got)
+}
+
+// TestCreateMVEOrderMarketplaceVisibility asserts the marshaled MVEOrderConfig
+// carries marketplaceVisibility when set, and omits it (preserving the API
+// default) when the request leaves it nil.
+func (suite *MVEClientTestSuite) TestCreateMVEOrderMarketplaceVisibility() {
+	visible := suite.marshalMVEOrder(&BuyMVERequest{MarketplaceVisibility: PtrTo(true)})
+	suite.Contains(visible, `"marketplaceVisibility":true`)
+
+	hidden := suite.marshalMVEOrder(&BuyMVERequest{MarketplaceVisibility: PtrTo(false)})
+	suite.Contains(hidden, `"marketplaceVisibility":false`)
+
+	unset := suite.marshalMVEOrder(&BuyMVERequest{})
+	suite.NotContains(unset, "marketplaceVisibility")
+}
+
+func (suite *MVEClientTestSuite) marshalMVEOrder(req *BuyMVERequest) string {
+	orders := createMVEOrder(req)
+	suite.Require().Len(orders, 1)
+	b, err := json.Marshal(orders[0])
+	suite.Require().NoError(err)
+	return string(b)
 }
 
 // TestBuyMVEWaitFails tests that BuyMVE returns the order response when the provisioning wait fails.
@@ -691,6 +716,28 @@ func (suite *MVEClientTestSuite) TestModifyMVEWithVnics() {
 	suite.Equal(&ModifyMVEResponse{MVEUpdated: true}, gotRes)
 }
 
+// TestModifyMVEPendingApproval verifies ModifyMVE returns
+// ErrModifyPendingApproval on a 202 without entering the wait loop.
+func (suite *MVEClientTestSuite) TestModifyMVEPendingApproval() {
+	ctx := context.Background()
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	path := fmt.Sprintf("/v2/product/%s/%s", PRODUCT_MVE, productUid)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPut)
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, `{"message":"Request accepted and pending for approval","terms":"This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"}`)
+	})
+	req := &ModifyMVERequest{
+		MVEID:              productUid,
+		ContractTermMonths: PtrTo(12),
+		WaitForUpdate:      true,
+		WaitForTime:        time.Second,
+	}
+	gotRes, err := suite.client.MVEService.ModifyMVE(ctx, req)
+	suite.ErrorIs(err, ErrModifyPendingApproval)
+	suite.Nil(gotRes)
+}
+
 // TestModifyMVENilRequest verifies ModifyMVE rejects a nil request up front
 // instead of panicking on field access.
 func (suite *MVEClientTestSuite) TestModifyMVENilRequest() {
@@ -994,6 +1041,31 @@ func (suite *MVEClientTestSuite) TestDeleteMVE() {
 	got, err := mveSvc.DeleteMVE(ctx, req)
 	suite.NoError(err)
 	suite.Equal(want, got)
+}
+
+// TestDeleteMVEPendingApproval tests that a 202 pending-approval cancel errors instead of reading as a completed delete.
+func (suite *MVEClientTestSuite) TestDeleteMVEPendingApproval() {
+	ctx := context.Background()
+
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	jblob := `{
+		"message": "Request accepted and pending for approval",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"
+	}`
+
+	path := "/v3/product/" + productUid + "/action/CANCEL_NOW"
+
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPost)
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, jblob)
+	})
+
+	got, err := suite.client.MVEService.DeleteMVE(ctx, &DeleteMVERequest{MVEID: productUid})
+
+	suite.ErrorIs(err, ErrCancelPendingApproval)
+	suite.Nil(got)
 }
 
 // TestCiscoConfigAdminPasswordMarshalling verifies that CiscoConfig.AdminPassword

@@ -66,6 +66,30 @@ func (suite *OrderApprovalClientTestSuite) TestListOrderApprovals() {
 				"comment": "Please approve this order",
 				"createDate": 1700000000000,
 				"detail": {"type": "NEW_ORDER", "origin": "https://portal.megaport.com", "userName": "user@example.com", "requesterCompanyId": 200, "productRequest": [{"name": "test"}]}
+			},
+			{
+				"uid": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+				"id": 12346,
+				"status": "PENDING",
+				"type": "EARLY_TERMINATION"
+			},
+			{
+				"uid": "c3d4e5f6-a7b8-9012-cdef-123456789012",
+				"id": 12347,
+				"status": "PENDING",
+				"type": "ADD_ON"
+			},
+			{
+				"uid": "d4e5f6a7-b8c9-0123-def0-234567890123",
+				"id": 12348,
+				"status": "PENDING",
+				"type": "IP_ADDRESS_PARTNER_ORDER"
+			},
+			{
+				"uid": "e5f6a7b8-c9d0-1234-ef01-345678901234",
+				"id": 12349,
+				"status": "PENDING",
+				"type": "IP_ADDRESS_COMPLIANCE"
 			}
 		]
 	}`
@@ -88,8 +112,32 @@ func (suite *OrderApprovalClientTestSuite) TestListOrderApprovals() {
 				CreateDate:         &Time{GetTime(1700000000000)},
 				Detail:             json.RawMessage(`{"type": "NEW_ORDER", "origin": "https://portal.megaport.com", "userName": "user@example.com", "requesterCompanyId": 200, "productRequest": [{"name": "test"}]}`),
 			},
+			{
+				UID:    "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+				ID:     12346,
+				Status: OrderApprovalStatusPending,
+				Type:   OrderApprovalTypeEarlyTermination,
+			},
+			{
+				UID:    "c3d4e5f6-a7b8-9012-cdef-123456789012",
+				ID:     12347,
+				Status: OrderApprovalStatusPending,
+				Type:   OrderApprovalTypeAddOn,
+			},
+			{
+				UID:    "d4e5f6a7-b8c9-0123-def0-234567890123",
+				ID:     12348,
+				Status: OrderApprovalStatusPending,
+				Type:   OrderApprovalTypeIPAddressPartnerOrder,
+			},
+			{
+				UID:    "e5f6a7b8-c9d0-1234-ef01-345678901234",
+				ID:     12349,
+				Status: OrderApprovalStatusPending,
+				Type:   OrderApprovalTypeIPAddressCompliance,
+			},
 		},
-		TotalCount: 1,
+		TotalCount: 4,
 		Page:       1,
 		Limit:      10,
 		TotalPages: 1,
@@ -100,7 +148,7 @@ func (suite *OrderApprovalClientTestSuite) TestListOrderApprovals() {
 		suite.Equal("PENDING", r.URL.Query().Get("status"))
 		suite.Equal("1", r.URL.Query().Get("pageNumber"))
 		suite.Equal("10", r.URL.Query().Get("pageSize"))
-		w.Header().Set("Pagination-Total-Count", "1")
+		w.Header().Set("Pagination-Total-Count", "4")
 		w.Header().Set("Pagination-Page", "1")
 		w.Header().Set("Pagination-Limit", "10")
 		w.Header().Set("Pagination-Total-Page", "1")

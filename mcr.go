@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
+	"net/url"
 	"slices"
 	"strconv"
 	"strings"
@@ -34,19 +36,26 @@ type MCRService interface {
 	// DeleteMCRPrefixFilterList deletes a prefix filter list on an MCR from the Megaport MCR API.
 	DeleteMCRPrefixFilterList(ctx context.Context, mcrID string, prefixFilterListID int) (*DeleteMCRPrefixFilterListResponse, error)
 	// ModifyMCR modifies an MCR in the Megaport MCR API.
+	// Returns ErrModifyPendingApproval without waiting when the API creates an order approval request instead of modifying.
 	ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (*ModifyMCRResponse, error)
 	// DeleteMCR deletes an MCR in the Megaport MCR API.
+	// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 	DeleteMCR(ctx context.Context, req *DeleteMCRRequest) (*DeleteMCRResponse, error)
-	// RestoreMCR restores a deleted MCR in the Megaport MCR API.
+	// RestoreMCR always returns ErrRestoreNotAllowed and sends no request.
+	//
+	// Deprecated: the Megaport API no longer supports restoring a canceled MCR.
 	RestoreMCR(ctx context.Context, mcrId string) (*RestoreMCRResponse, error)
 	// ListMCRResourceTags returns the resource tags for an MCR in the Megaport MCR API.
 	ListMCRResourceTags(ctx context.Context, mcrID string) (map[string]string, error)
 	// UpdateMCRResourceTags updates the resource tags for an MCR in the Megaport MCR API.
 	UpdateMCRResourceTags(ctx context.Context, mcrID string, tags map[string]string) error
 	// UpdateMCRWithAddOn adds an IPsec add-on to an existing MCR.
+	// Returns ErrModifyPendingApproval without waiting when the API creates an order approval request instead of adding it.
 	UpdateMCRWithAddOn(ctx context.Context, mcrID string, req MCRAddOnRequest) error
 	// UpdateMCRIPsecAddOn updates an existing IPsec add-on on an MCR. Setting tunnelCount to 0 will disable IPsec.
 	UpdateMCRIPsecAddOn(ctx context.Context, mcrID string, addOnUID string, tunnelCount int) error
+	// GetMCRIPsec returns the IPsec tunnel configuration for an MCR.
+	GetMCRIPsec(ctx context.Context, mcrID string) (*MCRIPsecConfiguration, error)
 	// WaitForMCRReady polls until the MCR reaches a ready provisioning state.
 	// A zero timeout defaults to 5 minutes. Returns ErrMCRNotFound or ErrMCRDecommissioned
 	// if the MCR is deleted or decommissioned while polling.
@@ -145,7 +154,7 @@ type DeleteMCRResponse struct {
 	IsDeleting bool
 }
 
-// RestoreMCRequest represents a request to restore a deleted MCR
+// RestoreMCRResponse represents a response from restoring an MCR.
 type RestoreMCRResponse struct {
 	IsRestored bool
 }
@@ -398,7 +407,12 @@ func (svc *MCRServiceOp) CreatePrefixFilterList(ctx context.Context, req *Create
 	}
 	url := "/v2/product/mcr2/" + req.MCRID + "/prefixList"
 
-	clientReq, err := svc.Client.NewRequest(ctx, "POST", url, req.PrefixFilterList)
+	reqBody, err := req.PrefixFilterList.toAPI()
+	if err != nil {
+		return nil, err
+	}
+
+	clientReq, err := svc.Client.NewRequest(ctx, "POST", url, reqBody)
 
 	if err != nil {
 		return nil, err
@@ -504,6 +518,7 @@ func (svc *MCRServiceOp) GetMCRPrefixFilterList(ctx context.Context, mcrID strin
 }
 
 // ModifyMCR modifies an MCR in the Megaport MCR API.
+// Returns ErrModifyPendingApproval without waiting when the API creates an order approval request instead of modifying.
 func (svc *MCRServiceOp) ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (*ModifyMCRResponse, error) {
 	if req == nil {
 		return nil, ErrModifyMCRRequestNil
@@ -571,7 +586,7 @@ func (svc *MCRServiceOp) DeleteMCRPrefixFilterList(ctx context.Context, mcrID st
 	if err != nil {
 		return nil, err
 	}
-	_, err = svc.Client.Do(ctx, clientReq, nil)
+	err = svc.Client.doDiscard(ctx, clientReq)
 	if err != nil {
 		return nil, err
 	}
@@ -582,12 +597,19 @@ func (svc *MCRServiceOp) DeleteMCRPrefixFilterList(ctx context.Context, mcrID st
 
 // ModifyMCRPrefixFilterList modifies a prefix filter list on an MCR in the Megaport MCR API.
 func (svc *MCRServiceOp) ModifyMCRPrefixFilterList(ctx context.Context, mcrID string, prefixFilterListID int, prefixFilterList *MCRPrefixFilterList) (*ModifyMCRPrefixFilterListResponse, error) {
+	if prefixFilterList == nil {
+		return nil, ErrMCRPrefixFilterListNil
+	}
 	url := fmt.Sprintf("/v2/product/mcr2/%s/prefixList/%d", mcrID, prefixFilterListID)
-	clientReq, err := svc.Client.NewRequest(ctx, "PUT", url, prefixFilterList)
+	reqBody, err := prefixFilterList.toAPI()
 	if err != nil {
 		return nil, err
 	}
-	_, err = svc.Client.Do(ctx, clientReq, nil)
+	clientReq, err := svc.Client.NewRequest(ctx, "PUT", url, reqBody)
+	if err != nil {
+		return nil, err
+	}
+	err = svc.Client.doDiscard(ctx, clientReq)
 	if err != nil {
 		return nil, err
 	}
@@ -600,6 +622,7 @@ func (svc *MCRServiceOp) ModifyMCRPrefixFilterList(ctx context.Context, mcrID st
 // Note: MCR products only support immediate deletion (CANCEL_NOW). Requests with
 // DeleteNow=false are rejected with ErrMCRCancelLaterNotAllowed, and accepted
 // requests always call the underlying API with DeleteNow=true.
+// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 func (svc *MCRServiceOp) DeleteMCR(ctx context.Context, req *DeleteMCRRequest) (*DeleteMCRResponse, error) {
 	if req == nil {
 		return nil, ErrDeleteMCRRequestNil
@@ -622,15 +645,11 @@ func (svc *MCRServiceOp) DeleteMCR(ctx context.Context, req *DeleteMCRRequest) (
 	}, nil
 }
 
-// Restore restores a deleted MCR in the Megaport MCR API.
+// RestoreMCR always returns ErrRestoreNotAllowed and sends no request.
+//
+// Deprecated: the Megaport API no longer supports restoring a canceled MCR.
 func (svc *MCRServiceOp) RestoreMCR(ctx context.Context, mcrId string) (*RestoreMCRResponse, error) {
-	_, err := svc.Client.ProductService.RestoreProduct(ctx, mcrId)
-	if err != nil {
-		return nil, err
-	}
-	return &RestoreMCRResponse{
-		IsRestored: true,
-	}, nil
+	return nil, ErrRestoreNotAllowed
 }
 
 // ListMCRResourceTags returns the resource tags for an MCR in the Megaport MCR API.
@@ -649,6 +668,8 @@ func (svc *MCRServiceOp) UpdateMCRResourceTags(ctx context.Context, mcrID string
 	})
 }
 
+// UpdateMCRWithAddOn adds an IPsec add-on to an existing MCR.
+// Returns ErrModifyPendingApproval without waiting when the API creates an order approval request instead of adding it.
 func (svc *MCRServiceOp) UpdateMCRWithAddOn(ctx context.Context, mcrID string, req MCRAddOnRequest) error {
 	if req.AddOn == nil {
 		return fmt.Errorf("AddOn cannot be nil")
@@ -675,9 +696,15 @@ func (svc *MCRServiceOp) UpdateMCRWithAddOn(ctx context.Context, mcrID string, r
 		if err != nil {
 			return err
 		}
-		_, err = svc.Client.Do(ctx, clientReq, nil)
+		resp, err := svc.Client.Do(ctx, clientReq, nil)
 		if err != nil {
 			return err
+		}
+		// Ignore drain errors, as doDiscard does: the API already took the order.
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
+		if resp.StatusCode == http.StatusAccepted {
+			return ErrModifyPendingApproval
 		}
 	default:
 		return ErrInvalidAddOnType
@@ -710,8 +737,43 @@ func (svc *MCRServiceOp) UpdateMCRIPsecAddOn(ctx context.Context, mcrID string, 
 	if err != nil {
 		return err
 	}
-	_, err = svc.Client.Do(ctx, clientReq, nil)
+	err = svc.Client.doDiscard(ctx, clientReq)
 	return err
+}
+
+// GetMCRIPsec returns the IPsec tunnel configuration for an MCR.
+// GET /v3/products/mcrs/{productUid}/ipsec
+// A decommissioned MCR returns an empty configuration, not an error.
+func (svc *MCRServiceOp) GetMCRIPsec(ctx context.Context, mcrID string) (*MCRIPsecConfiguration, error) {
+	path := "/v3/products/mcrs/" + url.PathEscape(mcrID) + "/ipsec"
+
+	clientReq, err := svc.Client.NewRequest(ctx, "GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := svc.Client.Do(ctx, clientReq, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	body, fileErr := io.ReadAll(response.Body)
+	if fileErr != nil {
+		return nil, fileErr
+	}
+
+	ipsecRes := &mcrIPsecResponse{}
+	unmarshalErr := json.Unmarshal(body, ipsecRes)
+	if unmarshalErr != nil {
+		return nil, unmarshalErr
+	}
+
+	if ipsecRes.Data == nil {
+		return nil, ErrMCRIPsecResponseEmpty
+	}
+
+	return ipsecRes.Data, nil
 }
 
 // WaitForMCRReady polls until the MCR identified by mcrID reaches a ready

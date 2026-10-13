@@ -23,6 +23,7 @@ type NATGatewayService interface {
 	// UpdateNATGateway updates a NAT Gateway by its product UID.
 	UpdateNATGateway(ctx context.Context, req *UpdateNATGatewayRequest) (*NATGateway, error)
 	// DeleteNATGateway deletes a NAT Gateway by its product UID.
+	// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 	DeleteNATGateway(ctx context.Context, productUID string) error
 	// ListNATGatewaySessions returns the speed/session-count availability matrix for NAT Gateways.
 	ListNATGatewaySessions(ctx context.Context) ([]*NATGatewaySession, error)
@@ -112,6 +113,15 @@ func NewNATGatewayService(c *Client) *NATGatewayServiceOp {
 // NATGatewayServiceOp handles communication with NAT Gateway methods of the Megaport API.
 type NATGatewayServiceOp struct {
 	Client *Client
+	// pollInitialDelay overrides diagnosticsPollInitialDelay when non-zero.
+	// Intended for tests that want to avoid real-time waits.
+	pollInitialDelay time.Duration
+	// pollInterval overrides diagnosticsPollInterval when non-zero.
+	// Intended for tests that want to avoid real-time waits.
+	pollInterval time.Duration
+	// pollTimeout overrides diagnosticsPollTimeout when non-zero.
+	// Intended for tests that want to avoid real-time waits.
+	pollTimeout time.Duration
 }
 
 // GetNATGatewayTelemetryRequest represents a request to get telemetry data for a NAT Gateway.
@@ -244,6 +254,7 @@ func (svc *NATGatewayServiceOp) UpdateNATGateway(ctx context.Context, req *Updat
 // Unlike DeletePort / DeleteMCR / DeleteMVE, this method does not currently
 // accept a SafeDelete (end-of-term cancellation) option — provisioned
 // gateways are always cancelled immediately with DeleteNow: true.
+// Returns ErrCancelPendingApproval when the API creates an order approval request instead of canceling.
 func (svc *NATGatewayServiceOp) DeleteNATGateway(ctx context.Context, productUID string) error {
 	if productUID == "" {
 		return ErrNATGatewayProductUIDRequired

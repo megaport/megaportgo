@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -193,6 +194,27 @@ func (suite *ProductClientTestSuite) TestModifyProduct() {
 	suite.Equal(wantRes, gotRes)
 }
 
+// TestModifyProductPendingApproval verifies ModifyProduct returns
+// ErrModifyPendingApproval when the API answers the PUT with 202.
+func (suite *ProductClientTestSuite) TestModifyProductPendingApproval() {
+	ctx := context.Background()
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	path := fmt.Sprintf("/v2/product/%s/%s", PRODUCT_MEGAPORT, productUid)
+	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPut)
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, `{"message":"Request accepted and pending for approval","terms":"This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"}`)
+	})
+	req := &ModifyProductRequest{
+		ProductID:          productUid,
+		ProductType:        PRODUCT_MEGAPORT,
+		ContractTermMonths: 12,
+	}
+	gotRes, err := suite.client.ProductService.ModifyProduct(ctx, req)
+	suite.ErrorIs(err, ErrModifyPendingApproval)
+	suite.Nil(gotRes)
+}
+
 // TestModifyProductVnicsOnNonMVE verifies ModifyProduct rejects vNIC updates
 // when the product is not an MVE, without dispatching the HTTP request.
 func (suite *ProductClientTestSuite) TestModifyProductVnicsOnNonMVE() {
@@ -268,30 +290,82 @@ func (suite *ProductClientTestSuite) TestDeleteProduct() {
 	suite.Equal(wantRes, gotRes)
 }
 
-// TestRestoreProduct tests the RestoreProduct method
-func (suite *ProductClientTestSuite) TestRestoreProduct() {
+// TestDeleteProductPendingApproval tests that a 202 pending-approval cancel errors instead of reading as a completed cancel.
+func (suite *ProductClientTestSuite) TestDeleteProductPendingApproval() {
 	ctx := context.Background()
 
 	productSvc := suite.client.ProductService
 	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
 
 	jblob := `{
-	"message": "Action [UN_CANCEL Service 36b3f68e-2f54-4331-bf94-f8984449365f] has been done.",
-	"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"
+    "message": "Request accepted and pending for approval",
+    "terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"
 	}`
 
-	path := "/v3/product/" + productUid + "/action/UN_CANCEL"
+	req := &DeleteProductRequest{
+		ProductID: productUid,
+		DeleteNow: true,
+	}
+
+	path := "/v3/product/" + req.ProductID + "/action/CANCEL_NOW"
 
 	suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodPost)
+		w.WriteHeader(http.StatusAccepted)
 		fmt.Fprint(w, jblob)
 	})
 
-	wantRes := &RestoreProductResponse{}
+	gotRes, err := productSvc.DeleteProduct(ctx, req)
 
-	gotRes, err := productSvc.RestoreProduct(ctx, productUid)
+	suite.ErrorIs(err, ErrCancelPendingApproval)
+	suite.Nil(gotRes)
+}
+
+// TestDeleteProductSafeDelete verifies that SafeDelete adds the safeDelete query parameter.
+func (suite *ProductClientTestSuite) TestDeleteProductSafeDelete() {
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+	var gotSafeDelete string
+	suite.mux.HandleFunc("/v3/product/"+productUid+"/action/CANCEL_NOW", func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodPost)
+		gotSafeDelete = r.URL.Query().Get("safeDelete")
+		fmt.Fprint(w, `{"message": "Action [CANCEL_NOW Service 36b3f68e-2f54-4331-bf94-f8984449365f] has been done."}`)
+	})
+
+	_, err := suite.client.ProductService.DeleteProduct(context.Background(), &DeleteProductRequest{
+		ProductID:  productUid,
+		DeleteNow:  true,
+		SafeDelete: true,
+	})
 	suite.NoError(err)
-	suite.Equal(wantRes, gotRes)
+	suite.Equal("true", gotSafeDelete)
+}
+
+// TestDeleteProductCancelLaterNotAllowed verifies that DeleteProduct rejects DeleteNow=false without sending a request.
+func (suite *ProductClientTestSuite) TestDeleteProductCancelLaterNotAllowed() {
+	var hit atomic.Bool
+	suite.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		hit.Store(true)
+	})
+
+	_, err := suite.client.ProductService.DeleteProduct(context.Background(), &DeleteProductRequest{
+		ProductID: "36b3f68e-2f54-4331-bf94-f8984449365f",
+		DeleteNow: false,
+	})
+	suite.ErrorIs(err, ErrCancelLaterNotAllowed)
+	suite.False(hit.Load(), "expected no request to the API")
+}
+
+// TestRestoreProduct verifies that RestoreProduct returns ErrRestoreNotAllowed without sending a request.
+func (suite *ProductClientTestSuite) TestRestoreProduct() {
+	var hit atomic.Bool
+	suite.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		hit.Store(true)
+	})
+
+	gotRes, err := suite.client.ProductService.RestoreProduct(context.Background(), "36b3f68e-2f54-4331-bf94-f8984449365f")
+	suite.ErrorIs(err, ErrRestoreNotAllowed)
+	suite.Nil(gotRes)
+	suite.False(hit.Load(), "expected no request to the API")
 }
 
 // TestManageProductLuck tests the ManageProductLock method
@@ -805,4 +879,57 @@ func (suite *ProductClientTestSuite) TestProductNilRequestGuards() {
 			suite.ErrorIs(tt.call(), tt.want)
 		})
 	}
+}
+
+func (suite *ProductClientTestSuite) TestGetProductType() {
+	ctx := context.Background()
+	productSvc := suite.client.ProductService
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	suite.mux.HandleFunc("/v2/product/"+productUid, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprintf(w, `{"message":"Found Product %s","terms":"terms","data":{"productUid":"%s","productType":"MEGAPORT","associatedVxcs":[]}}`, productUid, productUid)
+	})
+
+	productType, err := productSvc.GetProductType(ctx, productUid)
+
+	suite.NoError(err)
+	suite.Equal("MEGAPORT", productType)
+}
+
+// TestGetProductTypePartialContent covers the 206 the API returns for an AWS Interconnect read.
+func (suite *ProductClientTestSuite) TestGetProductTypePartialContent() {
+	ctx := context.Background()
+	productSvc := suite.client.ProductService
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	suite.mux.HandleFunc("/v2/product/"+productUid, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		w.WriteHeader(http.StatusPartialContent)
+		fmt.Fprintf(w, `{"message":"Found Product %s","terms":"terms","data":{"productUid":"%s","productType":"AWS_INTERCONNECT","associatedVxcs":[]}}`, productUid, productUid)
+	})
+
+	productType, err := productSvc.GetProductType(ctx, productUid)
+
+	suite.NoError(err)
+	suite.Equal("AWS_INTERCONNECT", productType)
+}
+
+func (suite *ProductClientTestSuite) TestGetProductTypeBadRequest() {
+	ctx := context.Background()
+	productSvc := suite.client.ProductService
+	productUid := "36b3f68e-2f54-4331-bf94-f8984449365f"
+
+	suite.mux.HandleFunc("/v2/product/"+productUid, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, `{"message":"Error occurred while looking up product [123] - unsupported product type [AWS_INTERCONNECT]","terms":"terms"}`)
+	})
+
+	productType, err := productSvc.GetProductType(ctx, productUid)
+
+	var apiErr *ErrorResponse
+	suite.Require().ErrorAs(err, &apiErr)
+	suite.Equal(http.StatusBadRequest, apiErr.Response.StatusCode)
+	suite.Empty(productType)
 }
