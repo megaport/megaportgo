@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"net/mail"
 	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
 )
@@ -72,14 +71,6 @@ func (req *CreateUserRequest) Validate() error {
 	// LastName validation - required, non-empty
 	if strings.TrimSpace(req.LastName) == "" {
 		return errors.New("lastName is required and cannot be empty")
-	}
-
-	// Phone validation - optional, but if provided must match international format
-	if req.Phone != "" {
-		phoneRegex := regexp.MustCompile(`^\+?[1-9]\d{1,14}$`)
-		if !phoneRegex.MatchString(req.Phone) {
-			return errors.New("phone number must be in valid international format (e.g., +1234567890)")
-		}
 	}
 
 	// Position validation - required, must be one of the valid roles
@@ -164,14 +155,6 @@ func (req *UpdateUserRequest) Validate() error {
 	// LastName validation - if provided, must be non-empty
 	if req.LastName != nil && strings.TrimSpace(*req.LastName) == "" {
 		return errors.New("lastName cannot be empty if provided")
-	}
-
-	// Phone validation - if provided, must match international format
-	if req.Phone != nil && *req.Phone != "" {
-		phoneRegex := regexp.MustCompile(`^\+?[1-9]\d{1,14}$`)
-		if !phoneRegex.MatchString(*req.Phone) {
-			return errors.New("phone number must be in valid international format (e.g., +1234567890)")
-		}
 	}
 
 	// Email validation - if provided, must be valid email format with minimum 5 characters

@@ -2,6 +2,7 @@ package megaport
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -184,6 +185,49 @@ func (suite *UserManagementClientTestSuite) TestUpdateUser() {
 
 	err := suite.client.UserManagementService.UpdateUser(ctx, employeeID, updateReq)
 	suite.NoError(err)
+}
+
+// TestUserPhoneCheckedByAPI verifies CreateUser and UpdateUser send the phone as given and return the API's error.
+func (suite *UserManagementClientTestSuite) TestUserPhoneCheckedByAPI() {
+	ctx := context.Background()
+	employeeID := 9012
+	var sent struct {
+		Phone string `json:"phone"`
+	}
+	suite.mux.HandleFunc("/v2/employment", func(w http.ResponseWriter, r *http.Request) {
+		suite.NoError(json.NewDecoder(r.Body).Decode(&sent))
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, `{"message": "Error Creating User - The following issues prevented this user from being created: phone number is not valid. Please check the information provided and try again. If the problem persists, contact support@megaport.com."}`)
+	})
+	suite.mux.HandleFunc(fmt.Sprintf("/v2/employee/%d", employeeID), func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPut {
+			suite.NoError(json.NewDecoder(r.Body).Decode(&sent))
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, `{"message": "User's phone is not in international format."}`)
+			return
+		}
+		fmt.Fprint(w, `{"data": {"partyId": 9012, "firstName": "John", "lastName": "Doe", "email": "john.doe@example.com", "position": "Company Admin", "active": true}}`)
+	})
+
+	for _, phone := range []string{"+1 415 555 2671", "(415) 555-2671"} {
+		suite.Run(phone, func() {
+			sent.Phone = ""
+			_, err := suite.client.UserManagementService.CreateUser(ctx, &CreateUserRequest{
+				FirstName: "John",
+				LastName:  "Doe",
+				Email:     "john.doe@example.com",
+				Phone:     phone,
+				Position:  USER_POSITION_COMPANY_ADMIN,
+			})
+			suite.ErrorContains(err, "phone number is not valid")
+			suite.Equal(phone, sent.Phone)
+
+			sent.Phone = ""
+			err = suite.client.UserManagementService.UpdateUser(ctx, employeeID, &UpdateUserRequest{Phone: PtrTo(phone)})
+			suite.ErrorContains(err, "User's phone is not in international format.")
+			suite.Equal(phone, sent.Phone)
+		})
+	}
 }
 
 // TestDeleteUser tests the DeleteUser method
