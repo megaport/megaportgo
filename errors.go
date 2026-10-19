@@ -235,6 +235,9 @@ var ErrCompanyUIDRequired = errors.New("company UID is required")
 // ErrCompanyProductAvailabilityResponseEmpty is returned when the company product availability API returns a 2xx response with a null or missing data payload.
 var ErrCompanyProductAvailabilityResponseEmpty = errors.New("company product availability response missing data")
 
+// ErrCurrentCompanyResponseEmpty is returned when the current company API returns a 2xx response with a null payload or no company UID.
+var ErrCurrentCompanyResponseEmpty = errors.New("current company response missing company UID")
+
 // ErrDeleteProductRequestNil is returned when DeleteProduct is called with a nil request.
 var ErrDeleteProductRequestNil = errors.New("delete product request cannot be nil")
 

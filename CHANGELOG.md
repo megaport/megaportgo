@@ -1,6 +1,7 @@
 # Unreleased
 
 ## New Features
+- Add `CompanyService` with `GetCurrentCompany`, which returns the company the caller acts in (UID, name, account type and any parent company) from `GET /v2/me`. Session users also get `CompanyID`, `RootAccountType`, `IsManagedContext` and `Companies`. Add the `AccountType` type and constants.
 - Add `ProductAvailabilityService` with `ListCompanyProductAvailability`, which lists the products a company can order and the markets each is available in.
 - Add `AggregationID` to `BuyPortRequest` so a port order can add ports to an existing LAG. Set it with `LagCount` to say how many ports to add, and send the LAG's own `LocationId` and `PortSpeed`. Leaving it zero keeps today's behavior.
 - Add `InterfaceType`, `IpSecTunnelOptions`, `Description`, `IpMtu`, `VLAN`, `PacketFilterIn`, `PacketFilterOut` and `DhcpPools` to `CSPConnectionVirtualRouterInterface` so `GetVXC` returns the settings the API already stores on an MCR interface, including IPsec tunnel configuration. A setting the API omits decodes as nil, not zero. A read fills in `InterfaceType` with `InterfaceTypeSubInterface` when the API omits it, which it does on every plain subinterface. `IpSecTunnelOptions` uses the new read-only `IPsecTunnelState` type, which deliberately omits the pre-shared key. The API returns the key in plaintext on this path, and decoding it would carry a live secret into Terraform state and CLI output.
