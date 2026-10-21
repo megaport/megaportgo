@@ -148,9 +148,9 @@ func (suite *NATGatewayDiagnosticsIntegrationTestSuite) TestNATGatewayDiagnostic
 	})
 }
 
-// pollDiagnosticsForTest is a copy of the SDK's internal poller specialised
-// for tests: shorter timeout, accepts an empty result as terminal so we
-// don't hang the suite on quiet route tables.
+// pollDiagnosticsForTest is a copy of the SDK's internal poller for tests.
+// A 200 is terminal, even with no routes. An operation still running at the
+// timeout returns an error.
 func pollDiagnosticsForTest(ctx context.Context, natSvc NATGatewayService, productUID, opID string) ([]*NATGatewayRoute, error) {
 	const (
 		initial = 2 * time.Second
@@ -166,24 +166,16 @@ func pollDiagnosticsForTest(ctx context.Context, natSvc NATGatewayService, produ
 	case <-time.After(initial):
 	}
 
-	deadline := time.Now().Add(timeout - initial)
 	ticker := time.NewTicker(tick)
 	defer ticker.Stop()
 	for {
 		routes, err := natSvc.GetNATGatewayDiagnosticsRoutes(pollCtx, productUID, opID)
-		if err != nil {
-			return nil, err
-		}
-		if len(routes) > 0 {
-			return routes, nil
-		}
-		// Empty response — accept after deadline rather than hanging.
-		if time.Now().After(deadline) {
-			return routes, nil
+		if !isNATGatewayDiagnosticsInProgress(err) {
+			return routes, err
 		}
 		select {
 		case <-pollCtx.Done():
-			return routes, nil
+			return nil, err
 		case <-ticker.C:
 		}
 	}

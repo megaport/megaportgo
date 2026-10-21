@@ -142,9 +142,12 @@ func IsServiceNotFoundError(err error) bool {
 		strings.Contains(apiErr.Message, "Could not find a service with UID")
 }
 
-// isNATGatewayDiagnosticsInProgress reports whether err is the HTTP 400 the NAT
-// gateway routes operation endpoint returns while the result is not ready.
+// isNATGatewayDiagnosticsInProgress reports whether err means the NAT gateway
+// routes operation is still running: a 202, or the HTTP 400 older deploys send.
 func isNATGatewayDiagnosticsInProgress(err error) bool {
+	if errors.Is(err, ErrNATGatewayDiagnosticsNotReady) {
+		return true
+	}
 	apiErr, ok := err.(*ErrorResponse)
 	if !ok || apiErr.Response == nil {
 		return false
