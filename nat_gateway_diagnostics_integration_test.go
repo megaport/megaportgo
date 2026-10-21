@@ -171,7 +171,7 @@ func pollDiagnosticsForTest(ctx context.Context, natSvc NATGatewayService, produ
 	defer ticker.Stop()
 	for {
 		routes, err := natSvc.GetNATGatewayDiagnosticsRoutes(pollCtx, productUID, opID)
-		if err != nil {
+		if err != nil && !isNATGatewayDiagnosticsInProgress(err) {
 			return nil, err
 		}
 		if len(routes) > 0 {

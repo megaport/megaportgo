@@ -1,7 +1,9 @@
 package megaport
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -15,6 +17,7 @@ var (
 	ErrNATGatewayDiagnosticsDirectionInvalid = errors.New("BGP neighbor diagnostics require a direction (RECEIVED or ADVERTISED)")
 	ErrNATGatewayDiagnosticsOperationEmpty   = errors.New("operation ID is required")
 	ErrNATGatewayDiagnosticsTimeout          = errors.New("timed out waiting for diagnostics operation to complete")
+	ErrNATGatewayDiagnosticsNotReady         = errors.New("diagnostics operation is still running")
 )
 
 // Default polling cadence used by the convenience diagnostics wrappers:
@@ -112,6 +115,7 @@ func (svc *NATGatewayServiceOp) ListNATGatewayBGPNeighborRoutesAsync(ctx context
 }
 
 // GetNATGatewayDiagnosticsRoutes fetches the routes for a prior async request.
+// It returns ErrNATGatewayDiagnosticsNotReady while the operation still runs.
 func (svc *NATGatewayServiceOp) GetNATGatewayDiagnosticsRoutes(ctx context.Context, productUID, operationID string) ([]*NATGatewayRoute, error) {
 	if productUID == "" {
 		return nil, ErrNATGatewayProductUIDRequired
@@ -122,8 +126,26 @@ func (svc *NATGatewayServiceOp) GetNATGatewayDiagnosticsRoutes(ctx context.Conte
 	params := url.Values{}
 	params.Set("operationId", operationID)
 	path := fmt.Sprintf("/v3/products/nat_gateways/%s/diagnostics/routes/operation?%s", url.PathEscape(productUID), params.Encode())
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var buf bytes.Buffer
+	resp, err := svc.Client.Do(ctx, clientReq, &buf)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	// The API answers 202 while the operation runs. An empty route list is
+	// also a 200, so only the status code separates the two.
+	if resp.StatusCode == http.StatusAccepted {
+		return nil, ErrNATGatewayDiagnosticsNotReady
+	}
+	if buf.Len() == 0 {
+		return nil, nil
+	}
 	var envelope natGatewayDiagnosticsRoutesResponse
-	if err := svc.doJSON(ctx, http.MethodGet, path, nil, &envelope); err != nil {
+	if err := json.Unmarshal(buf.Bytes(), &envelope); err != nil {
 		return nil, err
 	}
 	return envelope.Data, nil
@@ -131,8 +153,8 @@ func (svc *NATGatewayServiceOp) GetNATGatewayDiagnosticsRoutes(ctx context.Conte
 
 // pollDiagnosticsRoutes polls GetNATGatewayDiagnosticsRoutes until the
 // operation completes, the SDK-managed poll timeout elapses, or the caller's
-// context is cancelled. The endpoint returns HTTP 400 while the operation runs
-// and 200 once it completes, even with no routes.
+// context is cancelled. The endpoint returns HTTP 202 while the operation runs,
+// or HTTP 400 on older API deploys, and 200 once it completes, even with no routes.
 func (svc *NATGatewayServiceOp) pollDiagnosticsRoutes(ctx context.Context, productUID, operationID string) ([]*NATGatewayRoute, error) {
 	pollCtx, cancel := context.WithTimeout(ctx, svc.effectivePollTimeout())
 	defer cancel()
