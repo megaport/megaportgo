@@ -150,7 +150,7 @@ func (suite *NATGatewayDiagnosticsIntegrationTestSuite) TestNATGatewayDiagnostic
 
 // pollDiagnosticsForTest is a copy of the SDK's internal poller for tests.
 // A 200 is terminal, even with no routes. An operation still running at the
-// timeout returns its in-progress error.
+// timeout returns an error.
 func pollDiagnosticsForTest(ctx context.Context, natSvc NATGatewayService, productUID, opID string) ([]*NATGatewayRoute, error) {
 	const (
 		initial = 2 * time.Second
