@@ -1444,7 +1444,7 @@ func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesPollInProgress
 	suite.Equal(int32(2), opCalls.Load())
 }
 
-const diagnosticsNotReadyBody = `{"message":"Data result will be available soon","data":null}`
+const diagnosticsNotReadyBody = `{"message":"Data result will be available soon","terms":"This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"}`
 
 // TestListNATGatewayIPRoutesPollAcceptedThenComplete drives the poll through a
 // 202 while the operation runs, followed by a completed 200.
