@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -38,151 +39,146 @@ func (suite *OrderApprovalClientTestSuite) TearDownTest() {
 func (suite *OrderApprovalClientTestSuite) TestListOrderApprovals() {
 	ctx := context.Background()
 	status := OrderApprovalStatusPending
-	pageNumber := 1
+	approvalType := OrderApprovalTypeNewOrder
+	pageNumber := 2
 	pageSize := 10
+	sort := "createdAt"
+	direction := "ASC"
 
 	listReq := &ListOrderApprovalsRequest{
 		Status:     &status,
+		Type:       &approvalType,
+		ServiceIDs: []int{123, 456},
 		PageNumber: &pageNumber,
 		PageSize:   &pageSize,
+		Sort:       &sort,
+		Direction:  &direction,
 	}
 
 	jblob := `{
 		"message": "Success",
-		"terms": "https://www.megaport.com/legal/acceptable-use-policy",
-		"data": [
-			{
-				"uid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-				"id": 12345,
-				"referenceId": "ORD-54321-45",
-				"status": "PENDING",
-				"type": "NEW_ORDER",
-				"active": true,
-				"acctName": "Test Company",
-				"acctRef": "ACCT-001",
-				"approverCompanyId": 100,
-				"requesterCompanyId": 200,
-				"serviceId": 5678,
-				"comment": "Please approve this order",
-				"createDate": 1700000000000,
-				"detail": {"type": "NEW_ORDER", "origin": "https://portal.megaport.com", "userName": "user@example.com", "requesterCompanyId": 200, "productRequest": [{"name": "test"}]}
-			},
-			{
-				"uid": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
-				"id": 12346,
-				"status": "PENDING",
-				"type": "EARLY_TERMINATION"
-			},
-			{
-				"uid": "c3d4e5f6-a7b8-9012-cdef-123456789012",
-				"id": 12347,
-				"status": "PENDING",
-				"type": "ADD_ON"
-			},
-			{
-				"uid": "d4e5f6a7-b8c9-0123-def0-234567890123",
-				"id": 12348,
-				"status": "PENDING",
-				"type": "IP_ADDRESS_PARTNER_ORDER"
-			},
-			{
-				"uid": "e5f6a7b8-c9d0-1234-ef01-345678901234",
-				"id": 12349,
-				"status": "PENDING",
-				"type": "IP_ADDRESS_COMPLIANCE"
-			}
-		]
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": {
+			"pageNumber": 2,
+			"pageSize": 10,
+			"totalItems": 14,
+			"totalPages": 2,
+			"items": [
+				{
+					"uid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+					"id": 12345,
+					"referenceId": "ORD-54321-45",
+					"status": "PENDING",
+					"type": "NEW_ORDER",
+					"active": true,
+					"accountName": "Test Company",
+					"accountReference": "ACCT-001",
+					"approverCompanyId": 100,
+					"requesterCompanyId": 200,
+					"serviceId": 5678,
+					"comment": "Please approve this order",
+					"createdAt": "2026-10-22T23:22:39.977Z",
+					"completedAt": null,
+					"createdBy": "0a1717f0-7f85-470e-954d-7ad208392a2c",
+					"detail": {"origin": "https://portal.megaport.com", "userName": "user@example.com", "requesterCompanyId": 200}
+				},
+				{
+					"uid": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+					"id": 12346,
+					"status": "APPROVED",
+					"type": "EARLY_TERMINATION",
+					"createdAt": "2026-10-21T01:00:00Z",
+					"completedAt": "2026-10-22T02:30:15.250Z"
+				}
+			]
+		}
 	}`
 
-	want := &ListOrderApprovalsResponse{
-		OrderApprovals: []*OrderApproval{
-			{
-				UID:                "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-				ID:                 12345,
-				ReferenceID:        "ORD-54321-45",
-				Status:             OrderApprovalStatusPending,
-				Type:               OrderApprovalTypeNewOrder,
-				Active:             true,
-				AcctName:           "Test Company",
-				AcctRef:            "ACCT-001",
-				ApproverCompanyID:  100,
-				RequesterCompanyID: 200,
-				ServiceID:          5678,
-				Comment:            "Please approve this order",
-				CreateDate:         &Time{GetTime(1700000000000)},
-				Detail:             json.RawMessage(`{"type": "NEW_ORDER", "origin": "https://portal.megaport.com", "userName": "user@example.com", "requesterCompanyId": 200, "productRequest": [{"name": "test"}]}`),
-			},
-			{
-				UID:    "b2c3d4e5-f6a7-8901-bcde-f12345678901",
-				ID:     12346,
-				Status: OrderApprovalStatusPending,
-				Type:   OrderApprovalTypeEarlyTermination,
-			},
-			{
-				UID:    "c3d4e5f6-a7b8-9012-cdef-123456789012",
-				ID:     12347,
-				Status: OrderApprovalStatusPending,
-				Type:   OrderApprovalTypeAddOn,
-			},
-			{
-				UID:    "d4e5f6a7-b8c9-0123-def0-234567890123",
-				ID:     12348,
-				Status: OrderApprovalStatusPending,
-				Type:   OrderApprovalTypeIPAddressPartnerOrder,
-			},
-			{
-				UID:    "e5f6a7b8-c9d0-1234-ef01-345678901234",
-				ID:     12349,
-				Status: OrderApprovalStatusPending,
-				Type:   OrderApprovalTypeIPAddressCompliance,
-			},
-		},
-		TotalCount: 4,
-		Page:       1,
-		Limit:      10,
-		TotalPages: 1,
-	}
-
-	suite.mux.HandleFunc("/v3/order_approvals", func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc("/v4/order_approvals", func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
-		suite.Equal("PENDING", r.URL.Query().Get("status"))
-		suite.Equal("1", r.URL.Query().Get("pageNumber"))
-		suite.Equal("10", r.URL.Query().Get("pageSize"))
-		w.Header().Set("Pagination-Total-Count", "4")
-		w.Header().Set("Pagination-Page", "1")
-		w.Header().Set("Pagination-Limit", "10")
-		w.Header().Set("Pagination-Total-Page", "1")
+		query := r.URL.Query()
+		suite.Equal("PENDING", query.Get("status"))
+		suite.Equal("NEW_ORDER", query.Get("type"))
+		suite.Equal([]string{"123", "456"}, query["service_ids"])
+		suite.Equal("2", query.Get("page_number"))
+		suite.Equal("10", query.Get("page_size"))
+		suite.Equal([]string{"createdAt,ASC"}, query["sort"])
+		suite.Empty(query["direction"])
 		fmt.Fprint(w, jblob)
 	})
 
 	listRes, err := suite.client.OrderApprovalService.ListOrderApprovals(ctx, listReq)
-	suite.NoError(err)
-	suite.Equal(want, listRes)
+	suite.Require().NoError(err)
+
+	suite.Equal(14, listRes.TotalCount)
+	suite.Equal(2, listRes.Page)
+	suite.Equal(10, listRes.Limit)
+	suite.Equal(2, listRes.TotalPages)
+	suite.Require().Len(listRes.OrderApprovals, 2)
+
+	first := listRes.OrderApprovals[0]
+	suite.Equal("a1b2c3d4-e5f6-7890-abcd-ef1234567890", first.UID)
+	suite.Equal(12345, first.ID)
+	suite.Equal("ORD-54321-45", first.ReferenceID)
+	suite.Equal(OrderApprovalStatusPending, first.Status)
+	suite.Equal(OrderApprovalTypeNewOrder, first.Type)
+	suite.True(first.Active)
+	suite.Equal("Test Company", first.AcctName)
+	suite.Equal("ACCT-001", first.AcctRef)
+	suite.Equal(100, first.ApproverCompanyID)
+	suite.Equal(200, first.RequesterCompanyID)
+	suite.Equal(5678, first.ServiceID)
+	suite.Equal("Please approve this order", first.Comment)
+	suite.Equal("0a1717f0-7f85-470e-954d-7ad208392a2c", first.CreatedBy)
+	suite.Require().NotNil(first.CreateDate)
+	suite.True(first.CreateDate.Equal(time.Date(2026, 10, 22, 23, 22, 39, 977000000, time.UTC)))
+	suite.Nil(first.CompletedAt)
+	suite.JSONEq(`{"origin": "https://portal.megaport.com", "userName": "user@example.com", "requesterCompanyId": 200}`, string(first.Detail))
+
+	second := listRes.OrderApprovals[1]
+	suite.Equal(OrderApprovalStatusApproved, second.Status)
+	suite.Equal(OrderApprovalTypeEarlyTermination, second.Type)
+	suite.Require().NotNil(second.CompletedAt)
+	suite.True(second.CompletedAt.Equal(time.Date(2026, 10, 22, 2, 30, 15, 250000000, time.UTC)))
 }
 
-func (suite *OrderApprovalClientTestSuite) TestListOrderApprovalsWithServiceIDs() {
-	ctx := context.Background()
+func (suite *OrderApprovalClientTestSuite) TestListOrderApprovalsSort() {
+	sort := "serviceId"
+	direction := "DESC"
 
-	listReq := &ListOrderApprovalsRequest{
-		ServiceIDs: []int{123, 456},
+	tests := []struct {
+		name      string
+		sort      *string
+		direction *string
+		want      []string
+	}{
+		{name: "sort and direction", sort: &sort, direction: &direction, want: []string{"serviceId,DESC"}},
+		{name: "direction only", direction: &direction, want: []string{"createdAt,DESC"}},
+		{name: "sort only", sort: &sort, want: []string{"serviceId"}},
+		{name: "neither", want: nil},
 	}
 
-	jblob := `{
-		"message": "Success",
-		"terms": "https://www.megaport.com/legal/acceptable-use-policy",
-		"data": []
-	}`
+	for _, tt := range tests {
+		suite.Run(tt.name, func() {
+			mux := http.NewServeMux()
+			server := httptest.NewServer(mux)
+			defer server.Close()
+			client := NewClient(nil, nil)
+			client.BaseURL, _ = url.Parse(server.URL)
 
-	suite.mux.HandleFunc("/v3/order_approvals", func(w http.ResponseWriter, r *http.Request) {
-		suite.testMethod(r, http.MethodGet)
-		suite.Equal("123,456", r.URL.Query().Get("serviceIds"))
-		fmt.Fprint(w, jblob)
-	})
+			mux.HandleFunc("/v4/order_approvals", func(w http.ResponseWriter, r *http.Request) {
+				suite.Equal(tt.want, r.URL.Query()["sort"])
+				suite.Empty(r.URL.Query()["direction"])
+				fmt.Fprint(w, `{"message": "Success", "data": {"items": []}}`)
+			})
 
-	listRes, err := suite.client.OrderApprovalService.ListOrderApprovals(ctx, listReq)
-	suite.NoError(err)
-	suite.NotNil(listRes)
-	suite.Empty(listRes.OrderApprovals)
+			_, err := client.OrderApprovalService.ListOrderApprovals(context.Background(), &ListOrderApprovalsRequest{
+				Sort:      tt.sort,
+				Direction: tt.direction,
+			})
+			suite.NoError(err)
+		})
+	}
 }
 
 func (suite *OrderApprovalClientTestSuite) TestListOrderApprovalsNilRequest() {
@@ -190,11 +186,11 @@ func (suite *OrderApprovalClientTestSuite) TestListOrderApprovalsNilRequest() {
 
 	jblob := `{
 		"message": "Success",
-		"terms": "https://www.megaport.com/legal/acceptable-use-policy",
-		"data": []
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": {"pageNumber": 1, "pageSize": 10, "totalItems": 0, "totalPages": 0, "items": []}
 	}`
 
-	suite.mux.HandleFunc("/v3/order_approvals", func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc("/v4/order_approvals", func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
 		suite.Empty(r.URL.Query())
 		fmt.Fprint(w, jblob)
@@ -204,26 +200,8 @@ func (suite *OrderApprovalClientTestSuite) TestListOrderApprovalsNilRequest() {
 	suite.NoError(err)
 	suite.NotNil(listRes)
 	suite.Empty(listRes.OrderApprovals)
-}
-
-func (suite *OrderApprovalClientTestSuite) TestListOrderApprovalsInvalidPaginationHeader() {
-	ctx := context.Background()
-
-	jblob := `{
-		"message": "Success",
-		"terms": "https://www.megaport.com/legal/acceptable-use-policy",
-		"data": []
-	}`
-
-	suite.mux.HandleFunc("/v3/order_approvals", func(w http.ResponseWriter, r *http.Request) {
-		suite.testMethod(r, http.MethodGet)
-		w.Header().Set("Pagination-Total-Count", "not-a-number")
-		fmt.Fprint(w, jblob)
-	})
-
-	_, err := suite.client.OrderApprovalService.ListOrderApprovals(ctx, &ListOrderApprovalsRequest{})
-	suite.Error(err)
-	suite.Contains(err.Error(), "invalid Pagination-Total-Count header")
+	suite.Equal(1, listRes.Page)
+	suite.Equal(10, listRes.Limit)
 }
 
 func (suite *OrderApprovalClientTestSuite) TestActionEmptyUID() {
