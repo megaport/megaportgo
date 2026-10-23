@@ -100,13 +100,19 @@ type ListOrderApprovalsRequest struct {
 
 // ListOrderApprovalsAPIResponse represents the Megaport API HTTP response from listing order approvals.
 type ListOrderApprovalsAPIResponse struct {
-	Message string                 `json:"message"`
-	Terms   string                 `json:"terms"`
-	Data    ListOrderApprovalsPage `json:"data"`
+	Message string           `json:"message"`
+	Terms   string           `json:"terms"`
+	Data    []*OrderApproval `json:"data"`
 }
 
-// ListOrderApprovalsPage represents one page of order approvals in the Megaport API response.
-type ListOrderApprovalsPage struct {
+// listOrderApprovalsV4Response is the v4 response, whose data holds one page.
+type listOrderApprovalsV4Response struct {
+	Message string                   `json:"message"`
+	Terms   string                   `json:"terms"`
+	Data    listOrderApprovalsV4Page `json:"data"`
+}
+
+type listOrderApprovalsV4Page struct {
 	Items      []*OrderApproval `json:"items"`
 	PageNumber int              `json:"pageNumber"`
 	PageSize   int              `json:"pageSize"`
@@ -171,7 +177,7 @@ func (svc *OrderApprovalServiceOp) ListOrderApprovals(ctx context.Context, req *
 
 	svc.Client.Logger.DebugContext(ctx, "Listing Order Approvals", slog.String("url", path), slog.Int("status_code", response.StatusCode))
 
-	var apiResponse ListOrderApprovalsAPIResponse
+	var apiResponse listOrderApprovalsV4Response
 	if err = json.Unmarshal(buf.Bytes(), &apiResponse); err != nil {
 		return nil, err
 	}

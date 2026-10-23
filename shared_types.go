@@ -53,7 +53,7 @@ var (
 	SERVICE_STATE_READY = []string{SERVICE_CONFIGURED, SERVICE_LIVE}
 )
 
-// Time is a custom time type that allows for unmarshalling of Unix timestamps.
+// Time is a custom time type that unmarshals Unix timestamps in milliseconds and RFC 3339 strings.
 type Time struct {
 	time.Time
 }
