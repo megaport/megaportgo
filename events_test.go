@@ -158,7 +158,7 @@ func (suite *EventsTestSuite) TestGetOutageEvents() {
                 "notices": [
                     {
                         "description": "We are still investigating the packet loss.",
-                        "createdDate": "2024-05-23T10:05:00.000Z",
+                        "createdDate": "2024-05-23T15:05:00.000Z",
                         "nextUpdate": "in 2 hours"
                     },
                     {
@@ -188,7 +188,7 @@ func (suite *EventsTestSuite) TestGetOutageEvents() {
 	suite.Equal([]OutageEventNotice{
 		{
 			Description: "We are still investigating the packet loss.",
-			CreatedDate: "2024-05-23T10:05:00.000Z",
+			CreatedDate: "2024-05-23T15:05:00.000Z",
 			NextUpdate:  "in 2 hours",
 		},
 		{
