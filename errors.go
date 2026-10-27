@@ -142,9 +142,12 @@ func IsServiceNotFoundError(err error) bool {
 		strings.Contains(apiErr.Message, "Could not find a service with UID")
 }
 
-// isNATGatewayDiagnosticsInProgress reports whether err is the HTTP 400 the NAT
-// gateway routes operation endpoint returns while the result is not ready.
+// isNATGatewayDiagnosticsInProgress reports whether err means the NAT gateway
+// routes operation is still running: a 202, or the HTTP 400 older deploys send.
 func isNATGatewayDiagnosticsInProgress(err error) bool {
+	if errors.Is(err, ErrNATGatewayDiagnosticsNotReady) {
+		return true
+	}
 	apiErr, ok := err.(*ErrorResponse)
 	if !ok || apiErr.Response == nil {
 		return false
@@ -228,6 +231,15 @@ var ErrModifyProductRequestNil = errors.New("modify product request cannot be ni
 
 // ErrProductResourceTagsResponseEmpty is returned when the product resource tags API returns a 2xx response with a null or missing data payload.
 var ErrProductResourceTagsResponseEmpty = errors.New("product resource tags response missing data")
+
+// ErrCompanyUIDRequired is returned when a company availability method is called with an empty company UID.
+var ErrCompanyUIDRequired = errors.New("company UID is required")
+
+// ErrCompanyProductAvailabilityResponseEmpty is returned when the company product availability API returns a 2xx response with a null or missing data payload.
+var ErrCompanyProductAvailabilityResponseEmpty = errors.New("company product availability response missing data")
+
+// ErrCurrentCompanyResponseEmpty is returned when the current company API returns a 2xx response with a null payload or no company UID.
+var ErrCurrentCompanyResponseEmpty = errors.New("current company response missing company UID")
 
 // ErrDeleteProductRequestNil is returned when DeleteProduct is called with a nil request.
 var ErrDeleteProductRequestNil = errors.New("delete product request cannot be nil")

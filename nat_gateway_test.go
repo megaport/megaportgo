@@ -1444,6 +1444,54 @@ func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesPollInProgress
 	suite.Equal(int32(2), opCalls.Load())
 }
 
+const diagnosticsNotReadyBody = `{"message":"Data result will be available soon","terms":"This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy"}`
+
+// TestListNATGatewayIPRoutesPollAcceptedThenComplete drives the poll through a
+// 202 while the operation runs, followed by a completed 200.
+func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesPollAcceptedThenComplete() {
+	ctx := context.Background()
+	natSvc := suite.client.NATGatewayService
+	productUID := "uid-poll-202"
+
+	var opCalls atomic.Int32
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/ip", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":"op-poll-202"}`)
+	})
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/operation", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if opCalls.Add(1) == 1 {
+			w.WriteHeader(http.StatusAccepted)
+			fmt.Fprint(w, diagnosticsNotReadyBody)
+			return
+		}
+		fmt.Fprint(w, `{"message":"ok","terms":"","data":[
+			{"prefix":"10.0.0.0/24","protocol":"STATIC","nextHop":{"ip":"10.0.0.1","vxc":{"id":"vxc-1","name":"v1"}}}
+		]}`)
+	})
+
+	routes, err := natSvc.ListNATGatewayIPRoutes(ctx, productUID, "")
+	suite.Require().NoError(err)
+	suite.Require().Len(routes, 1)
+	suite.Equal("10.0.0.0/24", routes[0].Prefix)
+	suite.Equal(int32(2), opCalls.Load())
+}
+
+func (suite *NATGatewayClientTestSuite) TestGetNATGatewayDiagnosticsRoutesAccepted() {
+	productUID := "uid-op-202"
+
+	suite.mux.HandleFunc("/v3/products/nat_gateways/"+productUID+"/diagnostics/routes/operation", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, diagnosticsNotReadyBody)
+	})
+
+	routes, err := suite.client.NATGatewayService.GetNATGatewayDiagnosticsRoutes(context.Background(), productUID, "op-202")
+	suite.ErrorIs(err, ErrNATGatewayDiagnosticsNotReady)
+	suite.Nil(routes)
+}
+
 // TestListNATGatewayIPRoutesPollEmptyComplete verifies a 200 with an empty data
 // array is a completed result: the poll returns empty without further polling.
 func (suite *NATGatewayClientTestSuite) TestListNATGatewayIPRoutesPollEmptyComplete() {

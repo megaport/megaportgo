@@ -107,6 +107,10 @@ type Client struct {
 	MCRLookingGlassService MCRLookingGlassService
 	// OrderApprovalService provides methods for interacting with the Order Approvals API
 	OrderApprovalService OrderApprovalService
+	// ProductAvailabilityService provides methods for interacting with the Product Availability API
+	ProductAvailabilityService ProductAvailabilityService
+	// CompanyService provides methods for interacting with the company endpoints, such as the current company
+	CompanyService CompanyService
 
 	accessToken string    // Access Token for client
 	tokenExpiry time.Time // Token Expiration
@@ -210,6 +214,8 @@ func NewClient(httpClient *http.Client, base *url.URL) *Client {
 	c.UserManagementService = NewUserManagementService(c)
 	c.MCRLookingGlassService = NewMCRLookingGlassService(c)
 	c.OrderApprovalService = NewOrderApprovalService(c)
+	c.ProductAvailabilityService = NewProductAvailabilityService(c)
+	c.CompanyService = NewCompanyService(c)
 
 	c.headers = make(map[string]string)
 
