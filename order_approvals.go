@@ -82,7 +82,7 @@ type OrderApproval struct {
 	ServiceID          int                 `json:"serviceId"`
 	Comment            string              `json:"comment"`
 	CreateDate         *Time               `json:"createdAt"`
-	CompletedAt        *Time               `json:"completedAt"` // nil while the approval is pending.
+	CompletedAt        *Time               `json:"completedAt"`
 	CreatedBy          string              `json:"createdBy"`
 	Detail             json.RawMessage     `json:"detail"`
 }

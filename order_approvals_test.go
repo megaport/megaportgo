@@ -40,8 +40,9 @@ func (suite *OrderApprovalClientTestSuite) TestListOrderApprovals() {
 	ctx := context.Background()
 	status := OrderApprovalStatusPending
 	approvalType := OrderApprovalTypeNewOrder
-	pageNumber := 2
-	pageSize := 10
+	// The API caps the page size at 100 and answers a page past the last with page 1.
+	pageNumber := 4
+	pageSize := 500
 	sort := "createdAt"
 	direction := "ASC"
 
@@ -59,10 +60,10 @@ func (suite *OrderApprovalClientTestSuite) TestListOrderApprovals() {
 		"message": "Success",
 		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
 		"data": {
-			"pageNumber": 2,
-			"pageSize": 10,
+			"pageNumber": 1,
+			"pageSize": 100,
 			"totalItems": 25,
-			"totalPages": 3,
+			"totalPages": 1,
 			"items": [
 				{
 					"uid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
@@ -118,8 +119,8 @@ func (suite *OrderApprovalClientTestSuite) TestListOrderApprovals() {
 		suite.Equal("PENDING", query.Get("status"))
 		suite.Equal("NEW_ORDER", query.Get("type"))
 		suite.Equal([]string{"123", "456"}, query["service_ids"])
-		suite.Equal("2", query.Get("page_number"))
-		suite.Equal("10", query.Get("page_size"))
+		suite.Equal("4", query.Get("page_number"))
+		suite.Equal("500", query.Get("page_size"))
 		suite.Equal([]string{"createdAt,ASC"}, query["sort"])
 		suite.Empty(query["direction"])
 		fmt.Fprint(w, jblob)
@@ -129,9 +130,9 @@ func (suite *OrderApprovalClientTestSuite) TestListOrderApprovals() {
 	suite.Require().NoError(err)
 
 	suite.Equal(25, listRes.TotalCount)
-	suite.Equal(2, listRes.Page)
-	suite.Equal(10, listRes.Limit)
-	suite.Equal(3, listRes.TotalPages)
+	suite.Equal(1, listRes.Page)
+	suite.Equal(100, listRes.Limit)
+	suite.Equal(1, listRes.TotalPages)
 	suite.Require().Len(listRes.OrderApprovals, 5)
 
 	first := listRes.OrderApprovals[0]
