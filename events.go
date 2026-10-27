@@ -139,7 +139,7 @@ type OutageEvent struct {
 	UpdatedDate string `json:"updatedDate"`
 
 	// Notices is the list of progress notices on the outage. Follow-up notices come first, newest to oldest.
-	// The opening notice is always last. Its CreatedDate is when the outage was last updated.
+	// The opening notice is always last. Its CreatedDate is when the outage record was created.
 	Notices []OutageEventNotice `json:"notices"`
 }
 
