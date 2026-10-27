@@ -92,13 +92,15 @@ type ListOrderApprovalsRequest struct {
 	Status     *OrderApprovalStatus // Filter by approval status (optional).
 	Type       *OrderApprovalType   // Filter by approval type (optional).
 	ServiceIDs []int                // Filter by service IDs (optional).
-	PageNumber *int                 // Page number for pagination; if nil, the API default is used.
+	PageNumber *int                 // Page number for pagination; if nil, the API default is used. The API answers a page past the last with page 1.
 	PageSize   *int                 // Page size for pagination; if nil, the API default is used.
 	Sort       *string              // Field to sort by: createdAt, serviceId, status or type. The API rejects v3's createDate with a 400.
-	Direction  *string              // Sort direction: ASC or DESC. With Sort nil, it applies to createdAt.
+	Direction  *string              // Sort direction: ASC or DESC. A Sort with no Direction sorts ascending. With Sort nil, Direction applies to createdAt.
 }
 
-// ListOrderApprovalsAPIResponse represents the Megaport API HTTP response from listing order approvals.
+// ListOrderApprovalsAPIResponse is the v3 response from listing order approvals.
+//
+// Deprecated: ListOrderApprovals no longer decodes it.
 type ListOrderApprovalsAPIResponse struct {
 	Message string           `json:"message"`
 	Terms   string           `json:"terms"`

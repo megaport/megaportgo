@@ -61,8 +61,8 @@ func (suite *OrderApprovalClientTestSuite) TestListOrderApprovals() {
 		"data": {
 			"pageNumber": 2,
 			"pageSize": 10,
-			"totalItems": 14,
-			"totalPages": 2,
+			"totalItems": 25,
+			"totalPages": 3,
 			"items": [
 				{
 					"uid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
@@ -89,6 +89,24 @@ func (suite *OrderApprovalClientTestSuite) TestListOrderApprovals() {
 					"type": "EARLY_TERMINATION",
 					"createdAt": "2026-10-21T01:00:00Z",
 					"completedAt": "2026-10-22T02:30:15.250Z"
+				},
+				{
+					"uid": "c3d4e5f6-a7b8-9012-cdef-123456789012",
+					"id": 12347,
+					"status": "PENDING",
+					"type": "ADD_ON"
+				},
+				{
+					"uid": "d4e5f6a7-b8c9-0123-def0-234567890123",
+					"id": 12348,
+					"status": "PENDING",
+					"type": "IP_ADDRESS_PARTNER_ORDER"
+				},
+				{
+					"uid": "e5f6a7b8-c9d0-1234-ef01-345678901234",
+					"id": 12349,
+					"status": "PENDING",
+					"type": "IP_ADDRESS_COMPLIANCE"
 				}
 			]
 		}
@@ -110,11 +128,11 @@ func (suite *OrderApprovalClientTestSuite) TestListOrderApprovals() {
 	listRes, err := suite.client.OrderApprovalService.ListOrderApprovals(ctx, listReq)
 	suite.Require().NoError(err)
 
-	suite.Equal(14, listRes.TotalCount)
+	suite.Equal(25, listRes.TotalCount)
 	suite.Equal(2, listRes.Page)
 	suite.Equal(10, listRes.Limit)
-	suite.Equal(2, listRes.TotalPages)
-	suite.Require().Len(listRes.OrderApprovals, 2)
+	suite.Equal(3, listRes.TotalPages)
+	suite.Require().Len(listRes.OrderApprovals, 5)
 
 	first := listRes.OrderApprovals[0]
 	suite.Equal("a1b2c3d4-e5f6-7890-abcd-ef1234567890", first.UID)
@@ -140,6 +158,10 @@ func (suite *OrderApprovalClientTestSuite) TestListOrderApprovals() {
 	suite.Equal(OrderApprovalTypeEarlyTermination, second.Type)
 	suite.Require().NotNil(second.CompletedAt)
 	suite.True(second.CompletedAt.Equal(time.Date(2026, 10, 22, 2, 30, 15, 250000000, time.UTC)))
+
+	suite.Equal(OrderApprovalTypeAddOn, listRes.OrderApprovals[2].Type)
+	suite.Equal(OrderApprovalTypeIPAddressPartnerOrder, listRes.OrderApprovals[3].Type)
+	suite.Equal(OrderApprovalTypeIPAddressCompliance, listRes.OrderApprovals[4].Type)
 }
 
 func (suite *OrderApprovalClientTestSuite) TestListOrderApprovalsSort() {
@@ -202,6 +224,16 @@ func (suite *OrderApprovalClientTestSuite) TestListOrderApprovalsNilRequest() {
 	suite.Empty(listRes.OrderApprovals)
 	suite.Equal(1, listRes.Page)
 	suite.Equal(10, listRes.Limit)
+}
+
+func (suite *OrderApprovalClientTestSuite) TestListOrderApprovalsDecodeError() {
+	suite.mux.HandleFunc("/v4/order_approvals", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{"message": "Success", "data": []}`)
+	})
+
+	listRes, err := suite.client.OrderApprovalService.ListOrderApprovals(context.Background(), nil)
+	suite.Error(err)
+	suite.Nil(listRes)
 }
 
 func (suite *OrderApprovalClientTestSuite) TestActionEmptyUID() {

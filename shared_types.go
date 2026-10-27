@@ -61,16 +61,7 @@ type Time struct {
 // UnmarshalJSON unmarshals a Unix timestamp in milliseconds or an RFC 3339 string into a Time type.
 func (t *Time) UnmarshalJSON(b []byte) error {
 	if len(b) > 0 && b[0] == '"' {
-		var s string
-		if err := json.Unmarshal(b, &s); err != nil {
-			return err
-		}
-		parsed, err := time.Parse(time.RFC3339, s)
-		if err != nil {
-			return err
-		}
-		t.Time = parsed
-		return nil
+		return t.Time.UnmarshalJSON(b)
 	}
 	var timestamp int64
 	err := json.Unmarshal(b, &timestamp)
