@@ -98,7 +98,7 @@ type ListOrderApprovalsRequest struct {
 	Direction  *string              // Sort direction: ASC or DESC. A Sort with no Direction sorts ascending. With Sort nil, Direction applies to createdAt.
 }
 
-// ListOrderApprovalsAPIResponse is the v3 response from listing order approvals.
+// ListOrderApprovalsAPIResponse matches neither the v3 nor the v4 list response.
 //
 // Deprecated: ListOrderApprovals no longer decodes it.
 type ListOrderApprovalsAPIResponse struct {

@@ -224,6 +224,7 @@ func (suite *OrderApprovalClientTestSuite) TestListOrderApprovalsNilRequest() {
 	suite.Empty(listRes.OrderApprovals)
 	suite.Equal(1, listRes.Page)
 	suite.Equal(10, listRes.Limit)
+	suite.Equal(0, listRes.TotalPages)
 }
 
 func (suite *OrderApprovalClientTestSuite) TestListOrderApprovalsDecodeError() {
