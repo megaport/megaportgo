@@ -10,8 +10,12 @@
 - Add `AsOverride` (`*bool`) to `BgpConnectionConfig` so consumers can enable AS Override for eBGP peering. Unset leaves the API default in place.
 - Add `MCRService.GetMCRIPsec` to read an MCR's IPsec tunnels and tunnel counts. This endpoint does not return the pre-shared key or the phase lifetimes.
 - Add the `OrderApprovalType` constants `OrderApprovalTypeEarlyTermination`, `OrderApprovalTypeAddOn`, `OrderApprovalTypeIPAddressPartnerOrder` and `OrderApprovalTypeIPAddressCompliance`. A cancel approval has the type `EARLY_TERMINATION`.
+- Add `ListOrderApprovalsRequest.Type`, `OrderApproval.CompletedAt` and `OrderApproval.CreatedBy`. `Time` also decodes an RFC 3339 string.
 
 ## Changes
+- Breaking: `ListOrderApprovals` calls `GET /v4/order_approvals`, because the API is removing `GET /v3/order_approvals`. `Direction` now changes the sort order, which it did not on v3. `Sort` takes `createdAt`, `serviceId`, `status` or `type`. The SDK sends v3's `createDate` as `createdAt`, and the API returns 400 for other v3 sort fields such as `completionDate`. A `Sort` with no `Direction` sorts ascending.
+- Breaking: `ListOrderApprovals` returns page 1 for a `PageNumber` past the last page, where v3 returned an empty page. An empty result has `TotalPages` 0, not 1. A caller that is not a partner, Megaport staff or a managed account gets 403, where v3 returned 401.
+- Breaking: `OrderApproval` marshals `AcctName`, `AcctRef` and `CreateDate` as `accountName`, `accountReference` and `createdAt`. `OrderApproval.CreateDate` now keeps its milliseconds and the UTC zone the API sends. `OrderApproval.Detail` no longer contains `type`. Read `OrderApproval.Type` instead. `ListOrderApprovalsAPIResponse` is deprecated.
 - `ListNATGatewayIPRoutes`, `ListNATGatewayBGPRoutes` and `ListNATGatewayBGPNeighborRoutes` keep polling when the API answers HTTP 202 for an operation that is still running. Before this change, the first 202 returned an empty route list. `GetNATGatewayDiagnosticsRoutes` returns the new `ErrNATGatewayDiagnosticsNotReady` on a 202.
 - `CreateUser` and `UpdateUser` send the phone as given and leave the format check to the API. They used to reject a phone that failed the SDK's own pattern before sending the request. The API still validates the format, so use E.164, for example `+14155552671`.
 - `GetProductType` accepts a 206 Partial Content response. `GET /v2/product/{productUid}` returns a 206 for any product whose service details the API cannot load, such as an AWS Interconnect. The method used to reject a 206 with an error.

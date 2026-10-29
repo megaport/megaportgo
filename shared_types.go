@@ -53,13 +53,16 @@ var (
 	SERVICE_STATE_READY = []string{SERVICE_CONFIGURED, SERVICE_LIVE}
 )
 
-// Time is a custom time type that allows for unmarshalling of Unix timestamps.
+// Time is a custom time type that unmarshals Unix timestamps in milliseconds and RFC 3339 strings.
 type Time struct {
 	time.Time
 }
 
-// UnmarshalJSON unmarshals a Unix timestamp into a Time type.
+// UnmarshalJSON unmarshals a Unix timestamp in milliseconds or an RFC 3339 string into a Time type.
 func (t *Time) UnmarshalJSON(b []byte) error {
+	if len(b) > 0 && b[0] == '"' {
+		return t.Time.UnmarshalJSON(b)
+	}
 	var timestamp int64
 	err := json.Unmarshal(b, &timestamp)
 	if err != nil {
