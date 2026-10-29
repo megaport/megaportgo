@@ -94,7 +94,7 @@ type ListOrderApprovalsRequest struct {
 	ServiceIDs []int                // Filter by service IDs (optional).
 	PageNumber *int                 // Page number for pagination; if nil, the API default is used. The API answers a page past the last with page 1.
 	PageSize   *int                 // Page size for pagination; if nil, the API default is used.
-	Sort       *string              // Field to sort by: createdAt, serviceId, status or type. The API rejects v3's createDate with a 400.
+	Sort       *string              // Field to sort by: createdAt, serviceId, status or type. v3's createDate is sent as createdAt.
 	Direction  *string              // Sort direction: ASC or DESC. A Sort with no Direction sorts ascending. With Sort nil, Direction applies to createdAt.
 }
 
@@ -197,15 +197,18 @@ func (svc *OrderApprovalServiceOp) ListOrderApprovals(ctx context.Context, req *
 
 // orderApprovalSort builds the v4 sort value, which carries the direction after a comma.
 func orderApprovalSort(req *ListOrderApprovalsRequest) string {
-	if req.Direction == nil {
-		if req.Sort == nil {
-			return ""
-		}
-		return *req.Sort
-	}
-	field := "createdAt"
+	var field string
 	if req.Sort != nil {
 		field = *req.Sort
+	}
+	if field == "createDate" {
+		field = "createdAt" // v3's name for the field. v4 returns 400 for it.
+	}
+	if req.Direction == nil {
+		return field
+	}
+	if field == "" {
+		field = "createdAt"
 	}
 	return field + "," + *req.Direction
 }

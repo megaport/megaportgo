@@ -167,6 +167,7 @@ func (suite *OrderApprovalClientTestSuite) TestListOrderApprovals() {
 
 func (suite *OrderApprovalClientTestSuite) TestListOrderApprovalsSort() {
 	sort := "serviceId"
+	v3Sort := "createDate"
 	direction := "DESC"
 
 	tests := []struct {
@@ -178,6 +179,8 @@ func (suite *OrderApprovalClientTestSuite) TestListOrderApprovalsSort() {
 		{name: "sort and direction", sort: &sort, direction: &direction, want: []string{"serviceId,DESC"}},
 		{name: "direction only", direction: &direction, want: []string{"createdAt,DESC"}},
 		{name: "sort only", sort: &sort, want: []string{"serviceId"}},
+		{name: "v3 createDate and direction", sort: &v3Sort, direction: &direction, want: []string{"createdAt,DESC"}},
+		{name: "v3 createDate only", sort: &v3Sort, want: []string{"createdAt"}},
 		{name: "neither", want: nil},
 	}
 
