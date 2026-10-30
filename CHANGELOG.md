@@ -47,6 +47,7 @@
 - `DeleteNATGateway` now drains and closes the response body when it deletes a gateway in DESIGN state. Previously, on HTTP/1.1, it closed the body unread, and the transport dropped the connection instead of reusing it.
 - Breaking: `DeleteProduct`, `DeleteVXC` and `DeleteIX` now return `ErrCancelLaterNotAllowed` when `DeleteNow` is false, and `RestoreProduct`, `RestorePort` and `RestoreMCR` now return `ErrRestoreNotAllowed`. None of them sends a request. The API removed both actions, and these calls already failed with a 403 permission error. The restore methods are deprecated. `ErrTransitVXCCancelLaterNotAllowed` is deprecated too, and `DeleteVXC` no longer returns it.
 - A VXC read now decodes an IBM CSP connection to `CSPConnectionIBM` when it is the VXC's only CSP connection. The API sends that connection as a bare object, which used to decode to `CSPConnectionOther`.
+- Breaking: `OutageEvent.Notices` is now `[]OutageEventNotice` instead of `[]string`, with `Description`, `CreatedDate` and `NextUpdate` fields. The API sends each notice as an object, and every outage has at least one. `GetOutageEvents` used to fail with a JSON unmarshal error on any response that contained an outage.
 
 # 1.0.0 Release
 
