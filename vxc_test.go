@@ -2431,6 +2431,81 @@ func (suite *VXCClientTestSuite) TestGetVXCAWSPrefixes() {
 	}
 }
 
+func (suite *VXCClientTestSuite) TestGetVXCOraclePortFirstVXCServiceID() {
+	ctx := context.Background()
+	vxcSvc := suite.client.VXCService
+
+	tests := []struct {
+		name      string
+		vxcUid    string
+		portsJSON string
+		want      CSPConnectionOraclePort
+	}{
+		{
+			name:      "key absent",
+			vxcUid:    "2c9c8d3f-0000-4000-8000-000000000001",
+			portsJSON: `{"service_id": 101, "vxc_service_ids": [1234]}`,
+			want:      CSPConnectionOraclePort{ServiceID: 101, VXCServiceIDs: []int{1234}, FirstVXCServiceID: 1234},
+		},
+		{
+			name:      "key absent takes the first of several vxcs",
+			vxcUid:    "2c9c8d3f-0000-4000-8000-000000000002",
+			portsJSON: `{"service_id": 101, "vxc_service_ids": [1234, 5678]}`,
+			want:      CSPConnectionOraclePort{ServiceID: 101, VXCServiceIDs: []int{1234, 5678}, FirstVXCServiceID: 1234},
+		},
+		{
+			name:      "key present wins over vxc_service_ids",
+			vxcUid:    "2c9c8d3f-0000-4000-8000-000000000003",
+			portsJSON: `{"service_id": 101, "vxc_service_ids": [1234], "firstVxcServiceId": 5678}`,
+			want:      CSPConnectionOraclePort{ServiceID: 101, VXCServiceIDs: []int{1234}, FirstVXCServiceID: 5678},
+		},
+		{
+			name:      "no vxcs",
+			vxcUid:    "2c9c8d3f-0000-4000-8000-000000000004",
+			portsJSON: `{"service_id": 101, "vxc_service_ids": []}`,
+			want:      CSPConnectionOraclePort{ServiceID: 101, VXCServiceIDs: []int{}},
+		},
+	}
+
+	for _, tt := range tests {
+		suite.Run(tt.name, func() {
+			jblob := fmt.Sprintf(`{
+		"message": "Found Product %s",
+		"terms": "This data is subject to the Acceptable Use Policy https://www.megaport.com/legal/acceptable-use-policy",
+		"data": {
+			"productId": 1,
+			"productUid": "%s",
+			"productName": "test-oracle-vxc",
+			"productType": "VXC",
+			"resources": {
+				"csp_connection": {
+					"connectType": "ORACLE",
+					"resource_name": "b_csp_connection",
+					"resource_type": "csp_connection",
+					"ports": [%s]
+				}
+			}
+		}
+	}`, tt.vxcUid, tt.vxcUid, tt.portsJSON)
+
+			path := "/v2/product/" + tt.vxcUid
+			suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+				suite.testMethod(r, http.MethodGet)
+				fmt.Fprint(w, jblob)
+			})
+
+			gotVxc, err := vxcSvc.GetVXC(ctx, tt.vxcUid)
+			suite.Require().NoError(err)
+			suite.Require().Len(gotVxc.Resources.CSPConnection.CSPConnection, 1)
+
+			oracle, ok := gotVxc.Resources.CSPConnection.CSPConnection[0].(CSPConnectionOracle)
+			suite.Require().True(ok, "csp_connection did not decode as CSPConnectionOracle")
+			suite.Require().Len(oracle.Ports, 1)
+			suite.Equal(tt.want, oracle.Ports[0])
+		})
+	}
+}
+
 // TestVXCDhcpPoolOnBuy verifies that a DHCP pool on an MCR interface reaches
 // the order body.
 func (suite *VXCClientTestSuite) TestVXCDhcpPoolOnBuy() {

@@ -736,9 +736,22 @@ type CSPConnectionOracleMegaport struct {
 }
 
 type CSPConnectionOraclePort struct {
-	ServiceID         int   `json:"service_id"`
-	VXCServiceIDs     []int `json:"vxc_service_ids"`
-	FirstVXCServiceID int   `json:"firstVxcServiceId,omitempty"`
+	ServiceID     int   `json:"service_id"`
+	VXCServiceIDs []int `json:"vxc_service_ids"`
+	// Deprecated: use VXCServiceIDs[0].
+	FirstVXCServiceID int `json:"firstVxcServiceId,omitempty"`
+}
+
+// UnmarshalJSON fills FirstVXCServiceID from VXCServiceIDs when the API leaves out firstVxcServiceId.
+func (p *CSPConnectionOraclePort) UnmarshalJSON(data []byte) error {
+	type TempPort CSPConnectionOraclePort // A new type that doesn't have UnmarshalJSON method
+	if err := json.Unmarshal(data, (*TempPort)(p)); err != nil {
+		return err
+	}
+	if p.FirstVXCServiceID == 0 && len(p.VXCServiceIDs) > 0 {
+		p.FirstVXCServiceID = p.VXCServiceIDs[0]
+	}
+	return nil
 }
 
 // CSPConnectionTransit represents the configuration of a CSP connection for a Transit VXC.
