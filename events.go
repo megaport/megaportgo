@@ -138,8 +138,21 @@ type OutageEvent struct {
 	// UpdatedDate is the date and time when an outage event is updated, in ISO 8601 UTC format (yyyy-MM-dd'T'HH:mm:ss.SSSX).
 	UpdatedDate string `json:"updatedDate"`
 
-	// Notices is the list of notices sent as an update for an ongoing outage.
-	Notices []string `json:"notices"`
+	// Notices is the list of progress notices on the outage. Follow-up notices come first, newest to oldest.
+	// The opening notice is always last. Its CreatedDate is when the outage record was created.
+	Notices []OutageEventNotice `json:"notices"`
+}
+
+// OutageEventNotice represents a progress notice on an outage event.
+type OutageEventNotice struct {
+	// Description is the body of the notice, as shown to customers.
+	Description string `json:"description"`
+
+	// CreatedDate is the date and time when the notice is recorded, in ISO 8601 UTC format (yyyy-MM-dd'T'HH:mm:ss.SSSX).
+	CreatedDate string `json:"createdDate"`
+
+	// NextUpdate is when the next customer update is due. It is free text, not a timestamp.
+	NextUpdate string `json:"nextUpdate"`
 }
 
 // GetMaintenanceEvents retrieves maintenance events from the Megaport API, filtered by the specified state.
