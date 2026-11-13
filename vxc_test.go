@@ -2506,6 +2506,14 @@ func (suite *VXCClientTestSuite) TestGetVXCOraclePortFirstVXCServiceID() {
 	}
 }
 
+func (suite *VXCClientTestSuite) TestOraclePortFirstVXCServiceIDOnReusedDecode() {
+	var oracle CSPConnectionOracle
+	suite.Require().NoError(json.Unmarshal([]byte(`{"ports": [{"vxc_service_ids": [1234]}]}`), &oracle))
+	suite.Require().NoError(json.Unmarshal([]byte(`{"ports": [{"vxc_service_ids": [5678]}]}`), &oracle))
+	suite.Require().Len(oracle.Ports, 1)
+	suite.Equal(5678, oracle.Ports[0].FirstVXCServiceID)
+}
+
 // TestVXCDhcpPoolOnBuy verifies that a DHCP pool on an MCR interface reaches
 // the order body.
 func (suite *VXCClientTestSuite) TestVXCDhcpPoolOnBuy() {

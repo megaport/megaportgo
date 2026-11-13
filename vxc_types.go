@@ -745,6 +745,8 @@ type CSPConnectionOraclePort struct {
 // UnmarshalJSON fills FirstVXCServiceID from VXCServiceIDs when the API leaves out firstVxcServiceId.
 func (p *CSPConnectionOraclePort) UnmarshalJSON(data []byte) error {
 	type TempPort CSPConnectionOraclePort // A new type that doesn't have UnmarshalJSON method
+	// Clear the field so a decode into a reused port does not keep the last response's value.
+	p.FirstVXCServiceID = 0
 	if err := json.Unmarshal(data, (*TempPort)(p)); err != nil {
 		return err
 	}
