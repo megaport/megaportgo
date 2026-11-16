@@ -15,7 +15,7 @@ func TestUserManagementIntegrationTestSuite(t *testing.T) {
 }
 
 func (suite *UserManagementIntegrationTestSuite) SetupSuite() {
-	// The main test key's company accepts only megaport.com addresses, and megalith
+	// The main test key's company accepts only megaport.com addresses, and the API
 	// adds a new megaport.com user only to Megaport's own company.
 	accessKey := os.Getenv("MEGAPORT_CUSTOMER_ACCESS_KEY")
 	secretKey := os.Getenv("MEGAPORT_CUSTOMER_SECRET_KEY")
