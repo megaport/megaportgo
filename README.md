@@ -63,7 +63,7 @@ To run integration tests against the Megaport API you will need to [generate an 
 export MEGAPORT_ACCESS_KEY=YOUR_KEY
 export MEGAPORT_SECRET_KEY=YOUR_KEY
 
-# The user management tests need a key for a customer company, not Megaport's own
+# The user management tests skip unless these hold a key for a customer company, not Megaport's own
 export MEGAPORT_CUSTOMER_ACCESS_KEY=YOUR_KEY
 export MEGAPORT_CUSTOMER_SECRET_KEY=YOUR_KEY
 

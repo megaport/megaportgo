@@ -15,8 +15,8 @@ func TestUserManagementIntegrationTestSuite(t *testing.T) {
 }
 
 func (suite *UserManagementIntegrationTestSuite) SetupSuite() {
-	// The main test account's company accepts only megaport.com addresses, and
-	// megalith requires a new megaport.com user to start in the admin company.
+	// The main test key's company accepts only megaport.com addresses, and megalith
+	// adds a new megaport.com user only to Megaport's own company.
 	accessKey := os.Getenv("MEGAPORT_CUSTOMER_ACCESS_KEY")
 	secretKey := os.Getenv("MEGAPORT_CUSTOMER_SECRET_KEY")
 	if accessKey == "" || secretKey == "" {
@@ -163,6 +163,7 @@ func (suite *UserManagementIntegrationTestSuite) testCreateUser(c *Client, ctx c
 		suite.client.Logger.ErrorContext(ctx, "Failed to create user", slog.String("error", err.Error()))
 		return nil, err
 	}
+	suite.Require().NotNil(createRes)
 
 	suite.client.Logger.DebugContext(ctx, "User created successfully",
 		slog.Int("employee_id", createRes.EmployeeID),
