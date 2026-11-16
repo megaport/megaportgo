@@ -164,6 +164,10 @@ func (suite *UserManagementIntegrationTestSuite) testCreateUser(c *Client, ctx c
 		return nil, err
 	}
 	suite.Require().NotNil(createRes)
+	// Delete the user if the test stops before its own delete. On the normal path this call fails and is ignored.
+	suite.T().Cleanup(func() {
+		_ = c.UserManagementService.DeleteUser(context.Background(), createRes.EmployeeID)
+	})
 
 	suite.client.Logger.DebugContext(ctx, "User created successfully",
 		slog.Int("employee_id", createRes.EmployeeID),
