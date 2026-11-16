@@ -8,7 +8,6 @@ import (
 	"io"
 	"log/slog"
 	"net/mail"
-	"net/url"
 	"strconv"
 	"strings"
 )
@@ -27,7 +26,7 @@ type UserManagementService interface {
 	DeleteUser(ctx context.Context, employeeID int) error
 	// DeactivateUser deactivates a user by their employee ID.
 	DeactivateUser(ctx context.Context, employeeID int) error
-	// GetUserActivity retrieves the activity of a user based on their person ID or UID.
+	// GetUserActivity retrieves the caller's own activity log.
 	GetUserActivity(ctx context.Context, req *GetUserActivityRequest) ([]*UserActivity, error)
 }
 
@@ -186,12 +185,11 @@ func (req *UpdateUserRequest) Validate() error {
 	return nil
 }
 
-// GetUserActivityRequest represents the query parameters for retrieving user activity.
-// If a field is not an empty string, it will be included as a query parameter.
+// GetUserActivityRequest is kept for compatibility. GetUserActivity ignores it.
 type GetUserActivityRequest struct {
-	// PersonIdOrUid is the user's person ID or UID to filter activity for a specific user.
+	// Deprecated: GetUserActivity ignores this field.
 	PersonIdOrUid string
-	// CompanyIdOrUid is the company ID or UID to filter activity for a specific company.
+	// Deprecated: GetUserActivity ignores this field.
 	CompanyIdOrUid string
 }
 
@@ -434,28 +432,10 @@ func (svc *UserManagementServiceOp) DeleteUser(ctx context.Context, employeeID i
 	return nil
 }
 
-// GetUserActivity retrieves a log of user activity in the Megaport Portal.
-// It can be filtered by person ID/UID and/or company ID/UID using the request parameters.
-func (svc *UserManagementServiceOp) GetUserActivity(ctx context.Context, req *GetUserActivityRequest) ([]*UserActivity, error) {
-	if req == nil {
-		req = &GetUserActivityRequest{}
-	}
-	path := "/v3/activity"
-
-	// Append query parameters if provided using proper URL encoding
-	queryParams := url.Values{}
-	if req.PersonIdOrUid != "" {
-		queryParams.Add("personIdOrUid", req.PersonIdOrUid)
-	}
-	if req.CompanyIdOrUid != "" {
-		queryParams.Add("companyIdOrUid", req.CompanyIdOrUid)
-	}
-
-	if len(queryParams) > 0 {
-		path += "?" + queryParams.Encode()
-	}
-
-	clientReq, err := svc.client.NewRequest(ctx, "GET", path, nil)
+// GetUserActivity retrieves the caller's own activity log in the Megaport Portal.
+// The API returns the 10 most recent entries.
+func (svc *UserManagementServiceOp) GetUserActivity(ctx context.Context, _ *GetUserActivityRequest) ([]*UserActivity, error) {
+	clientReq, err := svc.client.NewRequest(ctx, "GET", "/v4/activity", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -478,10 +458,10 @@ func (svc *UserManagementServiceOp) GetUserActivity(ctx context.Context, req *Ge
 		return nil, fmt.Errorf("failed to get user activity: HTTP %d - %s", response.StatusCode, string(body))
 	}
 
-	var activities []*UserActivity
-	if err := json.Unmarshal(body, &activities); err != nil {
+	var page getActivityV4Response
+	if err := json.Unmarshal(body, &page); err != nil {
 		return nil, err
 	}
 
-	return activities, nil
+	return page.Data.Items, nil
 }

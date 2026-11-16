@@ -13,6 +13,7 @@
 - Add `ListOrderApprovalsRequest.Type`, `OrderApproval.CompletedAt` and `OrderApproval.CreatedBy`. `Time` also decodes an RFC 3339 string.
 
 ## Changes
+- Breaking: `GetUserActivity` calls `GET /v4/activity`, because the API is removing `GET /v3/activity` on 8 January 2027. It returns the caller's own 10 most recent entries and ignores `GetUserActivityRequest`, whose fields are deprecated. `UserActivity` marshals `CreateDate` as `createdAt`. The method used to fail on every call, because v3 wraps the list in `data`.
 - Breaking: `ListOrderApprovals` calls `GET /v4/order_approvals`, because the API is removing `GET /v3/order_approvals`. `Direction` now changes the sort order, which it did not on v3. `Sort` takes `createdAt`, `serviceId`, `status` or `type`. The SDK sends v3's `createDate` as `createdAt`, and the API returns 400 for other v3 sort fields such as `completionDate`. A `Sort` with no `Direction` sorts ascending.
 - Breaking: `ListOrderApprovals` returns page 1 for a `PageNumber` past the last page, where v3 returned an empty page. An empty result has `TotalPages` 0, not 1. A caller that is not a partner, Megaport staff or a managed account gets 403, where v3 returned 401.
 - Breaking: `OrderApproval` marshals `AcctName`, `AcctRef` and `CreateDate` as `accountName`, `accountReference` and `createdAt`. `OrderApproval.CreateDate` now keeps its milliseconds and the UTC zone the API sends. `OrderApproval.Detail` no longer contains `type`. Read `OrderApproval.Type` instead. `ListOrderApprovalsAPIResponse` is deprecated.

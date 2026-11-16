@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -271,29 +272,36 @@ func (suite *UserManagementClientTestSuite) TestGetUserActivity() {
 		CompanyIdOrUid: "1234",
 	}
 
-	jblob := `[
-        {
-            "loginName": "John Doe",
-            "personId": 9012,
-            "description": "User logged in",
-            "name": "Login",
-            "createDate": 1623456789000,
-            "userType": "USER"
-        },
-        {
-            "loginName": "John Doe",
-            "personId": 9012,
-            "description": "User updated profile",
-            "name": "UpdateProfile",
-            "createDate": 1623456999000,
-            "userType": "USER"
+	jblob := `{
+        "data": {
+            "items": [
+                {
+                    "loginName": "John Doe",
+                    "personId": 9012,
+                    "description": "User logged in",
+                    "name": "Login",
+                    "createdAt": "2025-11-12T10:15:30.123Z",
+                    "userType": "USER"
+                },
+                {
+                    "loginName": "John Doe",
+                    "personId": 9012,
+                    "description": "User updated profile",
+                    "name": "UpdateProfile",
+                    "createdAt": "2025-11-12T10:20:00.000Z",
+                    "userType": "USER"
+                }
+            ],
+            "pageNumber": 1,
+            "pageSize": 10,
+            "totalItems": 2,
+            "totalPages": 1
         }
-    ]`
+    }`
 
-	suite.mux.HandleFunc("/v3/activity", func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc("/v4/activity", func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
-		suite.Equal("9012", r.URL.Query().Get("personIdOrUid"))
-		suite.Equal("1234", r.URL.Query().Get("companyIdOrUid"))
+		suite.Empty(r.URL.RawQuery)
 		fmt.Fprint(w, jblob)
 	})
 
@@ -304,6 +312,8 @@ func (suite *UserManagementClientTestSuite) TestGetUserActivity() {
 	suite.Equal(9012, activities[0].PersonId)
 	suite.Equal("User logged in", activities[0].Description)
 	suite.Equal("Login", activities[0].Name)
+	suite.Equal("USER", activities[0].UserType)
+	suite.True(time.Date(2025, 11, 12, 10, 15, 30, 123000000, time.UTC).Equal(activities[0].CreateDate.Time))
 }
 
 // TestUserManagementNilRequestGuards verifies required-request methods reject a nil request.
@@ -332,12 +342,13 @@ func (suite *UserManagementClientTestSuite) TestUserManagementNilRequestGuards()
 	}
 }
 
-// TestGetUserActivityNilRequest verifies a nil request is treated as no filter.
+// TestGetUserActivityNilRequest verifies a nil request and an empty page return no entries.
 func (suite *UserManagementClientTestSuite) TestGetUserActivityNilRequest() {
 	ctx := context.Background()
-	suite.mux.HandleFunc("/v3/activity", func(w http.ResponseWriter, r *http.Request) {
+	suite.mux.HandleFunc("/v4/activity", func(w http.ResponseWriter, r *http.Request) {
 		suite.testMethod(r, http.MethodGet)
-		fmt.Fprint(w, `[]`)
+		suite.Empty(r.URL.RawQuery)
+		fmt.Fprint(w, `{"data": {"items": [], "pageNumber": 1, "pageSize": 10, "totalItems": 0, "totalPages": 0}}`)
 	})
 
 	activities, err := suite.client.UserManagementService.GetUserActivity(ctx, nil)
