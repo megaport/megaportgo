@@ -62,7 +62,7 @@ func (svc *SolutionServiceOp) BuyDCI(ctx context.Context, req *BuyDCIRequest) (*
 		return nil, err
 	}
 	orderInfo := solutionOrderResponse{}
-	if err := json.Unmarshal(*responseBody, &orderInfo); err != nil {
+	if err = json.Unmarshal(*responseBody, &orderInfo); err != nil {
 		return nil, err
 	}
 
@@ -171,7 +171,7 @@ func (svc *SolutionServiceOp) GetSolution(ctx context.Context, solutionUID strin
 	defer response.Body.Close()
 
 	resp := solutionAPIResponse{}
-	if err := json.NewDecoder(response.Body).Decode(&resp); err != nil {
+	if err = json.NewDecoder(response.Body).Decode(&resp); err != nil {
 		return nil, fmt.Errorf("failed to decode GetSolution response: %w", err)
 	}
 	if resp.Data == nil || resp.Data.UID == "" {
@@ -200,7 +200,7 @@ func (svc *SolutionServiceOp) GetSolutionBillable(ctx context.Context, solutionU
 	defer response.Body.Close()
 
 	resp := solutionBillableAPIResponse{}
-	if err := json.NewDecoder(response.Body).Decode(&resp); err != nil {
+	if err = json.NewDecoder(response.Body).Decode(&resp); err != nil {
 		return nil, fmt.Errorf("failed to decode GetSolutionBillable response: %w", err)
 	}
 	if resp.Data == nil {
