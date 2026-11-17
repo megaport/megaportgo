@@ -2,7 +2,6 @@ package megaport
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -10,6 +9,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // SolutionService is an interface for interfacing with the Solution endpoints of the Megaport API.
@@ -47,14 +48,8 @@ func (svc *SolutionServiceOp) BuyDCI(ctx context.Context, req *BuyDCIRequest) (*
 		return nil, ErrSolutionNameRequired
 	}
 
-	solutionRef, err := newUUID()
-	if err != nil {
-		return nil, err
-	}
-	networkDesign, err := createDCIOrder(req, solutionRef)
-	if err != nil {
-		return nil, err
-	}
+	solutionRef := uuid.NewString()
+	networkDesign := createDCIOrder(req, solutionRef)
 	solutions := []solutionOrder{{
 		Ref:                   solutionRef,
 		Type:                  SolutionTypeDCI,
@@ -75,6 +70,7 @@ func (svc *SolutionServiceOp) BuyDCI(ctx context.Context, req *BuyDCIRequest) (*
 	for _, s := range orderInfo.Solutions {
 		if s.Ref == solutionRef {
 			toReturn.SolutionUID = s.UID
+			break
 		}
 	}
 	if toReturn.SolutionUID == "" {
@@ -118,17 +114,9 @@ func (svc *SolutionServiceOp) BuyDCI(ctx context.Context, req *BuyDCIRequest) (*
 }
 
 // createDCIOrder builds the network design of a DCI: the A-End Port carrying the VXC, then the B-End Port.
-func createDCIOrder(req *BuyDCIRequest, solutionRef string) ([]dciPortOrder, error) {
+func createDCIOrder(req *BuyDCIRequest, solutionRef string) []dciPortOrder {
 	// The Ports do not exist yet, so the VXC names its ends by temporary UIDs.
-	uids := make([]string, 3)
-	for i := range uids {
-		uid, err := newUUID()
-		if err != nil {
-			return nil, err
-		}
-		uids[i] = uid
-	}
-	aEndPortUID, bEndPortUID, vxcUID := uids[0], uids[1], uids[2]
+	aEndPortUID, bEndPortUID, vxcUID := uuid.NewString(), uuid.NewString(), uuid.NewString()
 
 	port := func(uid string, locationID int, diversityZone string) dciPortOrder {
 		return dciPortOrder{
@@ -162,18 +150,7 @@ func createDCIOrder(req *BuyDCIRequest, solutionRef string) ([]dciPortOrder, err
 	}}
 	bEndPort := port(bEndPortUID, req.BEndLocationID, req.BEndDiversityZone)
 
-	return []dciPortOrder{aEndPort, bEndPort}, nil
-}
-
-// newUUID returns a random (version 4) UUID.
-func newUUID() (string, error) {
-	var b [16]byte
-	if _, err := rand.Read(b[:]); err != nil {
-		return "", fmt.Errorf("failed to generate a UUID: %w", err)
-	}
-	b[6] = (b[6] & 0x0f) | 0x40 // version 4
-	b[8] = (b[8] & 0x3f) | 0x80 // RFC 4122 variant
-	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16]), nil
+	return []dciPortOrder{aEndPort, bEndPort}
 }
 
 // GetSolution gets a Solution and its member services using GET /v1/solutions/{uid}.

@@ -9,11 +9,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"regexp"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -330,17 +328,4 @@ func (suite *SolutionClientTestSuite) TestSolutionUIDRequired() {
 
 	_, err = suite.client.SolutionService.GetSolutionBillable(ctx, "")
 	suite.ErrorIs(err, ErrSolutionUIDRequired)
-}
-
-func TestNewUUID(t *testing.T) {
-	t.Parallel()
-	version4 := regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`)
-	seen := map[string]bool{}
-	for i := 0; i < 100; i++ {
-		uid, err := newUUID()
-		require.NoError(t, err)
-		require.Regexp(t, version4, uid)
-		require.False(t, seen[uid], "%q was generated twice", uid)
-		seen[uid] = true
-	}
 }
