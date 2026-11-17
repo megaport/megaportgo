@@ -6,6 +6,7 @@ package megaport
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -40,11 +41,24 @@ func newFakeTimeClient(reads ...string) *Client {
 		case r.Method == http.MethodPost && r.URL.Path == "/v3/networkdesign/validate":
 			fmt.Fprint(w, `{"message":"ok"}`)
 		case r.Method == http.MethodPost && r.URL.Path == "/v4/networkdesign/buy":
-			fmt.Fprintf(w, `{"data":[{"technicalServiceUid":%q,"vxcJTechnicalServiceUid":%q}]}`, fakeTimeUID, fakeTimeUID)
+			var order struct {
+				Solutions []struct {
+					Ref string `json:"ref"`
+				} `json:"solutions"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&order)
+			solutions := "[]"
+			if len(order.Solutions) > 0 {
+				solutions = fmt.Sprintf(`[{"uid":%q,"ref":%q}]`, fakeTimeUID, order.Solutions[0].Ref)
+			}
+			fmt.Fprintf(w, `{"data":[{"technicalServiceUid":%q,"vxcJTechnicalServiceUid":%q}],"solutions":%s}`, fakeTimeUID, fakeTimeUID, solutions)
 		case r.Method == http.MethodPut && slices.Contains(updatePaths, r.URL.Path):
 			fmt.Fprint(w, `{"data":{}}`)
 		case r.Method == http.MethodGet && r.URL.Path == "/v2/product/"+fakeTimeUID && len(reads) > 0 && reads[0] != "":
 			fmt.Fprintf(w, `{"data":{"provisioningStatus":%q}}`, reads[0])
+			reads = reads[1:]
+		case r.Method == http.MethodGet && r.URL.Path == "/v1/solutions/"+fakeTimeUID && len(reads) > 0 && reads[0] != "":
+			fmt.Fprintf(w, `{"data":{"uid":%q,"provisioningStatus":%q}}`, fakeTimeUID, reads[0])
 			reads = reads[1:]
 		default:
 			w.WriteHeader(http.StatusInternalServerError)
@@ -76,7 +90,15 @@ func waitCases() []waitCase {
 	mveOrder := &BuyMVEResponse{TechnicalServiceUID: fakeTimeUID}
 	vxcOrder := &BuyVXCResponse{TechnicalServiceUID: fakeTimeUID}
 	ixOrder := &BuyIXResponse{TechnicalServiceUID: fakeTimeUID}
+	dciOrder := &BuyDCIResponse{SolutionUID: fakeTimeUID}
 	return []waitCase{
+		{
+			name: "BuyDCI",
+			call: func(ctx context.Context, c *Client) (any, error) {
+				return c.SolutionService.BuyDCI(ctx, &BuyDCIRequest{Name: "test-dci", AEndLocationID: 143, BEndLocationID: 145, PortSpeed: 10000, Term: 12, WaitForProvision: true})
+			},
+			firstRead: poll, failed: dciOrder, ready: dciOrder,
+		},
 		{
 			name: "BuyPort",
 			call: func(ctx context.Context, c *Client) (any, error) {
@@ -161,7 +183,6 @@ func waitCases() []waitCase {
 func TestWaitStatusReadFails(t *testing.T) {
 	t.Parallel()
 	for _, tc := range waitCases() {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			synctest.Test(t, func(t *testing.T) {
@@ -188,7 +209,6 @@ func TestWaitStatusReadFails(t *testing.T) {
 func TestWaitReadyOnSecondRead(t *testing.T) {
 	t.Parallel()
 	for _, tc := range waitCases() {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			synctest.Test(t, func(t *testing.T) {

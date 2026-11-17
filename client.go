@@ -111,6 +111,8 @@ type Client struct {
 	ProductAvailabilityService ProductAvailabilityService
 	// CompanyService provides methods for interacting with the company endpoints, such as the current company
 	CompanyService CompanyService
+	// SolutionService provides methods for interacting with the Solutions API, such as ordering a DCI
+	SolutionService SolutionService
 
 	accessToken string    // Access Token for client
 	tokenExpiry time.Time // Token Expiration
@@ -191,13 +193,20 @@ func NewClient(httpClient *http.Client, base *url.URL) *Client {
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
-	c := &Client{
+	client := &Client{
 		HTTPClient: httpClient,
 		BaseURL:    baseURL,
 		UserAgent:  userAgent,
 		Logger:     logger,
+		headers:    make(map[string]string),
 	}
+	client.initServices()
+	return client
+}
 
+// initServices initializes and attaches all the API sub-services to the Client.
+// It is called internally during the client creation process to set up endpoints.
+func (c *Client) initServices() {
 	c.ProductService = NewProductService(c)
 	c.PortService = NewPortService(c)
 	c.LocationService = NewLocationService(c)
@@ -216,10 +225,7 @@ func NewClient(httpClient *http.Client, base *url.URL) *Client {
 	c.OrderApprovalService = NewOrderApprovalService(c)
 	c.ProductAvailabilityService = NewProductAvailabilityService(c)
 	c.CompanyService = NewCompanyService(c)
-
-	c.headers = make(map[string]string)
-
-	return c
+	c.SolutionService = NewSolutionService(c)
 }
 
 // ClientOpt are options for New.

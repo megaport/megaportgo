@@ -1,0 +1,240 @@
+package megaport
+
+import (
+	"context"
+	"crypto/rand"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/url"
+	"slices"
+	"strings"
+	"time"
+)
+
+// SolutionService is an interface for interfacing with the Solution endpoints of the Megaport API.
+// A Solution is a named group of services, such as a DCI, that is ordered and billed as one item.
+type SolutionService interface {
+	// BuyDCI buys a DCI: a Port at each end and a VXC between them, placed as one order.
+	BuyDCI(ctx context.Context, req *BuyDCIRequest) (*BuyDCIResponse, error)
+	// GetSolution gets a Solution and its member services.
+	GetSolution(ctx context.Context, solutionUID string) (*Solution, error)
+	// GetSolutionBillable gets a Solution's current term and auto-renew setting.
+	GetSolutionBillable(ctx context.Context, solutionUID string) (*SolutionBillable, error)
+}
+
+// NewSolutionService creates a new instance of the Solution Service.
+func NewSolutionService(c *Client) *SolutionServiceOp {
+	return &SolutionServiceOp{
+		Client: c,
+	}
+}
+
+var _ SolutionService = &SolutionServiceOp{}
+
+// SolutionServiceOp handles communication with the Solution related methods of the Megaport API.
+type SolutionServiceOp struct {
+	Client *Client
+}
+
+// BuyDCI buys a DCI using POST /v4/networkdesign/buy. The order holds both Ports, the VXC between them and the
+// DCI itself, so the DCI is created, priced and billed as one item. The API checks the term, speed and locations.
+func (svc *SolutionServiceOp) BuyDCI(ctx context.Context, req *BuyDCIRequest) (*BuyDCIResponse, error) {
+	if req == nil {
+		return nil, ErrBuyDCIRequestNil
+	}
+	if strings.TrimSpace(req.Name) == "" {
+		return nil, ErrSolutionNameRequired
+	}
+
+	solutionRef, err := newUUID()
+	if err != nil {
+		return nil, err
+	}
+	networkDesign, err := createDCIOrder(req, solutionRef)
+	if err != nil {
+		return nil, err
+	}
+	solutions := []solutionOrder{{
+		Ref:                   solutionRef,
+		Type:                  SolutionTypeDCI,
+		Name:                  req.Name,
+		ServiceLevelReference: req.ServiceLevelReference,
+	}}
+
+	responseBody, err := executeOrder(ctx, svc.Client, networkDesign, solutions)
+	if err != nil {
+		return nil, err
+	}
+	orderInfo := solutionOrderResponse{}
+	if err := json.Unmarshal(*responseBody, &orderInfo); err != nil {
+		return nil, err
+	}
+
+	toReturn := &BuyDCIResponse{}
+	for _, s := range orderInfo.Solutions {
+		if s.Ref == solutionRef {
+			toReturn.SolutionUID = s.UID
+		}
+	}
+	if toReturn.SolutionUID == "" {
+		return nil, ErrDCIOrderResponseMissingSolution
+	}
+
+	// wait until the DCI is provisioned before returning if requested by the user
+	if req.WaitForProvision {
+		toWait := req.WaitForTime
+		if toWait == 0 {
+			toWait = 5 * time.Minute
+		}
+
+		ticker := time.NewTicker(30 * time.Second) // check on the provision status every 30 seconds
+		timer := time.NewTimer(toWait)
+		defer ticker.Stop()
+		defer timer.Stop()
+
+		for {
+			select {
+			case <-timer.C:
+				return toReturn, fmt.Errorf("time expired waiting for DCI %s to provision", toReturn.SolutionUID)
+			case <-ctx.Done():
+				return toReturn, fmt.Errorf("context expired waiting for DCI %s to provision", toReturn.SolutionUID)
+			case <-ticker.C:
+				solution, err := svc.GetSolution(ctx, toReturn.SolutionUID)
+				if err != nil {
+					return toReturn, err
+				}
+
+				// the status is rolled up from the members, so it is ready only once every member is
+				if slices.Contains(SERVICE_STATE_READY, solution.ProvisioningStatus) {
+					return toReturn, nil
+				}
+			}
+		}
+	}
+
+	// return the Solution UID right away if the user doesn't want to wait for provision
+	return toReturn, nil
+}
+
+// createDCIOrder builds the network design of a DCI: the A-End Port carrying the VXC, then the B-End Port.
+func createDCIOrder(req *BuyDCIRequest, solutionRef string) ([]dciPortOrder, error) {
+	// The Ports do not exist yet, so the VXC names its ends by temporary UIDs.
+	uids := make([]string, 3)
+	for i := range uids {
+		uid, err := newUUID()
+		if err != nil {
+			return nil, err
+		}
+		uids[i] = uid
+	}
+	aEndPortUID, bEndPortUID, vxcUID := uids[0], uids[1], uids[2]
+
+	port := func(uid string, locationID int, diversityZone string) dciPortOrder {
+		return dciPortOrder{
+			ProductUID:         uid,
+			Name:               req.Name,
+			ProductType:        "MEGAPORT",
+			ProvisioningStatus: STATUS_DESIGN,
+			LocationID:         locationID,
+			PortSpeed:          req.PortSpeed,
+			Term:               req.Term,
+			AutoRenewTerm:      req.AutoRenewTerm,
+			SolutionRef:        solutionRef,
+			Config:             PortOrderConfig{DiversityZone: diversityZone},
+			AssociatedVXCs:     []dciVXCOrder{},
+		}
+	}
+
+	aEndPort := port(aEndPortUID, req.AEndLocationID, req.AEndDiversityZone)
+	aEndPort.AssociatedVXCs = []dciVXCOrder{{
+		ProductUID:         vxcUID,
+		Name:               req.Name,
+		ProductType:        "VXC",
+		ProvisioningStatus: STATUS_DESIGN,
+		RateLimit:          req.PortSpeed,
+		Term:               req.Term,
+		AutoRenewTerm:      req.AutoRenewTerm,
+		ConnectType:        "DEFAULT",
+		AEnd:               dciVXCOrderEnd{ProductUID: aEndPortUID},
+		BEnd:               dciVXCOrderEnd{ProductUID: bEndPortUID},
+		SolutionRef:        solutionRef,
+	}}
+	bEndPort := port(bEndPortUID, req.BEndLocationID, req.BEndDiversityZone)
+
+	return []dciPortOrder{aEndPort, bEndPort}, nil
+}
+
+// newUUID returns a random (version 4) UUID.
+func newUUID() (string, error) {
+	var b [16]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return "", fmt.Errorf("failed to generate a UUID: %w", err)
+	}
+	b[6] = (b[6] & 0x0f) | 0x40 // version 4
+	b[8] = (b[8] & 0x3f) | 0x80 // RFC 4122 variant
+	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16]), nil
+}
+
+// GetSolution gets a Solution and its member services using GET /v1/solutions/{uid}.
+func (svc *SolutionServiceOp) GetSolution(ctx context.Context, solutionUID string) (*Solution, error) {
+	if solutionUID == "" {
+		return nil, ErrSolutionUIDRequired
+	}
+
+	req, err := svc.Client.NewRequest(ctx, http.MethodGet, svc.solutionURL(solutionUID), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := svc.Client.Do(ctx, req, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	resp := solutionAPIResponse{}
+	if err := json.NewDecoder(response.Body).Decode(&resp); err != nil {
+		return nil, fmt.Errorf("failed to decode GetSolution response: %w", err)
+	}
+	if resp.Data == nil || resp.Data.UID == "" {
+		return nil, ErrSolutionResponseEmpty
+	}
+
+	return resp.Data, nil
+}
+
+// GetSolutionBillable gets a Solution's current term using GET /v1/solutions/{uid}/billable.
+// Before billing starts, the term and auto-renew setting are as ordered and the term dates are nil.
+func (svc *SolutionServiceOp) GetSolutionBillable(ctx context.Context, solutionUID string) (*SolutionBillable, error) {
+	if solutionUID == "" {
+		return nil, ErrSolutionUIDRequired
+	}
+
+	req, err := svc.Client.NewRequest(ctx, http.MethodGet, svc.solutionURL(solutionUID, "billable"), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := svc.Client.Do(ctx, req, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	resp := solutionBillableAPIResponse{}
+	if err := json.NewDecoder(response.Body).Decode(&resp); err != nil {
+		return nil, fmt.Errorf("failed to decode GetSolutionBillable response: %w", err)
+	}
+	if resp.Data == nil {
+		return nil, ErrSolutionResponseEmpty
+	}
+
+	return resp.Data, nil
+}
+
+// solutionURL returns the URL of a Solution, or of one of its sub-resources.
+func (svc *SolutionServiceOp) solutionURL(solutionUID string, elem ...string) string {
+	path := append([]string{"/v1/solutions", url.PathEscape(solutionUID)}, elem...)
+	return svc.Client.BaseURL.JoinPath(path...).String()
+}

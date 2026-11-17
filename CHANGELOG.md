@@ -1,6 +1,7 @@
 # Unreleased
 
 ## New Features
+- Add `SolutionService` for ordering DCI Solutions. `BuyDCI` orders a Port at each end and the VXC between them as one item. `GetSolution` reads a Solution and its member services, and `GetSolutionBillable` reads its term and auto-renew setting. The API accepts a DCI term of 12, 24 or 36 months.
 - Add `CompanyService` with `GetCurrentCompany`, which returns the company the caller acts in (UID, name, account type and any parent company) from `GET /v2/me`. Session users also get `CompanyID`, `RootAccountType`, `IsManagedContext` and `Companies`. Add the `AccountType` type and constants.
 - Add `ProductAvailabilityService` with `ListCompanyProductAvailability`, which lists the products a company can order and the markets each is available in.
 - Add `AggregationID` to `BuyPortRequest` so a port order can add ports to an existing LAG. Set it with `LagCount` to say how many ports to add, and send the LAG's own `LocationId` and `PortSpeed`. Leaving it zero keeps today's behavior.
