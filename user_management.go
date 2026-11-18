@@ -29,6 +29,7 @@ type UserManagementService interface {
 	// DeactivateUser deactivates a user by their employee ID.
 	DeactivateUser(ctx context.Context, employeeID int) error
 	// GetUserActivity retrieves the caller's own activity log.
+	// It returns the first page only. Actions made with an API key are not included.
 	GetUserActivity(ctx context.Context, req *GetUserActivityRequest) ([]*UserActivity, error)
 }
 

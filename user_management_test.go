@@ -378,6 +378,16 @@ func (suite *UserManagementClientTestSuite) TestGetUserActivityFilters() {
 			want: url.Values{"from": {"2026-11-10T23:30:00.123Z"}, "to": {"2026-11-18T00:00:00.456Z"}},
 		},
 		{
+			name: "from with no to",
+			req:  &GetUserActivityRequest{From: &from},
+			want: url.Values{"from": {"2026-11-10T23:30:00.123Z"}},
+		},
+		{
+			name: "to with no from",
+			req:  &GetUserActivityRequest{To: &to},
+			want: url.Values{"to": {"2026-11-18T00:00:00.456Z"}},
+		},
+		{
 			name: "page size and sort",
 			req:  &GetUserActivityRequest{PageSize: PtrTo(50), Sort: PtrTo("name"), Direction: PtrTo("DESC")},
 			want: url.Values{"page_size": {"50"}, "sort": {"name,desc"}},
@@ -386,6 +396,11 @@ func (suite *UserManagementClientTestSuite) TestGetUserActivityFilters() {
 			name: "sort with no direction",
 			req:  &GetUserActivityRequest{Sort: PtrTo("description")},
 			want: url.Values{"sort": {"description"}},
+		},
+		{
+			name: "mixed-case sort field",
+			req:  &GetUserActivityRequest{Sort: PtrTo("createdAt")},
+			want: url.Values{"sort": {"createdAt"}},
 		},
 		{
 			name: "direction with no sort",
