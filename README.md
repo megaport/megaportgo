@@ -24,7 +24,7 @@ import (
 
 // Create a new client using your credentials and interact with the Megaport API
 func main() {
-	// Creates a new client using the default HTTP cleint with the specified credentials against the staging environment
+	// Creates a staging client with the specified credentials. A nil HTTP client gets a default with a 5 minute timeout
 	client, err := megaport.New(nil,
 		megaport.WithCredentials("ACCESS_KEY", "SECRET_KEY"),
 		megaport.WithEnvironment(megaport.EnvironmentStaging),
@@ -62,6 +62,10 @@ To run integration tests against the Megaport API you will need to [generate an 
 ```
 export MEGAPORT_ACCESS_KEY=YOUR_KEY
 export MEGAPORT_SECRET_KEY=YOUR_KEY
+
+# The user management tests skip unless these are set, and they need a key for a customer company, not Megaport's own
+export MEGAPORT_CUSTOMER_ACCESS_KEY=YOUR_KEY
+export MEGAPORT_CUSTOMER_SECRET_KEY=YOUR_KEY
 
 go test -timeout 20m -integration ./...
 ```

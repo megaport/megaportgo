@@ -1,6 +1,7 @@
 # Unreleased
 
 ## New Features
+- Add `SolutionService` for ordering DCI Solutions. `BuyDCI` orders a Port at each end and the VXC between them as one item. `GetSolution` reads a Solution and its member services, and `GetSolutionBillable` reads its term and auto-renew setting. The API accepts a DCI term of 12, 24 or 36 months.
 - Add `CompanyService` with `GetCurrentCompany`, which returns the company the caller acts in (UID, name, account type and any parent company) from `GET /v2/me`. Session users also get `CompanyID`, `RootAccountType`, `IsManagedContext` and `Companies`. Add the `AccountType` type and constants.
 - Add `ProductAvailabilityService` with `ListCompanyProductAvailability`, which lists the products a company can order and the markets each is available in.
 - Add `AggregationID` to `BuyPortRequest` so a port order can add ports to an existing LAG. Set it with `LagCount` to say how many ports to add, and send the LAG's own `LocationId` and `PortSpeed`. Leaving it zero keeps today's behavior.
@@ -15,6 +16,7 @@
 
 ## Changes
 - Breaking: `GetUserActivity` calls `GET /v4/activity`, because the API is removing `GET /v3/activity` on 8 January 2027. It returns the caller's own entries, 10 by default, and ignores `PersonIdOrUid` and `CompanyIdOrUid`, which are deprecated. Actions made with an API key are not included. `UserActivity` marshals `CreateDate` as `createdAt`. The method used to fail on every call, because v3 wraps the list in `data`.
+- `New`, `NewClient` and `DoRequest` use an HTTP client with a 5 minute timeout when the caller passes no `http.Client`. Before this change they used `http.DefaultClient`, which has no timeout, so a server that never replied blocked the call until the context ended.
 - Breaking: `ListOrderApprovals` calls `GET /v4/order_approvals`, because the API is removing `GET /v3/order_approvals`. `Direction` now changes the sort order, which it did not on v3. `Sort` takes `createdAt`, `serviceId`, `status` or `type`. The SDK sends v3's `createDate` as `createdAt`, and the API returns 400 for other v3 sort fields such as `completionDate`. A `Sort` with no `Direction` sorts ascending.
 - Breaking: `ListOrderApprovals` returns page 1 for a `PageNumber` past the last page, where v3 returned an empty page. An empty result has `TotalPages` 0, not 1. A caller that is not a partner, Megaport staff or a managed account gets 403, where v3 returned 401.
 - Breaking: `OrderApproval` marshals `AcctName`, `AcctRef` and `CreateDate` as `accountName`, `accountReference` and `createdAt`. `OrderApproval.CreateDate` now keeps its milliseconds and the UTC zone the API sends. `OrderApproval.Detail` no longer contains `type`. Read `OrderApproval.Type` instead. `ListOrderApprovalsAPIResponse` is deprecated.
@@ -26,6 +28,7 @@
 - `ModifyProduct` and `UpdateIX` return `ErrModifyPendingApproval` when the API creates an order approval request instead of applying the change. That case used to read as a successful update, though the API applied no field in the request. `ModifyPort`, `ModifyMCR`, `ModifyMVE` and `UpdateIX` return it without waiting.
 - `DeleteProduct` returns `ErrCancelPendingApproval` when the API creates an order approval request instead of canceling. That case used to read as a successful cancel on a product that was still live. Every product delete method forwards it.
 - `UpdateMCRWithAddOn` returns `ErrModifyPendingApproval` without waiting when the API creates an order approval request instead of adding the add-on. That case used to read as a successful add-on order, though the API added nothing.
+- `CSPConnectionOraclePort.FirstVXCServiceID` is deprecated. Use `VXCServiceIDs[0]`. A read fills it from `VXCServiceIDs` when the API leaves out `firstVxcServiceId`, which it stops sending in an upcoming release.
 - Add `Prefixes` to `CSPConnectionAWS` so an AWS VXC read returns the prefixes the API reports. The value decodes from either a JSON string or an array of strings, joined with commas.
 - Bump Go toolchain to 1.26.5 to pick up a `crypto/tls` fix for an Encrypted Client Hello privacy leak ([GO-2026-5856](https://pkg.go.dev/vuln/GO-2026-5856)).
 - Bump Go toolchain to 1.26.7. This clears the four standard library advisories `govulncheck` reports against 1.26.5: [GO-2026-6218](https://pkg.go.dev/vuln/GO-2026-6218) (`net/url`), [GO-2026-6090](https://pkg.go.dev/vuln/GO-2026-6090) (`crypto/tls`), [GO-2026-5972](https://pkg.go.dev/vuln/GO-2026-5972) (`encoding/asn1`), and [GO-2026-5026](https://pkg.go.dev/vuln/GO-2026-5026) (`net/http`).
@@ -50,6 +53,7 @@
 - `DeleteNATGateway` now drains and closes the response body when it deletes a gateway in DESIGN state. Previously, on HTTP/1.1, it closed the body unread, and the transport dropped the connection instead of reusing it.
 - Breaking: `DeleteProduct`, `DeleteVXC` and `DeleteIX` now return `ErrCancelLaterNotAllowed` when `DeleteNow` is false, and `RestoreProduct`, `RestorePort` and `RestoreMCR` now return `ErrRestoreNotAllowed`. None of them sends a request. The API removed both actions, and these calls already failed with a 403 permission error. The restore methods are deprecated. `ErrTransitVXCCancelLaterNotAllowed` is deprecated too, and `DeleteVXC` no longer returns it.
 - A VXC read now decodes an IBM CSP connection to `CSPConnectionIBM` when it is the VXC's only CSP connection. The API sends that connection as a bare object, which used to decode to `CSPConnectionOther`.
+- The `WaitForProvision` and `WaitForUpdate` waits on `BuyPort`, `BuyMCR`, `BuyMVE`, `BuyVXC`, `BuyIX`, `BuyDCI`, `ModifyPort`, `ModifyMCR`, `ModifyMVE`, `UpdateVXC` and `UpdateIX`, and `WaitForMCRReady`, check the status once more when the wait time ends. A product that turned ready in the last 30 seconds used to fail with `time expired` about half the time when the wait time was a multiple of 30 seconds, which includes the 5-minute default.
 
 # 1.0.0 Release
 

@@ -241,6 +241,18 @@ var ErrCompanyProductAvailabilityResponseEmpty = errors.New("company product ava
 // ErrCurrentCompanyResponseEmpty is returned when the current company API returns a 2xx response with a null payload or no company UID.
 var ErrCurrentCompanyResponseEmpty = errors.New("current company response missing company UID")
 
+// ErrBuyDCIRequestNil is returned when BuyDCI is called with a nil request.
+var ErrBuyDCIRequestNil = errors.New("buy DCI request cannot be nil")
+
+// ErrSolutionUIDRequired is returned when a Solution method is called with an empty Solution UID.
+var ErrSolutionUIDRequired = errors.New("solution UID is required")
+
+// ErrSolutionResponseEmpty is returned when a Solution API returns a 2xx response with a null or missing data payload.
+var ErrSolutionResponseEmpty = errors.New("solution response missing data")
+
+// ErrDCIOrderResponseMissingSolution is returned when a DCI order succeeds but the response does not name the DCI created.
+var ErrDCIOrderResponseMissingSolution = errors.New("DCI order response missing the solution")
+
 // ErrDeleteProductRequestNil is returned when DeleteProduct is called with a nil request.
 var ErrDeleteProductRequestNil = errors.New("delete product request cannot be nil")
 
@@ -268,6 +280,8 @@ var ErrListBGPRoutesRequestNil = errors.New("list BGP routes request cannot be n
 // ErrListBGPNeighborRoutesRequestNil is returned when ListBGPNeighborRoutes is called with a nil request.
 var ErrListBGPNeighborRoutesRequestNil = errors.New("list BGP neighbor routes request cannot be nil")
 
+var ErrInvalidOutageState = fmt.Errorf("invalid outage state, valid states are %s", strings.Join(outageStatesToString(VALID_OUTAGE_STATES), ", "))
+
 // maintenanceStatesToString converts a slice of MaintenanceState to a slice of strings
 func maintenanceStatesToString(states []MaintenanceState) []string {
 	strs := make([]string, len(states))
@@ -287,5 +301,3 @@ func outageStatesToString(states []OutageState) []string {
 	}
 	return strs
 }
-
-var ErrInvalidOutageState = fmt.Errorf("invalid outage state, valid states are %s", strings.Join(outageStatesToString(VALID_OUTAGE_STATES), ", "))

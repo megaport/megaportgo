@@ -37,6 +37,9 @@ const (
 	mediaType      = "application/json"
 	headerTraceId  = "Trace-Id"
 
+	// defaultHTTPTimeout bounds a request when the caller passes no http.Client.
+	defaultHTTPTimeout = 5 * time.Minute
+
 	// headerCallContext lets an authenticated user act on behalf of a company
 	// they can manage; the value is that company's UID.
 	headerCallContext = "X-Call-Context"
@@ -111,6 +114,8 @@ type Client struct {
 	ProductAvailabilityService ProductAvailabilityService
 	// CompanyService provides methods for interacting with the company endpoints, such as the current company
 	CompanyService CompanyService
+	// SolutionService provides methods for interacting with the Solutions API, such as ordering a DCI
+	SolutionService SolutionService
 
 	accessToken string    // Access Token for client
 	tokenExpiry time.Time // Token Expiration
@@ -179,7 +184,7 @@ type RequestCompletionCallback func(*http.Request, *http.Response)
 // http.Client to perform all requests.
 func NewClient(httpClient *http.Client, base *url.URL) *Client {
 	if httpClient == nil {
-		httpClient = http.DefaultClient
+		httpClient = &http.Client{Timeout: defaultHTTPTimeout}
 	}
 
 	var baseURL *url.URL
@@ -191,13 +196,20 @@ func NewClient(httpClient *http.Client, base *url.URL) *Client {
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
-	c := &Client{
+	client := &Client{
 		HTTPClient: httpClient,
 		BaseURL:    baseURL,
 		UserAgent:  userAgent,
 		Logger:     logger,
+		headers:    make(map[string]string),
 	}
+	client.initServices()
+	return client
+}
 
+// initServices initializes and attaches all the API sub-services to the Client.
+// It is called internally during the client creation process to set up endpoints.
+func (c *Client) initServices() {
 	c.ProductService = NewProductService(c)
 	c.PortService = NewPortService(c)
 	c.LocationService = NewLocationService(c)
@@ -216,10 +228,7 @@ func NewClient(httpClient *http.Client, base *url.URL) *Client {
 	c.OrderApprovalService = NewOrderApprovalService(c)
 	c.ProductAvailabilityService = NewProductAvailabilityService(c)
 	c.CompanyService = NewCompanyService(c)
-
-	c.headers = make(map[string]string)
-
-	return c
+	c.SolutionService = NewSolutionService(c)
 }
 
 // ClientOpt are options for New.
@@ -646,7 +655,7 @@ func (c *Client) Authorize(ctx context.Context) (*AuthInfo, error) {
 
 // DoRequest submits an HTTP request.
 func DoRequest(ctx context.Context, req *http.Request) (*http.Response, error) {
-	return DoRequestWithClient(ctx, http.DefaultClient, req)
+	return DoRequestWithClient(ctx, &http.Client{Timeout: defaultHTTPTimeout}, req)
 }
 
 // DoRequestWithClient submits an HTTP request using the specified client.

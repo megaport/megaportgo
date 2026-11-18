@@ -185,38 +185,20 @@ func (svc *VXCServiceOp) BuyVXC(ctx context.Context, req *BuyVXCRequest) (*BuyVX
 
 	// wait until the VXC is provisioned before returning if reqested by the user
 	if req.WaitForProvision {
-		toWait := req.WaitForTime
-		if toWait == 0 {
-			toWait = 5 * time.Minute
-		}
-
-		ticker := time.NewTicker(30 * time.Second) // check on the provision status every 30 seconds
-		timer := time.NewTimer(toWait)
-		defer ticker.Stop()
-		defer timer.Stop()
-
-		for {
-			select {
-			case <-timer.C:
-				return toReturn, fmt.Errorf("time expired waiting for VXC %s to provision", serviceUID)
-			case <-ctx.Done():
-				return toReturn, fmt.Errorf("context expired waiting for VXC %s to provision", serviceUID)
-			case <-ticker.C:
-				vxcDetails, err := svc.GetVXC(ctx, serviceUID)
-				if err != nil {
-					return toReturn, err
-				}
-
-				if slices.Contains(SERVICE_STATE_READY, vxcDetails.ProvisioningStatus) {
-					return toReturn, nil
-				}
-
+		err := waitUntilReady(ctx, req.WaitForTime, fmt.Sprintf("VXC %s to provision", serviceUID), func() (bool, error) {
+			vxcDetails, err := svc.GetVXC(ctx, serviceUID)
+			if err != nil {
+				return false, err
 			}
+			return slices.Contains(SERVICE_STATE_READY, vxcDetails.ProvisioningStatus), nil
+		})
+		if err != nil {
+			return toReturn, err
 		}
-	} else {
-		// return the service UID right away if the user doesn't want to wait for provision
-		return toReturn, nil
 	}
+
+	// return the service UID right away if the user doesn't want to wait for provision
+	return toReturn, nil
 }
 
 // GetVXC gets details about a single VXC from the Megaport VXC API.
@@ -410,41 +392,23 @@ func (svc *VXCServiceOp) UpdateVXC(ctx context.Context, id string, req *UpdateVX
 
 	// wait until the VXC is updated before returning if requested by the user
 	if req.WaitForUpdate {
-		toWait := req.WaitForTime
-		if toWait == 0 {
-			toWait = 5 * time.Minute
-		}
-
-		ticker := time.NewTicker(30 * time.Second) // check on the update status every 30 seconds
-		timer := time.NewTimer(toWait)
-		defer ticker.Stop()
-		defer timer.Stop()
-
-		for {
-			select {
-			case <-timer.C:
-				return nil, fmt.Errorf("time expired waiting for VXC %s to update", id)
-			case <-ctx.Done():
-				return nil, fmt.Errorf("context expired waiting for VXC %s to update", id)
-			case <-ticker.C:
-				vxc, err := svc.GetVXC(ctx, id)
-				if err != nil {
-					return nil, err
-				}
-
-				var isUpdated bool
-				if slices.Contains(SERVICE_STATE_READY, vxc.ProvisioningStatus) {
-					isUpdated = true
-				}
-				if isUpdated {
-					return vxc, nil
-				}
+		var updated *VXC
+		err = waitUntilReady(ctx, req.WaitForTime, fmt.Sprintf("VXC %s to update", id), func() (bool, error) {
+			vxc, err := svc.GetVXC(ctx, id)
+			if err != nil {
+				return false, err
 			}
+			updated = vxc
+			return slices.Contains(SERVICE_STATE_READY, vxc.ProvisioningStatus), nil
+		})
+		if err != nil {
+			return nil, err
 		}
-	} else {
-		// return the response right away if the user doesn't want to wait for update
-		return &vxcDetails.Data, nil
+		return updated, nil
 	}
+
+	// return the response right away if the user doesn't want to wait for update
+	return &vxcDetails.Data, nil
 }
 
 // LookupPartnerPorts looks up available partner ports in the Megaport VXC API.

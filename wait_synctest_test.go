@@ -6,6 +6,8 @@ package megaport
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -40,11 +42,24 @@ func newFakeTimeClient(reads ...string) *Client {
 		case r.Method == http.MethodPost && r.URL.Path == "/v3/networkdesign/validate":
 			fmt.Fprint(w, `{"message":"ok"}`)
 		case r.Method == http.MethodPost && r.URL.Path == "/v4/networkdesign/buy":
-			fmt.Fprintf(w, `{"data":[{"technicalServiceUid":%q,"vxcJTechnicalServiceUid":%q}]}`, fakeTimeUID, fakeTimeUID)
+			var order struct {
+				Solutions []struct {
+					Ref string `json:"ref"`
+				} `json:"solutions"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&order)
+			solutions := "[]"
+			if len(order.Solutions) > 0 {
+				solutions = fmt.Sprintf(`[{"uid":%q,"ref":%q}]`, fakeTimeUID, order.Solutions[0].Ref)
+			}
+			fmt.Fprintf(w, `{"data":[{"technicalServiceUid":%q,"vxcJTechnicalServiceUid":%q}],"solutions":%s}`, fakeTimeUID, fakeTimeUID, solutions)
 		case r.Method == http.MethodPut && slices.Contains(updatePaths, r.URL.Path):
 			fmt.Fprint(w, `{"data":{}}`)
 		case r.Method == http.MethodGet && r.URL.Path == "/v2/product/"+fakeTimeUID && len(reads) > 0 && reads[0] != "":
 			fmt.Fprintf(w, `{"data":{"provisioningStatus":%q}}`, reads[0])
+			reads = reads[1:]
+		case r.Method == http.MethodGet && r.URL.Path == "/v1/solutions/"+fakeTimeUID && len(reads) > 0 && reads[0] != "":
+			fmt.Fprintf(w, `{"data":{"uid":%q,"provisioningStatus":%q}}`, fakeTimeUID, reads[0])
 			reads = reads[1:]
 		default:
 			w.WriteHeader(http.StatusInternalServerError)
@@ -67,6 +82,8 @@ type waitCase struct {
 	firstRead time.Duration // fake time of the first status read
 	failed    any           // the result when the first status read fails
 	ready     any           // the result when the product turns ready on the second read
+	what      string        // what the wait errors say it was waiting for
+	ctxErr    string        // the error when the context ends the wait, if not "context expired waiting for " + what
 }
 
 func waitCases() []waitCase {
@@ -76,13 +93,23 @@ func waitCases() []waitCase {
 	mveOrder := &BuyMVEResponse{TechnicalServiceUID: fakeTimeUID}
 	vxcOrder := &BuyVXCResponse{TechnicalServiceUID: fakeTimeUID}
 	ixOrder := &BuyIXResponse{TechnicalServiceUID: fakeTimeUID}
+	dciOrder := &BuyDCIResponse{SolutionUID: fakeTimeUID}
 	return []waitCase{
+		{
+			name: "BuyDCI",
+			call: func(ctx context.Context, c *Client) (any, error) {
+				return c.SolutionService.BuyDCI(ctx, &BuyDCIRequest{Name: "test-dci", AEndLocationID: 143, BEndLocationID: 145, PortSpeed: 10000, Term: 12, WaitForProvision: true})
+			},
+			firstRead: poll, failed: dciOrder, ready: dciOrder,
+			what: "DCI " + fakeTimeUID + " to provision",
+		},
 		{
 			name: "BuyPort",
 			call: func(ctx context.Context, c *Client) (any, error) {
 				return c.PortService.BuyPort(ctx, &BuyPortRequest{Name: "test-port", Term: 12, PortSpeed: 10000, LocationId: 226, WaitForProvision: true})
 			},
 			firstRead: poll, failed: portOrder, ready: portOrder,
+			what: "Port [" + fakeTimeUID + "] to provision",
 		},
 		{
 			name: "BuyMCR",
@@ -90,6 +117,8 @@ func waitCases() []waitCase {
 				return c.MCRService.BuyMCR(ctx, &BuyMCRRequest{Name: "test-mcr", Term: 1, PortSpeed: 1000, LocationID: 1, WaitForProvision: true})
 			},
 			firstRead: poll, failed: mcrOrder, ready: mcrOrder,
+			what:   "MCR " + fakeTimeUID + " to provision",
+			ctxErr: "context expired waiting for MCR " + fakeTimeUID + " to provision: context deadline exceeded",
 		},
 		{
 			name: "BuyMVE",
@@ -97,6 +126,7 @@ func waitCases() []waitCase {
 				return c.MVEService.BuyMVE(ctx, &BuyMVERequest{Name: "test-mve", Term: 12, LocationID: 1, WaitForProvision: true})
 			},
 			firstRead: poll, failed: mveOrder, ready: mveOrder,
+			what: "MVE " + fakeTimeUID + " to provision",
 		},
 		{
 			name: "BuyVXC",
@@ -104,6 +134,7 @@ func waitCases() []waitCase {
 				return c.VXCService.BuyVXC(ctx, &BuyVXCRequest{PortUID: "9b1c46c7-1e8d-4035-bf38-1bc60d346d57", VXCName: "test-vxc", RateLimit: 50, Term: 1, WaitForProvision: true})
 			},
 			firstRead: poll, failed: vxcOrder, ready: vxcOrder,
+			what: "VXC " + fakeTimeUID + " to provision",
 		},
 		{
 			name: "BuyIX",
@@ -111,6 +142,7 @@ func waitCases() []waitCase {
 				return c.IXService.BuyIX(ctx, &BuyIXRequest{ProductUID: "9b1c46c7-1e8d-4035-bf38-1bc60d346d57", Name: "test-ix", NetworkServiceType: "Los Angeles IX", ASN: 12345, RateLimit: 500, VLAN: 2001, WaitForProvision: true})
 			},
 			firstRead: poll, failed: ixOrder, ready: ixOrder,
+			what: "IX " + fakeTimeUID + " to provision",
 		},
 		{
 			name: "ModifyPort",
@@ -118,6 +150,7 @@ func waitCases() []waitCase {
 				return c.PortService.ModifyPort(ctx, &ModifyPortRequest{PortID: fakeTimeUID, Name: "renamed", WaitForUpdate: true})
 			},
 			firstRead: poll, ready: &ModifyPortResponse{IsUpdated: true},
+			what: "Port " + fakeTimeUID + " to update",
 		},
 		{
 			name: "ModifyMCR",
@@ -125,6 +158,8 @@ func waitCases() []waitCase {
 				return c.MCRService.ModifyMCR(ctx, &ModifyMCRRequest{MCRID: fakeTimeUID, Name: "renamed", WaitForUpdate: true})
 			},
 			firstRead: poll, ready: &ModifyMCRResponse{IsUpdated: true},
+			what:   "MCR " + fakeTimeUID + " to update",
+			ctxErr: "context expired waiting for MCR " + fakeTimeUID + " to update: context deadline exceeded",
 		},
 		{
 			name: "ModifyMVE",
@@ -132,6 +167,7 @@ func waitCases() []waitCase {
 				return c.MVEService.ModifyMVE(ctx, &ModifyMVERequest{MVEID: fakeTimeUID, Name: "renamed", WaitForUpdate: true})
 			},
 			firstRead: poll, ready: &ModifyMVEResponse{MVEUpdated: true},
+			what: "MVE " + fakeTimeUID + " to update",
 		},
 		{
 			name: "UpdateVXC",
@@ -139,6 +175,7 @@ func waitCases() []waitCase {
 				return c.VXCService.UpdateVXC(ctx, fakeTimeUID, &UpdateVXCRequest{Name: PtrTo("renamed"), WaitForUpdate: true})
 			},
 			firstRead: poll, ready: &VXC{ProvisioningStatus: SERVICE_LIVE},
+			what: "VXC " + fakeTimeUID + " to update",
 		},
 		{
 			name: "UpdateIX",
@@ -146,6 +183,7 @@ func waitCases() []waitCase {
 				return c.IXService.UpdateIX(ctx, fakeTimeUID, &UpdateIXRequest{Name: PtrTo("renamed"), WaitForUpdate: true})
 			},
 			firstRead: poll, ready: &IX{ProvisioningStatus: SERVICE_LIVE},
+			what: "IX " + fakeTimeUID + " to update",
 		},
 		{
 			name: "WaitForMCRReady",
@@ -153,6 +191,8 @@ func waitCases() []waitCase {
 				return nil, c.MCRService.WaitForMCRReady(ctx, fakeTimeUID, 0)
 			},
 			firstRead: 0,
+			what:      "MCR " + fakeTimeUID + " to reach a ready state",
+			ctxErr:    "context deadline exceeded",
 		},
 	}
 }
@@ -161,14 +201,13 @@ func waitCases() []waitCase {
 func TestWaitStatusReadFails(t *testing.T) {
 	t.Parallel()
 	for _, tc := range waitCases() {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			synctest.Test(t, func(t *testing.T) {
 				c := newFakeTimeClient("")
 				start := time.Now()
 
-				got, err := tc.call(context.Background(), c)
+				got, err := tc.call(t.Context(), c)
 
 				var apiErr *ErrorResponse
 				require.ErrorAs(t, err, &apiErr)
@@ -188,14 +227,13 @@ func TestWaitStatusReadFails(t *testing.T) {
 func TestWaitReadyOnSecondRead(t *testing.T) {
 	t.Parallel()
 	for _, tc := range waitCases() {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			synctest.Test(t, func(t *testing.T) {
 				c := newFakeTimeClient("DEPLOYABLE", SERVICE_LIVE)
 				start := time.Now()
 
-				got, err := tc.call(context.Background(), c)
+				got, err := tc.call(t.Context(), c)
 
 				require.NoError(t, err)
 				if tc.ready == nil {
@@ -207,4 +245,154 @@ func TestWaitReadyOnSecondRead(t *testing.T) {
 			})
 		})
 	}
+}
+
+// TestWaitTimeExpires tests that each wait returns its "time expired" error when the product is not ready in time.
+func TestWaitTimeExpires(t *testing.T) {
+	t.Parallel()
+	for _, tc := range waitCases() {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			synctest.Test(t, func(t *testing.T) {
+				c := newFakeTimeClient(slices.Repeat([]string{"DEPLOYABLE"}, 20)...)
+				start := time.Now()
+
+				got, err := tc.call(t.Context(), c)
+
+				assert.EqualError(t, err, "time expired waiting for "+tc.what)
+				if tc.failed == nil {
+					assert.Nil(t, got)
+				} else {
+					assert.Equal(t, tc.failed, got)
+				}
+				assert.Equal(t, 5*time.Minute, time.Since(start))
+			})
+		})
+	}
+}
+
+// TestWaitContextEnds tests that each wait returns its "context expired" error when the context ends the wait.
+func TestWaitContextEnds(t *testing.T) {
+	t.Parallel()
+	for _, tc := range waitCases() {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			synctest.Test(t, func(t *testing.T) {
+				c := newFakeTimeClient("DEPLOYABLE", "DEPLOYABLE")
+				ctx, cancel := context.WithTimeout(t.Context(), 45*time.Second)
+				defer cancel()
+				start := time.Now()
+
+				got, err := tc.call(ctx, c)
+
+				want := tc.ctxErr
+				if want == "" {
+					want = "context expired waiting for " + tc.what
+				}
+				assert.EqualError(t, err, want)
+				if tc.failed == nil {
+					assert.Nil(t, got)
+				} else {
+					assert.Equal(t, tc.failed, got)
+				}
+				assert.Equal(t, 45*time.Second, time.Since(start))
+			})
+		})
+	}
+}
+
+// TestWaitForMCRReadyContextEnds tests that WaitForMCRReady returns the context's own error when the context ends the wait.
+func TestWaitForMCRReadyContextEnds(t *testing.T) {
+	t.Parallel()
+	synctest.Test(t, func(t *testing.T) {
+		c := newFakeTimeClient("DEPLOYABLE")
+		ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+		defer cancel()
+
+		err := c.MCRService.WaitForMCRReady(ctx, fakeTimeUID, 0)
+
+		assert.Equal(t, context.DeadlineExceeded, err)
+	})
+}
+
+// TestWaitUntilReady tests the shared wait loop on its own.
+func TestWaitUntilReady(t *testing.T) {
+	t.Parallel()
+	const what = "Port " + fakeTimeUID + " to provision"
+	notReady := func() (bool, error) { return false, nil }
+
+	t.Run("zero timeout waits 5 minutes", func(t *testing.T) {
+		t.Parallel()
+		synctest.Test(t, func(t *testing.T) {
+			start := time.Now()
+
+			err := waitUntilReady(t.Context(), 0, what, notReady)
+
+			assert.EqualError(t, err, "time expired waiting for "+what)
+			assert.Equal(t, 5*time.Minute, time.Since(start))
+		})
+	})
+
+	t.Run("ready on the second check", func(t *testing.T) {
+		t.Parallel()
+		synctest.Test(t, func(t *testing.T) {
+			start := time.Now()
+			checks := 0
+
+			err := waitUntilReady(t.Context(), time.Hour, what, func() (bool, error) {
+				checks++
+				return checks == 2, nil
+			})
+
+			require.NoError(t, err)
+			assert.Equal(t, time.Minute, time.Since(start))
+		})
+	})
+
+	t.Run("ready on the final check when the wait time ends", func(t *testing.T) {
+		t.Parallel()
+		synctest.Test(t, func(t *testing.T) {
+			start := time.Now()
+			checks := 0
+
+			err := waitUntilReady(t.Context(), 45*time.Second, what, func() (bool, error) {
+				checks++
+				return checks == 2, nil
+			})
+
+			require.NoError(t, err)
+			assert.Equal(t, 45*time.Second, time.Since(start))
+		})
+	})
+
+	t.Run("check error is returned as it is", func(t *testing.T) {
+		t.Parallel()
+		synctest.Test(t, func(t *testing.T) {
+			errCheck := errors.New("status read failed")
+			start := time.Now()
+
+			err := waitUntilReady(t.Context(), time.Hour, what, func() (bool, error) { return false, errCheck })
+
+			assert.Equal(t, errCheck, err)
+			assert.Equal(t, errCheck, withContextCause(err))
+			assert.Equal(t, 30*time.Second, time.Since(start))
+		})
+	})
+
+	t.Run("context end exposes the context error only through withContextCause", func(t *testing.T) {
+		t.Parallel()
+		synctest.Test(t, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(t.Context(), 45*time.Second)
+			defer cancel()
+			start := time.Now()
+
+			err := waitUntilReady(ctx, time.Hour, what, notReady)
+
+			assert.EqualError(t, err, "context expired waiting for "+what)
+			assert.NotErrorIs(t, err, context.DeadlineExceeded)
+			assert.EqualError(t, withContextCause(err), "context expired waiting for "+what+": context deadline exceeded")
+			assert.ErrorIs(t, withContextCause(err), context.DeadlineExceeded)
+			assert.Equal(t, 45*time.Second, time.Since(start))
+		})
+	})
 }

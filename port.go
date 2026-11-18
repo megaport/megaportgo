@@ -187,49 +187,34 @@ func (svc *PortServiceOp) BuyPort(ctx context.Context, req *BuyPortRequest) (*Bu
 
 	// wait until the Port is provisioned before returning if requested by the user
 	if req.WaitForProvision {
-		toWait := req.WaitForTime
-		if toWait == 0 {
-			toWait = 5 * time.Minute
-		}
-
-		ticker := time.NewTicker(30 * time.Second) // check on the provision status every 30 seconds
-		timer := time.NewTimer(toWait)
-		defer ticker.Stop()
-		defer timer.Stop()
-
-		for {
-			select {
-			case <-timer.C:
-				return toReturn, fmt.Errorf("time expired waiting for Port %s to provision", toReturn.TechnicalServiceUIDs)
-			case <-ctx.Done():
-				return toReturn, fmt.Errorf("context expired waiting for Port %s to provision", toReturn.TechnicalServiceUIDs)
-			case <-ticker.C:
-				ports := []*Port{}
-				for _, uid := range toReturn.TechnicalServiceUIDs {
-					portDetails, err := svc.GetPort(ctx, uid)
-					if err != nil {
-						return toReturn, err
-					}
-
-					ports = append(ports, portDetails)
+		what := fmt.Sprintf("Port %s to provision", toReturn.TechnicalServiceUIDs)
+		err := waitUntilReady(ctx, req.WaitForTime, what, func() (bool, error) {
+			ports := []*Port{}
+			for _, uid := range toReturn.TechnicalServiceUIDs {
+				portDetails, err := svc.GetPort(ctx, uid)
+				if err != nil {
+					return false, err
 				}
 
-				// if all ports are ready return
-				numReady := 0
-				for _, port := range ports {
-					if slices.Contains(SERVICE_STATE_READY, port.ProvisioningStatus) {
-						numReady++
-					}
-				}
-				if numReady == len(ports) {
-					return toReturn, nil
+				ports = append(ports, portDetails)
+			}
+
+			// if all ports are ready return
+			numReady := 0
+			for _, port := range ports {
+				if slices.Contains(SERVICE_STATE_READY, port.ProvisioningStatus) {
+					numReady++
 				}
 			}
+			return numReady == len(ports), nil
+		})
+		if err != nil {
+			return toReturn, err
 		}
-	} else {
-		// return the service UID right away if the user doesn't want to wait for provision
-		return toReturn, nil
 	}
+
+	// return the service UID right away if the user doesn't want to wait for provision
+	return toReturn, nil
 }
 
 func createPortOrder(req *BuyPortRequest) []PortOrder {
@@ -374,36 +359,20 @@ func (svc *PortServiceOp) ModifyPort(ctx context.Context, req *ModifyPortRequest
 
 	// wait until the Port is updated before returning if requested by the user
 	if req.WaitForUpdate {
-		toWait := req.WaitForTime
-		if toWait == 0 {
-			toWait = 5 * time.Minute
-		}
-
-		ticker := time.NewTicker(30 * time.Second) // check on the update status every 30 seconds
-		timer := time.NewTimer(toWait)
-		defer ticker.Stop()
-		defer timer.Stop()
-
-		for {
-			select {
-			case <-timer.C:
-				return nil, fmt.Errorf("time expired waiting for Port %s to update", req.PortID)
-			case <-ctx.Done():
-				return nil, fmt.Errorf("context expired waiting for Port %s to update", req.PortID)
-			case <-ticker.C:
-				portDetails, err := svc.GetPort(ctx, req.PortID)
-				if err != nil {
-					return nil, err
-				}
-				if slices.Contains(SERVICE_STATE_READY, portDetails.ProvisioningStatus) {
-					return toReturn, nil
-				}
+		err := waitUntilReady(ctx, req.WaitForTime, fmt.Sprintf("Port %s to update", req.PortID), func() (bool, error) {
+			portDetails, err := svc.GetPort(ctx, req.PortID)
+			if err != nil {
+				return false, err
 			}
+			return slices.Contains(SERVICE_STATE_READY, portDetails.ProvisioningStatus), nil
+		})
+		if err != nil {
+			return nil, err
 		}
-	} else {
-		// return the response right away if the user doesn't want to wait for update
-		return toReturn, nil
 	}
+
+	// return the response right away if the user doesn't want to wait for update
+	return toReturn, nil
 }
 
 // DeletePort deletes a port in the Megaport Port API.
