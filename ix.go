@@ -150,32 +150,16 @@ func (svc *IXServiceOp) BuyIX(ctx context.Context, req *BuyIXRequest) (*BuyIXRes
 
 	// Wait until the IX is provisioned before returning if requested
 	if req.WaitForProvision {
-		toWait := req.WaitForTime
-		if toWait == 0 {
-			toWait = 5 * time.Minute
-		}
-
-		ticker := time.NewTicker(30 * time.Second) // check every 30 seconds
-		timer := time.NewTimer(toWait)
-		defer ticker.Stop()
-		defer timer.Stop()
-
-		for {
-			select {
-			case <-timer.C:
-				return toReturn, fmt.Errorf("time expired waiting for IX %s to provision", toReturn.TechnicalServiceUID)
-			case <-ctx.Done():
-				return toReturn, fmt.Errorf("context expired waiting for IX %s to provision", toReturn.TechnicalServiceUID)
-			case <-ticker.C:
-				ix, err := svc.GetIX(ctx, toReturn.TechnicalServiceUID)
-				if err != nil {
-					return toReturn, err
-				}
-
-				if slices.Contains(SERVICE_STATE_READY, ix.ProvisioningStatus) {
-					return toReturn, nil
-				}
+		what := fmt.Sprintf("IX %s to provision", toReturn.TechnicalServiceUID)
+		err := waitUntilReady(ctx, req.WaitForTime, what, func() (bool, error) {
+			ix, err := svc.GetIX(ctx, toReturn.TechnicalServiceUID)
+			if err != nil {
+				return false, err
 			}
+			return slices.Contains(SERVICE_STATE_READY, ix.ProvisioningStatus), nil
+		})
+		if err != nil {
+			return toReturn, err
 		}
 	}
 
@@ -306,37 +290,23 @@ func (svc *IXServiceOp) UpdateIX(ctx context.Context, id string, req *UpdateIXRe
 
 	// Wait for update to complete if requested
 	if req.WaitForUpdate {
-		toWait := req.WaitForTime
-		if toWait == 0 {
-			toWait = 5 * time.Minute
-		}
-
-		ticker := time.NewTicker(30 * time.Second) // check every 30 seconds
-		timer := time.NewTimer(toWait)
-		defer ticker.Stop()
-		defer timer.Stop()
-
-		for {
-			select {
-			case <-timer.C:
-				return nil, fmt.Errorf("time expired waiting for IX %s to update", id)
-			case <-ctx.Done():
-				return nil, fmt.Errorf("context expired waiting for IX %s to update", id)
-			case <-ticker.C:
-				ix, err := svc.GetIX(ctx, id)
-				if err != nil {
-					return nil, err
-				}
-
-				if ix.ProvisioningStatus == "LIVE" || ix.ProvisioningStatus == "CONFIGURED" {
-					return ix, nil
-				}
+		var updated *IX
+		err = waitUntilReady(ctx, req.WaitForTime, fmt.Sprintf("IX %s to update", id), func() (bool, error) {
+			ix, err := svc.GetIX(ctx, id)
+			if err != nil {
+				return false, err
 			}
+			updated = ix
+			return ix.ProvisioningStatus == "LIVE" || ix.ProvisioningStatus == "CONFIGURED", nil
+		})
+		if err != nil {
+			return nil, err
 		}
-	} else {
-		// Return without waiting
-		return &resp.Data, nil
+		return updated, nil
 	}
+
+	// Return without waiting
+	return &resp.Data, nil
 }
 
 // DeleteIX deletes an Internet Exchange

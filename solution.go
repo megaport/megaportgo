@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -75,33 +74,18 @@ func (svc *SolutionServiceOp) BuyDCI(ctx context.Context, req *BuyDCIRequest) (*
 
 	// wait until the DCI is provisioned before returning if requested by the user
 	if req.WaitForProvision {
-		toWait := req.WaitForTime
-		if toWait == 0 {
-			toWait = 5 * time.Minute
-		}
-
-		ticker := time.NewTicker(30 * time.Second) // check on the provision status every 30 seconds
-		timer := time.NewTimer(toWait)
-		defer ticker.Stop()
-		defer timer.Stop()
-
-		for {
-			select {
-			case <-timer.C:
-				return toReturn, fmt.Errorf("time expired waiting for DCI %s to provision", toReturn.SolutionUID)
-			case <-ctx.Done():
-				return toReturn, fmt.Errorf("context expired waiting for DCI %s to provision", toReturn.SolutionUID)
-			case <-ticker.C:
-				solution, err := svc.GetSolution(ctx, toReturn.SolutionUID)
-				if err != nil {
-					return toReturn, err
-				}
-
-				// the status is rolled up from the members, so it is ready only once every member is
-				if slices.Contains(SERVICE_STATE_READY, solution.ProvisioningStatus) {
-					return toReturn, nil
-				}
+		what := fmt.Sprintf("DCI %s to provision", toReturn.SolutionUID)
+		err := waitUntilReady(ctx, req.WaitForTime, what, func() (bool, error) {
+			solution, err := svc.GetSolution(ctx, toReturn.SolutionUID)
+			if err != nil {
+				return false, err
 			}
+
+			// the status is rolled up from the members, so it is ready only once every member is
+			return slices.Contains(SERVICE_STATE_READY, solution.ProvisioningStatus), nil
+		})
+		if err != nil {
+			return toReturn, err
 		}
 	}
 
