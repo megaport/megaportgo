@@ -199,10 +199,12 @@ type GetUserActivityRequest struct {
 	// With To set and From nil, the range starts two years ago.
 	From *time.Time
 	// To is the end of the date range. With From set and To nil, the range ends now.
+	// The API returns 400 for a From or To later than now, and for a From later than To.
 	To *time.Time
 	// PageSize is the number of entries to return, from 1 to 100. The API defaults to 10.
 	PageSize *int
 	// Sort is the field to sort by: name, description or createdAt. The API defaults to createdAt, newest first.
+	// A Sort with no Direction sorts ascending.
 	Sort *string
 	// Direction is ASC or DESC. With Sort nil, it sorts by createdAt.
 	Direction *string
@@ -448,7 +450,8 @@ func (svc *UserManagementServiceOp) DeleteUser(ctx context.Context, employeeID i
 }
 
 // GetUserActivity retrieves the caller's own activity log in the Megaport Portal.
-// With no PageSize, the API returns the 10 most recent entries.
+// It returns the first page only, which holds 10 entries unless PageSize is set.
+// The entries are newest first unless Sort or Direction is set.
 // Actions made with an API key are not included.
 func (svc *UserManagementServiceOp) GetUserActivity(ctx context.Context, req *GetUserActivityRequest) ([]*UserActivity, error) {
 	path := "/v4/activity"

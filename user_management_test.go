@@ -359,8 +359,9 @@ func (suite *UserManagementClientTestSuite) TestGetUserActivityNilRequest() {
 // TestGetUserActivityFilters verifies the request fields reach the /v4/activity query string.
 func (suite *UserManagementClientTestSuite) TestGetUserActivityFilters() {
 	ctx := context.Background()
-	from := time.Date(2026, 11, 11, 9, 30, 0, 0, time.FixedZone("AEST", 10*60*60))
-	to := time.Date(2026, 11, 18, 0, 0, 0, 0, time.UTC)
+	aest := time.FixedZone("AEST", 10*60*60)
+	from := time.Date(2026, 11, 11, 9, 30, 0, 123000000, aest)
+	to := time.Date(2026, 11, 18, 10, 0, 0, 0, aest)
 	tests := []struct {
 		name string
 		req  *GetUserActivityRequest
@@ -368,13 +369,13 @@ func (suite *UserManagementClientTestSuite) TestGetUserActivityFilters() {
 	}{
 		{
 			name: "activity names",
-			req:  &GetUserActivityRequest{ActivityNames: []string{"Login", "Logout"}},
-			want: url.Values{"activity_name": {"Login", "Logout"}},
+			req:  &GetUserActivityRequest{ActivityNames: []string{"Login", "New API Order"}},
+			want: url.Values{"activity_name": {"Login", "New API Order"}},
 		},
 		{
 			name: "date range in UTC",
 			req:  &GetUserActivityRequest{From: &from, To: &to},
-			want: url.Values{"from": {"2026-11-10T23:30:00Z"}, "to": {"2026-11-18T00:00:00Z"}},
+			want: url.Values{"from": {"2026-11-10T23:30:00.123Z"}, "to": {"2026-11-18T00:00:00Z"}},
 		},
 		{
 			name: "page size and sort",
