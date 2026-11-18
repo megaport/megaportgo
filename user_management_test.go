@@ -355,3 +355,58 @@ func (suite *UserManagementClientTestSuite) TestGetUserActivityNilRequest() {
 	suite.NoError(err)
 	suite.Empty(activities)
 }
+
+// TestGetUserActivityFilters verifies the request fields reach the /v4/activity query string.
+func (suite *UserManagementClientTestSuite) TestGetUserActivityFilters() {
+	ctx := context.Background()
+	from := time.Date(2026, 11, 11, 9, 30, 0, 0, time.FixedZone("AEST", 10*60*60))
+	to := time.Date(2026, 11, 18, 0, 0, 0, 0, time.UTC)
+	tests := []struct {
+		name string
+		req  *GetUserActivityRequest
+		want url.Values
+	}{
+		{
+			name: "activity names",
+			req:  &GetUserActivityRequest{ActivityNames: []string{"Login", "Logout"}},
+			want: url.Values{"activity_name": {"Login", "Logout"}},
+		},
+		{
+			name: "date range in UTC",
+			req:  &GetUserActivityRequest{From: &from, To: &to},
+			want: url.Values{"from": {"2026-11-10T23:30:00Z"}, "to": {"2026-11-18T00:00:00Z"}},
+		},
+		{
+			name: "page size and sort",
+			req:  &GetUserActivityRequest{PageSize: PtrTo(50), Sort: PtrTo("name"), Direction: PtrTo("DESC")},
+			want: url.Values{"page_size": {"50"}, "sort": {"name,desc"}},
+		},
+		{
+			name: "sort with no direction",
+			req:  &GetUserActivityRequest{Sort: PtrTo("description")},
+			want: url.Values{"sort": {"description"}},
+		},
+		{
+			name: "direction with no sort",
+			req:  &GetUserActivityRequest{Direction: PtrTo("ASC")},
+			want: url.Values{"sort": {"createdAt,asc"}},
+		},
+		{
+			name: "empty request",
+			req:  &GetUserActivityRequest{},
+			want: url.Values{},
+		},
+	}
+	var got url.Values
+	suite.mux.HandleFunc("/v4/activity", func(w http.ResponseWriter, r *http.Request) {
+		got = r.URL.Query()
+		fmt.Fprint(w, `{"data": {"items": []}}`)
+	})
+	for _, tt := range tests {
+		suite.Run(tt.name, func() {
+			_, err := suite.client.UserManagementService.GetUserActivity(ctx, tt.req)
+			suite.NoError(err)
+			suite.Equal(tt.want, got)
+		})
+	}
+}
