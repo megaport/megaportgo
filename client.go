@@ -38,7 +38,7 @@ const (
 	headerTraceId  = "Trace-Id"
 
 	// defaultHTTPTimeout bounds a request when the caller passes no http.Client.
-	defaultHTTPTimeout = 60 * time.Second
+	defaultHTTPTimeout = 5 * time.Minute
 
 	// headerCallContext lets an authenticated user act on behalf of a company
 	// they can manage; the value is that company's UID.

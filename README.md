@@ -24,7 +24,7 @@ import (
 
 // Create a new client using your credentials and interact with the Megaport API
 func main() {
-	// Creates a new client using a default HTTP client with a 60 second timeout, with the specified credentials against the staging environment
+	// Creates a staging client with the specified credentials. A nil HTTP client gets a default with a 5 minute timeout
 	client, err := megaport.New(nil,
 		megaport.WithCredentials("ACCESS_KEY", "SECRET_KEY"),
 		megaport.WithEnvironment(megaport.EnvironmentStaging),

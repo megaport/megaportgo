@@ -99,7 +99,7 @@ func (suite *ClientTestSuite) TestNew_nilHTTPClientHasTimeout() {
 	c, err := New(nil)
 	suite.Require().NoError(err)
 	suite.NotSame(http.DefaultClient, c.HTTPClient)
-	suite.Equal(defaultHTTPTimeout, c.HTTPClient.Timeout)
+	suite.Equal(5*time.Minute, c.HTTPClient.Timeout)
 }
 
 func (suite *ClientTestSuite) TestNew_keepsCallerHTTPClient() {
