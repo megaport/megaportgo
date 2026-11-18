@@ -12,8 +12,10 @@
 - Add `MCRService.GetMCRIPsec` to read an MCR's IPsec tunnels and tunnel counts. This endpoint does not return the pre-shared key or the phase lifetimes.
 - Add the `OrderApprovalType` constants `OrderApprovalTypeEarlyTermination`, `OrderApprovalTypeAddOn`, `OrderApprovalTypeIPAddressPartnerOrder` and `OrderApprovalTypeIPAddressCompliance`. A cancel approval has the type `EARLY_TERMINATION`.
 - Add `ListOrderApprovalsRequest.Type`, `OrderApproval.CompletedAt` and `OrderApproval.CreatedBy`. `Time` also decodes an RFC 3339 string.
+- Add `ActivityNames`, `From`, `To`, `PageSize`, `Sort` and `Direction` to `GetUserActivityRequest` to filter and sort the entries `GetUserActivity` returns.
 
 ## Changes
+- Breaking: `GetUserActivity` calls `GET /v4/activity`, because the API is removing `GET /v3/activity` on 8 January 2027. It returns the caller's own entries, 10 by default, and ignores `PersonIdOrUid` and `CompanyIdOrUid`, which are deprecated. Actions made with an API key are not included. `UserActivity` marshals `CreateDate` as `createdAt`. The method used to fail on every call, because v3 wraps the list in `data`.
 - `New`, `NewClient` and `DoRequest` use an HTTP client with a 5 minute timeout when the caller passes no `http.Client`. Before this change they used `http.DefaultClient`, which has no timeout, so a server that never replied blocked the call until the context ended.
 - Breaking: `ListOrderApprovals` calls `GET /v4/order_approvals`, because the API is removing `GET /v3/order_approvals`. `Direction` now changes the sort order, which it did not on v3. `Sort` takes `createdAt`, `serviceId`, `status` or `type`. The SDK sends v3's `createDate` as `createdAt`, and the API returns 400 for other v3 sort fields such as `completionDate`. A `Sort` with no `Direction` sorts ascending.
 - Breaking: `ListOrderApprovals` returns page 1 for a `PageNumber` past the last page, where v3 returned an empty page. An empty result has `TotalPages` 0, not 1. A caller that is not a partner, Megaport staff or a managed account gets 403, where v3 returned 401.
