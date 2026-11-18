@@ -111,6 +111,8 @@ func (suite *SolutionClientTestSuite) TestBuyDCI() {
 	suite.Require().True(ok)
 	vxcUID := vxc["productUid"]
 	suite.NotEmpty(vxcUID)
+	suite.NotEqual(aEndUID, vxcUID)
+	suite.NotEqual(bEndUID, vxcUID)
 
 	suite.Equal(map[string]any{
 		"productUid":         aEndUID,
@@ -174,9 +176,6 @@ func (suite *SolutionClientTestSuite) TestBuyDCIInvalidRequest() {
 
 	_, err := suite.client.SolutionService.BuyDCI(suite.ctx, nil)
 	suite.ErrorIs(err, ErrBuyDCIRequestNil)
-
-	_, err = suite.client.SolutionService.BuyDCI(suite.ctx, &BuyDCIRequest{Name: "  "})
-	suite.ErrorIs(err, ErrSolutionNameRequired)
 }
 
 // The API's own error reaches the caller, as for a term a DCI is not sold on.
@@ -208,6 +207,31 @@ func (suite *SolutionClientTestSuite) TestBuyDCIResponseMissingSolution() {
 		Name: "My DCI", AEndLocationID: 143, BEndLocationID: 145, PortSpeed: 1000, Term: 12,
 	})
 	suite.ErrorIs(err, ErrDCIOrderResponseMissingSolution)
+}
+
+// TestBuyDCIWaitFails tests that BuyDCI returns the order response when the provisioning wait fails.
+func (suite *SolutionClientTestSuite) TestBuyDCIWaitFails() {
+	suite.handleDCIBuy()
+	want := &BuyDCIResponse{SolutionUID: testSolutionUID}
+	req := &BuyDCIRequest{
+		Name: "DCI", AEndLocationID: 143,
+		BEndLocationID:   145,
+		PortSpeed:        1000,
+		Term:             12,
+		WaitForProvision: true,
+		WaitForTime:      100 * time.Millisecond,
+	}
+
+	got, err := suite.client.SolutionService.BuyDCI(suite.ctx, req)
+	suite.EqualError(err, "time expired waiting for DCI "+testSolutionUID+" to provision")
+	suite.Equal(want, got)
+
+	ctx, cancel := context.WithTimeout(suite.ctx, 100*time.Millisecond)
+	defer cancel()
+	req.WaitForTime = time.Minute
+	got, err = suite.client.SolutionService.BuyDCI(ctx, req)
+	suite.EqualError(err, "context expired waiting for DCI "+testSolutionUID+" to provision")
+	suite.Equal(want, got)
 }
 
 func (suite *SolutionClientTestSuite) TestGetSolution() {

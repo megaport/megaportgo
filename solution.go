@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -39,13 +38,10 @@ type SolutionServiceOp struct {
 }
 
 // BuyDCI buys a DCI using POST /v4/networkdesign/buy. The order holds both Ports, the VXC between them and the
-// DCI itself, so the DCI is created, priced and billed as one item. The API checks the term, speed and locations.
+// DCI itself, so the DCI is created, priced and billed as one item. The API checks the name, term, speed and locations.
 func (svc *SolutionServiceOp) BuyDCI(ctx context.Context, req *BuyDCIRequest) (*BuyDCIResponse, error) {
 	if req == nil {
 		return nil, ErrBuyDCIRequestNil
-	}
-	if strings.TrimSpace(req.Name) == "" {
-		return nil, ErrSolutionNameRequired
 	}
 
 	solutionRef := uuid.NewString()

@@ -247,9 +247,6 @@ var ErrBuyDCIRequestNil = errors.New("buy DCI request cannot be nil")
 // ErrSolutionUIDRequired is returned when a Solution method is called with an empty Solution UID.
 var ErrSolutionUIDRequired = errors.New("solution UID is required")
 
-// ErrSolutionNameRequired is returned when a Solution is ordered with a blank name.
-var ErrSolutionNameRequired = errors.New("solution name is required")
-
 // ErrSolutionResponseEmpty is returned when a Solution API returns a 2xx response with a null or missing data payload.
 var ErrSolutionResponseEmpty = errors.New("solution response missing data")
 

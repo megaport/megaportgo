@@ -25,8 +25,7 @@ type Solution struct {
 
 	// Members are the Solution's services, ordered A-End Port, B-End Port, then VXC.
 	Members []SolutionMember `json:"members"`
-	// ProvisioningStatus is rolled up from the members: the first of FAILED, DECOMMISSIONED, CANCELLED, DESIGN,
-	// NEW, IN_PROGRESS, DEPLOYABLE, CONFIGURED and LIVE that any member has.
+	// ProvisioningStatus is the Solution's overall status, which the API rolls up from its members.
 	ProvisioningStatus string `json:"provisioningStatus"`
 	// ALocationID and BLocationID are 0 until the Solution's VXC is created.
 	ALocationID int `json:"aLocationId"`
