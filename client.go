@@ -37,6 +37,9 @@ const (
 	mediaType      = "application/json"
 	headerTraceId  = "Trace-Id"
 
+	// defaultHTTPTimeout bounds a request when the caller passes no http.Client.
+	defaultHTTPTimeout = 5 * time.Minute
+
 	// headerCallContext lets an authenticated user act on behalf of a company
 	// they can manage; the value is that company's UID.
 	headerCallContext = "X-Call-Context"
@@ -181,7 +184,7 @@ type RequestCompletionCallback func(*http.Request, *http.Response)
 // http.Client to perform all requests.
 func NewClient(httpClient *http.Client, base *url.URL) *Client {
 	if httpClient == nil {
-		httpClient = http.DefaultClient
+		httpClient = &http.Client{Timeout: defaultHTTPTimeout}
 	}
 
 	var baseURL *url.URL
@@ -652,7 +655,7 @@ func (c *Client) Authorize(ctx context.Context) (*AuthInfo, error) {
 
 // DoRequest submits an HTTP request.
 func DoRequest(ctx context.Context, req *http.Request) (*http.Response, error) {
-	return DoRequestWithClient(ctx, http.DefaultClient, req)
+	return DoRequestWithClient(ctx, &http.Client{Timeout: defaultHTTPTimeout}, req)
 }
 
 // DoRequestWithClient submits an HTTP request using the specified client.
