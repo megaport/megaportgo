@@ -28,6 +28,8 @@ func waitUntilReady(ctx context.Context, timeout time.Duration, what string, rea
 	for {
 		select {
 		case <-timer.C:
+			// the last tick can land together with the timer, so check once more before giving up.
+			// a failed check here still counts as time expired.
 			if done, err := ready(); err == nil && done {
 				return nil
 			}
