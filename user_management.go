@@ -450,9 +450,7 @@ func (svc *UserManagementServiceOp) DeleteUser(ctx context.Context, employeeID i
 }
 
 // GetUserActivity retrieves the caller's own activity log in the Megaport Portal.
-// It returns the first page only, which holds 10 entries unless PageSize is set.
-// The entries are newest first unless Sort or Direction is set.
-// Actions made with an API key are not included.
+// It returns the first page only. Actions made with an API key are not included.
 func (svc *UserManagementServiceOp) GetUserActivity(ctx context.Context, req *GetUserActivityRequest) ([]*UserActivity, error) {
 	path := "/v4/activity"
 	if req != nil {

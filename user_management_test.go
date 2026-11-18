@@ -361,7 +361,7 @@ func (suite *UserManagementClientTestSuite) TestGetUserActivityFilters() {
 	ctx := context.Background()
 	aest := time.FixedZone("AEST", 10*60*60)
 	from := time.Date(2026, 11, 11, 9, 30, 0, 123000000, aest)
-	to := time.Date(2026, 11, 18, 10, 0, 0, 0, aest)
+	to := time.Date(2026, 11, 18, 10, 0, 0, 456000000, aest)
 	tests := []struct {
 		name string
 		req  *GetUserActivityRequest
@@ -375,7 +375,7 @@ func (suite *UserManagementClientTestSuite) TestGetUserActivityFilters() {
 		{
 			name: "date range in UTC",
 			req:  &GetUserActivityRequest{From: &from, To: &to},
-			want: url.Values{"from": {"2026-11-10T23:30:00.123Z"}, "to": {"2026-11-18T00:00:00Z"}},
+			want: url.Values{"from": {"2026-11-10T23:30:00.123Z"}, "to": {"2026-11-18T00:00:00.456Z"}},
 		},
 		{
 			name: "page size and sort",
@@ -399,8 +399,10 @@ func (suite *UserManagementClientTestSuite) TestGetUserActivityFilters() {
 		},
 	}
 	var got url.Values
+	var uri string
 	suite.mux.HandleFunc("/v4/activity", func(w http.ResponseWriter, r *http.Request) {
 		got = r.URL.Query()
+		uri = r.RequestURI
 		fmt.Fprint(w, `{"data": {"items": []}}`)
 	})
 	for _, tt := range tests {
@@ -408,6 +410,9 @@ func (suite *UserManagementClientTestSuite) TestGetUserActivityFilters() {
 			_, err := suite.client.UserManagementService.GetUserActivity(ctx, tt.req)
 			suite.NoError(err)
 			suite.Equal(tt.want, got)
+			if len(tt.want) == 0 {
+				suite.Equal("/v4/activity", uri)
+			}
 		})
 	}
 }
