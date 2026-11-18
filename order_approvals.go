@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 )
 
 // OrderApprovalStatus represents the status of an order approval.
@@ -76,31 +75,51 @@ type OrderApproval struct {
 	Status             OrderApprovalStatus `json:"status"`
 	Type               OrderApprovalType   `json:"type"`
 	Active             bool                `json:"active"`
-	AcctName           string              `json:"acctName"`
-	AcctRef            string              `json:"acctRef"`
+	AcctName           string              `json:"accountName"`
+	AcctRef            string              `json:"accountReference"`
 	ApproverCompanyID  int                 `json:"approverCompanyId"`
 	RequesterCompanyID int                 `json:"requesterCompanyId"`
 	ServiceID          int                 `json:"serviceId"`
 	Comment            string              `json:"comment"`
-	CreateDate         *Time               `json:"createDate"`
+	CreateDate         *Time               `json:"createdAt"`
+	CompletedAt        *Time               `json:"completedAt"`
+	CreatedBy          string              `json:"createdBy"`
 	Detail             json.RawMessage     `json:"detail"`
 }
 
 // ListOrderApprovalsRequest represents a request to list order approvals from the Megaport API.
 type ListOrderApprovalsRequest struct {
 	Status     *OrderApprovalStatus // Filter by approval status (optional).
+	Type       *OrderApprovalType   // Filter by approval type (optional).
 	ServiceIDs []int                // Filter by service IDs (optional).
-	PageNumber *int                 // Page number for pagination; if nil, the API default is used.
+	PageNumber *int                 // Page number for pagination; if nil, the API default is used. The API answers a page past the last with page 1.
 	PageSize   *int                 // Page size for pagination; if nil, the API default is used.
-	Sort       *string              // Field to sort by (optional).
-	Direction  *string              // Sort direction: ASC or DESC (default DESC).
+	Sort       *string              // Field to sort by: createdAt, serviceId, status or type. v3's createDate is sent as createdAt.
+	Direction  *string              // Sort direction: ASC or DESC. A Sort with no Direction sorts ascending. With Sort nil, Direction applies to createdAt.
 }
 
-// ListOrderApprovalsAPIResponse represents the Megaport API HTTP response from listing order approvals.
+// ListOrderApprovalsAPIResponse matches neither the v3 nor the v4 list response.
+//
+// Deprecated: ListOrderApprovals no longer decodes it.
 type ListOrderApprovalsAPIResponse struct {
 	Message string           `json:"message"`
 	Terms   string           `json:"terms"`
 	Data    []*OrderApproval `json:"data"`
+}
+
+// listOrderApprovalsV4Response is the v4 response, whose data holds one page.
+type listOrderApprovalsV4Response struct {
+	Message string                   `json:"message"`
+	Terms   string                   `json:"terms"`
+	Data    listOrderApprovalsV4Page `json:"data"`
+}
+
+type listOrderApprovalsV4Page struct {
+	Items      []*OrderApproval `json:"items"`
+	PageNumber int              `json:"pageNumber"`
+	PageSize   int              `json:"pageSize"`
+	TotalItems int              `json:"totalItems"`
+	TotalPages int              `json:"totalPages"`
 }
 
 // ListOrderApprovalsResponse represents the Go SDK response from listing order approvals.
@@ -122,29 +141,25 @@ func (svc *OrderApprovalServiceOp) ListOrderApprovals(ctx context.Context, req *
 	if req == nil {
 		req = &ListOrderApprovalsRequest{}
 	}
-	path := "/v3/order_approvals"
+	path := "/v4/order_approvals"
 	params := url.Values{}
 	if req.Status != nil {
 		params.Add("status", string(*req.Status))
 	}
-	if len(req.ServiceIDs) > 0 {
-		ids := make([]string, len(req.ServiceIDs))
-		for i, id := range req.ServiceIDs {
-			ids[i] = strconv.Itoa(id)
-		}
-		params.Add("serviceIds", strings.Join(ids, ","))
+	if req.Type != nil {
+		params.Add("type", string(*req.Type))
+	}
+	for _, id := range req.ServiceIDs {
+		params.Add("service_ids", strconv.Itoa(id))
 	}
 	if req.PageNumber != nil {
-		params.Add("pageNumber", strconv.Itoa(*req.PageNumber))
+		params.Add("page_number", strconv.Itoa(*req.PageNumber))
 	}
 	if req.PageSize != nil {
-		params.Add("pageSize", strconv.Itoa(*req.PageSize))
+		params.Add("page_size", strconv.Itoa(*req.PageSize))
 	}
-	if req.Sort != nil {
-		params.Add("sort", *req.Sort)
-	}
-	if req.Direction != nil {
-		params.Add("direction", *req.Direction)
+	if sort := orderApprovalSort(req); sort != "" {
+		params.Add("sort", sort)
 	}
 
 	if len(params) > 0 {
@@ -164,45 +179,38 @@ func (svc *OrderApprovalServiceOp) ListOrderApprovals(ctx context.Context, req *
 
 	svc.Client.Logger.DebugContext(ctx, "Listing Order Approvals", slog.String("url", path), slog.Int("status_code", response.StatusCode))
 
-	var apiResponse ListOrderApprovalsAPIResponse
+	var apiResponse listOrderApprovalsV4Response
 	if err = json.Unmarshal(buf.Bytes(), &apiResponse); err != nil {
 		return nil, err
 	}
 
 	toReturn := &ListOrderApprovalsResponse{
-		OrderApprovals: apiResponse.Data,
-	}
-
-	if v := response.Header.Get("Pagination-Total-Count"); v != "" {
-		n, err := strconv.Atoi(v)
-		if err != nil {
-			return nil, fmt.Errorf("invalid Pagination-Total-Count header %q: %w", v, err)
-		}
-		toReturn.TotalCount = n
-	}
-	if v := response.Header.Get("Pagination-Page"); v != "" {
-		n, err := strconv.Atoi(v)
-		if err != nil {
-			return nil, fmt.Errorf("invalid Pagination-Page header %q: %w", v, err)
-		}
-		toReturn.Page = n
-	}
-	if v := response.Header.Get("Pagination-Limit"); v != "" {
-		n, err := strconv.Atoi(v)
-		if err != nil {
-			return nil, fmt.Errorf("invalid Pagination-Limit header %q: %w", v, err)
-		}
-		toReturn.Limit = n
-	}
-	if v := response.Header.Get("Pagination-Total-Page"); v != "" {
-		n, err := strconv.Atoi(v)
-		if err != nil {
-			return nil, fmt.Errorf("invalid Pagination-Total-Page header %q: %w", v, err)
-		}
-		toReturn.TotalPages = n
+		OrderApprovals: apiResponse.Data.Items,
+		TotalCount:     apiResponse.Data.TotalItems,
+		Page:           apiResponse.Data.PageNumber,
+		Limit:          apiResponse.Data.PageSize,
+		TotalPages:     apiResponse.Data.TotalPages,
 	}
 
 	return toReturn, nil
+}
+
+// orderApprovalSort builds the v4 sort value, which carries the direction after a comma.
+func orderApprovalSort(req *ListOrderApprovalsRequest) string {
+	var field string
+	if req.Sort != nil {
+		field = *req.Sort
+	}
+	if field == "createDate" {
+		field = "createdAt" // v3's name for the field. v4 returns 400 for it.
+	}
+	if req.Direction == nil {
+		return field
+	}
+	if field == "" {
+		field = "createdAt"
+	}
+	return field + "," + *req.Direction
 }
 
 // ApproveOrderApproval approves a pending order approval request.
