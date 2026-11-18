@@ -3,6 +3,7 @@ package megaport
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -204,38 +205,21 @@ func (svc *MCRServiceOp) BuyMCR(ctx context.Context, req *BuyMCRRequest) (*BuyMC
 
 	// wait until the MCR is provisioned before returning if requested by the user.
 	if req.WaitForProvision {
-		toWait := req.WaitForTime
-		if toWait == 0 {
-			toWait = 5 * time.Minute
-		}
-
-		ticker := time.NewTicker(30 * time.Second) // check on the provision status every 30 seconds
-		timer := time.NewTimer(toWait)
-		defer ticker.Stop()
-		defer timer.Stop()
-
-		for {
-			select {
-			case <-timer.C:
-				return toReturn, fmt.Errorf("time expired waiting for MCR %s to provision", toReturn.TechnicalServiceUID)
-			case <-ctx.Done():
-				return toReturn, fmt.Errorf("context expired waiting for MCR %s to provision: %w", toReturn.TechnicalServiceUID, ctx.Err())
-			case <-ticker.C:
-				mcrDetails, err := svc.GetMCR(ctx, toReturn.TechnicalServiceUID)
-				if err != nil {
-					return toReturn, err
-				}
-
-				if slices.Contains(SERVICE_STATE_READY, mcrDetails.ProvisioningStatus) {
-					return toReturn, nil
-				}
-
+		what := fmt.Sprintf("MCR %s to provision", toReturn.TechnicalServiceUID)
+		err := waitUntilReady(ctx, req.WaitForTime, what, func() (bool, error) {
+			mcrDetails, err := svc.GetMCR(ctx, toReturn.TechnicalServiceUID)
+			if err != nil {
+				return false, err
 			}
+			return slices.Contains(SERVICE_STATE_READY, mcrDetails.ProvisioningStatus), nil
+		})
+		if err != nil {
+			return toReturn, withContextCause(err)
 		}
-	} else {
-		// return the service UID right away if the user doesn't want to wait for provision
-		return toReturn, nil
 	}
+
+	// return the service UID right away if the user doesn't want to wait for provision
+	return toReturn, nil
 }
 
 // validateBuyMCRRequest validates the BuyMCRRequest for a valid term and port speed.
@@ -547,36 +531,20 @@ func (svc *MCRServiceOp) ModifyMCR(ctx context.Context, req *ModifyMCRRequest) (
 
 	// wait until the MCR is updated before returning if requested by the user
 	if req.WaitForUpdate {
-		toWait := req.WaitForTime
-		if toWait == 0 {
-			toWait = 5 * time.Minute
-		}
-
-		ticker := time.NewTicker(30 * time.Second) // check on the update status every 30 seconds
-		timer := time.NewTimer(toWait)
-		defer ticker.Stop()
-		defer timer.Stop()
-
-		for {
-			select {
-			case <-timer.C:
-				return nil, fmt.Errorf("time expired waiting for MCR %s to update", req.MCRID)
-			case <-ctx.Done():
-				return nil, fmt.Errorf("context expired waiting for MCR %s to update: %w", req.MCRID, ctx.Err())
-			case <-ticker.C:
-				mcrDetails, err := svc.GetMCR(ctx, req.MCRID)
-				if err != nil {
-					return nil, err
-				}
-				if slices.Contains(SERVICE_STATE_READY, mcrDetails.ProvisioningStatus) {
-					return toReturn, nil
-				}
+		err := waitUntilReady(ctx, req.WaitForTime, fmt.Sprintf("MCR %s to update", req.MCRID), func() (bool, error) {
+			mcrDetails, err := svc.GetMCR(ctx, req.MCRID)
+			if err != nil {
+				return false, err
 			}
+			return slices.Contains(SERVICE_STATE_READY, mcrDetails.ProvisioningStatus), nil
+		})
+		if err != nil {
+			return nil, withContextCause(err)
 		}
-	} else {
-		// return the response right away if the user doesn't want to wait for update
-		return toReturn, nil
 	}
+
+	// return the response right away if the user doesn't want to wait for update
+	return toReturn, nil
 }
 
 // DeleteMCRPrefixFilterList deletes a prefix filter list on an MCR from the Megaport MCR API.
@@ -781,10 +749,6 @@ func (svc *MCRServiceOp) GetMCRIPsec(ctx context.Context, mcrID string) (*MCRIPs
 // Returns ErrMCRNotFound if the MCR is deleted while polling, or
 // ErrMCRDecommissioned if it has been decommissioned.
 func (svc *MCRServiceOp) WaitForMCRReady(ctx context.Context, mcrID string, timeout time.Duration) error {
-	if timeout == 0 {
-		timeout = 5 * time.Minute
-	}
-
 	check := func() (bool, error) {
 		mcr, err := svc.GetMCR(ctx, mcrID)
 		if err != nil {
@@ -804,21 +768,11 @@ func (svc *MCRServiceOp) WaitForMCRReady(ctx context.Context, mcrID string, time
 		return err
 	}
 
-	ticker := time.NewTicker(30 * time.Second)
-	defer ticker.Stop()
-	timer := time.NewTimer(timeout)
-	defer timer.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-timer.C:
-			return fmt.Errorf("time expired waiting for MCR %s to reach a ready state", mcrID)
-		case <-ticker.C:
-			if ready, err := check(); err != nil || ready {
-				return err
-			}
-		}
+	err := waitUntilReady(ctx, timeout, fmt.Sprintf("MCR %s to reach a ready state", mcrID), check)
+	// this method returns the context's own error when the context ends the wait
+	var ctxErr *waitContextError
+	if errors.As(err, &ctxErr) {
+		return ctxErr.err
 	}
+	return err
 }
