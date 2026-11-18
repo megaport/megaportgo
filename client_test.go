@@ -95,6 +95,20 @@ func (suite *ClientTestSuite) TestNew() {
 	suite.testClientDefaults(c)
 }
 
+func (suite *ClientTestSuite) TestNew_nilHTTPClientHasTimeout() {
+	c, err := New(nil)
+	suite.Require().NoError(err)
+	suite.NotSame(http.DefaultClient, c.HTTPClient)
+	suite.Equal(defaultHTTPTimeout, c.HTTPClient.Timeout)
+}
+
+func (suite *ClientTestSuite) TestNew_keepsCallerHTTPClient() {
+	hc := &http.Client{}
+	c, err := New(hc)
+	suite.Require().NoError(err)
+	suite.Same(hc, c.HTTPClient)
+}
+
 // TestNewRequest_get tests if the NewRequest function returns a GET request with the default base URL and user agent.
 func (suite *ClientTestSuite) TestNewRequest_get() {
 	c := NewClient(nil, nil)
