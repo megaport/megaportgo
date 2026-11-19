@@ -155,7 +155,17 @@ func (suite *EventsTestSuite) TestGetOutageEvents() {
                 "createdDate": "2024-05-23T13:02:30.968Z",
                 "updatedDate": "2024-05-23T13:02:30.968Z",
                 "services": [],
-                "notices": []
+                "notices": [
+                    {
+                        "description": "We are still investigating the packet loss.",
+                        "createdDate": "2024-05-23T15:05:00.000Z",
+                        "nextUpdate": "in 2 hours"
+                    },
+                    {
+                        "description": "This happened because something broke",
+                        "createdDate": "2024-05-23T13:02:30.968Z"
+                    }
+                ]
             }
         ]
     }`
@@ -175,6 +185,17 @@ func (suite *EventsTestSuite) TestGetOutageEvents() {
 	suite.Len(events, 2)
 	suite.Equal("c2037361-eb5b-48a3-9c73-fb4efbf2c886", events[0].OutageID)
 	suite.Equal("CSS-12345", events[1].EventID)
+	suite.Equal([]OutageEventNotice{
+		{
+			Description: "We are still investigating the packet loss.",
+			CreatedDate: "2024-05-23T15:05:00.000Z",
+			NextUpdate:  "in 2 hours",
+		},
+		{
+			Description: "This happened because something broke",
+			CreatedDate: "2024-05-23T13:02:30.968Z",
+		},
+	}, events[1].Notices)
 }
 
 func (suite *EventsTestSuite) TestGetOutageEvents_CaseInsensitive() {
