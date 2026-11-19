@@ -250,6 +250,9 @@ var ErrSolutionUIDRequired = errors.New("solution UID is required")
 // ErrSolutionResponseEmpty is returned when a Solution API returns a 2xx response with a null or missing data payload.
 var ErrSolutionResponseEmpty = errors.New("solution response missing data")
 
+// ErrUpdateSolutionRequestNil is returned when UpdateSolution is called with a nil request.
+var ErrUpdateSolutionRequestNil = errors.New("update solution request cannot be nil")
+
 // ErrDCIOrderResponseMissingSolution is returned when a DCI order succeeds but the response does not name the DCI created.
 var ErrDCIOrderResponseMissingSolution = errors.New("DCI order response missing the solution")
 
