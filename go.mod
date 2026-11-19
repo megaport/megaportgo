@@ -5,6 +5,7 @@ go 1.21
 toolchain go1.26.11
 
 require (
+	github.com/google/uuid v1.6.0
 	github.com/lithammer/fuzzysearch v1.1.8
 	github.com/stretchr/testify v1.12.1
 )

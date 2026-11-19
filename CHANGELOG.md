@@ -1,6 +1,7 @@
 # Unreleased
 
 ## New Features
+- Add `SolutionService` for ordering DCI Solutions. `BuyDCI` orders a Port at each end and the VXC between them as one item. `GetSolution` reads a Solution and its member services, and `GetSolutionBillable` reads its term and auto-renew setting. The API accepts a DCI term of 12, 24 or 36 months.
 - Add `CompanyService` with `GetCurrentCompany`, which returns the company the caller acts in (UID, name, account type and any parent company) from `GET /v2/me`. Session users also get `CompanyID`, `RootAccountType`, `IsManagedContext` and `Companies`. Add the `AccountType` type and constants.
 - Add `ProductAvailabilityService` with `ListCompanyProductAvailability`, which lists the products a company can order and the markets each is available in.
 - Add `AggregationID` to `BuyPortRequest` so a port order can add ports to an existing LAG. Set it with `LagCount` to say how many ports to add, and send the LAG's own `LocationId` and `PortSpeed`. Leaving it zero keeps today's behavior.
@@ -11,8 +12,11 @@
 - Add `MCRService.GetMCRIPsec` to read an MCR's IPsec tunnels and tunnel counts. This endpoint does not return the pre-shared key or the phase lifetimes.
 - Add the `OrderApprovalType` constants `OrderApprovalTypeEarlyTermination`, `OrderApprovalTypeAddOn`, `OrderApprovalTypeIPAddressPartnerOrder` and `OrderApprovalTypeIPAddressCompliance`. A cancel approval has the type `EARLY_TERMINATION`.
 - Add `ListOrderApprovalsRequest.Type`, `OrderApproval.CompletedAt` and `OrderApproval.CreatedBy`. `Time` also decodes an RFC 3339 string.
+- Add `ActivityNames`, `From`, `To`, `PageSize`, `Sort` and `Direction` to `GetUserActivityRequest` to filter and sort the entries `GetUserActivity` returns.
 
 ## Changes
+- Breaking: `GetUserActivity` calls `GET /v4/activity`, because the API is removing `GET /v3/activity` on 8 January 2027. It returns the caller's own entries, 10 by default, and ignores `PersonIdOrUid` and `CompanyIdOrUid`, which are deprecated. Actions made with an API key are not included. `UserActivity` marshals `CreateDate` as `createdAt`. The method used to fail on every call, because v3 wraps the list in `data`.
+- `New`, `NewClient` and `DoRequest` use an HTTP client with a 5 minute timeout when the caller passes no `http.Client`. Before this change they used `http.DefaultClient`, which has no timeout, so a server that never replied blocked the call until the context ended.
 - Breaking: `ListOrderApprovals` calls `GET /v4/order_approvals`, because the API is removing `GET /v3/order_approvals`. `Direction` now changes the sort order, which it did not on v3. `Sort` takes `createdAt`, `serviceId`, `status` or `type`. The SDK sends v3's `createDate` as `createdAt`, and the API returns 400 for other v3 sort fields such as `completionDate`. A `Sort` with no `Direction` sorts ascending.
 - Breaking: `ListOrderApprovals` returns page 1 for a `PageNumber` past the last page, where v3 returned an empty page. An empty result has `TotalPages` 0, not 1. A caller that is not a partner, Megaport staff or a managed account gets 403, where v3 returned 401.
 - Breaking: `OrderApproval` marshals `AcctName`, `AcctRef` and `CreateDate` as `accountName`, `accountReference` and `createdAt`. `OrderApproval.CreateDate` now keeps its milliseconds and the UTC zone the API sends. `OrderApproval.Detail` no longer contains `type`. Read `OrderApproval.Type` instead. `ListOrderApprovalsAPIResponse` is deprecated.
@@ -50,6 +54,7 @@
 - Breaking: `DeleteProduct`, `DeleteVXC` and `DeleteIX` now return `ErrCancelLaterNotAllowed` when `DeleteNow` is false, and `RestoreProduct`, `RestorePort` and `RestoreMCR` now return `ErrRestoreNotAllowed`. None of them sends a request. The API removed both actions, and these calls already failed with a 403 permission error. The restore methods are deprecated. `ErrTransitVXCCancelLaterNotAllowed` is deprecated too, and `DeleteVXC` no longer returns it.
 - A VXC read now decodes an IBM CSP connection to `CSPConnectionIBM` when it is the VXC's only CSP connection. The API sends that connection as a bare object, which used to decode to `CSPConnectionOther`.
 - Breaking: `OutageEvent.Notices` is now `[]OutageEventNotice` instead of `[]string`, with `Description`, `CreatedDate` and `NextUpdate` fields. The API sends each notice as an object, and every outage has at least one. `GetOutageEvents` used to fail with a JSON unmarshal error on any response that contained an outage.
+- The `WaitForProvision` and `WaitForUpdate` waits on `BuyPort`, `BuyMCR`, `BuyMVE`, `BuyVXC`, `BuyIX`, `BuyDCI`, `ModifyPort`, `ModifyMCR`, `ModifyMVE`, `UpdateVXC` and `UpdateIX`, and `WaitForMCRReady`, check the status once more when the wait time ends. A product that turned ready in the last 30 seconds used to fail with `time expired` about half the time when the wait time was a multiple of 30 seconds, which includes the 5-minute default.
 
 # 1.0.0 Release
 

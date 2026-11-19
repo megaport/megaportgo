@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // UserManagementService is an interface that defines methods for managing users in the Megaport API.
@@ -27,7 +28,8 @@ type UserManagementService interface {
 	DeleteUser(ctx context.Context, employeeID int) error
 	// DeactivateUser deactivates a user by their employee ID.
 	DeactivateUser(ctx context.Context, employeeID int) error
-	// GetUserActivity retrieves the activity of a user based on their person ID or UID.
+	// GetUserActivity retrieves the caller's own activity log.
+	// It returns the first page only. Actions made with an API key are not included.
 	GetUserActivity(ctx context.Context, req *GetUserActivityRequest) ([]*UserActivity, error)
 }
 
@@ -186,13 +188,27 @@ func (req *UpdateUserRequest) Validate() error {
 	return nil
 }
 
-// GetUserActivityRequest represents the query parameters for retrieving user activity.
-// If a field is not an empty string, it will be included as a query parameter.
+// GetUserActivityRequest filters the entries GetUserActivity returns. Unset fields send nothing.
 type GetUserActivityRequest struct {
-	// PersonIdOrUid is the user's person ID or UID to filter activity for a specific user.
+	// Deprecated: GetUserActivity ignores this field.
 	PersonIdOrUid string
-	// CompanyIdOrUid is the company ID or UID to filter activity for a specific company.
+	// Deprecated: GetUserActivity ignores this field.
 	CompanyIdOrUid string
+	// ActivityNames returns only entries with one of these names, such as "Login".
+	ActivityNames []string
+	// From is the start of the date range. The API moves a From older than two years up to two years ago.
+	// With To set and From nil, the range starts two years ago.
+	From *time.Time
+	// To is the end of the date range. With From set and To nil, the range ends now.
+	// The API returns 400 for a From or To later than now, and for a From later than To.
+	To *time.Time
+	// PageSize is the number of entries to return, from 1 to 100. The API defaults to 10.
+	PageSize *int
+	// Sort is the field to sort by: name, description or createdAt. The API defaults to createdAt, newest first.
+	// A Sort with no Direction sorts ascending.
+	Sort *string
+	// Direction is ASC or DESC. With Sort nil, it sorts by createdAt.
+	Direction *string
 }
 
 // CreateUser creates a new user in the Megaport system.
@@ -434,25 +450,30 @@ func (svc *UserManagementServiceOp) DeleteUser(ctx context.Context, employeeID i
 	return nil
 }
 
-// GetUserActivity retrieves a log of user activity in the Megaport Portal.
-// It can be filtered by person ID/UID and/or company ID/UID using the request parameters.
+// GetUserActivity retrieves the caller's own activity log in the Megaport Portal.
+// It returns the first page only. Actions made with an API key are not included.
 func (svc *UserManagementServiceOp) GetUserActivity(ctx context.Context, req *GetUserActivityRequest) ([]*UserActivity, error) {
-	if req == nil {
-		req = &GetUserActivityRequest{}
-	}
-	path := "/v3/activity"
-
-	// Append query parameters if provided using proper URL encoding
-	queryParams := url.Values{}
-	if req.PersonIdOrUid != "" {
-		queryParams.Add("personIdOrUid", req.PersonIdOrUid)
-	}
-	if req.CompanyIdOrUid != "" {
-		queryParams.Add("companyIdOrUid", req.CompanyIdOrUid)
-	}
-
-	if len(queryParams) > 0 {
-		path += "?" + queryParams.Encode()
+	path := "/v4/activity"
+	if req != nil {
+		params := url.Values{}
+		for _, name := range req.ActivityNames {
+			params.Add("activity_name", name)
+		}
+		if req.From != nil {
+			params.Add("from", req.From.UTC().Format(time.RFC3339Nano))
+		}
+		if req.To != nil {
+			params.Add("to", req.To.UTC().Format(time.RFC3339Nano))
+		}
+		if req.PageSize != nil {
+			params.Add("page_size", strconv.Itoa(*req.PageSize))
+		}
+		if sort := userActivitySort(req); sort != "" {
+			params.Add("sort", sort)
+		}
+		if len(params) > 0 {
+			path = path + "?" + params.Encode()
+		}
 	}
 
 	clientReq, err := svc.client.NewRequest(ctx, "GET", path, nil)
@@ -478,10 +499,25 @@ func (svc *UserManagementServiceOp) GetUserActivity(ctx context.Context, req *Ge
 		return nil, fmt.Errorf("failed to get user activity: HTTP %d - %s", response.StatusCode, string(body))
 	}
 
-	var activities []*UserActivity
-	if err := json.Unmarshal(body, &activities); err != nil {
+	var page getActivityV4Response
+	if err := json.Unmarshal(body, &page); err != nil {
 		return nil, err
 	}
 
-	return activities, nil
+	return page.Data.Items, nil
+}
+
+// userActivitySort builds the v4 sort value, which carries the direction after a comma.
+func userActivitySort(req *GetUserActivityRequest) string {
+	var field string
+	if req.Sort != nil {
+		field = *req.Sort
+	}
+	if req.Direction == nil {
+		return field
+	}
+	if field == "" {
+		field = "createdAt"
+	}
+	return field + "," + strings.ToLower(*req.Direction)
 }

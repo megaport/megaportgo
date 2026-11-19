@@ -108,7 +108,16 @@ type UserActivity struct {
 	// Name is the type or name of the activity (e.g., "Login").
 	Name string `json:"name"`
 	// CreateDate is the timestamp when the activity occurred, parsed as a Time type.
-	CreateDate Time `json:"createDate"`
+	CreateDate Time `json:"createdAt"`
 	// UserType indicates the type of user (e.g., "USER").
 	UserType string `json:"userType"`
+}
+
+// getActivityV4Response is the v4 response, whose data holds one page.
+type getActivityV4Response struct {
+	Data getActivityV4ResponseData `json:"data"`
+}
+
+type getActivityV4ResponseData struct {
+	Items []*UserActivity `json:"items"`
 }

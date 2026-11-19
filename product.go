@@ -14,7 +14,7 @@ import (
 // ProductService is an interface for interfacing with the Product endpoints of the Megaport API.
 type ProductService interface {
 	// ExecuteOrder is responsible for executing an order for a product in the Megaport Products API.
-	ExecuteOrder(ctx context.Context, requestBody interface{}) (*[]byte, error)
+	ExecuteOrder(ctx context.Context, requestBody any) (*[]byte, error)
 	// ListProducts retrieves a list of products from the Megaport Products API. It returns a slice of Product interfaces, which can be of different types (Port, MCR, MVE). The function handles the parsing of the response and unmarshals it into the appropriate product type based on the product type field.
 	ListProducts(ctx context.Context) ([]Product, error)
 	// ModifyProduct modifies a product in the Megaport Products API. The available fields to modify are Name, Cost Centre, Marketplace Visibility, Contract Term, ASN (MCR only), and Vnics (MVE only).
@@ -30,7 +30,7 @@ type ProductService interface {
 	// ManageProductLock is responsible for locking or unlocking a product in the Megaport Products API.
 	ManageProductLock(ctx context.Context, req *ManageProductLockRequest) (*ManageProductLockResponse, error)
 	// ValidateProductOrder is responsible for validating an order for a product in the Megaport Products API.
-	ValidateProductOrder(ctx context.Context, requestBody interface{}) error
+	ValidateProductOrder(ctx context.Context, requestBody any) error
 	// ListProductResourceTags is responsible for retrieving the resource tags for a product in the Megaport Products API.
 	ListProductResourceTags(ctx context.Context, productID string) ([]ResourceTag, error)
 	// UpdateProductResourceTags is responsible for updating the resource tags for a product in the Megaport Products API.
@@ -157,35 +157,41 @@ type ResourceTag struct {
 
 // buyRequestV4 is the internal v4 request envelope for POST /v4/networkdesign/buy.
 type buyRequestV4 struct {
-	NetworkDesign interface{} `json:"networkDesign"`
-	DiscountCodes []string    `json:"discountCodes"`
+	NetworkDesign any             `json:"networkDesign"`
+	DiscountCodes []string        `json:"discountCodes"`
+	Solutions     []solutionOrder `json:"solutions,omitempty"`
 }
 
 // ExecuteOrder is responsible for executing an order for a product in the Megaport Products API.
-func (svc *ProductServiceOp) ExecuteOrder(ctx context.Context, requestBody interface{}) (*[]byte, error) {
+func (svc *ProductServiceOp) ExecuteOrder(ctx context.Context, requestBody any) (*[]byte, error) {
+	return executeOrder(ctx, svc.Client, requestBody, nil)
+}
+
+// executeOrder posts a network design to POST /v4/networkdesign/buy, with the Solutions its services belong to.
+func executeOrder(ctx context.Context, c *Client, networkDesign any, solutions []solutionOrder) (*[]byte, error) {
 	path := "/v4/networkdesign/buy"
 
 	wrappedBody := buyRequestV4{
-		NetworkDesign: requestBody,
+		NetworkDesign: networkDesign,
 		DiscountCodes: []string{},
+		Solutions:     solutions,
 	}
 
-	url := svc.Client.BaseURL.JoinPath(path).String()
+	url := c.BaseURL.JoinPath(path).String()
 
-	req, err := svc.Client.NewRequest(ctx, http.MethodPost, url, wrappedBody)
+	req, err := c.NewRequest(ctx, http.MethodPost, url, wrappedBody)
 	if err != nil {
 		return nil, err
 	}
 
-	response, resErr := svc.Client.Do(ctx, req, nil)
+	response, resErr := c.Do(ctx, req, nil)
 	if resErr != nil {
 		return nil, resErr
 	}
 
-	if response != nil {
-		svc.Client.Logger.DebugContext(ctx, "Executing product order", slog.String("url", url), slog.Int("status_code", response.StatusCode))
-		defer response.Body.Close()
-	}
+	defer response.Body.Close()
+
+	c.Logger.DebugContext(ctx, "Executing product order", slog.String("url", url), slog.Int("status_code", response.StatusCode))
 
 	body, fileErr := io.ReadAll(response.Body)
 	if fileErr != nil {
@@ -369,7 +375,7 @@ func (svc *ProductServiceOp) ManageProductLock(ctx context.Context, req *ManageP
 }
 
 // ValidateProductOrder is responsible for validating an order for a product in the Megaport Products API.
-func (svc *ProductServiceOp) ValidateProductOrder(ctx context.Context, requestBody interface{}) error {
+func (svc *ProductServiceOp) ValidateProductOrder(ctx context.Context, requestBody any) error {
 	path := "/v3/networkdesign/validate"
 
 	url := svc.Client.BaseURL.JoinPath(path).String()

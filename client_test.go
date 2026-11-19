@@ -95,6 +95,44 @@ func (suite *ClientTestSuite) TestNew() {
 	suite.testClientDefaults(c)
 }
 
+func (suite *ClientTestSuite) TestNew_nilHTTPClientHasTimeout() {
+	c, err := New(nil)
+	suite.Require().NoError(err)
+	suite.NotSame(http.DefaultClient, c.HTTPClient)
+	suite.Equal(5*time.Minute, c.HTTPClient.Timeout)
+}
+
+func (suite *ClientTestSuite) TestNew_keepsCallerHTTPClient() {
+	hc := &http.Client{}
+	c, err := New(hc)
+	suite.Require().NoError(err)
+	suite.Same(hc, c.HTTPClient)
+}
+
+// Not parallel: it swaps the global http.DefaultTransport.
+func TestDoRequest_defaultClientHasTimeout(t *testing.T) {
+	orig := http.DefaultTransport
+	t.Cleanup(func() { http.DefaultTransport = orig })
+	var deadline time.Time
+	var ok bool
+	http.DefaultTransport = rtFunc(func(r *http.Request) (*http.Response, error) {
+		deadline, ok = r.Context().Deadline()
+		return &http.Response{StatusCode: http.StatusOK, Body: http.NoBody, Header: make(http.Header), Request: r}, nil
+	})
+	req, err := http.NewRequest(http.MethodGet, "https://example.test", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := DoRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if d := time.Until(deadline); !ok || d < 4*time.Minute || d > 5*time.Minute {
+		t.Fatalf("request deadline = %v (set %v), want about 5 minutes from now", deadline, ok)
+	}
+}
+
 // TestNewRequest_get tests if the NewRequest function returns a GET request with the default base URL and user agent.
 func (suite *ClientTestSuite) TestNewRequest_get() {
 	c := NewClient(nil, nil)

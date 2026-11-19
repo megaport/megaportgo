@@ -48,7 +48,8 @@ Client
 ├── ManagedAccountService  (managed_account.go)
 ├── BillingMarketService   (billing_markets.go)
 ├── NATGatewayService      (nat_gateway.go)
-└── OrderApprovalService   (order_approvals.go)
+├── OrderApprovalService   (order_approvals.go)
+└── SolutionService        (solution.go)
 ```
 
 Each service follows the same pattern:
