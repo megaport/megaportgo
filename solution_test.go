@@ -357,8 +357,7 @@ func (suite *SolutionClientTestSuite) TestSolutionUIDRequired() {
 	suite.ErrorIs(err, ErrSolutionUIDRequired)
 }
 
-// The API sets the name and the service level reference on every update, so both must be on the wire.
-// An empty reference is sent as "", which the API takes to clear it.
+// Both fields must be on the wire. An empty reference is sent as "", which the API takes to clear it.
 func (suite *SolutionClientTestSuite) TestUpdateSolution() {
 	tests := []struct {
 		name string
@@ -376,22 +375,23 @@ func (suite *SolutionClientTestSuite) TestUpdateSolution() {
 			want: map[string]any{"name": "My DCI", "serviceLevelReference": ""},
 		},
 	}
+
+	// The handler is registered once and body is reset per case, because the cases share the suite's server.
+	var body map[string]any
+	suite.mux.HandleFunc(testSolutionPath, func(w http.ResponseWriter, r *http.Request) {
+		suite.Equal(http.MethodPut, r.Method)
+		suite.NoError(json.NewDecoder(r.Body).Decode(&body))
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{
+			"message": "Solution updated successfully",
+			"terms": "terms",
+			"data": {"uid": %q, "type": "DCI", "name": %q, "active": true, "locked": false, "memberServiceUids": []}
+		}`, testSolutionUID, body["name"])
+	})
+
 	for _, tt := range tests {
 		suite.Run(tt.name, func() {
-			suite.SetupTest()
-			defer suite.TearDownTest()
-
-			var body map[string]any
-			suite.mux.HandleFunc(testSolutionPath, func(w http.ResponseWriter, r *http.Request) {
-				suite.Equal(http.MethodPut, r.Method)
-				suite.NoError(json.NewDecoder(r.Body).Decode(&body))
-				w.Header().Set("Content-Type", "application/json")
-				fmt.Fprintf(w, `{
-					"message": "Solution updated successfully",
-					"terms": "terms",
-					"data": {"uid": %q, "type": "DCI", "name": %q, "active": true, "locked": false, "memberServiceUids": []}
-				}`, testSolutionUID, tt.req.Name)
-			})
+			body = nil
 
 			suite.NoError(suite.client.SolutionService.UpdateSolution(suite.ctx, &tt.req))
 			suite.Equal(tt.want, body)

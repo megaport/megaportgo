@@ -193,8 +193,8 @@ func (svc *SolutionServiceOp) GetSolutionBillable(ctx context.Context, solutionU
 }
 
 // UpdateSolution changes a Solution's name and service level reference using PUT /v1/solutions/{uid}.
-// The API sets both on every update, so send the current value of the one that stays as it is.
-// The API checks the name, and refuses the update while the Solution is locked. Read the updated Solution with GetSolution.
+// The API refuses the update while the Solution is locked. It also refuses a change of the reference
+// while the Solution is inactive or one of its member services is locked.
 func (svc *SolutionServiceOp) UpdateSolution(ctx context.Context, req *UpdateSolutionRequest) error {
 	if req == nil {
 		return ErrUpdateSolutionRequestNil
@@ -208,13 +208,7 @@ func (svc *SolutionServiceOp) UpdateSolution(ctx context.Context, req *UpdateSol
 		return err
 	}
 
-	response, err := svc.Client.Do(ctx, clientReq, nil)
-	if err != nil {
-		return err
-	}
-	defer response.Body.Close()
-
-	return nil
+	return svc.Client.doDiscard(ctx, clientReq)
 }
 
 // solutionURL returns the URL of a Solution, or of one of its sub-resources.
