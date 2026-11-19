@@ -20,6 +20,8 @@ type SolutionService interface {
 	GetSolution(ctx context.Context, solutionUID string) (*Solution, error)
 	// GetSolutionBillable gets a Solution's current term and auto-renew setting.
 	GetSolutionBillable(ctx context.Context, solutionUID string) (*SolutionBillable, error)
+	// UpdateSolution changes a Solution's name and service level reference.
+	UpdateSolution(ctx context.Context, req *UpdateSolutionRequest) error
 }
 
 // NewSolutionService creates a new instance of the Solution Service.
@@ -188,6 +190,25 @@ func (svc *SolutionServiceOp) GetSolutionBillable(ctx context.Context, solutionU
 	}
 
 	return resp.Data, nil
+}
+
+// UpdateSolution changes a Solution's name and service level reference using PUT /v1/solutions/{uid}.
+// The API refuses the update while the Solution is locked. It also refuses a change of the reference
+// while the Solution is inactive or one of its member services is locked.
+func (svc *SolutionServiceOp) UpdateSolution(ctx context.Context, req *UpdateSolutionRequest) error {
+	if req == nil {
+		return ErrUpdateSolutionRequestNil
+	}
+	if req.SolutionUID == "" {
+		return ErrSolutionUIDRequired
+	}
+
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodPut, svc.solutionURL(req.SolutionUID), req)
+	if err != nil {
+		return err
+	}
+
+	return svc.Client.doDiscard(ctx, clientReq)
 }
 
 // solutionURL returns the URL of a Solution, or of one of its sub-resources.

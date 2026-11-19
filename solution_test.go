@@ -352,4 +352,73 @@ func (suite *SolutionClientTestSuite) TestSolutionUIDRequired() {
 
 	_, err = suite.client.SolutionService.GetSolutionBillable(ctx, "")
 	suite.ErrorIs(err, ErrSolutionUIDRequired)
+
+	err = suite.client.SolutionService.UpdateSolution(ctx, &UpdateSolutionRequest{Name: "My DCI"})
+	suite.ErrorIs(err, ErrSolutionUIDRequired)
+}
+
+// Both fields must be on the wire. An empty reference is sent as "", which the API takes to clear it.
+func (suite *SolutionClientTestSuite) TestUpdateSolution() {
+	tests := []struct {
+		name string
+		req  UpdateSolutionRequest
+		want map[string]any
+	}{
+		{
+			name: "name and reference",
+			req:  UpdateSolutionRequest{SolutionUID: testSolutionUID, Name: "My renamed DCI", ServiceLevelReference: "SL-002"},
+			want: map[string]any{"name": "My renamed DCI", "serviceLevelReference": "SL-002"},
+		},
+		{
+			name: "cleared reference",
+			req:  UpdateSolutionRequest{SolutionUID: testSolutionUID, Name: "My DCI"},
+			want: map[string]any{"name": "My DCI", "serviceLevelReference": ""},
+		},
+	}
+
+	// The handler is registered once and body is reset per case, because the cases share the suite's server.
+	var body map[string]any
+	suite.mux.HandleFunc(testSolutionPath, func(w http.ResponseWriter, r *http.Request) {
+		suite.Equal(http.MethodPut, r.Method)
+		suite.NoError(json.NewDecoder(r.Body).Decode(&body))
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{
+			"message": "Solution updated successfully",
+			"terms": "terms",
+			"data": {"uid": %q, "type": "DCI", "name": %q, "active": true, "locked": false, "memberServiceUids": []}
+		}`, testSolutionUID, body["name"])
+	})
+
+	for _, tt := range tests {
+		suite.Run(tt.name, func() {
+			body = nil
+
+			suite.NoError(suite.client.SolutionService.UpdateSolution(suite.ctx, &tt.req))
+			suite.Equal(tt.want, body)
+		})
+	}
+}
+
+func (suite *SolutionClientTestSuite) TestUpdateSolutionInvalidRequest() {
+	suite.mux.HandleFunc(testSolutionPath, func(w http.ResponseWriter, r *http.Request) {
+		suite.Fail("an invalid request must not reach the API")
+	})
+
+	suite.ErrorIs(suite.client.SolutionService.UpdateSolution(suite.ctx, nil), ErrUpdateSolutionRequestNil)
+}
+
+// The API's own error reaches the caller, as for a blank name.
+func (suite *SolutionClientTestSuite) TestUpdateSolutionAPIError() {
+	const message = "Solution name must not be blank."
+	suite.mux.HandleFunc(testSolutionPath, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"message": %q}`, message)
+	})
+
+	err := suite.client.SolutionService.UpdateSolution(suite.ctx, &UpdateSolutionRequest{SolutionUID: testSolutionUID, Name: " "})
+	var apiErr *ErrorResponse
+	suite.Require().True(errors.As(err, &apiErr))
+	suite.Equal(http.StatusBadRequest, apiErr.Response.StatusCode)
+	suite.Equal(message, apiErr.Message)
 }

@@ -1,6 +1,7 @@
 # Unreleased
 
 ## New Features
+- Add `SolutionService.UpdateSolution`, which changes a Solution's name and service level reference with `PUT /v1/solutions/{uid}`. An empty `ServiceLevelReference` clears it. Code that implements `SolutionService`, such as a mock, needs the new method.
 - Add `SolutionService` for ordering DCI Solutions. `BuyDCI` orders a Port at each end and the VXC between them as one item. `GetSolution` reads a Solution and its member services, and `GetSolutionBillable` reads its term and auto-renew setting. The API accepts a DCI term of 12, 24 or 36 months.
 - Add `CompanyService` with `GetCurrentCompany`, which returns the company the caller acts in (UID, name, account type and any parent company) from `GET /v2/me`. Session users also get `CompanyID`, `RootAccountType`, `IsManagedContext` and `Companies`. Add the `AccountType` type and constants.
 - Add `ProductAvailabilityService` with `ListCompanyProductAvailability`, which lists the products a company can order and the markets each is available in.

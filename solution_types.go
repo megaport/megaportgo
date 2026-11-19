@@ -97,6 +97,17 @@ type BuyDCIResponse struct {
 	SolutionUID string
 }
 
+// UpdateSolutionRequest represents a request to change a Solution's name and service level reference.
+// The API sets both on every update: it cannot leave one as it is.
+type UpdateSolutionRequest struct {
+	SolutionUID string `json:"-"`
+	// Name is the new name of the Solution. It is required.
+	Name string `json:"name"`
+	// ServiceLevelReference replaces the reference on the Solution and on every member service.
+	// An empty value clears it. The API accepts at most 255 characters.
+	ServiceLevelReference string `json:"serviceLevelReference"`
+}
+
 // solutionOrder declares a new Solution in the body of POST /v4/networkdesign/buy.
 // The design's services point to it with solutionRef.
 type solutionOrder struct {
