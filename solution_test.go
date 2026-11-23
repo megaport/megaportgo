@@ -440,8 +440,8 @@ func (suite *SolutionClientTestSuite) TestCancelSolution() {
 		},
 		{
 			name: "reason without comment",
-			req:  CancelSolutionRequest{SolutionUID: testSolutionUID, CancellationReason: SolutionCancellationReasonServiceNotRequired},
-			want: map[string]any{"cancellation_reason": "SERVICE_NOT_REQUIRED"},
+			req:  CancelSolutionRequest{SolutionUID: testSolutionUID, CancellationReason: SolutionCancellationReasonBillingIssues},
+			want: map[string]any{"cancellation_reason": "BILLING_ISSUES"},
 		},
 		{
 			name: "comment without reason",

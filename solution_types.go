@@ -109,20 +109,20 @@ type UpdateSolutionRequest struct {
 }
 
 // CancelSolutionRequest represents a request to cancel a Solution. Both the reason and the comment are optional:
-// without them the API is sent an empty object.
+// without them the API is sent an empty object. The API checks them before it cancels a member service.
 type CancelSolutionRequest struct {
 	SolutionUID string `json:"-"`
-	// CancellationReason is one of the SolutionCancellationReason constants. The API rejects any other value
-	// before it cancels a member service.
+	// CancellationReason is one of the SolutionCancellationReason constants. The API rejects any other value.
 	CancellationReason string `json:"cancellation_reason,omitempty"`
-	// CancellationComment is free text recorded with the cancellation.
+	// CancellationComment is free text recorded with the cancellation. The API accepts at most 400 characters.
+	// Every reason except SolutionCancellationReasonBillingIssues requires a comment, and that one refuses it.
 	CancellationComment string `json:"cancellation_comment,omitempty"`
 }
 
-// The reasons the API accepts for canceling a Solution.
+// The reasons the API accepts for canceling a Solution. All but SolutionCancellationReasonBillingIssues
+// require a CancellationComment.
 const (
 	SolutionCancellationReasonBillingIssues         = "BILLING_ISSUES"
-	SolutionCancellationReasonBudgetaryConstraints  = "BUDGETARY_CONSTRAINTS"
 	SolutionCancellationReasonMovedToCloudNative    = "MOVED_TO_CLOUD_NATIVE_SOL"
 	SolutionCancellationReasonOther                 = "OTHER"
 	SolutionCancellationReasonPricing               = "PRICING"
@@ -130,9 +130,7 @@ const (
 	SolutionCancellationReasonProjectEnded          = "PROJECT_ENDED"
 	SolutionCancellationReasonProofOfConcept        = "PROOF_OF_CONCEPT"
 	SolutionCancellationReasonServiceMoved          = "SERVICE_MOVED"
-	SolutionCancellationReasonServiceNotRequired    = "SERVICE_NOT_REQUIRED"
 	SolutionCancellationReasonServiceOrderedInError = "SERVICE_ORDERED_IN_ERROR"
-	SolutionCancellationReasonServiceReordered      = "SERVICE_REORDERED"
 	SolutionCancellationReasonSwitchingProvider     = "SWITCHING_PROVIDER"
 )
 
