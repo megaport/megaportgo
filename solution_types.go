@@ -108,6 +108,34 @@ type UpdateSolutionRequest struct {
 	ServiceLevelReference string `json:"serviceLevelReference"`
 }
 
+// CancelSolutionRequest represents a request to cancel a Solution. Both the reason and the comment are optional:
+// without them the API is sent an empty object.
+type CancelSolutionRequest struct {
+	SolutionUID string `json:"-"`
+	// CancellationReason is one of the SolutionCancellationReason constants. The API rejects any other value
+	// before it cancels a member service.
+	CancellationReason string `json:"cancellation_reason,omitempty"`
+	// CancellationComment is free text recorded with the cancellation.
+	CancellationComment string `json:"cancellation_comment,omitempty"`
+}
+
+// The reasons the API accepts for canceling a Solution.
+const (
+	SolutionCancellationReasonBillingIssues         = "BILLING_ISSUES"
+	SolutionCancellationReasonBudgetaryConstraints  = "BUDGETARY_CONSTRAINTS"
+	SolutionCancellationReasonMovedToCloudNative    = "MOVED_TO_CLOUD_NATIVE_SOL"
+	SolutionCancellationReasonOther                 = "OTHER"
+	SolutionCancellationReasonPricing               = "PRICING"
+	SolutionCancellationReasonProductPerformance    = "PRODUCT_PERFORMANCE"
+	SolutionCancellationReasonProjectEnded          = "PROJECT_ENDED"
+	SolutionCancellationReasonProofOfConcept        = "PROOF_OF_CONCEPT"
+	SolutionCancellationReasonServiceMoved          = "SERVICE_MOVED"
+	SolutionCancellationReasonServiceNotRequired    = "SERVICE_NOT_REQUIRED"
+	SolutionCancellationReasonServiceOrderedInError = "SERVICE_ORDERED_IN_ERROR"
+	SolutionCancellationReasonServiceReordered      = "SERVICE_REORDERED"
+	SolutionCancellationReasonSwitchingProvider     = "SWITCHING_PROVIDER"
+)
+
 // solutionOrder declares a new Solution in the body of POST /v4/networkdesign/buy.
 // The design's services point to it with solutionRef.
 type solutionOrder struct {
