@@ -355,6 +355,9 @@ func (suite *SolutionClientTestSuite) TestSolutionUIDRequired() {
 
 	err = suite.client.SolutionService.UpdateSolution(ctx, &UpdateSolutionRequest{Name: "My DCI"})
 	suite.ErrorIs(err, ErrSolutionUIDRequired)
+
+	err = suite.client.SolutionService.CancelSolution(ctx, &CancelSolutionRequest{})
+	suite.ErrorIs(err, ErrSolutionUIDRequired)
 }
 
 // Both fields must be on the wire. An empty reference is sent as "", which the API takes to clear it.
@@ -393,7 +396,7 @@ func (suite *SolutionClientTestSuite) TestUpdateSolution() {
 		suite.Run(tt.name, func() {
 			body = nil
 
-			suite.NoError(suite.client.SolutionService.UpdateSolution(suite.ctx, &tt.req))
+			suite.Require().NoError(suite.client.SolutionService.UpdateSolution(suite.ctx, &tt.req))
 			suite.Equal(tt.want, body)
 		})
 	}
@@ -421,4 +424,101 @@ func (suite *SolutionClientTestSuite) TestUpdateSolutionAPIError() {
 	suite.Require().True(errors.As(err, &apiErr))
 	suite.Equal(http.StatusBadRequest, apiErr.Response.StatusCode)
 	suite.Equal(message, apiErr.Message)
+}
+
+// The API requires a body, so a request without a reason or comment is sent as an empty object.
+func (suite *SolutionClientTestSuite) TestCancelSolution() {
+	tests := []struct {
+		name string
+		req  CancelSolutionRequest
+		want map[string]any
+	}{
+		{
+			name: "no reason",
+			req:  CancelSolutionRequest{SolutionUID: testSolutionUID},
+			want: map[string]any{},
+		},
+		{
+			name: "reason without comment",
+			req:  CancelSolutionRequest{SolutionUID: testSolutionUID, CancellationReason: SolutionCancellationReasonBillingIssues},
+			want: map[string]any{"cancellation_reason": "BILLING_ISSUES"},
+		},
+		{
+			name: "comment without reason",
+			req:  CancelSolutionRequest{SolutionUID: testSolutionUID, CancellationComment: "No longer needed"},
+			want: map[string]any{"cancellation_comment": "No longer needed"},
+		},
+		{
+			name: "reason and comment",
+			req: CancelSolutionRequest{
+				SolutionUID:         testSolutionUID,
+				CancellationReason:  SolutionCancellationReasonProjectEnded,
+				CancellationComment: "No longer needed",
+			},
+			want: map[string]any{"cancellation_reason": "PROJECT_ENDED", "cancellation_comment": "No longer needed"},
+		},
+	}
+
+	// The handler is registered once and body is reset per case, because the cases share the suite's server.
+	var body map[string]any
+	suite.mux.HandleFunc(testSolutionPath+"/cancel", func(w http.ResponseWriter, r *http.Request) {
+		suite.Equal(http.MethodPost, r.Method)
+		suite.NoError(json.NewDecoder(r.Body).Decode(&body))
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{
+			"message": "Solution cancelled successfully",
+			"terms": "terms",
+			"data": {"uid": %q, "type": "DCI", "name": "My DCI", "active": false, "locked": false, "memberServiceUids": []}
+		}`, testSolutionUID)
+	})
+
+	for _, tt := range tests {
+		suite.Run(tt.name, func() {
+			body = nil
+
+			suite.Require().NoError(suite.client.SolutionService.CancelSolution(suite.ctx, &tt.req))
+			suite.Equal(tt.want, body)
+		})
+	}
+}
+
+func (suite *SolutionClientTestSuite) TestCancelSolutionInvalidRequest() {
+	suite.mux.HandleFunc(testSolutionPath+"/cancel", func(w http.ResponseWriter, r *http.Request) {
+		suite.Fail("an invalid request must not reach the API")
+	})
+
+	suite.ErrorIs(suite.client.SolutionService.CancelSolution(suite.ctx, nil), ErrCancelSolutionRequestNil)
+}
+
+// The API's own error reaches the caller, as when a member service fails to decommission
+// or the Solution is already canceled.
+func (suite *SolutionClientTestSuite) TestCancelSolutionAPIError() {
+	tests := []struct {
+		name    string
+		status  int
+		message string
+	}{
+		{name: "member not decommissioned", status: http.StatusConflict, message: "Service svc-b could not be decommissioned."},
+		{name: "already canceled", status: http.StatusBadRequest, message: "Solution is already cancelled."},
+	}
+
+	var status int
+	var message string
+	suite.mux.HandleFunc(testSolutionPath+"/cancel", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(status)
+		fmt.Fprintf(w, `{"message": %q}`, message)
+	})
+
+	for _, tt := range tests {
+		suite.Run(tt.name, func() {
+			status, message = tt.status, tt.message
+
+			err := suite.client.SolutionService.CancelSolution(suite.ctx, &CancelSolutionRequest{SolutionUID: testSolutionUID})
+			var apiErr *ErrorResponse
+			suite.Require().True(errors.As(err, &apiErr))
+			suite.Equal(tt.status, apiErr.Response.StatusCode)
+			suite.Equal(tt.message, apiErr.Message)
+		})
+	}
 }

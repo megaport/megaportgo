@@ -253,6 +253,9 @@ var ErrSolutionResponseEmpty = errors.New("solution response missing data")
 // ErrUpdateSolutionRequestNil is returned when UpdateSolution is called with a nil request.
 var ErrUpdateSolutionRequestNil = errors.New("update solution request cannot be nil")
 
+// ErrCancelSolutionRequestNil is returned when CancelSolution is called with a nil request.
+var ErrCancelSolutionRequestNil = errors.New("cancel solution request cannot be nil")
+
 // ErrDCIOrderResponseMissingSolution is returned when a DCI order succeeds but the response does not name the DCI created.
 var ErrDCIOrderResponseMissingSolution = errors.New("DCI order response missing the solution")
 

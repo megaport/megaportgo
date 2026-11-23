@@ -22,6 +22,8 @@ type SolutionService interface {
 	GetSolutionBillable(ctx context.Context, solutionUID string) (*SolutionBillable, error)
 	// UpdateSolution changes a Solution's name and service level reference.
 	UpdateSolution(ctx context.Context, req *UpdateSolutionRequest) error
+	// CancelSolution cancels a Solution now, with every member service.
+	CancelSolution(ctx context.Context, req *CancelSolutionRequest) error
 }
 
 // NewSolutionService creates a new instance of the Solution Service.
@@ -204,6 +206,26 @@ func (svc *SolutionServiceOp) UpdateSolution(ctx context.Context, req *UpdateSol
 	}
 
 	clientReq, err := svc.Client.NewRequest(ctx, http.MethodPut, svc.solutionURL(req.SolutionUID), req)
+	if err != nil {
+		return err
+	}
+
+	return svc.Client.doDiscard(ctx, clientReq)
+}
+
+// CancelSolution cancels a Solution using POST /v1/solutions/{uid}/cancel. The API decommissions every member
+// service and marks the Solution inactive, which GetSolution still reads. It refuses to cancel a Solution that is
+// already inactive or is locked. When the cancel cannot be completed, it answers 409 and leaves the Solution active,
+// so the cancel can be retried.
+func (svc *SolutionServiceOp) CancelSolution(ctx context.Context, req *CancelSolutionRequest) error {
+	if req == nil {
+		return ErrCancelSolutionRequestNil
+	}
+	if req.SolutionUID == "" {
+		return ErrSolutionUIDRequired
+	}
+
+	clientReq, err := svc.Client.NewRequest(ctx, http.MethodPost, svc.solutionURL(req.SolutionUID, "cancel"), req)
 	if err != nil {
 		return err
 	}
