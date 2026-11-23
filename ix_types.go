@@ -22,6 +22,9 @@ type IX struct {
 	ASN                int               `json:"asn"`
 	NetworkServiceType string            `json:"networkServiceType"`
 	PublicGraph        bool              `json:"publicGraph"`
+	CostCentre         string            `json:"costCentre"`
+	ReverseDNS         string            `json:"reverseDns"` // ListIXs does not send it.
+	Shutdown           bool              `json:"shutdown"`
 	UsageAlgorithm     string            `json:"usageAlgorithm"`
 	Resources          IXResources       `json:"resources"`
 }
