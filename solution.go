@@ -215,8 +215,8 @@ func (svc *SolutionServiceOp) UpdateSolution(ctx context.Context, req *UpdateSol
 
 // CancelSolution cancels a Solution using POST /v1/solutions/{uid}/cancel. The API decommissions every member
 // service and marks the Solution inactive, which GetSolution still reads. It refuses to cancel a Solution that is
-// already inactive or is locked. When a member service fails to decommission, it answers 409 and leaves the Solution
-// active, so the cancel can be retried.
+// already inactive or is locked. When the cancel cannot be completed, it answers 409 and leaves the Solution active,
+// so the cancel can be retried.
 func (svc *SolutionServiceOp) CancelSolution(ctx context.Context, req *CancelSolutionRequest) error {
 	if req == nil {
 		return ErrCancelSolutionRequestNil

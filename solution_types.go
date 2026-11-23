@@ -108,11 +108,12 @@ type UpdateSolutionRequest struct {
 	ServiceLevelReference string `json:"serviceLevelReference"`
 }
 
-// CancelSolutionRequest represents a request to cancel a Solution. Both the reason and the comment are optional:
-// without them the API is sent an empty object. The API checks them before it cancels a member service.
+// CancelSolutionRequest represents a request to cancel a Solution. The API checks the reason and the comment
+// before it cancels a member service.
 type CancelSolutionRequest struct {
 	SolutionUID string `json:"-"`
 	// CancellationReason is one of the SolutionCancellationReason constants. The API rejects any other value.
+	// It may be left empty.
 	CancellationReason string `json:"cancellation_reason,omitempty"`
 	// CancellationComment is free text recorded with the cancellation. The API accepts at most 400 characters.
 	// Every reason except SolutionCancellationReasonBillingIssues requires a comment, and that one refuses it.
