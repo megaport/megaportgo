@@ -22,6 +22,9 @@ type IX struct {
 	ASN                int               `json:"asn"`
 	NetworkServiceType string            `json:"networkServiceType"`
 	PublicGraph        bool              `json:"publicGraph"`
+	CostCentre         string            `json:"costCentre"`
+	ReverseDNS         string            `json:"reverseDns"` // Empty on an IX from ListIXs. GetIX fills it in.
+	Shutdown           bool              `json:"shutdown"`
 	UsageAlgorithm     string            `json:"usageAlgorithm"`
 	Resources          IXResources       `json:"resources"`
 }

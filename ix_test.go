@@ -190,6 +190,9 @@ func (suite *IXClientTestSuite) TestGetIX() {
 		CreateDate:         startDate,
 		DeployDate:         liveDate,
 		PublicGraph:        true,
+		CostCentre:         "CC12345",
+		ReverseDNS:         "as12345.los-angeles.megaport.com.",
+		Shutdown:           true,
 		UsageAlgorithm:     "POST_PAID_HOURLY_SPEED_LONG_HAUL_VXC",
 		Resources: IXResources{
 			Interface: IXInterface{
@@ -267,6 +270,9 @@ func (suite *IXClientTestSuite) TestGetIX() {
             "networkServiceType": "Los Angeles IX",
             "createDate": %d,
             "publicGraph": true,
+            "costCentre": "CC12345",
+            "reverseDns": "as12345.los-angeles.megaport.com.",
+            "shutdown": true,
             "usageAlgorithm": "POST_PAID_HOURLY_SPEED_LONG_HAUL_VXC",
             "resources": {
                 "interface": {
@@ -338,7 +344,36 @@ func (suite *IXClientTestSuite) TestGetIX() {
 	suite.Equal(wantIX.UsageAlgorithm, gotIX.UsageAlgorithm)
 	suite.Equal(wantIX.VLAN, gotIX.VLAN)
 	suite.Equal(wantIX.ASN, gotIX.ASN)
+	suite.Equal(wantIX.CostCentre, gotIX.CostCentre)
+	suite.Equal(wantIX.ReverseDNS, gotIX.ReverseDNS)
+	suite.Equal(wantIX.Shutdown, gotIX.Shutdown)
 	suite.Equal(wantIX.Resources, gotIX.Resources)
+}
+
+// TestGetIXWithoutOptionalFields tests GetIX on a body with no cost centre, reverse DNS, or shutdown.
+func (suite *IXClientTestSuite) TestGetIXWithoutOptionalFields() {
+	ctx := context.Background()
+	ixUid := "4017d2c3-1537-408e-9f0a-fdc72b6cce39"
+
+	jblob := fmt.Sprintf(`{
+        "message": "Found Product %s",
+        "data": {
+            "productUid": "%s",
+            "productName": "My LA IX",
+            "provisioningStatus": "CONFIGURED"
+        }
+    }`, ixUid, ixUid)
+
+	suite.mux.HandleFunc("/v2/product/"+ixUid, func(w http.ResponseWriter, r *http.Request) {
+		suite.testMethod(r, http.MethodGet)
+		fmt.Fprint(w, jblob)
+	})
+
+	gotIX, err := suite.client.IXService.GetIX(ctx, ixUid)
+	suite.NoError(err)
+	suite.Empty(gotIX.CostCentre)
+	suite.Empty(gotIX.ReverseDNS)
+	suite.False(gotIX.Shutdown)
 }
 
 // TestUpdateIX tests the UpdateIX method.
