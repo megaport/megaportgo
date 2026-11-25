@@ -18,6 +18,7 @@
 - Add `ActivityNames`, `From`, `To`, `PageSize`, `Sort` and `Direction` to `GetUserActivityRequest` to filter and sort the entries `GetUserActivity` returns.
 
 ## Changes
+- Breaking: `IXUpdate.CostCentre` is now a `*string`. `UpdateIX` sends an empty `UpdateIXRequest.CostCentre`, which clears the cost centre. Before this change, `UpdateIX` dropped an empty value from the request. A nil `CostCentre` leaves the cost centre unchanged.
 - Breaking: `GetUserActivity` calls `GET /v4/activity`, because the API is removing `GET /v3/activity` on 8 January 2027. It returns the caller's own entries, 10 by default, and ignores `PersonIdOrUid` and `CompanyIdOrUid`, which are deprecated. Actions made with an API key are not included. `UserActivity` marshals `CreateDate` as `createdAt`. The method used to fail on every call, because v3 wraps the list in `data`.
 - `New`, `NewClient` and `DoRequest` use an HTTP client with a 5 minute timeout when the caller passes no `http.Client`. Before this change they used `http.DefaultClient`, which has no timeout, so a server that never replied blocked the call until the context ended.
 - Breaking: `ListOrderApprovals` calls `GET /v4/order_approvals`, because the API is removing `GET /v3/order_approvals`. `Direction` now changes the sort order, which it did not on v3. `Sort` takes `createdAt`, `serviceId`, `status` or `type`. The SDK sends v3's `createDate` as `createdAt`, and the API returns 400 for other v3 sort fields such as `completionDate`. A `Sort` with no `Direction` sorts ascending.

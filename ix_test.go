@@ -497,6 +497,48 @@ func (suite *IXClientTestSuite) TestUpdateIX() {
 	suite.Equal(wantIX.ASN, gotIX.ASN)
 }
 
+// TestUpdateIXCostCentre tests that UpdateIX sends an empty cost centre and omits a nil one.
+func (suite *IXClientTestSuite) TestUpdateIXCostCentre() {
+	tests := []struct {
+		name       string
+		costCentre *string
+		wantKey    bool
+		wantValue  string
+	}{
+		{name: "empty string is sent", costCentre: PtrTo(""), wantKey: true, wantValue: ""},
+		{name: "value is sent", costCentre: PtrTo("CC12345"), wantKey: true, wantValue: "CC12345"},
+		{name: "nil is omitted", costCentre: nil, wantKey: false},
+	}
+
+	for i, tc := range tests {
+		suite.Run(tc.name, func() {
+			ixUid := fmt.Sprintf("4017d2c3-1537-408e-9f0a-fdc72b6cce%02d", i)
+			path := fmt.Sprintf("/v2/product/%s/%s", PRODUCT_IX, ixUid)
+			suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+				suite.testMethod(r, http.MethodPut)
+				var body map[string]json.RawMessage
+				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+					suite.FailNowf("could not decode json", "could not decode json %v", err)
+				}
+				raw, ok := body["costCentre"]
+				suite.Equal(tc.wantKey, ok)
+				if tc.wantKey && ok {
+					var got string
+					suite.NoError(json.Unmarshal(raw, &got))
+					suite.Equal(tc.wantValue, got)
+				}
+				fmt.Fprint(w, `{"message":"Product updated","data":{}}`)
+			})
+
+			_, err := suite.client.IXService.UpdateIX(context.Background(), ixUid, &UpdateIXRequest{
+				Name:       PtrTo("IX"),
+				CostCentre: tc.costCentre,
+			})
+			suite.NoError(err)
+		})
+	}
+}
+
 // TestUpdateIXPendingApproval verifies UpdateIX returns
 // ErrModifyPendingApproval on a 202 without entering the wait loop.
 func (suite *IXClientTestSuite) TestUpdateIXPendingApproval() {

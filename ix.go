@@ -234,7 +234,7 @@ func (svc *IXServiceOp) UpdateIX(ctx context.Context, id string, req *UpdateIXRe
 		update.RateLimit = req.RateLimit
 	}
 	if req.CostCentre != nil {
-		update.CostCentre = *req.CostCentre
+		update.CostCentre = req.CostCentre
 	}
 	if req.VLAN != nil {
 		update.VLAN = req.VLAN

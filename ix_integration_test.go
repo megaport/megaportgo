@@ -160,6 +160,25 @@ func (suite *IXIntegrationTestSuite) TestIXLifecycle() {
 	suite.Equal(newRateLimit, ix.RateLimit)
 	suite.Equal(newVLAN, ix.VLAN)
 
+	// Set a cost centre, then clear it with an empty string
+	for _, costCentre := range []string{"IX Test Cost Centre", ""} {
+		logger.InfoContext(ctx, "Updating IX cost centre", slog.String("cost_centre", costCentre))
+		_, updateErr = ixSvc.UpdateIX(ctx, ixID, &UpdateIXRequest{
+			CostCentre:    &costCentre,
+			WaitForUpdate: true,
+			WaitForTime:   10 * time.Minute,
+		})
+		if updateErr != nil {
+			suite.FailNowf("could not update ix cost centre", "could not update ix cost centre %v", updateErr)
+		}
+
+		ix, getErr = ixSvc.GetIX(ctx, ixID)
+		if getErr != nil {
+			suite.FailNowf("could not get ix", "could not get ix %v", getErr)
+		}
+		suite.Equal(costCentre, ix.CostCentre)
+	}
+
 	// Testing IX Cancel - the API only supports immediate deletion (CANCEL_NOW)
 	deleteErr := ixSvc.DeleteIX(ctx, ixID, &DeleteIXRequest{
 		DeleteNow: false,
