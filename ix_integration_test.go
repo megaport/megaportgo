@@ -168,14 +168,10 @@ func (suite *IXIntegrationTestSuite) TestIXLifecycle() {
 			WaitForUpdate: true,
 			WaitForTime:   10 * time.Minute,
 		})
-		if updateErr != nil {
-			suite.FailNowf("could not update ix cost centre", "could not update ix cost centre %v", updateErr)
-		}
+		suite.Require().NoError(updateErr, "could not update ix cost centre to %q", costCentre)
 
 		ix, getErr = ixSvc.GetIX(ctx, ixID)
-		if getErr != nil {
-			suite.FailNowf("could not get ix", "could not get ix %v", getErr)
-		}
+		suite.Require().NoError(getErr, "could not get ix after cost centre update to %q", costCentre)
 		suite.Equal(costCentre, ix.CostCentre)
 	}
 

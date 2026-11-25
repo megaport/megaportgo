@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -510,15 +511,19 @@ func (suite *IXClientTestSuite) TestUpdateIXCostCentre() {
 		{name: "nil is omitted", costCentre: nil, wantKey: false},
 	}
 
-	for i, tc := range tests {
+	for _, tc := range tests {
 		suite.Run(tc.name, func() {
-			ixUid := fmt.Sprintf("4017d2c3-1537-408e-9f0a-fdc72b6cce%02d", i)
+			ixUid := uuid.NewString()
 			path := fmt.Sprintf("/v2/product/%s/%s", PRODUCT_IX, ixUid)
 			suite.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-				suite.testMethod(r, http.MethodPut)
+				if !suite.Equal(http.MethodPut, r.Method) {
+					http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+					return
+				}
 				var body map[string]json.RawMessage
-				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-					suite.FailNowf("could not decode json", "could not decode json %v", err)
+				if !suite.NoError(json.NewDecoder(r.Body).Decode(&body), "could not decode json") {
+					http.Error(w, "bad request", http.StatusBadRequest)
+					return
 				}
 				raw, ok := body["costCentre"]
 				suite.Equal(tc.wantKey, ok)
