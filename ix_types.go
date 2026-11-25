@@ -160,15 +160,15 @@ type listIXPsResponse struct {
 
 // IXUpdate represents the structure for updating an IX
 type IXUpdate struct {
-	Name           string `json:"name,omitempty"`
-	RateLimit      *int   `json:"rateLimit,omitempty"`
-	CostCentre     string `json:"costCentre,omitempty"`
-	VLAN           *int   `json:"vlan,omitempty"`
-	MACAddress     string `json:"macAddress,omitempty"`
-	ASN            *int   `json:"asn,omitempty"`
-	Password       string `json:"password,omitempty"`
-	PublicGraph    *bool  `json:"publicGraph,omitempty"`
-	ReverseDns     string `json:"reverseDns,omitempty"`
-	AEndProductUid string `json:"aEndProductUid,omitempty"`
-	Shutdown       *bool  `json:"shutdown,omitempty"`
+	Name           string  `json:"name,omitempty"`
+	RateLimit      *int    `json:"rateLimit,omitempty"`
+	CostCentre     *string `json:"costCentre,omitempty"`
+	VLAN           *int    `json:"vlan,omitempty"`
+	MACAddress     string  `json:"macAddress,omitempty"`
+	ASN            *int    `json:"asn,omitempty"`
+	Password       string  `json:"password,omitempty"`
+	PublicGraph    *bool   `json:"publicGraph,omitempty"`
+	ReverseDns     string  `json:"reverseDns,omitempty"`
+	AEndProductUid string  `json:"aEndProductUid,omitempty"`
+	Shutdown       *bool   `json:"shutdown,omitempty"`
 }
